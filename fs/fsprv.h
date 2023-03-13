@@ -1,0 +1,1 @@
+Filefmt*	reggfa(void);
