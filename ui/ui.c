@@ -33,6 +33,5 @@ resetui(void)
 void
 initui(void)
 {
-	initsysui();
 	resetui();
 }

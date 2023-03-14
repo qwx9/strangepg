@@ -16,7 +16,6 @@ OFILES=\
 	plan9/fs.$O\
 	plan9/render.$O\
 	plan9/sys.$O\
-	plan9/ui.$O\
 	ui/ev.$O\
 	ui/ui.$O\
 

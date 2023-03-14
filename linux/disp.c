@@ -31,5 +31,6 @@ initsysdisp(void)
             SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
             v.w, v.h)) == NULL)
 		sysfatal("SDL_CreateTexture: %s\n", SDL_GetError());
+	SDL_GetWindowSize(sdl.win, &v.w, &v.h);
 	return v;
 }

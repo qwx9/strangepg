@@ -16,7 +16,6 @@ OBJS:=\
 	layout/conga.o\
 	linux/disp.o\
 	linux/sys.o\
-	linux/ui.o\
 	rend/rend.o\
 	ui/ev.o\
 	ui/ui.o\

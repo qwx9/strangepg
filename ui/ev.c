@@ -1,41 +1,63 @@
 #include "strpg.h"
+#include <SDL2/SDL.h>
+
+static int	(*mousefn)(SDL_Event, Vertex);
+static int	(*keyfn)(char);
+
 
 static int
-parsekey(Event e)
+mousepan(Vertex Δ)
 {
-	USED(e);
+	return panview(Δ);
+}
+
+static int
+mouseselect(Vertex p)
+{
+	USED(p);
 	return 0;
 }
 
 static int
-parsemouse(Event e)
+mousemenu(void)
 {
-	USED(e);
 	return 0;
 }
 
-void
+static int
+mouseprompt(char *label, char *buf, int bufsz)
+{
+	USED(label);
+	USED(buf);
+	USED(bufsz);
+	return 0;
+}
+
+int
 evloop(void)
 {
-	Event ev;
+	SDL_Event e;
 
 	for(;;){
-		ev = waitevent();
-		switch(ev.type){
-		case EVmouse:
-			//parsemouse(ev.key);
-			/* wet floor */
-		case EVkbd:
-			if(ev.key <= 0){
-				warn("evloop: invalid event: %r");
-				continue;
-			}
-			switch(ev.key){
-			default:;
-			}
-			break;
-		default:;
+		while(SDL_PollEvent(&e)){
+		    if(e.type == SDL_MOUSEBUTTONDOWN){
+				// FIXME: pan, menu, select
+		    }else if(e.type == SDL_MOUSEMOTION){
+		        //mx = e.motion.x;
+		        //my = e.motion.y;
+		        // FIXME: ...
+		    }else if(e.type == SDL_KEYDOWN){
+		        switch(e.key.keysym.sym){
+		        case SDLK_ESCAPE:
+		        case SDLK_q:
+		            SDL_Quit();
+					return 0;
+		        default:;
+		        }
+		    }else if(e.type == SDL_QUIT)
+		        return 0;
 		}
-		/* FIXME: key events, mouse events ... */
+		// FIXME: update world if needed
+		// FIXME: pan/thrdhold
 	}
 }
