@@ -76,8 +76,12 @@ usage(void)
 void
 threadmain(int argc, char **argv)
 {
+	ARGBEGIN{
+	default: usage();
+	}ARGEND
 	if(parseargs(argc, argv) < 0)
 		usage();
 	init();
 	evloop();
+	exits(nil);
 }

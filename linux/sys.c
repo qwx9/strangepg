@@ -3,6 +3,7 @@
 #include <string.h>
 
 int debug;
+char *argv0;
 
 static char err[512];
 
@@ -65,10 +66,21 @@ emalloc(usize n)
 	return p;
 }
 
+static void
+usage(void)
+{
+	fprintf(stderr, "usage: %s\n", argv0);
+	exit(1);
+}
+
 int
 main(int argc, char **argv)
 {
-	/* FIXME: parse args */
+	ARGBEGIN{
+	default: usage();
+	}ARGEND
+	if(parseargs(argc, argv) < 0)
+		usage();
 	init();
 	evloop();
 	return 0;
