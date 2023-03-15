@@ -1,13 +1,16 @@
 #include "strpg.h"
 
-// FIXME: get ARGBEGIN etc from plan9 and use it?
+// FIXME: single graph for now
+Graph *lolgraph;
+Layer lolayer;
 
 void
 run(void)
 {
 	flushcmd();
-	render();
-	show();
+	lolayer = dolayout(lolgraph, LLconga);	// position in space
+	render(lolgraph, &lolayer);		// pretty drawing with edges, etc.
+	show(lolgraph, &lolayer);			// display result
 }
 
 int

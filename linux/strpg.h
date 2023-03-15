@@ -18,10 +18,10 @@ void	werrstr(char*, ...);
 #include "kvec.h"
 #include "cmd.h"
 #include "graph.h"
-#include "disp.h"
-#include "fs.h"
 #include "layout.h"
+#include "disp.h"
 #include "rend.h"
+#include "fs.h"
 #include "ui.h"
 
 extern char *argv0;

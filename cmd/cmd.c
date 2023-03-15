@@ -51,7 +51,7 @@ flushcmd(void)	/* execute queued commands */
 
 	if(done > 0)
 		return 0;
-	loadfs(FFgfa, path);
+	lolgraph = loadfs(FFgfa, path);
 	done++;
 	return 0;
 }

@@ -1,8 +1,6 @@
 #include "strpg.h"
 #include "fsprv.h"
 
-// FIXME: single graph for now
-
 static Filefmt *ff[FFnil];
 
 Graph *

@@ -4,8 +4,11 @@
 View view;
 
 void
-show(void)
+show(Graph *, Layer *)
 {
+	// take vector image
+	// draw at default zoom level + translated by pan offset
+	// paste on screen
 }
 
 // FIXME: rename disp → view?

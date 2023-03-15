@@ -15,3 +15,4 @@ extern View view;
 void	initdisp(void);
 void	resetdisp(void);
 void	updatedisp(void);
+void	show(Graph*, Layer*);

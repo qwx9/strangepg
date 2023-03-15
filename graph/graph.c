@@ -25,7 +25,7 @@ addnode(Graph *g, usize id)
 }
 
 void
-addedge(Graph *g, usize id, usize from, usize to, double w)
+addedge(Graph *g, usize id, usize u, usize v, double w)
 {
 	int ret;	// FIXME: error checks
 	usize eid;
@@ -33,16 +33,16 @@ addedge(Graph *g, usize id, usize from, usize to, double w)
 	Edge e;
 	Node *n;
 
-	e.from = from;
-	e.to = to;
+	e.u = u;
+	e.v = v;
 	e.w = w;
 	kv_push(Edge, g->edges, e);
 	eid = kv_size(g->edges) - 1;
 	k = kh_put(usize, g->eid, id, &ret);
 	kh_value(g->eid, k) = eid;
-	n = lab2n(g, from);
+	n = lab2n(g, u);
 	kv_push(usize, n->out, eid);
-	n = lab2n(g, to);
+	n = lab2n(g, v);
 	kv_push(usize, n->in, eid);
 }
 

@@ -20,8 +20,8 @@ struct Node{
 };
 
 struct Edge{
-	usize from;
-	usize to;
+	usize u;
+	usize v;
 	double w;
 };
 
@@ -36,3 +36,5 @@ struct Vertex{
 
 extern Vertex ZV;
 int	eqv(Vertex, Vertex);
+
+extern Graph *lolgraph;

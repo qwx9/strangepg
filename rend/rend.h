@@ -1,2 +1,2 @@
 void	initrend(void);
-int	render(void);
+int	render(Graph *, Layer *);
