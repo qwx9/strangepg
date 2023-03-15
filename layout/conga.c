@@ -15,7 +15,6 @@ compute(Graph *g)
 
 	kv_init(l.nodes);
 	kv_init(l.edges);
-	/*kv_init(l.bsp);*/
 	for(v=&kv_A(g->nodes, 0), ve=v+kv_size(g->nodes), i=0; v<ve; v++, i++)
 		putnode(&l, i, i, 0, 1);
 	for(e=&kv_A(g->edges, 0), ee=e+kv_size(g->edges), i=0; e<ee; e++, i++)

@@ -6,32 +6,6 @@
 Layer ZL;
 static Layout *ll[LLnil];
 
-/* untested, unnecessary
-void
-putnode(Layer *l, Vertex v)
-{
-	Vertex u;
-	Bnode b, t, **p;
-
-	memset(&b, 0, sizeof b);
-	b.vid = kv_size(l.nodes);
-	kv_push(Vertex, l.nodes, v);
-	kv_push(Bnode, l.bsp, v);
-	if(kv_size(l.bsp) == 1)
-		return;
-	t = kv_A(l.bsp, 0);
-	u = kv_A(l.nodes, t.vid);
-	for(;;){
-		p = v.x <= u.x && v.y <= u.y ? &t.left : &t.right;
-		if(*p == nil){
-			*p = v;
-			return;
-		}
-		u = *p;
-	}
-}
-*/
-
 void
 putnode(Layer *l, usize id, int x, int y, double w)
 {

@@ -2,7 +2,6 @@ typedef struct Layout Layout;
 typedef struct Layer Layer;
 typedef struct Vnode Vnode;
 typedef struct Vedge Vedge;
-/*typedef struct Bnode Bnode;*/
 
 struct Vedge{
 	usize id;
@@ -17,13 +16,6 @@ struct Vnode{
 	double w;
 };
 
-/*
-struct Bnode{
-	usize vid;
-	Bnode *left;
-	Bnode *right;
-};
-*/
 enum{
 	LLconga,
 	LLnil,
@@ -36,7 +28,6 @@ struct Layer{
 	Layout *ll;
 	kvec_t(Vnode) nodes;
 	kvec_t(Vedge) edges;
-	/*kvec_t(Bnode) bsp;*/
 };
 
 void	initlayout(void);
