@@ -1,2 +1,8 @@
+typedef struct Render Render;
+
+struct Render{
+	kvec_t(Shape) shapes;
+};
+
 void	initrend(void);
-int	render(Graph *, Layer *);
+Render	render(Graph *, Layer *);

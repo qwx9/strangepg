@@ -51,7 +51,7 @@ s2p(Point p)
 }
 
 static void
-flipdisp(void)
+flipview(void)
 {
 	draw(screen, screen->r, viewbg, nil, addpt(viewΔ, view.pan));
 	flushimage(display, 1);
@@ -66,16 +66,16 @@ redraw(int clear)
 }
 
 void
-updatedisp(void)
+updateview(void)
 {
 	lockdisplay(display);
 	redraw(0);
 	unlockdisplay(display);
-	flipdisp();
+	flipview();
 }
 
 void
-resetdisp(void)
+resetview(void)
 {
 	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
 	viewΔ = divpt(addpt(subpt(ZP, subpt(screen->r.max, screen->r.min)), viewr.max), 2);
@@ -89,11 +89,11 @@ resetdisp(void)
 	freeimage(board);
 	board = eallocimage(viewr, 0, DBlack);
 	/* FIXME: in sequence, actual drawing later */
-	updatedisp();
+	updateview();
 }
 
 View
-initsysdisp(void)
+initsysview(void)
 {
 	View v = {0};
 

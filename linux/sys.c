@@ -1,6 +1,8 @@
-#include "strpg.h"
+#include "strpg.h"	/* FIXME: this sucks */
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
+#include <errno.h>
 
 int debug;
 char *argv0;
@@ -44,6 +46,19 @@ warn(char *fmt, ...)
 	va_start(arg, fmt);
 	vfprintf(stderr, fmt, arg);
 	va_end(arg);
+}
+
+/* FIXME: check */
+vlong
+msec(void)
+{
+	struct timeval tv;
+
+	if(gettimeofday(&tv, nil) < 0){
+		warn("gettimeofday: error %d\n", errno);
+		return -1;
+	}
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
 void *

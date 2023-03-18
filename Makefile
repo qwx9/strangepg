@@ -7,18 +7,17 @@ BINDIR:= $(INSTALLPREFIX)/bin
 OBJS:=\
 	main.o\
 	cmd/cmd.o\
-	disp/disp.o\
 	fs/fs.o\
 	fs/gfa.o\
 	graph/graph.o\
 	graph/vertex.o\
 	layout/layout.o\
 	layout/conga.o\
-	linux/disp.o\
 	linux/sys.o\
 	rend/rend.o\
 	ui/ev.o\
 	ui/ui.o\
+	view/sdl.o\
 
 CC?= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -29,13 +28,13 @@ IFLAGS?=\
 	-I.\
 	-Ilinux\
 	-Icmd\
-	-Idisp\
 	-Ifs\
 	-Igraph\
 	-Ilayout\
 	-Ilinux\
 	-Irend\
 	-Iui\
+	-Iview\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=

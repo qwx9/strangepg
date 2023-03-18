@@ -5,14 +5,15 @@ typedef ulong size_t;
 
 void	quit(void);
 
-#include "common.h"
 #include "khash.h"
 #include "kvec.h"
+#include "dat.h"
+#include "fns.h"
 #include "cmd.h"
 #include "graph.h"
 #include "layout.h"
-#include "disp.h"
 #include "rend.h"
+#include "view.h"
 #include "fs.h"
 #include "ui.h"
 

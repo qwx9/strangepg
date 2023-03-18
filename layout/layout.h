@@ -7,13 +7,13 @@ struct Vedge{
 	usize id;
 	Vertex u;
 	Vertex v;
-	double w;
+	float w;
 };
 
 struct Vnode{
 	usize id;
 	Vertex v;
-	double w;
+	float w;
 };
 
 enum{
@@ -28,6 +28,7 @@ struct Layer{
 	Layout *ll;
 	kvec_t(Vnode) nodes;
 	kvec_t(Vedge) edges;
+	kvec_t(Shape) shapes;	// ???
 };
 
 void	initlayout(void);

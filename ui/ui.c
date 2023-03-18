@@ -1,5 +1,7 @@
 #include "strpg.h"
 
+float zoom;
+
 static Vertex panmax;
 
 int
@@ -15,7 +17,7 @@ panview(Vertex p)
 		p.y = 0;
 	else if(p.y > panmax.y)
 		p.y = panmax.y;
-	if(eqv(p, view.pan)){
+	if(eqvx(p, view.pan)){
 		view.pan = p;
 		return 0;
 	}

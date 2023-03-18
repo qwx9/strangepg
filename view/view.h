@@ -12,7 +12,7 @@ struct View{
 };
 extern View view;
 
-void	initdisp(void);
-void	resetdisp(void);
-void	updatedisp(void);
-void	show(Graph*, Layer*);
+void	initview(void);
+void	resetview(void);
+void	updateview(void);
+void	show(Graph*, Render*);

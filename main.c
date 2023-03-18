@@ -7,10 +7,12 @@ Layer lolayer;
 void
 run(void)
 {
+	Render r;
+
 	flushcmd();
 	lolayer = dolayout(lolgraph, LLconga);	// position in space
-	render(lolgraph, &lolayer);		// pretty drawing with edges, etc.
-	show(lolgraph, &lolayer);			// display result
+	r = render(lolgraph, &lolayer);		// pretty drawing with edges, etc.
+	show(lolgraph, &r);			// display result
 }
 
 int
@@ -31,7 +33,7 @@ init(void)
 	initfs();
 	initlayout();
 	initrend();
-	initdisp();
+	initview();
 	initui();
 	run();
 }

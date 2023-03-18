@@ -1,1 +1,0 @@
-View	initsysdisp(void);

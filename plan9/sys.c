@@ -29,6 +29,12 @@ dprint(char *fmt, ...)
 	fprint(2, "%s", s);
 }
 
+vlong
+msec(void)
+{
+	return nsec() / 1000000;
+}
+
 char *
 estrdup(char *s)
 {

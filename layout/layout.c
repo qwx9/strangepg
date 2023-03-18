@@ -6,6 +6,7 @@
 Layer ZL;
 static Layout *ll[LLnil];
 
+/* FIXME: LSB already set? */
 void
 putnode(Layer *l, usize id, int x, int y, double w)
 {

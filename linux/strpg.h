@@ -5,6 +5,8 @@
 
 typedef size_t usize;
 typedef unsigned char uchar;
+typedef long long vlong;
+#define const
 #define nil NULL
 
 #define USED(x) (void)(x)
@@ -13,14 +15,15 @@ extern int debug;
 
 void	werrstr(char*, ...);
 
-#include "common.h"
 #include "khash.h"
 #include "kvec.h"
+#include "dat.h"
+#include "fns.h"
 #include "cmd.h"
 #include "graph.h"
 #include "layout.h"
-#include "disp.h"
 #include "rend.h"
+#include "view.h"
 #include "fs.h"
 #include "ui.h"
 
