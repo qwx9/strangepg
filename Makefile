@@ -22,7 +22,7 @@ OBJS:=\
 CC?= clang
 OFLAGS?= -O2 -pipe -march=native
 CFLAGS?= $(OFLAGS)
-WFLAGS?= -Wall -Wextra -Wformat=2
+WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
