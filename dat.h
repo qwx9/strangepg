@@ -23,7 +23,7 @@ KHASH_MAP_INIT_INT64(usize, usize);
 
 typedef struct Shape Shape;
 typedef struct Vertex Vertex;
-typedef struct Vrect Vrect;
+typedef struct Vquad Vquad;
 typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
@@ -33,7 +33,7 @@ struct Vertex{
 	int x;
 	int y;
 };
-struct Vrect{
+struct Vquad{
 	Vertex u;
 	Vertex v;
 };
@@ -58,5 +58,5 @@ enum{
 };
 struct Shape{
 	usize id;	// LSB: type
-	Vrect r;
+	Vquad r;
 };

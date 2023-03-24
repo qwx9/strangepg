@@ -1,8 +1,8 @@
 int	eqvx(Vertex, Vertex);
-int	dxvx(Vrect);
-int	dyvx(Vrect);
-Vrect	vx2r(Vertex, Vertex);
+int	dxvx(Vquad);
+int	dyvx(Vquad);
+Vquad	vx2r(Vertex, Vertex);
 Vertex	addvx(Vertex, Vertex);
 Vertex	subvx(Vertex, Vertex);
 Vertex	scalevx(Vertex, float);
-Vrect	insetvx(Vertex, int);
+Vquad	insetvx(Vertex, int);

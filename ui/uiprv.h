@@ -1,0 +1,1 @@
+void	initui_(void);

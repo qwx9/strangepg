@@ -3,16 +3,15 @@
 // FIXME: single graph for now
 Graph *lolgraph;
 Layer lolayer;
+Render lolrender;
 
 void
 run(void)
 {
-	Render r;
-
 	flushcmd();
-	lolayer = dolayout(lolgraph, LLconga);	// position in space
-	r = render(lolgraph, &lolayer);		// pretty drawing with edges, etc.
-	show(lolgraph, &r);			// display result
+	lolayer = dolayout(lolgraph, LLconga);
+	lolrender = render(lolgraph, &lolayer);
+	redraw(lolgraph, &lolrender);
 }
 
 int
@@ -33,7 +32,7 @@ init(void)
 	initfs();
 	initlayout();
 	initrend();
-	initview();
+	initvdraw();
 	initui();
 	run();
 }

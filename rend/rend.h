@@ -6,3 +6,5 @@ struct Render{
 
 void	initrend(void);
 Render	render(Graph *, Layer *);
+
+extern Render lolrender;

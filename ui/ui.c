@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "uiprv.h"
 
 float zoom;
 
@@ -35,5 +36,7 @@ resetui(void)
 void
 initui(void)
 {
+	resetdraw(lolgraph, &lolrender);
+	initui_();
 	resetui();
 }

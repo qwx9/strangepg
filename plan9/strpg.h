@@ -13,7 +13,7 @@ void	quit(void);
 #include "graph.h"
 #include "layout.h"
 #include "rend.h"
-#include "view.h"
+#include "vdraw.h"
 #include "fs.h"
 #include "ui.h"
 
