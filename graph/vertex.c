@@ -2,10 +2,16 @@
 
 Vertex ZV;
 
+Vertex
+Vx(int x, int y)
+{
+	return (Vertex){x, y};
+}
+
 int
 eqvx(Vertex a, Vertex b)
 {
-	return memcmp(&a, &b, sizeof a);
+	return memcmp(&a, &b, sizeof a) == 0;
 }
 
 int

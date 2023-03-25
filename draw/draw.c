@@ -37,7 +37,9 @@ drawshapes(Graph *g, Render *rd)
 
 	USED(g);
 	for(s=&kv_A(rd->shapes, 0), se=s+kv_size(rd->shapes); s<se; s++){
-		r = scaletrans(s->r, view.zoom, view.pan);
+		// FIXME
+		//r = scaletrans(s->r, view.zoom, view.pan);
+		r = scaletrans(s->r, view.zoom, ZV);
 		if((s->id & SHrect) == SHrect)
 			drawnode(s->id >> 1, &r);
 		else
@@ -64,6 +66,9 @@ cleardraw(void)
 	cleardraw_();
 }
 
+// FIXME: until there is a need to do drawing asynchronously,
+// there's no need to distinguish draw and ui layers, it will
+// all be redrawn anyway
 int
 updatedraw(Graph *g, Render *r)
 {

@@ -131,3 +131,48 @@ pushcmd(int cmd, char *fmt, ...)
 	va_end(a);
 	return 0;
 }
+
+#ifdef fuck
+int
+cmd(char *s)
+{
+	int n, x;
+	Rune r, r´;
+
+	/* FIXME: avoid potential conflicts with keys in main() */
+	assert(s != nil);
+	s += chartorune(&r, s);
+	for(;;){
+		n = chartorune(&r´, s);
+		if(r´ == Runeerror){
+			werrstr("malformed input");
+			return -1;
+		}
+		if(r´ == 0 || r´ != ' ' && r´ != '\t')
+			break;
+		s += n;
+	}
+	if(debug)
+		paranoia(1);
+	switch(r){
+	case '<': x = pipefrom(s); break;
+	case '^': x = pipethrough(s); break;
+	case '|': x = pipeto(s); break;
+	case 'c': x = copy(s); break;
+	case 'd': x = cut(s); break;
+	case 'p': x = paste(s, nil); break;
+	case 'q': threadexitsall(nil);
+	case 'r': x = readfrom(s); break;
+	case 's': x = replicate(s); break;
+//	case 'U': x = unpop(s); break;
+	case 'u': x = popop(s); break;
+	case 'w': x = writeto(s); break;
+	case 'x': x = crop(s); break;
+	default: werrstr("unknown command %C", r); x = -1; break;
+	}
+	if(debug)
+		paranoia(0);
+	recalcsize();
+	return x;
+}
+#endif

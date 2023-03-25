@@ -6,6 +6,7 @@
 typedef size_t usize;
 typedef unsigned char uchar;
 typedef long long vlong;
+typedef unsigned long Rune;
 #define const
 #define nil NULL
 

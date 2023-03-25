@@ -32,7 +32,6 @@ HFILES=\
 	graph/graph.h\
 	layout/layout.h\
 	layout/layoutprv.h\
-	plan9/sdl.h\
 	plan9/strpg.h\
 	rend/rend.h\
 	ui/ui.h\

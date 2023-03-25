@@ -20,6 +20,19 @@ menter(char *label, char *buf, int bufsz)
 }
 */
 
+static int
+k2e(Rune r)
+{
+	switch(r){
+	case Kleft: r = K←; break;
+	case Kright: r = K→; break;
+	case Kup: r = K↑; break;
+	case Kdown: r = K↓; break;
+	default: /*dprint("k2e: unhandled key %C\n", r)*/;
+	}
+	return keyevent(r);
+}
+
 int
 evloop(void)
 {
@@ -44,8 +57,11 @@ evloop(void)
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
 			resetdraw(lolgraph, &lolrender);
+			resetui();
 			/* wet floor */
 		case Amouse:
+			// FIXME: scroll
+			mouseevent(mc->xy, subpt(mc->xy, mold.xy), mc->buttons & 7);
 			mold = mc->Mouse;
 			break;
 		case Akbd:
@@ -53,6 +69,7 @@ evloop(void)
 			case Kdel:
 			case 'q':
 				threadexitsall(nil);
+			default: keyevent(k2e(r)); break;
 			}
 			break;
 		}

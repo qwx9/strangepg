@@ -6,3 +6,4 @@ Vertex	addvx(Vertex, Vertex);
 Vertex	subvx(Vertex, Vertex);
 Vertex	scalevx(Vertex, float);
 Vquad	insetvx(Vertex, int);
+Vertex	Vx(int, int);
