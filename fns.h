@@ -7,3 +7,4 @@ Vertex	subvx(Vertex, Vertex);
 Vertex	scalevx(Vertex, float);
 Vquad	insetvx(Vertex, int);
 Vertex	Vx(int, int);
+Vquad	quadaddvx(Vquad, Vertex);

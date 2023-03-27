@@ -1,7 +1,8 @@
 typedef struct Render Render;
 
 struct Render{
-	kvec_t(Shape) shapes;
+	kvec_t(Vnode) nodes;
+	Vquad dim;
 };
 
 void	initrend(void);

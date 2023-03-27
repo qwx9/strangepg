@@ -26,16 +26,30 @@ drawedge(usize id, Vquad *r)
 static int
 drawnode(usize id, Vquad *r)
 {
+	dprint("drawnode %llud %d,%d,%d,%d\n", id, r->u.x, r->u.y, r->v.x, r->v.y);
 	return drawquad(id, r->u, r->v);
 }
 
 static int
-drawshapes(Graph *g, Render *rd)
+drawedges(Graph *, Render *)
 {
-	Shape *s, *se;
+	// FIXME
+	return 0;
+}
+
+static int
+//drawshapes(Graph *g, Render *rd)
+drawnodes(Graph *g, Render *rd)
+{
+	Vnode *v, *ve;
 	Vquad r;
 
 	USED(g);
+	for(v=&kv_A(rd->nodes, 0), ve=v+kv_size(rd->nodes); v<ve; v++){
+		r = scaletrans(v->q, view.zoom, (Vertex){50,50});
+		drawnode(v->id >> 1, &r);
+	}
+	/*
 	for(s=&kv_A(rd->shapes, 0), se=s+kv_size(rd->shapes); s<se; s++){
 		// FIXME
 		//r = scaletrans(s->r, view.zoom, view.pan);
@@ -45,6 +59,7 @@ drawshapes(Graph *g, Render *rd)
 		else
 			drawedge(s->id >> 1, &r);
 	}
+	*/
 	return 0;
 }
 
@@ -52,7 +67,8 @@ drawshapes(Graph *g, Render *rd)
 static void
 drawworld(Graph *g, Render *r)
 {
-	drawshapes(g, r);
+	drawnodes(g, r);
+	drawedges(g, r);
 }
 
 static void
@@ -82,6 +98,7 @@ int
 redraw(Graph *g, Render *r)
 {
 	cleardraw();
+	//centerdraw(r->dim);	// FIXME: center view, ie. default pan + zoom
 	drawworld(g, r);
 	return updatedraw(g, r);
 }

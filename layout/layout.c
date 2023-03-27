@@ -2,27 +2,22 @@
 #include "layoutprv.h"
 
 /* nodes are points in space, distances are in unit vectors */
+/* edges: retrieved from graph; could be filtered, but not here */
+/* representation: pretty much a binary map except we need node ids;
+ * 	it's renderer's job to inflate nodes, draw's job to put edges */
 
 Layer ZL;
 static Layout *ll[LLnil];
 
 /* FIXME: LSB already set? */
 void
-putnode(Layer *l, usize id, int x, int y, double w)
+putnode(Layer *l, usize id, int x, int y)
 {
 	Vnode n;
 
-	n = (Vnode){id, (Vertex){x, y}, w};
+	/* 0-size quad */
+	n = (Vnode){id, (Vquad){(Vertex){x, y}, ZV}};
 	kv_push(Vnode, l->nodes, n);
-}
-
-void
-putedge(Layer *l, usize id, int x1, int y1, int x2, int y2, double w)
-{
-	Vedge e;
-
-	e = (Vedge){id, (Vertex){x1, y1}, (Vertex){x2, y2}, w};
-	kv_push(Vedge, l->edges, e);
 }
 
 Layer

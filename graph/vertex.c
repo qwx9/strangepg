@@ -53,5 +53,13 @@ scalevx(Vertex a, float f)
 Vquad
 insetvx(Vertex v, int Δ)
 {
-	return (Vquad){(Vertex){v.x + Δ, v.y + Δ}, (Vertex){v.x - Δ, v.y - Δ}};
+	return (Vquad){(Vertex){v.x - Δ, v.y - Δ}, (Vertex){v.x + Δ, v.y + Δ}};
+}
+
+Vquad
+quadaddvx(Vquad q, Vertex v)
+{
+	q.u = addvx(q.u, v);
+	q.v = addvx(q.v, v);
+	return q;
 }

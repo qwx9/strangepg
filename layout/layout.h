@@ -1,19 +1,10 @@
 typedef struct Layout Layout;
 typedef struct Layer Layer;
 typedef struct Vnode Vnode;
-typedef struct Vedge Vedge;
-
-struct Vedge{
-	usize id;
-	Vertex u;
-	Vertex v;
-	float w;
-};
 
 struct Vnode{
 	usize id;
-	Vertex v;
-	float w;
+	Vquad q;
 };
 
 enum{
@@ -27,8 +18,6 @@ struct Layout{
 struct Layer{
 	Layout *ll;
 	kvec_t(Vnode) nodes;
-	kvec_t(Vedge) edges;
-	kvec_t(Shape) shapes;	// ???
 };
 
 void	initlayout(void);
