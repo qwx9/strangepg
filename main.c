@@ -1,17 +1,14 @@
 #include "strpg.h"
 
-// FIXME: single graph for now
-Graph *lolgraph;
-Layer lolayer;
-Render lolrender;
-
 void
 run(void)
 {
 	flushcmd();
-	lolayer = dolayout(lolgraph, LLconga);
-	lolrender = render(lolgraph, &lolayer);
-	redraw(lolgraph, &lolrender);
+	if(dolayout(graph, LLconga) < 0)
+		sysfatal("dolayout: %s\n", error());
+	if(render(graph) < 0)
+		sysfatal("render: %s\n", error());
+	redraw(graph);
 }
 
 int
@@ -30,6 +27,7 @@ void
 init(void)
 {
 	initfs();
+	flushcmd();	// FIXME: temp
 	initlayout();
 	initrend();
 	initvdraw();

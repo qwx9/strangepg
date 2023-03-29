@@ -20,22 +20,23 @@ putnode(Layer *l, usize id, int x, int y)
 	kv_push(Vnode, l->nodes, n);
 }
 
-Layer
+int
 dolayout(Graph *g, int type)
 {
 	Layout *l;
 
 	if(type < 0 || type >= LLnil){
 		werrstr("invalid layout");
-		return ZL;
+		return -1;
 	}
 	l = ll[type];
 	assert(l != nil);
 	if(l->compute == nil){
 		werrstr("unimplemented fs type");
-		return ZL;
+		return -1;
 	}
-	return l->compute(g);
+	g->l = l->compute(g);
+	return 0;
 }
 
 void

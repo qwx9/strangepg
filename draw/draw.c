@@ -31,26 +31,25 @@ drawnode(usize id, Vquad *r)
 }
 
 static int
-drawedges(Graph *, Render *)
+drawedges(Graph *)
 {
 	// FIXME
 	return 0;
 }
 
 static int
-//drawshapes(Graph *g, Render *rd)
-drawnodes(Graph *g, Render *rd)
+drawnodes(Graph *g)
 {
 	Vnode *v, *ve;
 	Vquad r;
 
 	USED(g);
-	for(v=&kv_A(rd->nodes, 0), ve=v+kv_size(rd->nodes); v<ve; v++){
+	for(v=&kv_A(g->r.nodes, 0), ve=v+kv_size(g->r.nodes); v<ve; v++){
 		r = scaletrans(v->q, view.zoom, (Vertex){50,50});
 		drawnode(v->id >> 1, &r);
 	}
 	/*
-	for(s=&kv_A(rd->shapes, 0), se=s+kv_size(rd->shapes); s<se; s++){
+	for(s=&kv_A(g->r.shapes, 0), se=s+kv_size(g->r.shapes); s<se; s++){
 		// FIXME
 		//r = scaletrans(s->r, view.zoom, view.pan);
 		r = scaletrans(s->r, view.zoom, ZV);
@@ -65,10 +64,10 @@ drawnodes(Graph *g, Render *rd)
 
 // FIXME: for all graphs, same for the others
 static void
-drawworld(Graph *g, Render *r)
+drawworld(Graph *g)
 {
-	drawnodes(g, r);
-	drawedges(g, r);
+	drawnodes(g);
+	drawedges(g);
 }
 
 static void
@@ -86,28 +85,28 @@ cleardraw(void)
 // there's no need to distinguish draw and ui layers, it will
 // all be redrawn anyway
 int
-updatedraw(Graph *g, Render *r)
+updatedraw(Graph *g)
 {
-	USED(g, r);
+	USED(g);
 	drawui();
 	flush();
 	return 0;
 }
 
 int
-redraw(Graph *g, Render *r)
+redraw(Graph *g)
 {
 	cleardraw();
-	//centerdraw(r->dim);	// FIXME: center view, ie. default pan + zoom
-	drawworld(g, r);
-	return updatedraw(g, r);
+	//centerdraw(g->r->dim);	// FIXME: center view, ie. default pan + zoom
+	drawworld(g);
+	return updatedraw(g);
 }
 
 int
-resetdraw(Graph *g, Render *r)
+resetdraw(Graph *g)
 {
 	resetdraw_();
-	return redraw(g, r);
+	return redraw(g);
 }
 
 int

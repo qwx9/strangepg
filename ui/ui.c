@@ -30,10 +30,10 @@ int
 keyevent(Rune r)
 {
 	switch(r){
-	case K↑: if(panview(Vx(0,+16)) >= 0) redraw(lolgraph, &lolrender); break;
-	case K↓: if(panview(Vx(0,-16)) >= 0) redraw(lolgraph, &lolrender); break;
-	case K→: if(panview(Vx(-16,0)) >= 0) redraw(lolgraph, &lolrender); break;
-	case K←: if(panview(Vx(+16,0)) >= 0) redraw(lolgraph, &lolrender); break;
+	case K↑: if(panview(Vx(0,+16)) >= 0) redraw(graph); break;
+	case K↓: if(panview(Vx(0,-16)) >= 0) redraw(graph); break;
+	case K→: if(panview(Vx(-16,0)) >= 0) redraw(graph); break;
+	case K←: if(panview(Vx(+16,0)) >= 0) redraw(graph); break;
 	default: break;	// FIXME: cmd(r)
 	}
 	return 0;
@@ -51,7 +51,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & Mrmb) == Mrmb){
 		if(panview(subvx(ZV, Δ)) >= 0){
 			dprint("pan: %d,%d\n", view.pan.x, view.pan.y);
-			redraw(lolgraph, &lolrender);
+			redraw(graph);
 		}
 	}else if((b & (Mlmb | Mrmb)) == Mlmb | Mrmb){
 		// FIXME: zoom
@@ -73,7 +73,7 @@ resetui(void)
 void
 initui(void)
 {
-	resetdraw(lolgraph, &lolrender);
+	resetdraw(graph);
 	initui_();
 	resetui();
 }

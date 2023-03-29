@@ -4,6 +4,15 @@
 mainstacksize = 16*1024;
 int debug;
 
+char *
+error(void)
+{
+	static char err[1024];
+
+	errstr(err, sizeof err);
+	return err;
+}
+
 void
 warn(char *fmt, ...)
 {

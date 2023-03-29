@@ -12,8 +12,8 @@ enum{
 	Ptsz = 25,
 };
 
-static void                                                            
-rendershapes(Graph *g, Layer *l, Render *r)
+static int                                                            
+rendershapes(Graph *g)
 {
 	Vnode *v, *ve;
 	Vnode p;
@@ -21,26 +21,27 @@ rendershapes(Graph *g, Layer *l, Render *r)
 
 	// FIXME: ridiculous
 	USED(g);
-	kv_init(r->nodes);
-	for(v=&kv_A(l->nodes, 0), ve=v+kv_size(l->nodes); v<ve; v++){
+	kv_init(g->r.nodes);
+	for(v=&kv_A(g->l.nodes, 0), ve=v+kv_size(g->l.nodes); v<ve; v++){
 		p.id = v->id & ~1 | SHrect;
 		p.q = insetvx(scalevx(v->q.u, Ptsz), Nodesz/2);
-		kv_push(Vnode, r->nodes, p);
-		if(r->dim.u.x > p.q.u.x)
-			r->dim.u.x = p.q.u.x;
-		else if(r->dim.v.x < p.q.v.x)
-			r->dim.v.x = p.q.v.x;
-		if(r->dim.u.y > p.q.u.y)
-			r->dim.u.y = p.q.u.y;
-		else if(r->dim.v.y > p.q.v.y)
-			r->dim.v.y = p.q.v.y;
+		kv_push(Vnode, g->r.nodes, p);
+		if(g->r.dim.u.x > p.q.u.x)
+			g->r.dim.u.x = p.q.u.x;
+		else if(g->r.dim.v.x < p.q.v.x)
+			g->r.dim.v.x = p.q.v.x;
+		if(g->r.dim.u.y > p.q.u.y)
+			g->r.dim.u.y = p.q.u.y;
+		else if(g->r.dim.v.y > p.q.v.y)
+			g->r.dim.v.y = p.q.v.y;
 	}
 	Δ = ZV;
-	if(r->dim.u.x < 0)
-		Δ.x = -r->dim.u.x;
-	if(r->dim.u.y < 0)
-		Δ.y = -r->dim.u.y;
-	r->dim = quadaddvx(r->dim, Δ);
+	if(g->r.dim.u.x < 0)
+		Δ.x = -g->r.dim.u.x;
+	if(g->r.dim.u.y < 0)
+		Δ.y = -g->r.dim.u.y;
+	g->r.dim = quadaddvx(g->r.dim, Δ);
+	return 0;
 }
 
 // TODO: produce a vector of SDL lines and rectangles to draw
@@ -54,13 +55,10 @@ rendershapes(Graph *g, Layer *l, Render *r)
 // with nicer semantics; also check out github issues/pulls
 // for useful code to take
 
-Render
-render(Graph *g, Layer *l)
+int
+render(Graph *g)
 {
-	Render r;
-
-	rendershapes(g, l, &r);
-	return r;
+	return rendershapes(g);
 }
 
 void

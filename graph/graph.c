@@ -1,5 +1,7 @@
 #include "strpg.h"
 
+Graph *graph;
+
 static Node *
 lab2n(Graph *g, usize labid)
 {

@@ -51,7 +51,8 @@ flushcmd(void)	/* execute queued commands */
 
 	if(done > 0)
 		return 0;
-	lolgraph = loadfs(FFgfa, path);
+	if((graph = loadfs(FFgfa, path)) == nil)
+		sysfatal("loadfs: %s", error());
 	done++;
 	return 0;
 }

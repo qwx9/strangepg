@@ -56,7 +56,7 @@ evloop(void)
 		case Aresize:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			resetdraw(lolgraph, &lolrender);
+			resetdraw(graph);
 			resetui();
 			/* wet floor */
 		case Amouse:
