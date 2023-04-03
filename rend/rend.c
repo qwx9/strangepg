@@ -23,7 +23,7 @@ rendershapes(Graph *g)
 	USED(g);
 	kv_init(g->r.nodes);
 	for(v=&kv_A(g->l.nodes, 0), ve=v+kv_size(g->l.nodes); v<ve; v++){
-		p.id = v->id & ~1 | SHrect;
+		p.u = v->u;
 		p.q = insetvx(scalevx(v->q.u, Ptsz), Nodesz/2);
 		kv_push(Vnode, g->r.nodes, p);
 		if(g->r.dim.u.x > p.q.u.x)

@@ -5,8 +5,8 @@ int initdraw_(void);
 
 Vquad	scaletrans(Vquad, double, Vertex);
 int	rotate(Vquad);
-int	drawline(usize, Vertex, Vertex, double);
+int	drawline(Vertex, Vertex, double);
 int	drawline_(Vertex, Vertex, double);
-int	drawquad(usize, Vertex, Vertex);
+int	drawquad(Vertex, Vertex);
 int	drawquad_(Vertex, Vertex);
 int	drawbezier(void);

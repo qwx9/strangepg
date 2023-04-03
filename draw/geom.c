@@ -16,13 +16,13 @@ rotate(Vquad)
 }
 
 int
-drawline(usize, Vertex u, Vertex v, double w)
+drawline(Vertex u, Vertex v, double w)
 {
 	return drawline_(u, v, w);
 }
 
 int
-drawquad(usize, Vertex u, Vertex v)
+drawquad(Vertex u, Vertex v)
 {
 	return drawquad_(u, v);
 }

@@ -11,12 +11,12 @@ static Layout *ll[LLnil];
 
 /* FIXME: LSB already set? */
 void
-putnode(Layer *l, usize id, int x, int y)
+putnode(Layer *l, Node *u, int x, int y)
 {
 	Vnode n;
 
 	/* 0-size quad */
-	n = (Vnode){id, (Vquad){(Vertex){x, y}, ZV}};
+	n = (Vnode){u, (Vquad){(Vertex){x, y}, ZV}};
 	kv_push(Vnode, l->nodes, n);
 }
 

@@ -8,8 +8,10 @@ OFILES=\
 	draw/geom.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
+	graph/fertex.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
+	layout/force.$O\
 	layout/layout.$O\
 	layout/conga.$O\
 	rend/rend.$O\
@@ -29,8 +31,6 @@ HFILES=\
 	draw/vdraw.h\
 	fs/fs.h\
 	fs/fsprv.h\
-	graph/graph.h\
-	layout/layout.h\
 	layout/layoutprv.h\
 	plan9/strpg.h\
 	rend/rend.h\

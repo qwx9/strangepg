@@ -10,8 +10,6 @@ void	quit(void);
 #include "dat.h"
 #include "fns.h"
 #include "cmd.h"
-#include "layout.h"
-#include "graph.h"
 #include "rend.h"
 #include "vdraw.h"
 #include "fs.h"

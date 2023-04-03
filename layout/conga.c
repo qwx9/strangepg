@@ -9,13 +9,12 @@ static Layer
 compute(Graph *g)
 {
 	int x;
-	usize i;
 	Layer l;
 	Node *v, *ve;
 
 	kv_init(l.nodes);
-	for(v=&kv_A(g->nodes, 0), ve=v+kv_size(g->nodes), i=0, x=0; v<ve; v++, i++, x+=2)
-		putnode(&l, i << 1, x, 0);
+	for(v=&kv_A(g->nodes, 0), ve=v+kv_size(g->nodes), x=0; v<ve; v++, x+=2)
+		putnode(&l, v, x, 0);
 	return l;
 }
 

@@ -3,6 +3,7 @@ typedef struct Shape Shape;
 typedef struct Vertex Vertex;
 typedef struct Vquad Vquad;
 typedef struct Vnode Vnode;
+typedef struct Fertex Fertex;
 typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
@@ -32,17 +33,9 @@ struct Vquad{
 };
 extern Vertex ZV;
 
-/* FIXME: vectors of node id's or edge id's? */
-struct Node{
-	usize id;
-	kvec_t(usize) in;
-	kvec_t(usize) out;
-};
-
-struct Edge{
-	usize u;
-	usize v;
-	double w;
+struct Fertex{
+	float x;
+	float y;
 };
 
 enum{
@@ -55,7 +48,7 @@ struct Shape{
 };
 
 struct Vnode{
-	usize id;
+	Node *u;
 	Vquad q;
 };
 
@@ -79,9 +72,33 @@ struct Render{
 
 extern Layer ZL;
 
+/* FIXME: what we need:
+ * - node vec
+ * - edge vec
+ * - lab2node
+ * - lab2edge
+ * in node: in/out, Edge* vec
+ * in layer: Vertex
+ * in render: Quad
+ */
+/* FIXME: vectors of node pointers */
+struct Node{
+	usize lab; 
+	kvec_t(Edge*) in;
+	kvec_t(Edge*) out;
+	Vquad q;
+};
+
+// FIXME: nodes and edges have a name
+struct Edge{
+	Node *u;
+	Node *v;
+	double w;
+};
+
 struct Graph{
-	khash_t(usize) *eid;
-	khash_t(usize) *nid;
+	//khash_t(Node*) *l2n;	← cpp error
+	khash_t(usize) *lab2node;
 	kvec_t(Edge) edges;
 	kvec_t(Node) nodes;
 	Layer l;
