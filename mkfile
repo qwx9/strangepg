@@ -20,6 +20,7 @@ OFILES=\
 	plan9/sys.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
+	util/vec.$O\
 
 HFILES=\
 	dat.h\
@@ -35,7 +36,6 @@ HFILES=\
 	plan9/strpg.h\
 	rend/rend.h\
 	ui/ui.h\
-	util/util.h\
 
 </sys/src/cmd/mkone
 

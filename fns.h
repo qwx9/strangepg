@@ -6,6 +6,12 @@ void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
 int	parseargs(int, char **);
 
+void	vecnuke(Vec*);
+void*	vecget(Vec*, usize);
+void*	vecpoptail(Vec*);
+Vec*	vecpush(Vec*, void*);
+Vec	vec(usize, usize);
+
 void	init(void);
 void	run(void);
 #define MAX(a,b)	((a) > (b) ? (a) : (b))

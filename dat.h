@@ -1,3 +1,4 @@
+typedef struct Vec Vec;
 typedef struct Graph Graph;
 typedef struct Shape Shape;
 typedef struct Vertex Vertex;
@@ -11,6 +12,14 @@ typedef struct Layer Layer;
 typedef struct Layout Layout;
 typedef struct Render Render;
 typedef struct View View;
+
+struct Vec{
+	void *buf;
+	void *latch;
+	int elsz;
+	usize len;
+	usize bufsz;
+};
 
 enum{
 	Onode,
@@ -75,8 +84,6 @@ extern Layer ZL;
 /* FIXME: what we need:
  * - node vec
  * - edge vec
- * - lab2node
- * - lab2edge
  * in node: in/out, Edge* vec
  * in layer: Vertex
  * in render: Quad
@@ -97,8 +104,6 @@ struct Edge{
 };
 
 struct Graph{
-	//khash_t(Node*) *l2n;	← cpp error
-	khash_t(usize) *lab2node;
 	kvec_t(Edge) edges;
 	kvec_t(Node) nodes;
 	Layer l;
