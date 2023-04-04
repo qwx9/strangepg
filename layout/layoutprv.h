@@ -1,2 +1,2 @@
 Layout*	regconga(void);
-void	putnode(Layer*, Node*, int, int);
+void	putnode(Node*, int, int);

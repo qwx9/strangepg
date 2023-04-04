@@ -5,12 +5,9 @@ typedef ulong size_t;
 
 void	quit(void);
 
-#include "khash.h"
-#include "kvec.h"
 #include "dat.h"
 #include "fns.h"
 #include "cmd.h"
-#include "rend.h"
 #include "vdraw.h"
 #include "fs.h"
 #include "ui.h"

@@ -9,7 +9,7 @@ int	parseargs(int, char **);
 void	vecnuke(Vec*);
 void*	vecget(Vec*, usize);
 void*	vecpoptail(Vec*);
-Vec*	vecpush(Vec*, void*);
+void*	vecpush(Vec*, void*);
 Vec	vec(usize, usize);
 
 void	init(void);
@@ -29,8 +29,8 @@ Vquad	insetvx(Vertex, int);
 Vertex	Vx(int, int);
 Vquad	quadaddvx(Vquad, Vertex);
 Graph*	initgraph(Graph*);
-void	addnode(Graph*, usize);
-void	addedge(Graph*, usize, usize, usize, double);
+void	addnode(Graph*, char*);
+void	addedge(Graph*, char*, usize, usize, double);
 
 void	initlayout(void);
 int	dolayout(Graph*, int);

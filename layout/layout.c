@@ -6,18 +6,15 @@
 /* representation: pretty much a binary map except we need node ids;
  * 	it's renderer's job to inflate nodes, draw's job to put edges */
 
-Layer ZL;
 static Layout *ll[LLnil];
 
 /* FIXME: LSB already set? */
 void
-putnode(Layer *l, Node *u, int x, int y)
+putnode(Node *u, int x, int y)
 {
-	Vnode n;
-
 	/* 0-size quad */
-	n = (Vnode){u, (Vquad){(Vertex){x, y}, ZV}};
-	kv_push(Vnode, l->nodes, n);
+	u->q.u = (Vertex){x, y};
+	u->q.v = u->q.u;
 }
 
 int
@@ -35,8 +32,8 @@ dolayout(Graph *g, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	g->l = l->compute(g);
-	return 0;
+	g->ll = l;
+	return l->compute(g);
 }
 
 void

@@ -34,25 +34,13 @@ drawnode(Vquad *r)
 static int
 drawedges(Graph *g)
 {
-	Vnode *v, *ve;
-	Node *u;
 	Edge *e, *ee;
 	Vquad r;
 
-	for(v=&kv_A(g->r.nodes, 0), ve=v+kv_size(g->r.nodes); v<ve; v++){
-		warn("node %zd -- ", v->u - &kv_A(g->nodes, 0));
-		u = v->u;
-		// FIXME: :for some reason, loop does not terminate even if list is empty (variable is *not* zero, but some small integer
-		warn("e %#p size %lud\n", kv_A(u->out, 0), kv_size(u->out));
-		for(e=kv_A(u->out, 0), ee=e+kv_size(u->out); e<ee; e++){
-			// FIXME: ugh
-			warn("e %#p q->u %#p ", e, e->u);
-			e->u->q.u;
-			warn("q->v %#p\n", e->v);
-			e->v->q.v;
-			r = scaletrans((Vquad){e->u->q.u, e->v->q.u}, view.zoom, (Vertex){50,50});
-			drawedge(e, &r);
-		}
+	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
+		r = vx2r(e->u->q.u, e->v->q.u);
+		r = scaletrans(r, view.zoom, (Vertex){50,50});
+		drawedge(e, &r);
 	}
 	return 0;
 }
@@ -60,25 +48,13 @@ drawedges(Graph *g)
 static int
 drawnodes(Graph *g)
 {
-	Vnode *v, *ve;
 	Vquad r;
+	Node *u, *ue;
 
-	USED(g);
-	for(v=&kv_A(g->r.nodes, 0), ve=v+kv_size(g->r.nodes); v<ve; v++){
-		r = scaletrans(v->q, view.zoom, (Vertex){50,50});
+	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
+		r = scaletrans(u->q, view.zoom, (Vertex){50,50});
 		drawnode(&r);
 	}
-	/*
-	for(s=&kv_A(g->r.shapes, 0), se=s+kv_size(g->r.shapes); s<se; s++){
-		// FIXME
-		//r = scaletrans(s->r, view.zoom, view.pan);
-		r = scaletrans(s->r, view.zoom, ZV);
-		if((s->id & SHrect) == SHrect)
-			drawnode(s->id >> 1,&r);
-		else
-			drawedge(s->id >> 1, &r);
-	}
-	*/
 	return 0;
 }
 

@@ -9,19 +9,18 @@ load(char *)
 	Graph *g;
 
 	g = initgraph(&shim);
-	addnode(g, 'a');
-	addnode(g, 'b');
-	addnode(g, 'c');
-	addnode(g, 'd');
-	addnode(g, 'e');
-	addedge(g, 'A', 0, 1, 1.);
-	addedge(g, 'B', 1, 2, 1.);
-	addedge(g, 'C', 2, 3, 1.);
-	addedge(g, 'D', 3, 4, 1.);
-	addedge(g, 'E', 4, 5, 1.);
-	addedge(g, 'F', 2, 2, 1.);
-	addedge(g, 'G', 2, 4, 1.);
-	addedge(g, 'H', 4, 4, 1.);
+	addnode(g, "a");
+	addnode(g, "b");
+	addnode(g, "c");
+	addnode(g, "d");
+	addnode(g, "e");
+	addedge(g, "A", 0, 1, 1.);
+	addedge(g, "B", 1, 2, 1.);
+	addedge(g, "C", 2, 3, 1.);
+	addedge(g, "D", 3, 4, 1.);
+	addedge(g, "E", 2, 2, 1.);
+	addedge(g, "F", 2, 4, 1.);
+	addedge(g, "G", 4, 4, 1.);
 	return g;
 }
 

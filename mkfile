@@ -34,7 +34,6 @@ HFILES=\
 	fs/fsprv.h\
 	layout/layoutprv.h\
 	plan9/strpg.h\
-	rend/rend.h\
 	ui/ui.h\
 
 </sys/src/cmd/mkone

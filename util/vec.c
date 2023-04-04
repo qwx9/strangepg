@@ -52,14 +52,17 @@ vecpoptail(Vec *v)
 	return v->latch;
 }
 
-Vec *
+void *
 vecpush(Vec *v, void *p)
 {
+	uchar *t;
+
 	assert((uintptr)p > v->elsz);
 	v = checksize(v);
-	memcpy((uchar *)v->buf + v->elsz * v->len, p, v->elsz);
+	t = (uchar *)v->buf + v->elsz * v->len;
+	memcpy(t, p, v->elsz);
 	v->len++;
-	return v;
+	return (void *)t;
 }
 
 Vec
@@ -69,9 +72,9 @@ vec(usize len, usize elsz)
 
 	assert(elsz > 0);
 	v.elsz = elsz;
-	v.len = len > 0 ? len : Shardsz;
-	v.bufsz = len;
-	v.buf = emalloc(elsz * len);
+	v.len = 0;
+	v.bufsz = len > 0 ? len : Shardsz;
+	v.buf = emalloc(elsz * v.bufsz);
 	v.latch = emalloc(elsz);
 	return v;
 }

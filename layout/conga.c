@@ -5,17 +5,15 @@
 /* nodes and edges are duplicated, but realize that everything else is
  * supposed to in fine unravel/unload while we go */
 
-static Layer
+static int
 compute(Graph *g)
 {
 	int x;
-	Layer l;
-	Node *v, *ve;
+	Node *u, *ue;
 
-	kv_init(l.nodes);
-	for(v=&kv_A(g->nodes, 0), ve=v+kv_size(g->nodes), x=0; v<ve; v++, x+=2)
-		putnode(&l, v, x, 0);
-	return l;
+	for(u=g->nodes.buf, ue=u+g->nodes.len, x=0; u<ue; u++, x+=2)
+		putnode(u, x, 0);
+	return 0;
 }
 
 static Layout ll = {

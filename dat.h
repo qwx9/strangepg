@@ -8,9 +8,7 @@ typedef struct Fertex Fertex;
 typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
-typedef struct Layer Layer;
 typedef struct Layout Layout;
-typedef struct Render Render;
 typedef struct View View;
 
 struct Vec{
@@ -67,19 +65,8 @@ enum{
 };
 struct Layout{
 	char *name;
-	Layer (*compute)(Graph*);
+	int (*compute)(Graph*);
 };
-struct Layer{
-	Layout *ll;
-	kvec_t(Vnode) nodes;
-};
-
-struct Render{
-	kvec_t(Vnode) nodes;
-	Vquad dim;
-};
-
-extern Layer ZL;
 
 /* FIXME: what we need:
  * - node vec
@@ -88,26 +75,25 @@ extern Layer ZL;
  * in layer: Vertex
  * in render: Quad
  */
-/* FIXME: vectors of node pointers */
 struct Node{
-	usize lab; 
-	kvec_t(Edge*) in;
-	kvec_t(Edge*) out;
+	char *label;
+	Vec in;
+	Vec out;
 	Vquad q;
 };
 
 // FIXME: nodes and edges have a name
 struct Edge{
+	char *label;
 	Node *u;
 	Node *v;
 	double w;
 };
-
 struct Graph{
-	kvec_t(Edge) edges;
-	kvec_t(Node) nodes;
-	Layer l;
-	Render r;
+	Vec edges;
+	Vec nodes;
+	Layout *ll;
+	Vquad dim;
 };
 extern Graph *graph;
 
