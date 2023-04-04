@@ -13,7 +13,6 @@ typedef struct View View;
 
 struct Vec{
 	void *buf;
-	void *latch;
 	int elsz;
 	usize len;
 	usize bufsz;
@@ -82,7 +81,6 @@ struct Node{
 	Vquad q;
 };
 
-// FIXME: nodes and edges have a name
 struct Edge{
 	char *label;
 	Node *u;

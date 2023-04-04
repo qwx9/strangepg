@@ -23,7 +23,6 @@ vecnuke(Vec *v)
 {
 	if(v == nil)
 		return;
-	free(v->latch);
 	free(v->buf);
 	free(v);
 }
@@ -35,8 +34,7 @@ vecget(Vec *v, usize i)
 
 	assert(i < v->len && v->len > 0);
 	n = (uchar*)v->buf + i * v->elsz;
-	memcpy(v->latch, n, v->elsz);
-	return v->latch;
+	return n;
 }
 
 void *
@@ -46,10 +44,8 @@ vecpoptail(Vec *v)
 
 	assert(v->len > 0);
 	n = (uchar*)v->buf + (v->len - 1) * v->elsz;
-	memcpy(v->latch, n, v->elsz);
-	memset(n, 0, v->elsz);
 	v->len--;
-	return v->latch;
+	return n;
 }
 
 void *
@@ -75,6 +71,5 @@ vec(usize len, usize elsz)
 	v.len = 0;
 	v.bufsz = len > 0 ? len : Shardsz;
 	v.buf = emalloc(elsz * v.bufsz);
-	v.latch = emalloc(elsz);
 	return v;
 }

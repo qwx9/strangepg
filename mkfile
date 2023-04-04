@@ -25,8 +25,6 @@ OFILES=\
 HFILES=\
 	dat.h\
 	fns.h\
-	khash.h\
-	kvec.h\
 	cmd/cmd.h\
 	draw/drawprv.h\
 	draw/vdraw.h\
@@ -35,6 +33,8 @@ HFILES=\
 	layout/layoutprv.h\
 	plan9/strpg.h\
 	ui/ui.h\
+	util/kvec.h\
+	util/khash.h\
 
 </sys/src/cmd/mkone
 
