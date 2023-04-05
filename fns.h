@@ -38,6 +38,10 @@ int	dolayout(Graph*, int);
 int	pushcmd(int, char*, ...);
 int	flushcmd(void);
 
+void	initfs(void);
+void	regfs(Filefmt*);
+Graph*	loadfs(int, char*);
+
 int	initvdraw(void);
 int	resetdraw(void);
 int	updatedraw(Graph*);
@@ -45,3 +49,11 @@ int	redraw(Graph*);
 
 void	initrend(void);
 int	render(Graph*);
+
+int	panview(Vertex);
+void	initui(void);
+int	evloop(void);
+void	errmsg(char*, ...);
+void	resetui(void);
+int	mouseevent(Vertex, Vertex, int);
+int	keyevent(Rune);

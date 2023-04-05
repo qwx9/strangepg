@@ -106,11 +106,6 @@ struct Dat{
 	usize sz;
 };
 
-void	initfs(void);
-void	regfs(Filefmt*);
-Graph*	loadfs(int, char*);
-
-
 enum{
 	Vdefw = 800,
 	Vdefh = 600,
@@ -136,13 +131,3 @@ enum{
 	K↑,
 	K↓,
 };
-
-int	panview(Vertex);
-
-void	initui(void);
-int	evloop(void);
-void	errmsg(char*, ...);
-void	resetui(void);
-
-int	mouseevent(Vertex, Vertex, int);
-int	keyevent(Rune);
