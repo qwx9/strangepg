@@ -15,22 +15,9 @@ rotate(Quad)
 	return 0;
 }
 
-/* top-left to center (kludge) */
-static Quad
-centernode(Quad r)
-{
-	int d;
-
-	d = MIN(-(r.v.x - r.u.x), -(r.v.y - r.u.y));
-	//r = quadaddvx(r, Vx(d, d));
-	warn("%d,%d %d,%d\n", r.u.x, r.u.y, r.v.x, r.v.y);
-	return r;
-}
-
 int
 drawline(Quad r, double w)
 {
-	r = centernode(r);
 	return drawline_(r, w);
 }
 

@@ -17,16 +17,30 @@ flush(void)
 	flushdraw_();
 }
 
-static int
-drawedge(Edge *e, Quad r)
+/* top-left to center (kludge) */
+static Quad
+centernode(Quad r)
 {
-	return drawline(r, e->w);
+	int dx, dy;
+
+	dx = dxvx(r) / 2;
+	dy = dyvx(r) / 2;
+	dprint("centernode %s → ", quadfmt(&r));
+	r = quadaddvx(r, Vx(dx, dy));
+	dprint("%s\n", quadfmt(&r));
+	return r;
+}
+
+static int
+drawedge(Quad r, double w)
+{
+	return drawline(r, w);
 }
 
 static int
 drawnode(Quad r)
 {
-	dprint("drawnode %d,%d,%d,%d\n", r.u.x, r.u.y, r.v.x, r.v.y);
+	dprint("drawnode %s\n", quadfmt(&r));
 	return drawquad(r);
 }
 
@@ -34,12 +48,25 @@ static int
 drawedges(Graph *g)
 {
 	Edge *e, *ee;
-	Quad r;
+	Quad r, u, v;
+	Vertex Δu, Δv;
 
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
-		r = vx2r(e->u->q.u, e->v->q.u);
+		r = vx2r(e->u->q.v, e->v->q.u);
+		USED(u, v, Δu, Δv);
+		/*
+		u = e->u->q;
+		v = e->v->q;
+		Δu = Vx(dxvx(u), dyvx(u));
+		Δv = Vx(dxvx(v), dyvx(v));
+		u = quadaddvx(u, scalevx(Δu, 0.5));
+		v = quadaddvx(v, scalevx(Δv, 0.5));
+		//v = quadaddvx(v, Δv);
+		r = vx2r(u.u, v.u);
+		*/
+
 		r = scaletrans(r, view.zoom, view.vpan);
-		drawedge(e, r);
+		drawedge(r, e->w);
 	}
 	return 0;
 }
@@ -50,7 +77,7 @@ drawnodes(Graph *g)
 	Quad r;
 	Node *u, *ue;
 
-	warn("dim %s\n", vertfmt_(&g->dim));
+	warn("dim %s\n", vertfmt(&g->dim));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		r = scaletrans(u->q, view.zoom, view.vpan);
 		drawnode(r);

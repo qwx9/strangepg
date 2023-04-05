@@ -57,3 +57,5 @@ void	errmsg(char*, ...);
 void	resetui(void);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
+char*	quadfmt(Quad*);
+char*	vertfmt(Vertex*);

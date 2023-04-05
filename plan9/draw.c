@@ -39,7 +39,7 @@ s2p(Vertex p)
 
 // FIXME: custom fmt for linux??
 char *
-quadfmt_(Quad *r)
+quadfmt(Quad *r)
 {
 	static char buf[128];
 
@@ -47,7 +47,7 @@ quadfmt_(Quad *r)
 	return buf;
 }
 char *
-vertfmt_(Vertex *v)
+vertfmt(Vertex *v)
 {
 	static char buf[128];
 
@@ -58,7 +58,15 @@ vertfmt_(Vertex *v)
 int
 drawquad_(Quad r)
 {
-	draw(viewfb, r, col[Ctext], nil, ZP);
+	//draw(viewfb, r, col[Ctext], nil, ZP);
+	Point p[] = {
+		(Point){r.u.x, r.u.y},
+		(Point){r.v.x, r.u.y},
+		(Point){r.v.x, r.v.y},
+		(Point){r.u.x, r.v.y},
+		(Point){r.u.x, r.u.y}
+	};
+	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Ctext], ZP);
 	return 0;
 }
 

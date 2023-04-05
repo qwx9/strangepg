@@ -10,5 +10,3 @@ int	drawline_(Quad, double);
 int	drawquad(Quad);
 int	drawquad_(Quad);
 int	drawbezier(void);
-char*	quadfmt_(Quad*);
-char*	vertfmt_(Vertex*);
