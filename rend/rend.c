@@ -14,27 +14,20 @@ enum{
 static int                                                            
 rendershapes(Graph *g)
 {
+	int d;
 	Node *u, *ue;
-	Vertex Δ, *n;
+	Vertex *n;
 
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		n = &u->q.u;
 		u->q = insetvx(scalevx(*n, Ptsz), Nodesz/2);
-		if(g->dim.u.x > n->x)
-			g->dim.u.x = n->x;
-		else if(g->dim.u.x < n->x)
-			g->dim.u.x = n->x;
-		if(g->dim.u.y > n->y)
-			g->dim.u.y = n->y;
-		else if(g->dim.u.y > n->y)
-			g->dim.u.y = n->y;
+		d = u->q.v.x + dxvx(u->q);
+		if(g->dim.x < d)
+			g->dim.x = d;
+		d = u->q.v.y +  dyvx(u->q);
+		if(g->dim.y < d)
+			g->dim.y = d;
 	}
-	Δ = ZV;
-	if(g->dim.u.x < 0)
-		Δ.x = -g->dim.u.x;
-	if(g->dim.u.y < 0)
-		Δ.y = -g->dim.u.y;
-	g->dim = quadaddvx(g->dim, Δ);
 	return 0;
 }
 

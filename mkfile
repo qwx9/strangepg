@@ -25,14 +25,10 @@ OFILES=\
 HFILES=\
 	dat.h\
 	fns.h\
-	cmd/cmd.h\
 	draw/drawprv.h\
-	draw/vdraw.h\
-	fs/fs.h\
 	fs/fsprv.h\
 	layout/layoutprv.h\
 	plan9/strpg.h\
-	ui/ui.h\
 	util/kvec.h\
 	util/khash.h\
 

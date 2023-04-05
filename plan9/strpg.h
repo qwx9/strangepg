@@ -7,10 +7,6 @@ void	quit(void);
 
 #include "dat.h"
 #include "fns.h"
-#include "cmd.h"
-#include "vdraw.h"
-#include "fs.h"
-#include "ui.h"
 
 /* FIXME
 extern char *argv0;

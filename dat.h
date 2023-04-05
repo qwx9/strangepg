@@ -2,9 +2,8 @@ typedef struct Vec Vec;
 typedef struct Graph Graph;
 typedef struct Shape Shape;
 typedef struct Vertex Vertex;
-typedef struct Vquad Vquad;
-typedef struct Vnode Vnode;
 typedef struct Fertex Fertex;
+typedef struct Quad Quad;
 typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
@@ -27,13 +26,11 @@ struct Obj{
 	void *p;
 };
 
-KHASH_MAP_INIT_INT64(usize, usize);
-
 struct Vertex{
 	int x;
 	int y;
 };
-struct Vquad{
+struct Quad{
 	Vertex u;
 	Vertex v;
 };
@@ -50,12 +47,7 @@ enum{
 };
 struct Shape{
 	usize id;	// LSB: type
-	Vquad r;
-};
-
-struct Vnode{
-	Node *u;
-	Vquad q;
+	Quad r;
 };
 
 enum{
@@ -67,20 +59,12 @@ struct Layout{
 	int (*compute)(Graph*);
 };
 
-/* FIXME: what we need:
- * - node vec
- * - edge vec
- * in node: in/out, Edge* vec
- * in layer: Vertex
- * in render: Quad
- */
 struct Node{
 	char *label;
 	Vec in;
 	Vec out;
-	Vquad q;
+	Quad q;
 };
-
 struct Edge{
 	char *label;
 	Node *u;
@@ -91,7 +75,7 @@ struct Graph{
 	Vec edges;
 	Vec nodes;
 	Layout *ll;
-	Vquad dim;
+	Vertex dim;
 };
 extern Graph *graph;
 
@@ -99,6 +83,33 @@ enum{
 	COMload,
 	COMnil,
 };
+
+typedef struct Filefmt Filefmt;
+typedef struct Dat Dat;
+
+enum{
+	FFgfa,
+	FFgfa2,
+	FFnil,
+};
+struct Filefmt{
+	char *name;
+	Graph* (*load)(char *);
+	int (*save)(Graph*);
+};
+extern Filefmt fftab[FFnil];
+
+struct Dat{
+	int type;
+	Filefmt *ff;
+	void *p;
+	usize sz;
+};
+
+void	initfs(void);
+void	regfs(Filefmt*);
+Graph*	loadfs(int, char*);
+
 
 enum{
 	Vdefw = 800,
@@ -108,6 +119,30 @@ struct View{
 	int w;
 	int h;
 	Vertex pan;
+	Vertex vpan;
 	double zoom;
 };
 extern View view;
+
+enum{
+	Mlmb = 1<<0,
+	Mmmb = 1<<1,
+	Mrmb = 1<<2,
+	Mscrlup = 1<<3,	// FIXME: shouldn't be
+	Mscrldn = 1<<4,
+
+	K← = 0,
+	K→,
+	K↑,
+	K↓,
+};
+
+int	panview(Vertex);
+
+void	initui(void);
+int	evloop(void);
+void	errmsg(char*, ...);
+void	resetui(void);
+
+int	mouseevent(Vertex, Vertex, int);
+int	keyevent(Rune);

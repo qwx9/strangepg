@@ -56,8 +56,9 @@ evloop(void)
 		case Aresize:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			resetdraw(graph);
+			resetdraw();
 			resetui();
+			redraw(graph);
 			/* wet floor */
 		case Amouse:
 			// FIXME: scroll

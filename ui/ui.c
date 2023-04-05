@@ -73,7 +73,7 @@ resetui(void)
 void
 initui(void)
 {
-	resetdraw(graph);
+	//resetdraw(graph);
 	initui_();
 	resetui();
 }

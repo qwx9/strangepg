@@ -1,14 +1,18 @@
 #include "strpg.h"
 
+// FIXME: no command queue handling
 void
 run(void)
 {
+	init();
 	flushcmd();
+	resetdraw();
 	if(dolayout(graph, LLconga) < 0)
 		sysfatal("dolayout: %s\n", error());
 	if(render(graph) < 0)
 		sysfatal("render: %s\n", error());
 	redraw(graph);
+	evloop();
 }
 
 int
@@ -27,10 +31,8 @@ void
 init(void)
 {
 	initfs();
-	flushcmd();	// FIXME: temp
 	initlayout();
 	initrend();
 	initvdraw();
 	initui();
-	run();
 }

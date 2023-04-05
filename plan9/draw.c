@@ -3,7 +3,7 @@
 #include <draw.h>
 
 typedef Vertex Point;
-typedef Vquad Rectangle;
+typedef Quad Rectangle;
 
 enum{
 	Cbg,
@@ -37,17 +37,35 @@ s2p(Vertex p)
 	return p;
 }
 
-int
-drawquad_(Vertex u, Vertex v)
+// FIXME: custom fmt for linux??
+char *
+quadfmt_(Quad *r)
 {
-	draw(viewfb, Rpt(u, v), col[Ctext], nil, ZP);
+	static char buf[128];
+
+	snprint(buf, sizeof buf, "%R", *r);
+	return buf;
+}
+char *
+vertfmt_(Vertex *v)
+{
+	static char buf[128];
+
+	snprint(buf, sizeof buf, "%P", *v);
+	return buf;
+}
+
+int
+drawquad_(Quad r)
+{
+	draw(viewfb, r, col[Ctext], nil, ZP);
 	return 0;
 }
 
 int
-drawline_(Vertex u, Vertex v, double w)
+drawline_(Quad r, double w)
 {
-	line(viewfb, u, v, Endsquare, Endarrow, w, col[Ctext], ZP);
+	line(viewfb, r.u, r.v, Endsquare, Endarrow, w, col[Ctext], ZP);
 	return 0;
 }
 
@@ -68,7 +86,7 @@ cleardraw_(void)
 	//unlockdisplay(display);
 }
 
-void
+int
 resetdraw_(void)
 {
 	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
@@ -80,7 +98,6 @@ resetdraw_(void)
 	if(-viewΔ.y < font->height * 2)
 		viewΔ.y = 0;
 
-
 	hudr.u = addpt(screen->r.min, subpt(Pt(2, viewr.v.y+2), viewΔ));
 	hudr.v = addpt(hudr.u, Pt(screen->r.max.x, font->height*3));
 	/* all the way up to here */
@@ -88,6 +105,7 @@ resetdraw_(void)
 	viewfb = eallocimage(viewr, 0, DBlack);
 	freeimage(board);
 	board = eallocimage(viewr, 0, DBlack);
+	return 0;
 }
 
 // FIXME: colors/styles do not belong here

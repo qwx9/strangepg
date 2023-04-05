@@ -51,7 +51,7 @@ setcol(usize id)
 }
 
 static int
-drawline(usize id, Vquad *r)
+drawline(usize id, Quad *r)
 {
 	SDL_Rect rr;
 
@@ -64,7 +64,7 @@ drawline(usize id, Vquad *r)
 }
 
 static int
-drawrect(usize id, Vquad *r)
+drawrect(usize id, Quad *r)
 {
 	SDL_Rect rr;
 
@@ -85,7 +85,7 @@ static void
 drawshapes(Graph *g, Render *rd)
 {
 	Shape *s, *se;
-	Vquad r;
+	Quad r;
 	SDL_Rect rr;
 
 	for(s=&kv_A(rd->shapes, 0), se=s+kv_size(rd->shapes); s<se; s++){

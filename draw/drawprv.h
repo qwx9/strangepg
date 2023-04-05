@@ -1,12 +1,14 @@
 void	flushdraw_(void);
 void	cleardraw_(void);
-void	resetdraw_(void);
+int	resetdraw_(void);
 int initdraw_(void);
 
-Vquad	scaletrans(Vquad, double, Vertex);
-int	rotate(Vquad);
-int	drawline(Vertex, Vertex, double);
-int	drawline_(Vertex, Vertex, double);
-int	drawquad(Vertex, Vertex);
-int	drawquad_(Vertex, Vertex);
+Quad	scaletrans(Quad, double, Vertex);
+int	rotate(Quad);
+int	drawline(Quad, double);
+int	drawline_(Quad, double);
+int	drawquad(Quad);
+int	drawquad_(Quad);
 int	drawbezier(void);
+char*	quadfmt_(Quad*);
+char*	vertfmt_(Vertex*);

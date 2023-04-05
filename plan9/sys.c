@@ -96,7 +96,6 @@ threadmain(int argc, char **argv)
 	}ARGEND
 	if(parseargs(argc, argv) < 0)
 		usage();
-	init();
-	evloop();
+	run();
 	exits(nil);
 }

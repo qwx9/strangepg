@@ -1,8 +1,8 @@
 #include "strpg.h"
 #include "drawprv.h"
 
-Vquad
-scaletrans(Vquad r, double zoom, Vertex pan)
+Quad
+scaletrans(Quad r, double zoom, Vertex pan)
 {
 	r.u = addvx(scalevx(r.u, zoom), pan);
 	r.v = addvx(scalevx(r.v, zoom), pan);
@@ -10,21 +10,34 @@ scaletrans(Vquad r, double zoom, Vertex pan)
 }
 
 int
-rotate(Vquad)
+rotate(Quad)
 {
 	return 0;
 }
 
-int
-drawline(Vertex u, Vertex v, double w)
+/* top-left to center (kludge) */
+static Quad
+centernode(Quad r)
 {
-	return drawline_(u, v, w);
+	int d;
+
+	d = MIN(-(r.v.x - r.u.x), -(r.v.y - r.u.y));
+	//r = quadaddvx(r, Vx(d, d));
+	warn("%d,%d %d,%d\n", r.u.x, r.u.y, r.v.x, r.v.y);
+	return r;
 }
 
 int
-drawquad(Vertex u, Vertex v)
+drawline(Quad r, double w)
 {
-	return drawquad_(u, v);
+	r = centernode(r);
+	return drawline_(r, w);
+}
+
+int
+drawquad(Quad r)
+{
+	return drawquad_(r);
 }
 
 int

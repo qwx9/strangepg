@@ -19,15 +19,15 @@ void	run(void);
 
 int	errstr(char*, uint);
 int	eqvx(Vertex, Vertex);
-int	dxvx(Vquad);
-int	dyvx(Vquad);
-Vquad	vx2r(Vertex, Vertex);
+int	dxvx(Quad);
+int	dyvx(Quad);
+Quad	vx2r(Vertex, Vertex);
 Vertex	addvx(Vertex, Vertex);
 Vertex	subvx(Vertex, Vertex);
 Vertex	scalevx(Vertex, float);
-Vquad	insetvx(Vertex, int);
+Quad	insetvx(Vertex, int);
 Vertex	Vx(int, int);
-Vquad	quadaddvx(Vquad, Vertex);
+Quad	quadaddvx(Quad, Vertex);
 Graph*	initgraph(Graph*);
 void	addnode(Graph*, char*);
 void	addedge(Graph*, char*, usize, usize, double);
@@ -39,7 +39,7 @@ int	pushcmd(int, char*, ...);
 int	flushcmd(void);
 
 int	initvdraw(void);
-int	resetdraw(Graph*);
+int	resetdraw(void);
 int	updatedraw(Graph*);
 int	redraw(Graph*);
 

@@ -22,7 +22,7 @@ addedge(Graph *g, char *label, usize u, usize v, double w)
 	e.label = estrdup(label);
 	e.w = w;
 	if(w == 0.0)
-		warn("edge %s has 0 weight", label);
+		warn("edge %s has 0 weight\n", label);
 	dprint("addedge %s %zd,%zd ", label, u, v);
 	e.u = vecget(&g->nodes, u);
 	e.v = vecget(&g->nodes, v);

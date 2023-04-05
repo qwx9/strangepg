@@ -15,21 +15,21 @@ eqvx(Vertex a, Vertex b)
 }
 
 int
-dxvx(Vquad r)
+dxvx(Quad r)
 {
 	return r.v.x - r.u.x;
 }
 
 int
-dyvx(Vquad r)
+dyvx(Quad r)
 {
 	return r.v.y - r.u.y;
 }
 
-Vquad
+Quad
 vx2r(Vertex a, Vertex b)
 {
-	return (Vquad){a, b};
+	return (Quad){a, b};
 }
 
 Vertex
@@ -50,14 +50,14 @@ scalevx(Vertex a, float f)
 	return (Vertex){a.x * f, a.y * f};
 }
 
-Vquad
+Quad
 insetvx(Vertex v, int Δ)
 {
-	return (Vquad){(Vertex){v.x - Δ, v.y - Δ}, (Vertex){v.x + Δ, v.y + Δ}};
+	return (Quad){(Vertex){v.x - Δ, v.y - Δ}, (Vertex){v.x + Δ, v.y + Δ}};
 }
 
-Vquad
-quadaddvx(Vquad q, Vertex v)
+Quad
+quadaddvx(Quad q, Vertex v)
 {
 	q.u = addvx(q.u, v);
 	q.v = addvx(q.v, v);
