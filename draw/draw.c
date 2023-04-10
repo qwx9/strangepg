@@ -1,14 +1,6 @@
 #include "strpg.h"
 #include "drawprv.h"
 
-/* interface:
- * take a quad layout
- * rotate rectangles (from quad)
- * draw rectangles based on their unit vector
- * draw edges: straight lines or bezier curves
- * color nodes
- */
-
 View view;
 
 static void
@@ -48,21 +40,24 @@ static int
 drawedges(Graph *g)
 {
 	Edge *e, *ee;
-	Quad r, u, v;
-	Vertex Δu, Δv;
+	Node *u, *v;
+	Quad r;
 
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
-		r = vx2r(e->u->q.v, e->v->q.u);
-		USED(u, v, Δu, Δv);
+		if((u = id2n(g, e->u >> 1)) == nil
+		|| (v = id2n(g, e->v >> 1)) == nil)
+			return -1;
+		r = vx2r(u->q.v, v->q.u);
+
 		/*
-		u = e->u->q;
-		v = e->v->q;
-		Δu = Vx(dxvx(u), dyvx(u));
-		Δv = Vx(dxvx(v), dyvx(v));
-		u = quadaddvx(u, scalevx(Δu, 0.5));
-		v = quadaddvx(v, scalevx(Δv, 0.5));
-		//v = quadaddvx(v, Δv);
-		r = vx2r(u.u, v.u);
+		p = e->p->q;
+		q = e->q->q;
+		Δu = Vx(dxvx(p), dyvx(p));
+		Δv = Vx(dxvx(q), dyvx(q));
+		p = quadaddvx(p, scalevx(Δu, 0.5));
+		q = quadaddvx(q, scalevx(Δv, 0.5));
+		//q = quadaddvx(q, Δv);
+		r = vx2r(p.p, q.p);
 		*/
 
 		r = scaletrans(r, view.zoom, view.vpan);
@@ -85,13 +80,16 @@ drawnodes(Graph *g)
 	return 0;
 }
 
-// FIXME: for all graphs, same for the others
 static void
-drawworld(Graph *g)
+drawworld(void)
 {
-	warn("drawworld %#p\n", g);
-	drawnodes(g);
-	drawedges(g);
+	Graph *g;
+
+	for(g=graphs; g<graphs+ngraphs; g++){
+		warn("drawworld %#p\n", g);
+		drawnodes(g);
+		drawedges(g);
+	}
 }
 
 static void
@@ -109,31 +107,33 @@ cleardraw(void)
 // there's no need to distinguish draw and ui layers, it will
 // all be redrawn anyway
 int
-updatedraw(Graph *g)
+updatedraw(void)
 {
-	USED(g);
 	drawui();
 	flush();
 	return 0;
 }
 
 void
-centerdraw(Vertex v)
+centerdraw(void)
 {
-	Vertex p;
+	Vertex p, v;
 
+	// FIXME: compute a global dim or something from all graphs' dim
+	v = graphs[0].dim;
 	p.x = view.pan.x + (view.w - v.x) / 2;
 	p.y = view.pan.y + (view.h - v.y) / 2;
 	view.vpan = p;
 }
 
+// FIXME: one world, many graphs
 int
-redraw(Graph *g)
+redraw(void)
 {
 	cleardraw();
-	centerdraw(g->dim);
-	drawworld(g);
-	return updatedraw(g);
+	centerdraw();
+	drawworld();
+	return updatedraw();
 }
 
 int

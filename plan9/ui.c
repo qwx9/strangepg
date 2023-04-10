@@ -58,7 +58,7 @@ evloop(void)
 				sysfatal("resize failed: %r");
 			resetdraw();
 			resetui();
-			redraw(graph);
+			redraw();
 			/* wet floor */
 		case Amouse:
 			// FIXME: scroll

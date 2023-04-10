@@ -9,6 +9,15 @@ typedef struct Node Node;
 typedef struct Edge Edge;
 typedef struct Layout Layout;
 typedef struct View View;
+typedef struct File File;
+
+// FIXME: possibly avoidable; see after command impl
+#pragma incomplete File
+
+enum{
+	Vforward = 0,
+	Vreverse = 1,
+};
 
 struct Vec{
 	void *buf;
@@ -17,14 +26,9 @@ struct Vec{
 	usize bufsz;
 };
 
-enum{
-	Onode,
-	Oedge,
-};
-struct Obj{
-	uchar type;
-	void *p;
-};
+#include "khash.h"
+KHASH_MAP_INIT_INT64(id, usize)
+#define Htab khash_t(id)
 
 struct Vertex{
 	int x;
@@ -36,18 +40,10 @@ struct Quad{
 };
 extern Vertex ZV;
 
+// FIXME: hengliesque generic 2d/3d version? point + rect
 struct Fertex{
 	float x;
 	float y;
-};
-
-enum{
-	SHline = 0<<0,
-	SHrect = 1<<0,
-};
-struct Shape{
-	usize id;	// LSB: type
-	Quad r;
 };
 
 enum{
@@ -60,50 +56,37 @@ struct Layout{
 };
 
 struct Node{
-	char *label;
+	usize id;
+	char *seq;
 	Vec in;
 	Vec out;
 	Quad q;
 };
 struct Edge{
-	char *label;
-	Node *u;
-	Node *v;
+	usize u;
+	usize v;
+	char *overlap;
 	double w;
 };
 struct Graph{
 	Vec edges;
 	Vec nodes;
+	Htab *id2n;
 	Layout *ll;
 	Vertex dim;
 };
-extern Graph *graph;
+extern Graph *graphs;
+extern int ngraphs;
 
 enum{
 	COMload,
 	COMnil,
 };
 
-typedef struct Filefmt Filefmt;
-typedef struct Dat Dat;
-
 enum{
 	FFgfa,
 	FFgfa2,
 	FFnil,
-};
-struct Filefmt{
-	char *name;
-	Graph* (*load)(char *);
-	int (*save)(Graph*);
-};
-extern Filefmt fftab[FFnil];
-
-struct Dat{
-	int type;
-	Filefmt *ff;
-	void *p;
-	usize sz;
 };
 
 enum{

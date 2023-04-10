@@ -24,7 +24,6 @@ vecnuke(Vec *v)
 	if(v == nil)
 		return;
 	free(v->buf);
-	free(v);
 }
 
 void *
@@ -49,15 +48,25 @@ vecpoptail(Vec *v)
 }
 
 void *
-vecpush(Vec *v, void *p)
+vecp(Vec *v, usize i)
 {
+	return (uchar *)v->buf + v->elsz * i;
+}
+
+void *
+vecpush(Vec *v, void *p, usize *ip)
+{
+	usize i;
 	uchar *t;
 
 	assert((uintptr)p > v->elsz);
 	v = checksize(v);
-	t = (uchar *)v->buf + v->elsz * v->len;
+	i = v->elsz * v->len;
+	t = (uchar *)v->buf + i;
 	memcpy(t, p, v->elsz);
 	v->len++;
+	if(ip != nil)
+		*ip = i;
 	return (void *)t;
 }
 

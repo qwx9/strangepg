@@ -42,6 +42,7 @@ unpack(char *fmt, ...)
 }
 */
 
+// FIXME: kludge
 int
 flushcmd(void)	/* execute queued commands */
 {
@@ -51,7 +52,7 @@ flushcmd(void)	/* execute queued commands */
 
 	if(done > 0)
 		return 0;
-	if((graph = loadfs(FFgfa, path)) == nil)
+	if(loadfs(FFgfa, path) == nil)
 		sysfatal("loadfs: %s", error());
 	done++;
 	return 0;

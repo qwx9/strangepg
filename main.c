@@ -5,13 +5,21 @@ void
 run(void)
 {
 	init();
-	flushcmd();
 	resetdraw();
-	if(dolayout(graph, LLconga) < 0)
+
+
+	// FIXME ------> cut from
+	flushcmd();
+	ngraphs++;
+	if(dolayout(&graphs[0], LLconga) < 0)
 		sysfatal("dolayout: %s\n", error());
-	if(render(graph) < 0)
+	if(render(&graphs[0]) < 0)
 		sysfatal("render: %s\n", error());
-	redraw(graph);
+	redraw();
+	// FIXME <------ to
+
+
+	redraw();
 	evloop();
 }
 

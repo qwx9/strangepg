@@ -3,7 +3,7 @@
 
 static Filefmt *ff[FFnil];
 
-Graph *
+Graph*
 loadfs(int type, char *path)
 {
 	Filefmt *f;

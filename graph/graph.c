@@ -1,48 +1,76 @@
 #include "strpg.h"
 
-Graph *graph;
+Graph *graphs;
+int ngraphs;
 
-void
-addnode(Graph *g, char *label)
+Node *
+id2n(Graph *g, usize i)
 {
+	if(idget(g->id2n, i, &i) < 0)
+		return nil;
+	return vecp(&g->nodes, i);
+}
+
+int
+addnode(Graph *g, usize id, char *seq)
+{
+	usize i;
 	Node n;
 
-	dprint("addnode %s %#p (vec sz %zd elsz %d)\n", label, (uchar *)g->nodes.buf + g->nodes.len-1, g->nodes.len, g->nodes.elsz);
-	n.label = estrdup(label);
+	dprint("addnode %zd %#p (vec sz %zd elsz %d)\n", id, (uchar *)g->nodes.buf + g->nodes.len-1, g->nodes.len, g->nodes.elsz);
+	memset(&n, 0, sizeof n);
+	n.id = id;
+	n.seq = estrdup(seq);
 	n.in = vec(0, sizeof(Edge*));
 	n.out = vec(0, sizeof(Edge*));
-	vecpush(&g->nodes, &n);
+	vecpush(&g->nodes, &n, &i);
+	return idput(g->id2n, id, i);
+}
+
+/* id's in edges are always packed with direction bit */
+int
+addedge(Graph *g, usize u, usize v, char *overlap, double w)
+{
+	Edge e, *ep;
+	Node *up, *vp;
+
+	/* FIXME: this api is RETARDED */
+	e.overlap = estrdup(overlap);
+	e.w = w;
+	e.u = u;
+	e.v = v;
+	ep = vecpush(&g->edges, &e, nil);
+	// FIXME: better print
+//	dprint("addedge %s%zd → %s%zd: %s",
+//		NDIRS(u), NID(u), NDIRS(v), NID(v), overlap);
+	if((up = id2n(g, u)) == nil
+	|| (vp = id2n(g, v)) == nil)
+		return -1;
+	vecpush(&up->out, &ep, nil);
+	vecpush(&vp->in, &ep, nil);
+	return 0;
 }
 
 void
-addedge(Graph *g, char *label, usize u, usize v, double w)
+nukegraph(Graph *g)
 {
-	Edge e, *ep;
-
-	e.label = estrdup(label);
-	e.w = w;
-	if(w == 0.0)
-		warn("edge %s has 0 weight\n", label);
-	dprint("addedge %s %zd,%zd ", label, u, v);
-	e.u = vecget(&g->nodes, u);
-	e.v = vecget(&g->nodes, v);
-	ep = vecpush(&g->edges, &e);
-	dprint("%#p %#p,%#p\n", ep, e.u, e.v);
-	vecpush(&e.u->out, &ep);
-	vecpush(&e.v->in, &ep);
+	vecnuke(&g->edges);
+	vecnuke(&g->nodes);
+	idnuke(g->id2n);
+	memset(g, 0, sizeof *g);
 }
 
-Graph *
-initgraph(Graph *h)
+Graph*
+initgraph(void)
 {
 	Graph *g;
 
-	// FIXME: don't alloc on heap either
-	if(h != nil)
-		g = h;
-	else
-		g = emalloc(sizeof *g);
+	ngraphs++;
+	graphs = erealloc(graphs,
+		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
+	g = graphs + ngraphs++;
 	g->nodes = vec(0, sizeof(Node));
 	g->edges = vec(0, sizeof(Edge));
+	g->id2n = idmap();
 	return g;
 }

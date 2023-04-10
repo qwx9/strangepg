@@ -20,6 +20,7 @@ OFILES=\
 	plan9/sys.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
+	util/htab.$O\
 	util/vec.$O\
 
 HFILES=\
@@ -29,14 +30,13 @@ HFILES=\
 	fs/fsprv.h\
 	layout/layoutprv.h\
 	plan9/strpg.h\
-	util/kvec.h\
 	util/khash.h\
 
 </sys/src/cmd/mkone
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
-	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui \
+	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui -Iutil \
 
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
