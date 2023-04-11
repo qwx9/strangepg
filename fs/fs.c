@@ -8,7 +8,7 @@ loadfs(int type, char *path)
 {
 	Filefmt *f;
 
-	if(type < 0 || type >= FFnil){
+	if(type < 0 || type >= nelem(ff)){
 		werrstr("invalid fs type");
 		return nil;
 	}

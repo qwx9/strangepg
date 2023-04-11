@@ -119,19 +119,26 @@ updatedraw(void)
 void
 centerdraw(void)
 {
+	Graph *g;
 	Vertex p, v;
 
-	// FIXME: compute a global dim or something from all graphs' dim
-	v = graphs[0].dim;
-	p.x = view.pan.x + (view.w - v.x) / 2;
-	p.y = view.pan.y + (view.h - v.y) / 2;
+	v = ZV;
+	for(g=graphs; g<graphs+ngraphs; g++){
+		v = g->dim;
+		if(v.x > p.x)
+			p.x = v.x;
+		if(v.y > p.y)
+			p.y = v.y;
+	}
+	p.x = view.pan.x + (view.w - p.x) / 2;
+	p.y = view.pan.y + (view.h - p.y) / 2;
 	view.vpan = p;
 }
 
-// FIXME: one world, many graphs
 int
 redraw(void)
 {
+	dprint("redraw\n");
 	cleardraw();
 	centerdraw();
 	drawworld();

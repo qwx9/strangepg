@@ -1,6 +1,5 @@
 #include "strpg.h"
 
-// FIXME: no command queue handling
 void
 run(void)
 {
@@ -8,6 +7,8 @@ run(void)
 	resetdraw();
 	flushcmd();
 	rendernew();
+	if(ngraphs == 0)
+		redraw();
 	evloop();
 }
 

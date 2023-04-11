@@ -24,13 +24,13 @@ void	run(void);
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 
 #define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
-			   (p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
+	(p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
 #define	GBIT64(p)	((u32int)(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8)|\
-				(((uchar*)(p))[2]<<16)|(((uchar*)(p))[3]<<24)) |\
-			((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
-				(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
+	(((uchar*)(p))[2]<<16)|(((uchar*)(p))[3]<<24)) |\
+	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
+	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
-#define NID(u) ((u)->id >> 1)
+#define NID(u) ((u)->id >> 1)
 #define NDIR(u) ((u)->id & 1)
 #define NDIRS(u) (((u)->id & 1) == 0 ? "+" : "-")
 
