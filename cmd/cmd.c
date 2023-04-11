@@ -1,180 +1,66 @@
 #include "strpg.h"
 
-static char cmdbuf[1024], *bufp;
-
-
-/* FIXME: command pack/unpack; good idea? varargs prob. mandatory
-	problem: alignment!
-void
-vunpack(char *fmt, va_list a)
+static int
+loadgfacmd(uchar *arg, usize sz)
 {
-	long n;
-	void *p;
-
-	for(;;){
-		switch(*fmt++){
-		default: sysfatal("unknown format %c", fmt[-1]);
-		case 0: return;
-		case 'b': *va_arg(a, int*) = get8(outbf); break;
-		case 'B': *va_arg(a, u8int*) = get8(outbf); break;
-		case 'w': *va_arg(a, int*) = get16(outbf); break;
-		case 'W': *va_arg(a, u16int*) = get16(outbf); break;
-		case 'd': *va_arg(a, int*) = get32(outbf); break;
-		case 's': *va_arg(a, int*) = (s16int)get16(outbf); break;
-		case 'S': *va_arg(a, int*) = (s32int)get32(outbf); break;
-		case 'n':
-			p = va_arg(a, void*);
-			n = va_arg(a, long);
-			eread(outbf, p, n);
-			break;
-		}
-	}
+	assert(arg != nil);
+	USED(sz);
+	return loadfs(FFgfa, (char *)arg) == nil;
 }
 
-void
-unpack(char *fmt, ...)
-{
-	va_list a;
+static uchar cmdbuf[1024], *bufp;
 
-	va_start(a, fmt);
-	vunpack(fmt, a);
-	va_end(a);
-}
-*/
-
-// FIXME: kludge
+/* nil-terminated strings with 1-character command code */
 int
-flushcmd(void)	/* execute queued commands */
+flushcmd(void)
 {
-	/* FIXME: ... unpack, read buffer or sth ... */
-	static int done;
-	char *path = "";
+	uchar c, *p;
+	usize sz;
+	int (*fn)(uchar*, usize);
 
-	if(done > 0)
-		return 0;
-	if(loadfs(FFgfa, path) == nil)
-		sysfatal("loadfs: %s", error());
-	done++;
-	return 0;
-}
-
-void
-vpack(char *fmt, va_list a)
-{
-	USED(fmt);
-	USED(a);
-/*
-	int c;
-	long n;
-	void *p;
-	u32int v;
-	uchar u[4];
-
-	// FIXME: this fucking sucks; see sce code
-	for(;;){
-		break;
-		switch(*fmt++){
-		default: sysfatal("unknown format %c", fmt[-1]);
-		case 0: return;
-		case 'F':
-			c = va_arg(a, int);
-			n += sizeof *fmt + sizeof c;
-			switch(c){
-			case COMload:
-				s = va_arg(a, char*);
-				n += strlen(s) + 1;
-				assert(p + n <= cmdbuf + nelem(cmdbuf));
-				bufp = memmove(bufp, &c, sizeof c);
+	p = cmdbuf;
+	while(p < bufp){
+		sz = GBIT64(p);
+		p += 8;
+		switch(c = *p++){
+		case COMload:
+			switch(c = *p++){
+			case FFgfa: fn = loadgfacmd; break;
+			default: fn = nil; warn("unknown file format %c\n", c);
 			}
-			
-		out8:
-			ewrite(outbf, u, sizeof(u8int));
 			break;
-		out16:
-			PBIT16(u, v);
-			ewrite(outbf, u, sizeof(u16int));
-			break;
-		case 'b':
-			u[0] = va_arg(a, int);
-			goto out8;
-		case 'B':
-			u[0] = va_arg(a, u8int);
-			goto out8;
-		case 'w':
-			v = va_arg(a, int);
-			goto out16;
-		case 'W':
-			v = va_arg(a, u16int);
-			goto out16;
-		case 'd':
-			v = va_arg(a, int);
-			PBIT32(u, v);
-			ewrite(outbf, u, sizeof(u32int));
-			break;
-		case 'n':
-			p = va_arg(a, void*);
-			n = va_arg(a, long);
-			ewrite(outbf, p, n);
-			break;
+		default: fn = nil; warn("unknown command %c\n", c);
 		}
+		assert(p + sz < cmdbuf + nelem(cmdbuf) && p[sz] == 0);
+		if(fn != nil && fn(p, sz) < 0)
+			return -1;
+		p += strlen((char *)p);
+		assert(p < cmdbuf + nelem(cmdbuf));
 	}
-	*/
-}
-//#pragma	varargck	type	"F"	int
-
-int
-pushcmd(int cmd, char *fmt, ...)
-{
-	va_list a;
-
-	USED(cmd);
-	va_start(a, fmt);
-	vpack(fmt, a);
-	va_end(a);
+	bufp = cmdbuf;
+	memset(cmdbuf, 0, nelem(cmdbuf));
 	return 0;
 }
 
-#ifdef fuck
+/* [len][cmd][arg1][...] */
 int
-cmd(char *s)
+pushcmd(int cmd, usize sz, int arg1, uchar *cbuf)
 {
-	int n, x;
-	Rune r, r´;
+	uchar *p;
 
-	/* FIXME: avoid potential conflicts with keys in main() */
-	assert(s != nil);
-	s += chartorune(&r, s);
-	for(;;){
-		n = chartorune(&r´, s);
-		if(r´ == Runeerror){
-			werrstr("malformed input");
+	sz++;
+	if(sz > cmdbuf + nelem(cmdbuf) - bufp){
+		flushcmd();
+		if(sz > nelem(cmdbuf) - 1){
+			werrstr("pushcmd: message too long");
 			return -1;
 		}
-		if(r´ == 0 || r´ != ' ' && r´ != '\t')
-			break;
-		s += n;
 	}
-	if(debug)
-		paranoia(1);
-	switch(r){
-	case '<': x = pipefrom(s); break;
-	case '^': x = pipethrough(s); break;
-	case '|': x = pipeto(s); break;
-	case 'c': x = copy(s); break;
-	case 'd': x = cut(s); break;
-	case 'p': x = paste(s, nil); break;
-	case 'q': threadexitsall(nil);
-	case 'r': x = readfrom(s); break;
-	case 's': x = replicate(s); break;
-//	case 'U': x = unpop(s); break;
-	case 'u': x = popop(s); break;
-	case 'w': x = writeto(s); break;
-	case 'x': x = crop(s); break;
-	default: werrstr("unknown command %C", r); x = -1; break;
-	}
-	if(debug)
-		paranoia(0);
-	recalcsize();
-	return x;
+	p = bufp;
+	PBIT64(p, sz);	/* excluding header */
+	p += 8;
+	*p++ = cmd;
+	*p++ = arg1;
+	bufp = memmove(p, cbuf, sz);
+	return 0;
 }
-#endif

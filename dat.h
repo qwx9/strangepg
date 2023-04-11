@@ -79,7 +79,8 @@ extern Graph *graphs;
 extern int ngraphs;
 
 enum{
-	COMload,
+	COMload = 'l',
+	COMredraw = 'R',
 	COMnil,
 };
 

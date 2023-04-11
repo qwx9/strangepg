@@ -86,7 +86,9 @@ drawworld(void)
 	Graph *g;
 
 	for(g=graphs; g<graphs+ngraphs; g++){
-		warn("drawworld %#p\n", g);
+		if(g->ll != nil)	// FIXME: weak check
+			continue;
+		dprint("update %#p\n", g);
 		drawnodes(g);
 		drawedges(g);
 	}

@@ -52,6 +52,24 @@ addedge(Graph *g, usize u, usize v, char *overlap, double w)
 }
 
 void
+rendernew(void)
+{
+	int done;
+	Graph *g;
+
+	for(g=graphs, done=0; g<graphs+ngraphs; g++){
+		dprint("drawworld %#p\n", g);
+		if(dolayout(&graphs[0], LLconga) < 0)
+			sysfatal("dolayout: %s\n", error());
+		if(render(&graphs[0]) < 0)
+			sysfatal("render: %s\n", error());
+		done++;
+	}
+	if(done > 0)
+		redraw();
+}
+
+void
 nukegraph(Graph *g)
 {
 	vecnuke(&g->edges);
