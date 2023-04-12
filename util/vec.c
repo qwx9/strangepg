@@ -73,9 +73,10 @@ vecpush(Vec *v, void *p, usize *ip)
 Vec
 vec(usize len, usize elsz)
 {
-	Vec v = {0};
+	Vec v;
 
 	assert(elsz > 0);
+	memset(&v, 0, sizeof v);
 	v.elsz = elsz;
 	v.len = 0;
 	v.bufsz = len > 0 ? len : Shardsz;

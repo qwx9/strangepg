@@ -83,7 +83,6 @@ initgraph(void)
 {
 	Graph *g;
 
-	ngraphs++;
 	graphs = erealloc(graphs,
 		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
 	g = graphs + ngraphs++;

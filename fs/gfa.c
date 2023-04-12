@@ -71,10 +71,11 @@ loadgfa1(char *path)
 	Graph *g;
 	File f;
 
-	memset(&f, 0, sizeof f);
-	f.path = path;
+	warn("loadgfa1 %s\n", path);
 	if((g = initgraph()) == nil)	
 		sysfatal("loadgfa1: ");
+	memset(&f, 0, sizeof f);
+	f.path = path;
 	while(readrecord(&f) != nil){
 		switch(f.fld[0][0]){
 		case 'H': parse = gfa1hdr; break;
@@ -88,10 +89,12 @@ loadgfa1(char *path)
 			break;
 		}
 	}
+	warn("shit %r\n");
 	if(f.err){
 		nukegraph(g);
 		return nil;
 	}
+	warn("done loading gfa\n");
 	return g;
 }
 

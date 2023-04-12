@@ -115,3 +115,5 @@ enum{
 	K↑,
 	K↓,
 };
+
+extern int debug;

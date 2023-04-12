@@ -2,7 +2,6 @@
 #include <thread.h>
 
 mainstacksize = 16*1024;
-int debug;
 
 char *
 error(void)
@@ -81,22 +80,11 @@ quit(void)
 	threadexitsall(nil);
 }
 
-static void
-usage(void)
-{
-	fprint(2, "usage: %s\n", argv0);
-	threadexits("usage [-D]");
-}
-
 void
 threadmain(int argc, char **argv)
 {
-	ARGBEGIN{
-	case 'D': debug = 1; break;
-	default: usage();
-	}ARGEND
 	if(parseargs(argc, argv) < 0)
-		usage();
+		sysfatal("usage");
 	run();
-	exits(nil);
+	threadexitsall(nil);
 }

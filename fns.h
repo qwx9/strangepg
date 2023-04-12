@@ -30,7 +30,7 @@ void	run(void);
 	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
 	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
-#define NID(u) ((u)->id >> 1)
+#define NID(u) ((u)->id >> 1)
 #define NDIR(u) ((u)->id & 1)
 #define NDIRS(u) (((u)->id & 1) == 0 ? "+" : "-")
 
