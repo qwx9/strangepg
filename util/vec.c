@@ -66,7 +66,7 @@ vecpush(Vec *v, void *p, usize *ip)
 	memcpy(t, p, v->elsz);
 	v->len++;
 	if(ip != nil)
-		*ip = i;
+		*ip = i / v->elsz;
 	return (void *)t;
 }
 

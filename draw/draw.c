@@ -130,8 +130,8 @@ centerdraw(void)
 		if(v.y > p.y)
 			p.y = v.y;
 	}
-	p.x = view.pan.x + (view.w - p.x) / 2;
-	p.y = view.pan.y + (view.h - p.y) / 2;
+	p.x = view.pan.x + (view.dim.v.x - p.x) / 2;
+	p.y = view.pan.y + (view.dim.v.y - p.y) / 2;
 	view.vpan = p;
 }
 
@@ -140,6 +140,7 @@ redraw(void)
 {
 	dprint("redraw\n");
 	cleardraw();
+	rendernew();
 	centerdraw();
 	drawworld();
 	return updatedraw();

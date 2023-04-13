@@ -6,9 +6,10 @@ int ngraphs;
 Node *
 id2n(Graph *g, usize i)
 {
-	if(idget(g->id2n, i, &i) < 0)
+	usize v;
+	if(idget(g->id2n, i, &v) < 0)
 		return nil;
-	return vecp(&g->nodes, i);
+	return vecp(&g->nodes, v);
 }
 
 int
@@ -34,6 +35,7 @@ addedge(Graph *g, usize u, usize v, char *overlap, double w)
 	Edge e, *ep;
 	Node *up, *vp;
 
+	dprint("addedge %zd,%zd:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", u, v, w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1, g->edges.len, g->edges.elsz);
 	/* FIXME: this api is RETARDED */
 	e.overlap = estrdup(overlap);
 	e.w = w;
@@ -43,8 +45,8 @@ addedge(Graph *g, usize u, usize v, char *overlap, double w)
 	// FIXME: better print
 //	dprint("addedge %s%zd → %s%zd: %s",
 //		NDIRS(u), NID(u), NDIRS(v), NID(v), overlap);
-	if((up = id2n(g, u)) == nil
-	|| (vp = id2n(g, v)) == nil)
+	if((up = id2n(g, u >> 1)) == nil
+	|| (vp = id2n(g, v >> 1)) == nil)
 		return -1;
 	vecpush(&up->out, &ep, nil);
 	vecpush(&vp->in, &ep, nil);
@@ -54,19 +56,17 @@ addedge(Graph *g, usize u, usize v, char *overlap, double w)
 void
 rendernew(void)
 {
-	int done;
 	Graph *g;
 
-	for(g=graphs, done=0; g<graphs+ngraphs; g++){
-		dprint("drawworld %#p\n", g);
+	for(g=graphs; g<graphs+ngraphs; g++){
+		if(g->ll != nil)	// FIXME: weak check
+			continue;
+		dprint("rendernew %#p\n", g);
 		if(dolayout(&graphs[0], LLconga) < 0)
 			sysfatal("dolayout: %s\n", error());
 		if(render(&graphs[0]) < 0)
 			sysfatal("render: %s\n", error());
-		done++;
 	}
-	if(done > 0)
-		redraw();
 }
 
 void

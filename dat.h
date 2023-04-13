@@ -95,8 +95,7 @@ enum{
 	Vdefh = 600,
 };
 struct View{
-	int w;
-	int h;
+	Quad dim;
 	Vertex pan;
 	Vertex vpan;
 	double zoom;

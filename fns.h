@@ -44,6 +44,7 @@ Vertex	subvx(Vertex, Vertex);
 Vertex	scalevx(Vertex, float);
 Quad	insetvx(Vertex, int);
 Vertex	Vx(int, int);
+int	vxinquad(Vertex, Quad);
 Quad	quadaddvx(Quad, Vertex);
 
 Node*	id2n(Graph*, usize);

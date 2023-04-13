@@ -63,7 +63,7 @@ gfa1path(Graph *g, File *f)
 	return 0;
 }
 
-// FIXME: actually handle bad input + handle no graph loaded in main
+// FIXME: actually handle bad input
 static Graph*
 loadgfa1(char *path)
 {
@@ -89,12 +89,11 @@ loadgfa1(char *path)
 			break;
 		}
 	}
-	warn("shit %r\n");
 	if(f.err){
 		nukegraph(g);
 		return nil;
 	}
-	warn("done loading gfa\n");
+	dprint("done loading gfa\n");
 	return g;
 }
 

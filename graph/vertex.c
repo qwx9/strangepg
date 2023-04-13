@@ -50,6 +50,13 @@ scalevx(Vertex a, float f)
 	return (Vertex){a.x * f, a.y * f};
 }
 
+int
+vxinquad(Vertex v, Quad q)
+{
+	return v.x >= q.u.x && v.x < q.v.x
+		&& v.y >= q.u.y && v.y < q.v.y;
+}
+
 Quad
 insetvx(Vertex v, int Δ)
 {

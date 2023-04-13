@@ -39,10 +39,12 @@ keyevent(Rune r)
 	return 0;
 }
 
+/* the very first mouse event will have non-sense deltas */
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
-	dprint("mouseevent %ux %d,%d +%d,%d\n", b, v.x, v.y, Δ.x, Δ.y);
+	if(!vxinquad(v, view.dim))
+		return;
 	if((b & Mlmb) == Mlmb){
 		// FIXME: select
 		// FIXME: drag → move
@@ -66,7 +68,7 @@ resetui(void)
 {
 	view.pan = ZV;
 	view.zoom = 1.0;
-	panmax = (Vertex){view.w, view.h};
+	panmax = view.dim.v;
 	assert(!eqvx(panmax, ZV));
 }
 

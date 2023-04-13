@@ -9,8 +9,7 @@ run(void)
 	resetdraw();
 	flushcmd();
 	rendernew();
-	if(ngraphs == 0)
-		redraw();
+	redraw();
 	evloop();
 }
 

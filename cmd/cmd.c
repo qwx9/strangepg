@@ -36,6 +36,7 @@ flushcmd(void)
 				warn("flushcmd: FFgfa\n");
 				if(loadfs(FFgfa, (char *)p) == nil)
 					return -1;
+				rendernew();
 				break;
 			default: warn("unknown file format %c\n", c);
 			}

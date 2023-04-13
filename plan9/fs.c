@@ -29,7 +29,6 @@ readrecord(File *ff)
 {
 	Biobuf *bf;
 
-	dprint("readrecord %#p path \"%s\"\n", ff, ff->path);
 	assert(ff != nil && ff->path != nil);
 	if(ff->aux == nil && bopen(ff) < 0){
 		ff->err++;

@@ -126,7 +126,7 @@ initdraw_(void)
 	//unlockdisplay(display);
 	col[Cbg] = display->black;
 	col[Ctext] = display->white;
-	view.w = Dx(screen->r);
-	view.h = Dy(screen->r);
+	view.dim.u = ZV;
+	view.dim.v = (Vertex){Dx(screen->r), Dy(screen->r)};
 	return 0;
 }
