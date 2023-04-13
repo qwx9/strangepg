@@ -7,6 +7,7 @@ Node *
 id2n(Graph *g, usize i)
 {
 	usize v;
+
 	if(idget(g->id2n, i, &v) < 0)
 		return nil;
 	return vecp(&g->nodes, v);

@@ -26,11 +26,9 @@ idget(Htab *h, usize k, usize *v)
 	dprint("idget %#p k=%zd\n", h, k);
 	g = kh_get(id, h, k);
 	if(g == kh_end(h)){
-		dprint("%zd not found\n", k);
 		werrstr("idmap %#p: no such key %zd\n", h, k);
 		return -1;
 	}
 	*v = kh_value(h, g);
-	dprint("g=%lud v=%zd k=%zd\n", g, *v, k);
 	return 0;
 }
