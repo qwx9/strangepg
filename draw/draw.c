@@ -60,6 +60,7 @@ drawedges(Graph *g)
 		r = vx2r(p.p, q.p);
 		*/
 
+		// FIXME: shouldn't have to do translation at all
 		r = scaletrans(r, view.zoom, view.vpan);
 		drawedge(r, e->w);
 	}
@@ -122,6 +123,7 @@ centerdraw(void)
 	Graph *g;
 	Vertex p, v;
 
+	p = ZV;
 	v = ZV;
 	for(g=graphs; g<graphs+ngraphs; g++){
 		v = g->dim;
@@ -130,8 +132,8 @@ centerdraw(void)
 		if(v.y > p.y)
 			p.y = v.y;
 	}
-	p.x = view.pan.x + (view.dim.v.x - p.x) / 2;
-	p.y = view.pan.y + (view.dim.v.y - p.y) / 2;
+	p.x = (view.dim.v.x - p.x) / 2;
+	p.y = (view.dim.v.y - p.y) / 2;
 	view.vpan = p;
 }
 

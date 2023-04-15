@@ -28,15 +28,16 @@ k2e(Rune r)
 	case Kright: r = K→; break;
 	case Kup: r = K↑; break;
 	case Kdown: r = K↓; break;
-	default: /*dprint("k2e: unhandled key %C\n", r)*/;
+	default: dprint("k2e: unhandled key %C\n", r);
 	}
-	return keyevent(r);
+	return r;
 }
 
 int
 evloop(void)
 {
 	Rune r;
+	Point Δ;
 	Mouse mold;
 
 	enum{
@@ -47,10 +48,11 @@ evloop(void)
 	};
 	Alt a[] = {
 		[Aresize] {mc->resizec, nil, CHANRCV},
-		[Amouse] {mc->c, &mc->Mouse, CHANRCV},
+		[Amouse] {mc->c, nil, CHANRCV},
 		[Akbd] {kc->c, &r, CHANRCV},
 		[Aend] {nil, nil, CHANEND},
 	};
+	mold = mc->Mouse;	/* likely blank */
 	for(;;){
 		switch(alt(a)){
 		case Aresize:
@@ -59,10 +61,16 @@ evloop(void)
 			resetdraw();
 			resetui();
 			redraw();
+			mold.xy = mc->xy;
 			/* wet floor */
 		case Amouse:
+			if(a[Amouse].v == nil){	/* ignore first mouse delta */
+				a[Amouse].v = &mc->Mouse;
+				mold = mc->Mouse;
+			}
+			Δ = subpt(mc->xy, mold.xy);
 			// FIXME: scroll
-			mouseevent(mc->xy, subpt(mc->xy, mold.xy), mc->buttons & 7);
+			mouseevent(mc->xy, Δ, mc->buttons & 7);
 			mold = mc->Mouse;
 			break;
 		case Akbd:

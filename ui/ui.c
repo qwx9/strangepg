@@ -19,11 +19,10 @@ panview(Vertex p)
 	else if(p.y > panmax.y)
 		p.y = panmax.y;
 	*/
-	if(!eqvx(p, view.pan)){
-		view.pan = p;
-		return 0;
-	}
-	return -1;
+	if(eqvx(p, view.pan))
+		return -1;
+	view.pan = p;
+	return 0;
 }
 
 int
@@ -43,8 +42,7 @@ keyevent(Rune r)
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
-	if(!vxinquad(v, view.dim))
-		return;
+	USED(v);
 	if((b & Mlmb) == Mlmb){
 		// FIXME: select
 		// FIXME: drag → move

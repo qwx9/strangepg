@@ -11,9 +11,9 @@ enum{
 	Cend,
 };
 static Image *col[Cend];
-static Point viewΔ, panmax;
+static Point panmax;
 static Rectangle viewr, hudr;
-static Image *viewfb, *board;
+static Image *viewfb;
 
 static Image *
 eallocimage(Rectangle r, int repl, ulong col)
@@ -29,7 +29,6 @@ static Vertex
 s2p(Vertex p)
 {
 	p = subpt(p, screen->r.min);
-	p = addpt(p, viewΔ);
 	p = subpt(p, Pt(1,1));
 	p = addpt(p, view.pan);
 	if(!ptinrect(p, viewr))
@@ -80,7 +79,7 @@ drawline_(Quad r, double w)
 void
 flushdraw_(void)
 {
-	draw(screen, screen->r, viewfb, nil, subpt(view.pan, viewΔ));
+	draw(screen, screen->r, viewfb, nil, view.pan);
 	flushimage(display, 1);
 }
 
@@ -98,21 +97,10 @@ int
 resetdraw_(void)
 {
 	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
-
-	viewΔ = subpt(screen->r.max, screen->r.min);
-	viewΔ = subpt(ZP, viewΔ);
-	viewΔ = addpt(viewΔ, viewr.v);
-	viewΔ = divpt(viewΔ, 2);
-	if(-viewΔ.y < font->height * 2)
-		viewΔ.y = 0;
-
-	hudr.u = addpt(screen->r.min, subpt(Pt(2, viewr.v.y+2), viewΔ));
+	hudr.u = addpt(screen->r.min, Pt(2, viewr.v.y+2));
 	hudr.v = addpt(hudr.u, Pt(screen->r.max.x, font->height*3));
-	/* all the way up to here */
 	freeimage(viewfb);
 	viewfb = eallocimage(viewr, 0, DBlack);
-	freeimage(board);
-	board = eallocimage(viewr, 0, DBlack);
 	return 0;
 }
 
