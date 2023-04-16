@@ -65,7 +65,7 @@ char*	readrecord(File*);
 void	initfs(void);
 Graph*	loadfs(int, char*);
 
-int	initvdraw(void);
+int	initdraw_(void);	/* plan9 already has initdraw(2) */
 int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);

@@ -44,6 +44,6 @@ init(void)
 	initfs();
 	initlayout();
 	initrend();
-	initvdraw();
+	initdraw_();
 	initui();
 }

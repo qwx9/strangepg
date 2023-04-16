@@ -3,12 +3,6 @@
 
 View view;
 
-static void
-flush(void)
-{
-	flushdraw_();
-}
-
 /* top-left to center (kludge) */
 static Quad
 centernode(Quad r)
@@ -100,11 +94,6 @@ drawui(void)
 {
 }
 
-static void
-cleardraw(void)
-{
-	cleardraw_();
-}
 
 // FIXME: until there is a need to do drawing asynchronously,
 // there's no need to distinguish draw and ui layers, it will
@@ -113,7 +102,7 @@ int
 updatedraw(void)
 {
 	drawui();
-	flush();
+	flushdraw();
 	return 0;
 }
 
@@ -146,16 +135,4 @@ redraw(void)
 	centerdraw();
 	drawworld();
 	return updatedraw();
-}
-
-int
-resetdraw(void)
-{
-	return resetdraw_();
-}
-
-int
-initvdraw(void)
-{
-	return initdraw_();
 }

@@ -16,18 +16,6 @@ rotate(Quad)
 }
 
 int
-drawline(Quad r, double w)
-{
-	return drawline_(r, w);
-}
-
-int
-drawquad(Quad r)
-{
-	return drawquad_(r);
-}
-
-int
 drawbezier(void)
 {
 	return 0;

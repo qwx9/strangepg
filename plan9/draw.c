@@ -55,7 +55,7 @@ vertfmt(Vertex *v)
 }
 
 int
-drawquad_(Quad r)
+drawquad(Quad r)
 {
 	//draw(viewfb, r, col[Ctext], nil, ZP);
 	Point p[] = {
@@ -70,21 +70,21 @@ drawquad_(Quad r)
 }
 
 int
-drawline_(Quad r, double w)
+drawline(Quad r, double w)
 {
 	line(viewfb, r.u, r.v, Endsquare, Endarrow, w, col[Ctext], ZP);
 	return 0;
 }
 
 void
-flushdraw_(void)
+flushdraw(void)
 {
 	draw(screen, screen->r, viewfb, nil, view.pan);
 	flushimage(display, 1);
 }
 
 void
-cleardraw_(void)
+cleardraw(void)
 {
 	//lockdisplay(display);
 	// FIXME: unnecessary if view/pan is bounded
@@ -94,7 +94,7 @@ cleardraw_(void)
 }
 
 int
-resetdraw_(void)
+resetdraw(void)
 {
 	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
 	hudr.u = addpt(screen->r.min, Pt(2, viewr.v.y+2));
