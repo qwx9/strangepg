@@ -61,7 +61,6 @@ int	dolayout(Graph*, int);
 int	pushcmd(int, usize, int, uchar*);
 int	flushcmd(void);
 
-char*	readrecord(File*);
 void	initfs(void);
 Graph*	loadfs(int, char*);
 

@@ -18,5 +18,5 @@ struct Filefmt{
 extern Filefmt fftab[FFnil];
 
 Filefmt*	reggfa(void);
-char*	readrecord_(File*);
+char*	readrecord(File*);
 void	regfs(Filefmt*);

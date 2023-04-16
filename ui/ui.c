@@ -69,10 +69,3 @@ resetui(void)
 	panmax = view.dim.v;
 	assert(!eqvx(panmax, ZV));
 }
-
-void
-initui(void)
-{
-	initui_();
-	resetui();
-}

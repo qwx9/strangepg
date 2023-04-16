@@ -86,7 +86,7 @@ evloop(void)
 }
 
 void
-initui_(void)
+initui(void)
 {
 	if((kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");

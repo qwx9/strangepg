@@ -46,4 +46,5 @@ init(void)
 	initrend();
 	initdraw_();
 	initui();
+	resetui();
 }
