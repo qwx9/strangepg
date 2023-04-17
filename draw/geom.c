@@ -1,5 +1,6 @@
 #include "strpg.h"
-#include "drawprv.h"
+#include <draw.h>
+#include "drw.h"
 
 Quad
 scaletrans(Quad r, double zoom, Vertex pan)

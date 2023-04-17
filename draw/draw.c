@@ -1,5 +1,6 @@
 #include "strpg.h"
-#include "drawprv.h"
+#include <draw.h>
+#include "drw.h"
 
 View view;
 

@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "fsprv.h"
+#include "fs.h"
 
 static Filefmt *ff[FFnil];
 

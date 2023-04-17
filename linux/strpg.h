@@ -17,16 +17,14 @@ extern int debug;
 void	werrstr(char*, ...);
 
 #include "khash.h"
-#include "kvec.h"
 #include "dat.h"
 #include "fns.h"
 #include "cmd.h"
 #include "graph.h"
 #include "layout.h"
 #include "rend.h"
-#include "vdraw.h"
+#include "drw.h"
 #include "fs.h"
-#include "ui.h"
 
 extern char *argv0;
 #define	ARGBEGIN	for((argv0||(argv0=*argv)),argv++,argc--;\

@@ -48,6 +48,7 @@ struct Fertex{
 
 enum{
 	LLconga,
+	LLforce,
 	LLnil,
 };
 struct Layout{

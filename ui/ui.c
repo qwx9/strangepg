@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "uiprv.h"
 
 float zoom;
 

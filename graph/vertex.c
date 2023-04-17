@@ -2,6 +2,13 @@
 
 Vertex ZV;
 
+// FIXME: better names (vx → vert? or just use Point/Rectangle?
+// and reimplement/copy for linux?)
+// FIXME: Vector type? Vec2D/Vec3D? Or just use rodri's geometry(2) api
+//	and study its use for rotation etc
+//  why not pull in this kind of code if it's simple enough
+//	could contemplate even bundling a libdraw+libgeometry for linux
+
 Vertex
 Vx(int x, int y)
 {

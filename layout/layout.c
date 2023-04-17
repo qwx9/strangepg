@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "layoutprv.h"
+#include "layout.h"
 
 /* nodes are points in space, distances are in unit vectors */
 /* edges: retrieved from graph; could be filtered, but not here */
@@ -40,4 +40,5 @@ void
 initlayout(void)
 {
 	ll[LLconga] = regconga();
+	ll[LLforce] = regforce();
 }

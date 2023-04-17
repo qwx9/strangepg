@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "fsprv.h"
+#include "fs.h"
 #include <bio.h>
 
 static int

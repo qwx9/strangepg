@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include <thread.h>
 #include <draw.h>
+#include "drw.h"
 
 typedef Vertex Point;
 typedef Quad Rectangle;
@@ -106,7 +107,7 @@ resetdraw(void)
 
 // FIXME: colors/styles do not belong here
 int
-initdraw_(void)
+initdrw(void)
 {
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");

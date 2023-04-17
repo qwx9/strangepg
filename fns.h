@@ -64,7 +64,7 @@ int	flushcmd(void);
 void	initfs(void);
 Graph*	loadfs(int, char*);
 
-int	initdraw_(void);	/* plan9 already has initdraw(2) */
+int	initdrw(void);	/* plan9 already has initdraw(2) */
 int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);

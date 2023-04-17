@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "uiprv.h"
 #include <thread.h>
 #include <draw.h>
 #include <mouse.h>

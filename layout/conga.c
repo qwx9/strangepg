@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "layoutprv.h"
+#include "layout.h"
 
 /* stupidest layout: 1D, nodes preordered by id */
 /* nodes and edges are duplicated, but realize that everything else is

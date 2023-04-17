@@ -8,7 +8,6 @@ OFILES=\
 	draw/geom.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
-	graph/fertex.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
 	layout/force.$O\
@@ -26,9 +25,9 @@ OFILES=\
 HFILES=\
 	dat.h\
 	fns.h\
-	draw/drawprv.h\
-	fs/fsprv.h\
-	layout/layoutprv.h\
+	draw/drw.h\
+	fs/fs.h\
+	layout/layout.h\
 	plan9/strpg.h\
 	util/khash.h\
 

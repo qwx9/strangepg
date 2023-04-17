@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "fsprv.h"
+#include "fs.h"
 
 static int
 gfa1hdr(Graph *g, File *f)
