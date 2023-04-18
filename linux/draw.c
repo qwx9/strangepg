@@ -89,8 +89,8 @@ drawshapes(Graph *g, Render *rd)
 	SDL_Rect rr;
 
 	for(s=&kv_A(rd->shapes, 0), se=s+kv_size(rd->shapes); s<se; s++){
-		r.u = addvx(scalevx(s->r.u, view.zoom), view.pan);
-		r.v = addvx(scalevx(s->r.v, view.zoom), view.pan);
+		r.u = addvx(mulvx(s->r.u, view.zoom), view.pan);
+		r.v = addvx(mulvx(s->r.v, view.zoom), view.pan);
 		//rr = (SDL_Rect){r.u.x, r.u.y, dxvx(r), dyvx(r)};
 		setcol(s->id);
 		if((s->id & SHrect) == SHrect)

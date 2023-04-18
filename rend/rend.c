@@ -7,8 +7,8 @@
 // FIXME: layout: add an angle or 
 
 enum{
-	Nodesz = 2 * 10,
-	Ptsz = 25,
+	Nodesz = 8,
+	Ptsz = 2,
 };
 
 static int                                                            
@@ -20,7 +20,7 @@ rendershapes(Graph *g)
 
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		n = &u->q.u;
-		u->q = insetvx(scalevx(*n, Ptsz), Nodesz/2);
+		u->q = insetvx(addvx(*n, (Vertex){Ptsz,Ptsz}), Nodesz/2);
 		d = u->q.v.x + dxvx(u->q);
 		if(g->dim.x < d)
 			g->dim.x = d;

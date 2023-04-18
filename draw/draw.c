@@ -49,8 +49,8 @@ drawedges(Graph *g)
 		q = e->q->q;
 		Δu = Vx(dxvx(p), dyvx(p));
 		Δv = Vx(dxvx(q), dyvx(q));
-		p = quadaddvx(p, scalevx(Δu, 0.5));
-		q = quadaddvx(q, scalevx(Δv, 0.5));
+		p = quadaddvx(p, mulvx(Δu, 0.5));
+		q = quadaddvx(q, mulvx(Δv, 0.5));
 		//q = quadaddvx(q, Δv);
 		r = vx2r(p.p, q.p);
 		*/
@@ -68,7 +68,7 @@ drawnodes(Graph *g)
 	Quad r;
 	Node *u, *ue;
 
-	warn("dim %s\n", vertfmt(&g->dim));
+	dprint("drawnodes dim %s\n", vertfmt(&g->dim));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		r = scaletrans(u->q, view.zoom, view.vpan);
 		drawnode(r);

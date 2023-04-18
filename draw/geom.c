@@ -5,8 +5,8 @@
 Quad
 scaletrans(Quad r, double zoom, Vertex pan)
 {
-	r.u = addvx(scalevx(r.u, zoom), pan);
-	r.v = addvx(scalevx(r.v, zoom), pan);
+	r.u = addvx(mulvx(r.u, zoom), pan);
+	r.v = addvx(mulvx(r.v, zoom), pan);
 	return r;
 }
 

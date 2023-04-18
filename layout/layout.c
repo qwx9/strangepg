@@ -8,7 +8,7 @@
 
 static Layout *ll[LLnil];
 
-/* FIXME: LSB already set? */
+/* FIXME: LSB already set? it should NOT be */
 void
 putnode(Node *u, int x, int y)
 {
@@ -41,4 +41,5 @@ initlayout(void)
 {
 	ll[LLconga] = regconga();
 	ll[LLforce] = regforce();
+	ll[LLrandom] = regrandom();
 }

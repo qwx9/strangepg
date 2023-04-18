@@ -21,7 +21,6 @@ idput(Htab *h, usize k, usize v)
 		return -1;
 	}
 	kh_value(h, g) = v;
-	warn("k=%zd v=%zd kh=%zd\n", k, v, kh_value(h, g));
 	return 0;
 }
 

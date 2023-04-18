@@ -2,7 +2,6 @@ typedef struct Vec Vec;
 typedef struct Graph Graph;
 typedef struct Shape Shape;
 typedef struct Vertex Vertex;
-typedef struct Fertex Fertex;
 typedef struct Quad Quad;
 typedef struct Obj Obj;
 typedef struct Node Node;
@@ -48,6 +47,7 @@ struct Fertex{
 
 enum{
 	LLconga,
+	LLrandom,
 	LLforce,
 	LLnil,
 };

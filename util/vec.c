@@ -26,12 +26,27 @@ vecnuke(Vec *v)
 	free(v->buf);
 }
 
+usize
+vecindexof(Vec *v, void *p)
+{
+	uintptr x;
+
+	assert(v != nil && p >= v->buf && p < v->buf);
+	x = (uchar *)p - (uchar *)v->buf;
+	if(x % v->elsz != 0)
+		sysfatal("vecindexof: invalid pointer");
+	return x / v->elsz;
+}
+
 void *
 vecget(Vec *v, usize i)
 {
 	void *n;
 
-	assert(i < v->len && v->len > 0);
+	if(i >= v->len || v->len == 0){
+		werrstr("vecget %#p[%zd]: out of bounds", v, i);
+		return nil;
+	}
 	n = (uchar*)v->buf + i * v->elsz;
 	return n;
 }

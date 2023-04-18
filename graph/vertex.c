@@ -52,9 +52,15 @@ subvx(Vertex a, Vertex b)
 }
 
 Vertex
-scalevx(Vertex a, float f)
+mulvx(Vertex a, float f)
 {
 	return (Vertex){a.x * f, a.y * f};
+}
+
+Vertex
+divvx(Vertex a, float f)
+{
+	return (Vertex){a.x / f, a.y / f};
 }
 
 int

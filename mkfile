@@ -10,9 +10,10 @@ OFILES=\
 	fs/gfa.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
+	layout/conga.$O\
 	layout/force.$O\
 	layout/layout.$O\
-	layout/conga.$O\
+	layout/random.$O\
 	rend/rend.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\

@@ -25,6 +25,8 @@ addnode(Graph *g, usize id, char *seq)
 	n.seq = estrdup(seq);
 	n.in = vec(0, sizeof(Edge*));
 	n.out = vec(0, sizeof(Edge*));
+	n.q.u.x = nrand(view.dim.v.x /1);
+	n.q.u.y = nrand(view.dim.v.y);
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, id, i);
 }
@@ -63,7 +65,7 @@ rendernew(void)
 		if(g->ll != nil)	// FIXME: weak check
 			continue;
 		dprint("rendernew %#p\n", g);
-		if(dolayout(&graphs[0], LLconga) < 0)
+		if(dolayout(&graphs[0], LLrandom) < 0)
 			sysfatal("dolayout: %s\n", error());
 		if(render(&graphs[0]) < 0)
 			sysfatal("render: %s\n", error());
@@ -90,5 +92,6 @@ initgraph(void)
 	g->nodes = vec(0, sizeof(Node));
 	g->edges = vec(0, sizeof(Edge));
 	g->id2n = idmap();
+	srand(time(nil));
 	return g;
 }

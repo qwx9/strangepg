@@ -9,6 +9,8 @@ typedef Quad Rectangle;
 enum{
 	Cbg,
 	Ctext,
+	Cnode,
+	Cedge,
 	Cend,
 };
 static Image *col[Cend];
@@ -66,14 +68,14 @@ drawquad(Quad r)
 		(Point){r.u.x, r.v.y},
 		(Point){r.u.x, r.u.y}
 	};
-	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Ctext], ZP);
+	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Cnode], ZP);
 	return 0;
 }
 
 int
 drawline(Quad r, double w)
 {
-	line(viewfb, r.u, r.v, Endsquare, Endarrow, w, col[Ctext], ZP);
+	line(viewfb, r.u, r.v, Endsquare, Endarrow, w, col[Cedge], ZP);
 	return 0;
 }
 
@@ -115,6 +117,8 @@ initdrw(void)
 	//unlockdisplay(display);
 	col[Cbg] = display->black;
 	col[Ctext] = display->white;
+	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, DYellow);
+	col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777FF);
 	view.dim.u = ZV;
 	view.dim.v = (Vertex){Dx(screen->r), Dy(screen->r)};
 	return 0;

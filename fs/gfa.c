@@ -71,7 +71,7 @@ loadgfa1(char *path)
 	Graph *g;
 	File f;
 
-	warn("loadgfa1 %s\n", path);
+	dprint("loadgfa1 %s\n", path);
 	if((g = initgraph()) == nil)	
 		sysfatal("loadgfa1: ");
 	memset(&f, 0, sizeof f);
