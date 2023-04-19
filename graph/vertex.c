@@ -60,6 +60,7 @@ mulvx(Vertex a, float f)
 Vertex
 divvx(Vertex a, float f)
 {
+	f += 0.0001;	/* FIXME */
 	return (Vertex){a.x / f, a.y / f};
 }
 

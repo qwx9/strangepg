@@ -31,7 +31,7 @@ vecindexof(Vec *v, void *p)
 {
 	uintptr x;
 
-	assert(v != nil && p >= v->buf && p < v->buf);
+	assert(v != nil && p >= v->buf && p < (uchar *)v->buf + v->elsz * v->len);
 	x = (uchar *)p - (uchar *)v->buf;
 	if(x % v->elsz != 0)
 		sysfatal("vecindexof: invalid pointer");
@@ -65,7 +65,11 @@ vecpoptail(Vec *v)
 void *
 vecp(Vec *v, usize i)
 {
-	return (uchar *)v->buf + v->elsz * i;
+	void *p;
+
+	p = (uchar *)v->buf + v->elsz * i;
+	assert(p >= v->buf && p < (uchar *)v->buf + v->elsz * v->len);
+	return p;
 }
 
 void *

@@ -42,14 +42,15 @@ compute(Graph *g)
 	int i, j, r;
 	double k, T, totΔr, Δ;
 	Vertex *Δr, dv;
-	Node *ve, *up, *vp, *ie;
+	Node *ve, *up, *vp, *uu;
+	Edge **ep, **ee;
 
 	k = sqrt(Length * Length / g->nodes.len);
 	T = Temp0;
 	Δr = emalloc(g->nodes.len * sizeof *Δr);
 	ve = vecget(&g->nodes, g->nodes.len - 1);	/* just being defensive */
 	for(r=0; r<Niter;){
-		for(up=vecget(&g->nodes, 0), i=0; up<ve; i++){
+		for(up=vecget(&g->nodes, 0), i=0; up<ve; i++, up++){
 			/* ∀u,v ∈ E, Δr += d_uv / |d_uv| * Fr */
 			for(vp=vecget(&g->nodes, 0); vp<ve; vp++){
 				if(vp == up)
@@ -61,11 +62,13 @@ compute(Graph *g)
 			/* ∀u,v ∈ E:
 			 *	Δr_u -= d_uv/|d_uv| * Fa
 			 *	Δr_v += d_uv/|d_uv| * Fa */
-			for(vp=vecget(&up->in, 0), ie=vecget(&up->in, up->in.len - 1); vp!=nil&&vp<ie; vp++){
-				dv = subvx(up->q.u, vp->q.u);
+			for(ep=vecget(&up->in, 0), ee=vecget(&up->in, up->in.len - 1); ep!=nil&&ep<ee; ep++){
+				if((uu = id2n(g, (*ep)->u >> 1)) == nil)
+					sysfatal("phase error");
+				dv = subvx(uu->q.u, up->q.u);
 				Δ = diffdist(dv);
 				Δr[i] = addvx(Δr[i], mulvx(divvx(dv, Δ), attraction(Δ, k)));
-				j = vecindexof(&g->nodes, vp);
+				j = vecindexof(&g->nodes, uu);
 				Δr[j] = subvx(Δr[j], mulvx(divvx(dv, Δ), attraction(Δ, k)));
 			}
 		}

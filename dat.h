@@ -56,6 +56,7 @@ struct Layout{
 	int (*compute)(Graph*);
 };
 
+/* FIXME: very unsafe mix of pointers and primitives with generic Vec */
 struct Node{
 	usize id;
 	char *seq;
