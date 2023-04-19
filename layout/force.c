@@ -4,9 +4,9 @@
 /* force-directed layout */
 
 enum{
-	Niter = 1,
-	Length = 100,
-	Temp0 = 20,
+	Niter = 1000,
+	Length = 1000,
+	Temp0 = 50,
 };
 
 static double
@@ -18,22 +18,21 @@ diffdist(Vertex v)
 static double
 attraction(double d, double k)
 {
+	d += 0.0001;
     return d * d / k;
 }
 
 static double
 repulsion(double d, double k)
 {
+	d += 0.0001;
     return k * k / d;
 }
 
 static double
 cooldown(double T)
 {
-    double cold;
-
-	cold = 0.0001;
-	return T > cold ? 0.999 * T : T;
+	return T > 0.0001 ? 0.999 * T : 0.0001;
 }
 
 static int

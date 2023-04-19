@@ -29,7 +29,7 @@ addnode(Graph *g, usize id, char *seq)
 	n.seq = estrdup(seq);
 	n.in = vec(0, sizeof(Edge*));
 	n.out = vec(0, sizeof(Edge*));
-	n.q.u.x = nrand(view.dim.v.x /1);
+	n.q.u.x = nrand(view.dim.v.x);
 	n.q.u.y = nrand(view.dim.v.y);
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, id, i);
