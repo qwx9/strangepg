@@ -16,15 +16,26 @@ run(void)
 static void
 usage(void)
 {
-	fprint(2, "usage: %s\n", argv0);
-	sysfatal("usage");
+	sysfatal("usage: %s [-l layout] FILE\n", argv0);
 }
 
 int
 parseargs(int argc, char **argv)
 {
-	warn("parseargs %d\n", argc);
+	char *s;
+
 	ARGBEGIN{
+	case 'l':
+		s = EARGF(usage());
+		if(strcmp(s, "random") == 0)
+			deflayout = LLrandom;
+		else if(strcmp(s, "conga") == 0)
+			deflayout = LLconga;
+		else if(strcmp(s, "force") == 0)
+			deflayout = LLforce;
+		else
+			sysfatal("unknown layout type");
+		break;
 	case 'D': debug = 1; break;
 	default: usage();
 	}ARGEND

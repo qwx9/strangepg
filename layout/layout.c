@@ -1,6 +1,8 @@
 #include "strpg.h"
 #include "layout.h"
 
+int deflayout = LLforce;
+
 /* nodes are points in space, distances are in unit vectors */
 /* edges: retrieved from graph; could be filtered, but not here */
 /* representation: pretty much a binary map except we need node ids;
@@ -8,7 +10,6 @@
 
 static Layout *ll[LLnil];
 
-/* FIXME: LSB already set? it should NOT be */
 void
 putnode(Node *u, int x, int y)
 {

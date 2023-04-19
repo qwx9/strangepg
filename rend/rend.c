@@ -6,11 +6,6 @@
 
 // FIXME: layout: add an angle or 
 
-enum{
-	Nodesz = 8,
-	Ptsz = 2,
-};
-
 static int                                                            
 rendershapes(Graph *g)
 {

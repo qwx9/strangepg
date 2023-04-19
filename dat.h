@@ -39,10 +39,9 @@ struct Quad{
 };
 extern Vertex ZV;
 
-// FIXME: hengliesque generic 2d/3d version? point + rect
-struct Fertex{
-	float x;
-	float y;
+enum{
+	Nodesz = 8,
+	Ptsz = 2,
 };
 
 enum{
@@ -55,6 +54,7 @@ struct Layout{
 	char *name;
 	int (*compute)(Graph*);
 };
+extern int deflayout;
 
 /* FIXME: very unsafe mix of pointers and primitives with generic Vec */
 struct Node{

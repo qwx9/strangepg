@@ -8,7 +8,7 @@ flushcmd(void)
 {
 	uchar c, *p, *q;
 	usize sz;
-	warn("flushcmd: %zd bytes\n", bufp - cmdbuf);
+	dprint("flushcmd: %zd bytes\n", bufp - cmdbuf);
 
 	p = cmdbuf;
 	while(p < bufp){
@@ -30,10 +30,10 @@ flushcmd(void)
 		dprint("\n");
 		switch(c = *p++){
 		case COMload:
-			warn("flushcmd: COMload\n");
+			dprint("flushcmd: COMload\n");
 			switch(c = *p++){
 			case FFgfa:
-				warn("flushcmd: FFgfa\n");
+				dprint("flushcmd: FFgfa\n");
 				if(loadfs(FFgfa, (char *)p) == nil)
 					return -1;
 				rendernew();
@@ -42,7 +42,7 @@ flushcmd(void)
 			}
 			break;
 		case COMredraw:
-			warn("flushcmd: redraw\n");
+			dprint("flushcmd: redraw\n");
 			redraw();
 			break;
 		default: warn("unknown command %c\n", c);
@@ -63,7 +63,7 @@ pushcmd(int cmd, usize sz, int arg1, uchar *cbuf)
 {
 	uchar *p;
 
-	warn("pushcmd %c n=%zd arg=%d\n", cmd, sz, arg1);
+	dprint("pushcmd %c n=%zd arg=%d\n", cmd, sz, arg1);
 	if(sz + 1 > cmdbuf + nelem(cmdbuf) - bufp){
 		flushcmd();
 		if(sz + 1 > nelem(cmdbuf) - 1){

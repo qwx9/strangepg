@@ -8,12 +8,12 @@ id2n(Graph *g, usize i)
 {
 	usize v;
 
-	warn("id2n %#p k=%zd ", g, i);
+	dprint("id2n %#p k=%zd ", g, i);
 	if(idget(g->id2n, i, &v) < 0){
-		warn("→ nope\n");
+		dprint("→ nope\n");
 		return nil;
 	}
-	warn("→ %zd\n", v);
+	dprint("→ %zd\n", v);
 	return vecp(&g->nodes, v);
 }
 
@@ -69,7 +69,7 @@ rendernew(void)
 		if(g->ll != nil)	// FIXME: weak check
 			continue;
 		dprint("rendernew %#p\n", g);
-		if(dolayout(&graphs[0], LLforce) < 0)
+		if(dolayout(&graphs[0], deflayout) < 0)
 			sysfatal("dolayout: %s\n", error());
 		if(render(&graphs[0]) < 0)
 			sysfatal("render: %s\n", error());
