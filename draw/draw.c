@@ -1,34 +1,29 @@
 #include "strpg.h"
-#include <draw.h>
 #include "drw.h"
 
 View view;
 
 /* top-left to center (kludge) */
 static Quad
-centernode(Quad r)
+centernode(Quad q)
 {
-	int dx, dy;
-
-	dx = dxvx(r) / 2;
-	dy = dyvx(r) / 2;
-	dprint("centernode %s → ", quadfmt(&r));
-	r = quadaddvx(r, Vx(dx, dy));
-	dprint("%s\n", quadfmt(&r));
-	return r;
+	dprint("centernode %s → ", quadfmt(&q));
+	q.o = addpt2(q.o, divpt2(q.v, 2));
+	dprint("%s\n", quadfmt(&q));
+	return q;
 }
 
 static int
-drawedge(Quad r, double w)
+drawedge(Quad q, double w)
 {
-	return drawline(r, w);
+	return drawline(q.o, addpt2(q.o, q.v), w);
 }
 
 static int
-drawnode(Quad r)
+drawnode(Quad q)
 {
-	dprint("drawnode %s\n", quadfmt(&r));
-	return drawquad(r);
+	dprint("drawnode %s\n", quadfmt(&q));
+	return drawquad(q);
 }
 
 static int
@@ -36,28 +31,16 @@ drawedges(Graph *g)
 {
 	Edge *e, *ee;
 	Node *u, *v;
-	Quad r;
+	Quad q;
 
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
-		if((u = id2n(g, e->u >> 1)) == nil
-		|| (v = id2n(g, e->v >> 1)) == nil)
+		if((u = id2n(g, e->from >> 1)) == nil
+		|| (v = id2n(g, e->to >> 1)) == nil)
 			return -1;
-		r = vx2r(u->q.v, v->q.u);
-
-		/*
-		p = e->p->q;
-		q = e->q->q;
-		Δu = Vx(dxvx(p), dyvx(p));
-		Δv = Vx(dxvx(q), dyvx(q));
-		p = quadaddvx(p, mulvx(Δu, 0.5));
-		q = quadaddvx(q, mulvx(Δv, 0.5));
-		//q = quadaddvx(q, Δv);
-		r = vx2r(p.p, q.p);
-		*/
-
+		q = Qd(v->q.o, subpt2(u->q.v, u->q.o));
 		// FIXME: shouldn't have to do translation at all
-		r = scaletrans(r, view.zoom, view.vpan);
-		drawedge(r, e->w);
+		q = scaletrans(q, view.zoom, view.vpan);
+		drawedge(q, e->w);
 	}
 	return 0;
 }
@@ -65,13 +48,13 @@ drawedges(Graph *g)
 static int
 drawnodes(Graph *g)
 {
-	Quad r;
+	Quad q;
 	Node *u, *ue;
 
-	dprint("drawnodes dim %s\n", vertfmt(&g->dim));
+	dprint("drawnodes dim %s\n", vertfmt(&g->dim.v));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		r = scaletrans(u->q, view.zoom, view.vpan);
-		drawnode(r);
+		q = scaletrans(u->q, view.zoom, view.vpan);
+		drawnode(q);
 	}
 	return 0;
 }
@@ -111,12 +94,11 @@ void
 centerdraw(void)
 {
 	Graph *g;
-	Vertex p, v;
+	Vector p, v;
 
 	p = ZV;
-	v = ZV;
 	for(g=graphs; g<graphs+ngraphs; g++){
-		v = g->dim;
+		v = g->dim.v;
 		if(v.x > p.x)
 			p.x = v.x;
 		if(v.y > p.y)

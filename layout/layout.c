@@ -13,9 +13,8 @@ static Layout *ll[LLnil];
 void
 putnode(Node *u, int x, int y)
 {
-	/* 0-size quad */
-	u->q.u = (Vertex){x, y};
-	u->q.v = u->q.u;
+	u->q.o = Vec2(x, y);
+	u->q.v = ZV;
 }
 
 int

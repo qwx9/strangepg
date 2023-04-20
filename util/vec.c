@@ -34,7 +34,7 @@ vecindexof(Vec *v, void *p)
 	assert(v != nil && p >= v->buf && p < (uchar *)v->buf + v->elsz * v->len);
 	x = (uchar *)p - (uchar *)v->buf;
 	if(x % v->elsz != 0)
-		sysfatal("vecindexof: invalid pointer");
+		panic("vecindexof: invalid pointer");
 	return x / v->elsz;
 }
 

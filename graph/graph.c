@@ -29,34 +29,32 @@ addnode(Graph *g, usize id, char *seq)
 	n.seq = estrdup(seq);
 	n.in = vec(0, sizeof(Edge*));
 	n.out = vec(0, sizeof(Edge*));
-	n.q.u.x = nrand(view.dim.v.x);
-	n.q.u.y = nrand(view.dim.v.y);
+	n.q.o.x = nrand(view.dim.v.x);
+	n.q.o.y = nrand(view.dim.v.y);
+	n.q.v = ZV;
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, id, i);
 }
 
 /* id's in edges are always packed with direction bit */
 int
-addedge(Graph *g, usize u, usize v, char *overlap, double w)
+addedge(Graph *g, usize from, usize to, char *overlap, double w)
 {
 	Edge e, *ep;
-	Node *up, *vp;
+	Node *u, *v;
 
-	dprint("addedge %zd,%zd:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", u, v, w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1, g->edges.len, g->edges.elsz);
+	dprint("addedge %zd,%zd:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", from, to, w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1, g->edges.len, g->edges.elsz);
 	/* FIXME: this api is RETARDED */
 	e.overlap = estrdup(overlap);
 	e.w = w;
-	e.u = u;
-	e.v = v;
+	e.from = from;
+	e.to = to;
 	ep = vecpush(&g->edges, &e, nil);
-	// FIXME: better print
-//	dprint("addedge %s%zd → %s%zd: %s",
-//		NDIRS(u), NID(u), NDIRS(v), NID(v), overlap);
-	if((up = id2n(g, u >> 1)) == nil
-	|| (vp = id2n(g, v >> 1)) == nil)
+	if((u = id2n(g, from >> 1)) == nil
+	|| (v = id2n(g, to >> 1)) == nil)
 		return -1;
-	vecpush(&up->out, &ep, nil);
-	vecpush(&vp->in, &ep, nil);
+	vecpush(&u->out, &ep, nil);
+	vecpush(&v->in, &ep, nil);
 	return 0;
 }
 

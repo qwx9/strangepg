@@ -4,28 +4,26 @@
 /* force-directed layout */
 
 enum{
-	Niter = 1000,
-	Length = 1000,
-	Temp0 = 50,
+	Niter = 100,
+	Length = 100,
+	Temp0 = 20,
 };
 
 static double
-diffdist(Vertex v)
+diff(Vertex v)
 {
-	return sqrt(v.x * v.x + v.y * v.y);
+	return sqrt(v.x * v.x + v.y * v.y) + 0.0001;
 }
 
 static double
 attraction(double d, double k)
 {
-	d += 0.0001;
     return d * d / k;
 }
 
 static double
 repulsion(double d, double k)
 {
-	d += 0.0001;
     return k * k / d;
 }
 
@@ -39,47 +37,47 @@ static int
 compute(Graph *g)
 {
 	int i, j, r;
-	double k, T, totΔr, Δ;
+	double k, T, R, Δ;
 	Vertex *Δr, dv;
-	Node *ve, *up, *vp, *uu;
-	Edge **ep, **ee;
+	Node *u, *iu, *v, *ne;
+	Edge **e, **ee;
 
 	k = sqrt(Length * Length / g->nodes.len);
 	T = Temp0;
 	Δr = emalloc(g->nodes.len * sizeof *Δr);
-	ve = vecget(&g->nodes, g->nodes.len - 1);	/* just being defensive */
+	u = g->nodes.buf;
+	ne = u + g->nodes.len;
 	for(r=0; r<Niter;){
-		for(up=vecget(&g->nodes, 0), i=0; up<ve; i++, up++){
+		for(u=g->nodes.buf, i=0; u<ne; i++, u++){
 			/* ∀u,v ∈ E, Δr += d_uv / |d_uv| * Fr */
-			for(vp=vecget(&g->nodes, 0); vp<ve; vp++){
-				if(vp == up)
+			for(v=g->nodes.buf; v<ne; v++){
+				if(v == u)
 					continue;
-				dv = subvx(up->q.u, vp->q.u);
-				Δ = diffdist(dv);
-				Δr[i] = addvx(Δr[i], mulvx(divvx(dv, Δ), repulsion(Δ, k)));
+				dv = subpt2(u->q.o, v->q.o);
+				Δ = diff(dv);
+				Δr[i] = addpt2(Δr[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, k)));
 			}
 			/* ∀u,v ∈ E:
 			 *	Δr_u -= d_uv/|d_uv| * Fa
 			 *	Δr_v += d_uv/|d_uv| * Fa */
-			for(ep=vecget(&up->in, 0), ee=vecget(&up->in, up->in.len - 1); ep!=nil&&ep<ee; ep++){
-				if((uu = id2n(g, (*ep)->u >> 1)) == nil)
-					sysfatal("phase error");
-				dv = subvx(uu->q.u, up->q.u);
-				Δ = diffdist(dv);
-				Δr[i] = addvx(Δr[i], mulvx(divvx(dv, Δ), attraction(Δ, k)));
-				j = vecindexof(&g->nodes, uu);
-				Δr[j] = subvx(Δr[j], mulvx(divvx(dv, Δ), attraction(Δ, k)));
+			for(e=u->in.buf,ee=e+u->in.len; e!=nil && e<ee; e++){
+				if((iu = id2n(g, (*e)->from >> 1)) == nil)
+					panic("phase error -- missing incident node");
+				dv = subpt2(iu->q.o, u->q.o);
+				Δ = diff(dv);
+				Δr[i] = addpt2(Δr[i], mulpt2(divpt2(dv, Δ), attraction(Δ, k)));
+				j = vecindexof(&g->nodes, iu);
+				Δr[j] = subpt2(Δr[j], mulpt2(divpt2(dv, Δ), attraction(Δ, k)));
 			}
 		}
-		totΔr = 0;
-		for(vp=vecget(&g->nodes, 0), i=0; vp<ve; i++, vp++){
+		for(u=g->nodes.buf, R=0, i=0; u<ne; i++, u++){
 			dv = Δr[i];
-			Δ = diffdist(dv);
-			dv = mulvx(divvx(dv, Δ), MIN(Δ, T));
-			vp->q.u = addvx(vp->q.u, dv);
-			totΔr = totΔr + Δ;
+			Δ = diff(dv);
+			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, T));
+			u->q.o = addpt2(u->q.o, dv);
+			R += Δ;
 		}
-		if(totΔr < 0.0005 * g->nodes.len)
+		//if(R < 0.0005 * g->nodes.len)
 			r++;
 		T = cooldown(T);
 	}

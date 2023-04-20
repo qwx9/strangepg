@@ -3,9 +3,6 @@
 #include <draw.h>
 #include "drw.h"
 
-typedef Vertex Point;
-typedef Quad Rectangle;
-
 enum{
 	Cbg,
 	Ctext,
@@ -28,12 +25,20 @@ eallocimage(Rectangle r, int repl, ulong col)
 	return i;
 }
 
-static Vertex
-s2p(Vertex p)
+static Point
+v2p(Vertex v)
 {
-	p = subpt(p, screen->r.min);
+	return Pt(v.x, v.y);
+}
+
+static Point
+s2p(Vertex v)
+{
+	Point p;
+
+	p = subpt(v2p(v), screen->r.min);
 	p = subpt(p, Pt(1,1));
-	p = addpt(p, view.pan);
+	p = addpt(p, v2p(view.dim.o));
 	if(!ptinrect(p, viewr))
 		return Pt(-1,-1);
 	return p;
@@ -45,7 +50,8 @@ quadfmt(Quad *r)
 {
 	static char buf[128];
 
-	snprint(buf, sizeof buf, "%R", *r);
+	snprint(buf, sizeof buf, "[%.2f,%.2f][%.2f,%.2f]",
+		r->o.x, r->o.y, r->v.x, r->v.y);
 	return buf;
 }
 char *
@@ -53,7 +59,7 @@ vertfmt(Vertex *v)
 {
 	static char buf[128];
 
-	snprint(buf, sizeof buf, "%P", *v);
+	snprint(buf, sizeof buf, "%.2f,%.2f", v->x, v->y);
 	return buf;
 }
 
@@ -62,27 +68,27 @@ drawquad(Quad r)
 {
 	//draw(viewfb, r, col[Ctext], nil, ZP);
 	Point p[] = {
-		(Point){r.u.x, r.u.y},
-		(Point){r.v.x, r.u.y},
-		(Point){r.v.x, r.v.y},
-		(Point){r.u.x, r.v.y},
-		(Point){r.u.x, r.u.y}
+		Pt(r.o.x, r.o.y),
+		Pt(r.v.x, r.o.y),
+		Pt(r.v.x, r.v.y),
+		Pt(r.o.x, r.v.y),
+		Pt(r.o.x, r.o.y)
 	};
 	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Cnode], ZP);
 	return 0;
 }
 
 int
-drawline(Quad r, double w)
+drawline(Vertex u, Vertex v, double w)
 {
-	line(viewfb, r.u, r.v, Endsquare, Endarrow, w, col[Cedge], ZP);
+	line(viewfb, v2p(u), v2p(v), Endsquare, Endarrow, w, col[Cedge], ZP);
 	return 0;
 }
 
 void
 flushdraw(void)
 {
-	draw(screen, screen->r, viewfb, nil, view.pan);
+	draw(screen, screen->r, viewfb, nil, v2p(view.dim.o));
 	flushimage(display, 1);
 }
 
@@ -100,8 +106,8 @@ int
 resetdraw(void)
 {
 	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
-	hudr.u = addpt(screen->r.min, Pt(2, viewr.v.y+2));
-	hudr.v = addpt(hudr.u, Pt(screen->r.max.x, font->height*3));
+	hudr.min = addpt(screen->r.min, Pt(2, viewr.max.y+2));
+	hudr.max = addpt(hudr.min, Pt(screen->r.max.x, font->height*3));
 	freeimage(viewfb);
 	viewfb = eallocimage(viewr, 0, DBlack);
 	return 0;
@@ -119,7 +125,7 @@ initdrw(void)
 	col[Ctext] = display->white;
 	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, DYellow);
 	col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777FF);
-	view.dim.u = ZV;
-	view.dim.v = (Vertex){Dx(screen->r), Dy(screen->r)};
+	view.dim.o = ZV;
+	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	return 0;
 }

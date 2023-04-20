@@ -4,8 +4,6 @@
 #include <mouse.h>
 #include <keyboard.h>
 
-typedef Vertex Point;
-
 static Keyboardctl *kc;
 static Mousectl *mc;
 
@@ -69,7 +67,6 @@ evloop(void)
 			}
 			Δ = subpt(mc->xy, mold.xy);
 			// FIXME: scroll
-			mouseevent(mc->xy, Δ, mc->buttons & 7);
 			mold = mc->Mouse;
 			break;
 		case Akbd:

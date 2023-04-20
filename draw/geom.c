@@ -1,13 +1,10 @@
 #include "strpg.h"
-#include <draw.h>
 #include "drw.h"
 
 Quad
-scaletrans(Quad r, double zoom, Vertex pan)
+scaletrans(Quad q, double zoom, Vertex pan)
 {
-	r.u = addvx(mulvx(r.u, zoom), pan);
-	r.v = addvx(mulvx(r.v, zoom), pan);
-	return r;
+	return Qd(addpt2(mulpt2(q.o, zoom), pan), mulpt2(q.v, zoom));
 }
 
 int

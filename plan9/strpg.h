@@ -1,10 +1,6 @@
 #include <u.h>
 #include <libc.h>
-
-typedef ulong size_t;
-
-void	quit(void);
-
+#include <geometry.h>
 #include "dat.h"
 #include "fns.h"
 

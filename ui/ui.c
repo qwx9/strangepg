@@ -5,9 +5,9 @@ float zoom;
 static Vertex panmax;
 
 int
-panview(Vertex p)
+panview(Vector v)
 {
-	p = addvx(p, view.pan);
+	v = floorpt2(addpt2(v, view.dim.o));
 	/* FIXME
 	if(p.x < -panmax.x / 2)
 		p.x = -panmax.x / 2;
@@ -18,9 +18,9 @@ panview(Vertex p)
 	else if(p.y > panmax.y)
 		p.y = panmax.y;
 	*/
-	if(eqvx(p, view.pan))
+	if(eqpt2(v, view.dim.o))
 		return -1;
-	view.pan = p;
+	view.dim.o = v;
 	return 0;
 }
 
@@ -28,10 +28,10 @@ int
 keyevent(Rune r)
 {
 	switch(r){
-	case K↑: if(panview(Vx(0,+16)) >= 0) redraw(); break;
-	case K↓: if(panview(Vx(0,-16)) >= 0) redraw(); break;
-	case K→: if(panview(Vx(-16,0)) >= 0) redraw(); break;
-	case K←: if(panview(Vx(+16,0)) >= 0) redraw(); break;
+	case K↑: if(panview(Vec2(0,+16)) >= 0) redraw(); break;
+	case K↓: if(panview(Vec2(0,-16)) >= 0) redraw(); break;
+	case K→: if(panview(Vec2(-16,0)) >= 0) redraw(); break;
+	case K←: if(panview(Vec2(+16,0)) >= 0) redraw(); break;
 	default: break;	// FIXME: cmd(r)
 	}
 	return 0;
@@ -48,8 +48,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & Mmmb) == Mmmb){
 		// FIXME: menu
 	}else if((b & Mrmb) == Mrmb){
-		if(panview(subvx(ZV, Δ)) >= 0){
-			dprint("pan: %d,%d\n", view.pan.x, view.pan.y);
+		if(panview(subpt2(ZV, Δ)) >= 0){
+			dprint("pan: %s\n", vertfmt(&view.dim.o));
 			redraw();
 		}
 	}else if((b & (Mlmb | Mrmb)) == Mlmb | Mrmb){
@@ -63,8 +63,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 void
 resetui(void)
 {
-	view.pan = ZV;
+	view.dim.o = ZV;
 	view.zoom = 1.0;
 	panmax = view.dim.v;
-	assert(!eqvx(panmax, ZV));
+	//assert(!eqpt2(panmax, ZV));
 }

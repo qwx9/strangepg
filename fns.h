@@ -5,6 +5,8 @@ char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
 int	parseargs(int, char **);
+void	quit(void);
+#define panic(x) {warn((x)); abort();}
 
 void	vecnuke(Vec*);
 void*	vecget(Vec*, usize);
@@ -13,6 +15,15 @@ usize	vecindexof(Vec*, void*);
 void*	vecpush(Vec*, void*, usize*);
 void*	vecp(Vec*, usize);
 Vec	vec(usize, usize);
+
+Quad	Qd(Vertex, Vector);
+double	qΔx(Quad);
+double	qΔy(Quad);
+int	ptinquad(Vertex, Quad);
+Quad	insetquad(Quad, int);
+Quad	quadaddpt2(Quad, Vector);
+Vertex	floorpt2(Vertex);
+int	eqpt2(Point2, Point2);
 
 #define idmap() kh_init(id)
 #define idnuke(h) kh_destroy(id, h)
@@ -37,18 +48,6 @@ void	run(void);
 #define NDIRS(u) (((u)->id & 1) == 0 ? "+" : "-")
 
 int	errstr(char*, uint);
-int	eqvx(Vertex, Vertex);
-int	dxvx(Quad);
-int	dyvx(Quad);
-Quad	vx2r(Vertex, Vertex);
-Vertex	addvx(Vertex, Vertex);
-Vertex	subvx(Vertex, Vertex);
-Vertex	divvx(Vertex, float);
-Vertex	mulvx(Vertex, float);
-Quad	insetvx(Vertex, int);
-Vertex	Vx(int, int);
-int	vxinquad(Vertex, Quad);
-Quad	quadaddvx(Quad, Vertex);
 
 Node*	id2n(Graph*, usize);
 void	nukegraph(Graph*);
@@ -66,6 +65,7 @@ int	flushcmd(void);
 void	initfs(void);
 Graph*	loadfs(int, char*);
 
+// FIXME: initourdraw?
 int	initdrw(void);	/* plan9 already has initdraw(2) */
 int	resetdraw(void);
 int	updatedraw(void);

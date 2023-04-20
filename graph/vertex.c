@@ -1,86 +1,56 @@
 #include "strpg.h"
 
 Vertex ZV;
+Quad ZQ;
 
-// FIXME: better names (vx → vert? or just use Point/Rectangle?
-// and reimplement/copy for linux?)
-// FIXME: Vector type? Vec2D/Vec3D? Or just use rodri's geometry(2) api
-//	and study its use for rotation etc
-//  why not pull in this kind of code if it's simple enough
-//	could contemplate even bundling a libdraw+libgeometry for linux
-
-Vertex
-Vx(int x, int y)
+Quad
+Qd(Vertex o, Vector v)
 {
-	return (Vertex){x, y};
+	return (Quad){o, v};
+}
+
+double
+qΔx(Quad q)
+{
+	return q.v.x;
+}
+
+double
+qΔy(Quad q)
+{
+	return q.v.y;
 }
 
 int
-eqvx(Vertex a, Vertex b)
+ptinquad(Vertex v, Quad q)
 {
-	return memcmp(&a, &b, sizeof a) == 0;
-}
-
-int
-dxvx(Quad r)
-{
-	return r.v.x - r.u.x;
-}
-
-int
-dyvx(Quad r)
-{
-	return r.v.y - r.u.y;
+	return v.x >= q.o.x && v.x < q.o.x + q.v.x
+		&& v.y >= q.o.y && v.y < q.o.y + q.v.y;
 }
 
 Quad
-vx2r(Vertex a, Vertex b)
+insetquad(Quad q, int Δ)
 {
-	return (Quad){a, b};
+	return (Quad){
+		Vec2(q.o.x - Δ, q.o.y - Δ),
+		Vec2(q.v.x + Δ, q.v.y + Δ)
+	};
+}
+
+Quad
+quadaddpt2(Quad q, Vector v)
+{
+	return (Quad){addpt2(q.o, v), addpt2(q.v, v)};
 }
 
 Vertex
-addvx(Vertex a, Vertex b)
+floorpt2(Vertex v)
 {
-	return (Vertex){a.x + b.x, a.y + b.y};
-}
-
-Vertex
-subvx(Vertex a, Vertex b)
-{
-	return (Vertex){a.x - b.x, a.y - b.y};
-}
-
-Vertex
-mulvx(Vertex a, float f)
-{
-	return (Vertex){a.x * f, a.y * f};
-}
-
-Vertex
-divvx(Vertex a, float f)
-{
-	f += 0.0001;	/* FIXME */
-	return (Vertex){a.x / f, a.y / f};
+	return Vec2(floor(v.x), floor(v.y));
 }
 
 int
-vxinquad(Vertex v, Quad q)
+eqpt2(Point2 a, Point2 b)
 {
-	return v.x >= q.u.x && v.x < q.v.x
-		&& v.y >= q.u.y && v.y < q.v.y;
-}
-
-Quad
-insetvx(Vertex v, int Δ)
-{
-	return (Quad){(Vertex){v.x - Δ, v.y - Δ}, (Vertex){v.x + Δ, v.y + Δ}};
-}
-
-Quad
-quadaddvx(Quad q, Vertex v)
-{
-	q.u = addvx(q.u, v);
-	q.v = addvx(q.v, v);
-	return q;
+	return a.x == b.x && a.y == b.y && a.w == b.w;
 }

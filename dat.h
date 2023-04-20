@@ -1,7 +1,6 @@
 typedef struct Vec Vec;
 typedef struct Graph Graph;
 typedef struct Shape Shape;
-typedef struct Vertex Vertex;
 typedef struct Quad Quad;
 typedef struct Obj Obj;
 typedef struct Node Node;
@@ -29,15 +28,16 @@ struct Vec{
 KHASH_MAP_INIT_INT64(id, usize)
 #define Htab khash_t(id)
 
-struct Vertex{
-	int x;
-	int y;
-};
-struct Quad{
-	Vertex u;
-	Vertex v;
-};
+typedef Point2 Vertex;
+typedef Point2 Vector;
+
 extern Vertex ZV;
+extern Quad ZQ;
+
+struct Quad{
+	Vertex o;	/* position in original reference */
+	Vector v;	/* dimensions and orientation */
+};
 
 enum{
 	Nodesz = 8,
@@ -65,8 +65,8 @@ struct Node{
 	Quad q;
 };
 struct Edge{
-	usize u;
-	usize v;
+	usize from;
+	usize to;
 	char *overlap;
 	double w;
 };
@@ -75,7 +75,7 @@ struct Graph{
 	Vec nodes;
 	Htab *id2n;
 	Layout *ll;
-	Vertex dim;
+	Quad dim;
 };
 extern Graph *graphs;
 extern int ngraphs;
@@ -98,8 +98,7 @@ enum{
 };
 struct View{
 	Quad dim;
-	Vertex pan;
-	Vertex vpan;
+	Vector vpan;
 	double zoom;
 };
 extern View view;

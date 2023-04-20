@@ -3,26 +3,28 @@
 /* .w will be used to modify the shape and isn't saved any more */
 
 // FIXME: functional style? pipeline vector of nodes
-
 // FIXME: layout: add an angle or 
 
 static int                                                            
 rendershapes(Graph *g)
 {
-	int d;
 	Node *u, *ue;
-	Vertex *n;
+	Quad d;
+	Vertex p;
 
+	d = Qd(view.dim.o, addpt2(view.dim.o, view.dim.v));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		n = &u->q.u;
-		u->q = insetvx(addvx(*n, (Vertex){Ptsz,Ptsz}), Nodesz/2);
-		d = u->q.v.x + dxvx(u->q);
-		if(g->dim.x < d)
-			g->dim.x = d;
-		d = u->q.v.y +  dyvx(u->q);
-		if(g->dim.y < d)
-			g->dim.y = d;
+		p = u->q.o;
+		if(p.x < d.o.x)
+			d.o.x = p.x;
+		else if(p.x > d.v.x)
+			d.v.x = p.x;
+		if(p.y < d.o.y)
+			d.o.y = p.y;
+		else if(p.y > d.v.y)
+			d.v.y = p.y;
 	}
+	g->dim = Qd(d.o, subpt2(d.v, d.o));
 	return 0;
 }
 
