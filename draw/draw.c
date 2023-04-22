@@ -3,20 +3,27 @@
 
 View view;
 
-/* top-left to center (kludge) */
-static Quad
-centernode(Quad q)
+// FIXME: maybe we should start converting to integer coords here,
+// not in plan9, since we're looking at pixels now (excl. zoom)
+// also view stuff should probably also be in px coords
+void
+centergraph(Graph *g)
 {
-	dprint("centernode %s → ", quadfmt(&q));
-	q.o = addpt2(q.o, divpt2(q.v, 2));
-	dprint("%s\n", quadfmt(&q));
-	return q;
+	Vector c, v;
+
+	c = divpt2(view.dim.v, 2);
+	v = divpt2(g->dim.v, 2);
+	view.center = addpt2(subpt2(c, v), divpt2(view.dim.v, 2));
+	view.center = subpt2(c, v);
+	//warn("centergraph %.2f,%.2f\n", view.center.x, view.center.y);
 }
 
 static int
 drawedge(Quad q, double w)
 {
-	return drawline(q.o, addpt2(q.o, q.v), w);
+	Qd(q.o, addpt2(q.o, q.v));
+	dprint("drawedge %s\n", quadfmt(&q));
+	return drawline(q.o, q.v, w);
 }
 
 static int
@@ -37,9 +44,10 @@ drawedges(Graph *g)
 		if((u = id2n(g, e->from >> 1)) == nil
 		|| (v = id2n(g, e->to >> 1)) == nil)
 			return -1;
-		q = Qd(v->q.o, subpt2(u->q.v, u->q.o));
+		//q = Qd(v->q.o, subpt2(u->q.v, u->q.o));
+		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
 		// FIXME: shouldn't have to do translation at all
-		q = scaletrans(q, view.zoom, view.vpan);
+		q = scaletrans(q, view.zoom, ZV);
 		drawedge(q, e->w);
 	}
 	return 0;
@@ -53,7 +61,7 @@ drawnodes(Graph *g)
 
 	dprint("drawnodes dim %s\n", vertfmt(&g->dim.v));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		q = scaletrans(u->q, view.zoom, view.vpan);
+		q = scaletrans(u->q, view.zoom, ZV);
 		drawnode(q);
 	}
 	return 0;
@@ -67,6 +75,7 @@ drawworld(void)
 	for(g=graphs; g<graphs+ngraphs; g++){
 		if(g->ll == nil)	// FIXME: weak check
 			continue;
+		centergraph(g);
 		dprint("drawworld: draw graph %#p\n", g);
 		drawnodes(g);
 		drawedges(g);
@@ -90,32 +99,12 @@ updatedraw(void)
 	return 0;
 }
 
-void
-centerdraw(void)
-{
-	Graph *g;
-	Vector p, v;
-
-	p = ZV;
-	for(g=graphs; g<graphs+ngraphs; g++){
-		v = g->dim.v;
-		if(v.x > p.x)
-			p.x = v.x;
-		if(v.y > p.y)
-			p.y = v.y;
-	}
-	p.x = (view.dim.v.x - p.x) / 2;
-	p.y = (view.dim.v.y - p.y) / 2;
-	view.vpan = p;
-}
-
 int
 redraw(void)
 {
 	dprint("redraw\n");
 	cleardraw();
 	rendernew();
-	centerdraw();
 	drawworld();
 	return updatedraw();
 }

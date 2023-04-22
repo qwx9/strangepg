@@ -98,7 +98,8 @@ enum{
 };
 struct View{
 	Quad dim;
-	Vector vpan;
+	Vector pan;
+	Vector center;
 	double zoom;
 };
 extern View view;

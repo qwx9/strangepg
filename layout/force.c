@@ -4,15 +4,16 @@
 /* force-directed layout */
 
 enum{
-	Niter = 100,
-	Length = 100,
-	Temp0 = 20,
+	Length = 300,
+	Nrep = 1000,
 };
+
+#define	ΔT	(1.0 - 1.0 / Nrep)		/* eg. δ *= 0.999 at every step */
 
 static double
 diff(Vertex v)
 {
-	return sqrt(v.x * v.x + v.y * v.y) + 0.0001;
+	return sqrt(v.x * v.x + v.y * v.y) + 0.00001;
 }
 
 static double
@@ -27,61 +28,87 @@ repulsion(double d, double k)
     return k * k / d;
 }
 
-static double
-cooldown(double T)
-{
-	return T > 0.0001 ? 0.999 * T : 0.0001;
-}
-
 static int
 compute(Graph *g)
 {
-	int i, j, r;
-	double k, T, R, Δ;
-	Vertex *Δr, dv;
-	Node *u, *iu, *v, *ne;
+	int i, j, n;
+	double K, δ, R, Δ, ε;
+	Vertex *Fu, dv;
+	Node *u, *from, *v, *ne;
 	Edge **e, **ee;
 
-	k = sqrt(Length * Length / g->nodes.len);
-	T = Temp0;
-	Δr = emalloc(g->nodes.len * sizeof *Δr);
+	/* initial random placement, but in same scale as springs */
+	for(u=g->nodes.buf, ne=u+g->nodes.len; u<ne; u++)
+		//putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
+		putnode(u, 10+nrand(Length), 10+nrand(Length));
+	K = ceil(sqrt((double)Length * Length / g->nodes.len));
+	/* arbitrary displacement minimum function */
+	ε = ceil(sqrt((double)Length * Length / g->edges.len));
+	δ = 1.0;
+	Fu = emalloc(g->nodes.len * sizeof *Fu);
 	u = g->nodes.buf;
 	ne = u + g->nodes.len;
-	for(r=0; r<Niter;){
-		for(u=g->nodes.buf, i=0; u<ne; i++, u++){
-			/* ∀u,v ∈ E, Δr += d_uv / |d_uv| * Fr */
+	for(n=0; n<Nrep; n++){
+		memset(Fu, 0, g->nodes.len * sizeof *Fu);
+		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(v=g->nodes.buf; v<ne; v++){
 				if(v == u)
 					continue;
 				dv = subpt2(u->q.o, v->q.o);
 				Δ = diff(dv);
-				Δr[i] = addpt2(Δr[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, k)));
+				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, K)));
 			}
-			/* ∀u,v ∈ E:
-			 *	Δr_u -= d_uv/|d_uv| * Fa
-			 *	Δr_v += d_uv/|d_uv| * Fa */
+		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(e=u->in.buf,ee=e+u->in.len; e!=nil && e<ee; e++){
-				if((iu = id2n(g, (*e)->from >> 1)) == nil)
+				if((from = id2n(g, (*e)->from >> 1)) == nil)
 					panic("phase error -- missing incident node");
-				dv = subpt2(iu->q.o, u->q.o);
+				dv = subpt2(from->q.o, u->q.o);
 				Δ = diff(dv);
-				Δr[i] = addpt2(Δr[i], mulpt2(divpt2(dv, Δ), attraction(Δ, k)));
-				j = vecindexof(&g->nodes, iu);
-				Δr[j] = subpt2(Δr[j], mulpt2(divpt2(dv, Δ), attraction(Δ, k)));
+				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
+				Fu[i] = addpt2(Fu[i], dv);
+				j = vecindexof(&g->nodes, from);
+				Fu[j] = subpt2(Fu[j], dv);
 			}
-		}
 		for(u=g->nodes.buf, R=0, i=0; u<ne; i++, u++){
-			dv = Δr[i];
+			dv = Fu[i];
 			Δ = diff(dv);
-			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, T));
+			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));
 			u->q.o = addpt2(u->q.o, dv);
-			R += Δ;
+			if(R < Δ)
+				R = Δ;
 		}
-		//if(R < 0.0005 * g->nodes.len)
-			r++;
-		T = cooldown(T);
+		dprint("R %.2f ε %.2f K %.2f δ %.2f\n", R, ε, K, δ);
+		if(R < ε)
+			break;
+		if(δ > 0.0001)
+			δ *= ΔT;
+
+
+/* FIXME: kludge */
+{
+	Quad d;
+
+	//Quad d = Qd(view.dim.o, addpt2(view.dim.o, view.dim.v));
+	for(u=g->nodes.buf, d=u->q; u<ne; u++){
+		if(u->q.o.x < d.o.x)
+			d.o.x = u->q.o.x;
+		else if(d.v.x < u->q.o.x + u->q.v.x)
+			d.v.x = u->q.o.x + u->q.v.x;
+		if(u->q.o.y < d.o.y)
+			d.o.y = u->q.o.y;
+		else if(d.v.y < u->q.o.y + u->q.v.y)
+			d.v.y = u->q.o.y + u->q.v.y;
 	}
-	free(Δr);
+	//g->dim = Qd(d.o, subpt2(d.v, d.o));
+	g->dim = Qd(d.o, subpt2(d.v, d.o));
+	dprint("dim %.2f,%.2f %.2f,%.2f\n", g->dim.o.x, g->dim.o.y, g->dim.v.x, g->dim.v.y);
+	redraw();
+	sleep(1);
+}
+
+
+	}
+	free(Fu);
 	return 0;
 }
 

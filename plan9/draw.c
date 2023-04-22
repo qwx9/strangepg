@@ -63,24 +63,71 @@ vertfmt(Vertex *v)
 	return buf;
 }
 
+Rectangle dim;
+
 int
-drawquad(Quad r)
+drawquad(Quad q)
 {
-	//draw(viewfb, r, col[Ctext], nil, ZP);
+	Rectangle r;
+	Point o;
+
+	q.v = addpt2(q.o, q.v);
+
+	r = Rpt(v2p(q.o), v2p(q.v));
+	if(dim.min.x > r.min.x)
+		dim.min.x = r.min.x;
+	if(dim.max.x < r.max.x)
+		dim.max.x = r.max.x;
+	if(dim.min.y > r.min.y)
+		dim.min.y = r.min.y;
+	if(dim.max.y < r.max.y)
+		dim.max.y = r.max.y;
+
+	//rectaddpt(r, v2p(view.center));
+	//quadaddpt2(q, view.center);
+	//r = Rpt(v2p(q.o), v2p(q.v));
+/*
+FIXME: we already know what the bounds are before we do any drawing
+we want g->dim to be the bounding area for our drawing
+its coordinates are not pixel coordinates
+we will translate it to have no negative coordinates or at least be centered
+then, the screen is a second variable
+
+
+so:
+	- we have the graph's bounding box (or should)
+	- we have the viewsize == viewfb rectangle
+	- we have a panning offset (for flush)
+what we want:
+	- center of viewfb == center of graph box, or even a given node
+		=> offset drawing into viewfb
+unless we're ok with redrawing any time we pan,
+	we must have a viewfb larger than the screen, or a constant size
+	based on default lengths, etc.
+*/
+
+
+
 	Point p[] = {
-		Pt(r.o.x, r.o.y),
-		Pt(r.v.x, r.o.y),
-		Pt(r.v.x, r.v.y),
-		Pt(r.o.x, r.v.y),
-		Pt(r.o.x, r.o.y)
+		r.min,
+		Pt(r.max.x, r.min.y),
+		r.max,
+		Pt(r.min.x, r.max.y),
+		r.min
 	};
 	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Cnode], ZP);
 	return 0;
 }
 
+// NOTE: don't need to take into account edges for max dimensions,
+// they'll never go beyond the nodes
 int
 drawline(Vertex u, Vertex v, double w)
 {
+	Point o;
+
+	//u = addpt2(u, view.center);
+	//v = addpt2(v, view.center);
 	line(viewfb, v2p(u), v2p(v), Endsquare, Endarrow, w, col[Cedge], ZP);
 	return 0;
 }
@@ -88,13 +135,30 @@ drawline(Vertex u, Vertex v, double w)
 void
 flushdraw(void)
 {
-	draw(screen, screen->r, viewfb, nil, v2p(view.dim.o));
+	Point o, z;
+
+	line(viewfb, Pt(viewfb->r.max.x/2,0), Pt(viewfb->r.max.x/2,viewfb->r.max.y), Endsquare, Endarrow, 0, col[Ctext], ZP);
+	line(viewfb, Pt(0,viewfb->r.max.y/2), Pt(viewfb->r.max.x,viewfb->r.max.y/2), Endsquare, Endarrow, 0, col[Ctext], ZP);
+
+	Point pl[] = {
+		dim.min,
+		Pt(dim.max.x, dim.min.y),
+		dim.max,
+		Pt(dim.min.x, dim.max.y),
+		dim.min
+	};
+	poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, col[Cnode], v2p(view.center));
+
+	o = v2p(view.pan);
+	draw(screen, screen->r, viewfb, nil, o);
+	//draw(screen, rectsubpt(screen->r, o), viewfb, nil, ZP);
 	flushimage(display, 1);
 }
 
 void
 cleardraw(void)
 {
+	dim = Rpt(viewfb->r.max, viewfb->r.min);
 	//lockdisplay(display);
 	// FIXME: unnecessary if view/pan is bounded
 	draw(screen, screen->r, col[Cbg], nil, ZP);

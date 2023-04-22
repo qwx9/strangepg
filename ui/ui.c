@@ -7,7 +7,8 @@ static Vertex panmax;
 int
 panview(Vector v)
 {
-	v = floorpt2(addpt2(v, view.dim.o));
+	dprint("panview to %.2f,%.2f\n", v.x, v.y);
+	v = floorpt2(addpt2(v, view.pan));
 	/* FIXME
 	if(p.x < -panmax.x / 2)
 		p.x = -panmax.x / 2;
@@ -18,9 +19,9 @@ panview(Vector v)
 	else if(p.y > panmax.y)
 		p.y = panmax.y;
 	*/
-	if(eqpt2(v, view.dim.o))
+	if(eqpt2(v, view.pan))
 		return -1;
-	view.dim.o = v;
+	view.pan = v;
 	return 0;
 }
 

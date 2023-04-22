@@ -1,11 +1,14 @@
 #include "strpg.h"
 
-/* .w will be used to modify the shape and isn't saved any more */
+static int
+rendernode(Node *u)
+{
+	// FIXME: orientation, length
+	u->q.v = addpt2(u->q.v, Vec2(Nodesz, Nodesz));
+	return 0;
+}
 
-// FIXME: functional style? pipeline vector of nodes
-// FIXME: layout: add an angle or 
-
-static int                                                            
+static int
 rendershapes(Graph *g)
 {
 	Node *u, *ue;
@@ -14,7 +17,10 @@ rendershapes(Graph *g)
 
 	d = Qd(view.dim.o, addpt2(view.dim.o, view.dim.v));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		p = u->q.o;
+		dprint("render node %s\n", quadfmt(&u->q));
+		u->q.v = ZV;
+		rendernode(u);
+		p = addpt2(u->q.o, u->q.v);
 		if(p.x < d.o.x)
 			d.o.x = p.x;
 		else if(p.x > d.v.x)
@@ -28,12 +34,13 @@ rendershapes(Graph *g)
 	return 0;
 }
 
-// TODO: produce a vector of SDL lines and rectangles to draw
-// TODO/draw: draw them; scale by zoom factor first
-
 int
 render(Graph *g)
 {
+	if(g->nodes.len < 1){
+		werrstr("empty graph");
+		return -1;
+	}
 	return rendershapes(g);
 }
 
