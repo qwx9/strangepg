@@ -22,6 +22,10 @@ dolayout(Graph *g, int type)
 {
 	Layout *l;
 
+	if(g->nodes.len < 1){
+		werrstr("empty graph");
+		return -1;
+	}
 	if(type < 0 || type >= LLnil){
 		werrstr("invalid layout");
 		return -1;
