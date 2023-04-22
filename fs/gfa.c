@@ -4,7 +4,7 @@
 static int
 gfa1hdr(Graph *g, File *f)
 {
-	if(f->nf != 2){
+	if(f->nf < 2){
 		werrstr("line %d: malformed header", f->nr);
 		return -1;
 	}
@@ -15,7 +15,7 @@ gfa1hdr(Graph *g, File *f)
 static int
 gfa1seg(Graph *g, File *f)
 {
-	if(f->nf != 3){
+	if(f->nf < 3){
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
@@ -42,7 +42,7 @@ gfa1link(Graph *g, File *f)
 {
 	usize u, v;
 
-	if(f->nf != 6){
+	if(f->nf < 6){
 		werrstr("line %d: malformed link", f->nr);
 		return -1;
 	}
@@ -76,7 +76,7 @@ loadgfa1(char *path)
 		sysfatal("loadgfa1: ");
 	memset(&f, 0, sizeof f);
 	f.path = path;
-	while(readrecord(&f) != nil){
+	while(readrecord(&f) != nil && f.err < 10){
 		switch(f.fld[0][0]){
 		case 'H': parse = gfa1hdr; break;
 		case 'S': parse = gfa1seg; break;
@@ -85,8 +85,8 @@ loadgfa1(char *path)
 		default: werrstr("line %d: unknown record type %c", f.nr, *f.fld[0]); continue;
 		}
 		if(parse(g, &f) < 0){
+			warn("loadgfa1: %s\n", error());
 			f.err++;
-			break;
 		}
 	}
 	if(f.err){
