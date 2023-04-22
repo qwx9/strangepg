@@ -67,6 +67,7 @@ evloop(void)
 			}
 			Δ = subpt(mc->xy, mold.xy);
 			// FIXME: scroll
+			mouseevent(Vec2(mc->xy.x, mc->xy.y), Vec2(Δ.x, Δ.y), mc->buttons & 7);
 			mold = mc->Mouse;
 			break;
 		case Akbd:
