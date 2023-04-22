@@ -8,12 +8,12 @@ id2n(Graph *g, usize i)
 {
 	usize v;
 
-	dprint("id2n %#p k=%zd ", g, i);
+	//dprint("id2n %#p k=%zd ", g, i);
 	if(idget(g->id2n, i, &v) < 0){
 		dprint("→ nope\n");
 		return nil;
 	}
-	dprint("→ %zd\n", v);
+	//dprint("→ %zd\n", v);
 	return vecp(&g->nodes, v);
 }
 
@@ -29,9 +29,7 @@ addnode(Graph *g, usize id, char *seq)
 	n.seq = estrdup(seq);
 	n.in = vec(0, sizeof(Edge*));
 	n.out = vec(0, sizeof(Edge*));
-	n.q.o.x = nrand(view.dim.v.x);
-	n.q.o.y = nrand(view.dim.v.y);
-	n.q.v = ZV;
+	n.q = ZQ;
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, id, i);
 }
