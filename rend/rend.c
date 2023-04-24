@@ -15,8 +15,7 @@ rendershapes(Graph *g)
 	Quad d;
 	Vertex p;
 
-	d = Qd(view.dim.o, addpt2(view.dim.o, view.dim.v));
-	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
+	for(d=ZQ, u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		dprint("render node %s\n", quadfmt(&u->q));
 		u->q.v = ZV;
 		rendernode(u);
@@ -30,7 +29,7 @@ rendershapes(Graph *g)
 		else if(p.y > d.v.y)
 			d.v.y = p.y;
 	}
-	g->dim = Qd(d.o, subpt2(d.v, d.o));
+	g->dim = d;
 	return 0;
 }
 

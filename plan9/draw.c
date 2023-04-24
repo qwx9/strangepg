@@ -25,6 +25,12 @@ eallocimage(Rectangle r, int repl, ulong col)
 	return i;
 }
 
+static Vertex
+p2v(Point p)
+{
+	return Vec2(p.x, p.y);
+}
+
 static Point
 v2p(Vertex v)
 {
@@ -69,45 +75,20 @@ int
 drawquad(Quad q)
 {
 	Rectangle r;
-	Point o;
 
 	q.v = addpt2(q.o, q.v);
-
 	r = Rpt(v2p(q.o), v2p(q.v));
-	if(dim.min.x > r.min.x)
-		dim.min.x = r.min.x;
-	if(dim.max.x < r.max.x)
-		dim.max.x = r.max.x;
-	if(dim.min.y > r.min.y)
-		dim.min.y = r.min.y;
-	if(dim.max.y < r.max.y)
-		dim.max.y = r.max.y;
-
-	//rectaddpt(r, v2p(view.center));
-	//quadaddpt2(q, view.center);
-	//r = Rpt(v2p(q.o), v2p(q.v));
-/*
-FIXME: we already know what the bounds are before we do any drawing
-we want g->dim to be the bounding area for our drawing
-its coordinates are not pixel coordinates
-we will translate it to have no negative coordinates or at least be centered
-then, the screen is a second variable
-
-
-so:
-	- we have the graph's bounding box (or should)
-	- we have the viewsize == viewfb rectangle
-	- we have a panning offset (for flush)
-what we want:
-	- center of viewfb == center of graph box, or even a given node
-		=> offset drawing into viewfb
-unless we're ok with redrawing any time we pan,
-	we must have a viewfb larger than the screen, or a constant size
-	based on default lengths, etc.
-*/
-
-
-
+	if(debug){
+		if(dim.min.x > r.min.x)
+			dim.min.x = r.min.x;
+		if(dim.max.x < r.max.x)
+			dim.max.x = r.max.x;
+		if(dim.min.y > r.min.y)
+			dim.min.y = r.min.y;
+		if(dim.max.y < r.max.y)
+			dim.max.y = r.max.y;
+	}
+	r = rectaddpt(r, v2p(view.center));
 	Point p[] = {
 		r.min,
 		Pt(r.max.x, r.min.y),
@@ -119,15 +100,11 @@ unless we're ok with redrawing any time we pan,
 	return 0;
 }
 
-// NOTE: don't need to take into account edges for max dimensions,
-// they'll never go beyond the nodes
 int
 drawline(Vertex u, Vertex v, double w)
 {
-	Point o;
-
-	//u = addpt2(u, view.center);
-	//v = addpt2(v, view.center);
+	u = addpt2(u, view.center);
+	v = addpt2(v, view.center);
 	line(viewfb, v2p(u), v2p(v), Endsquare, Endarrow, w, col[Cedge], ZP);
 	return 0;
 }
@@ -135,45 +112,78 @@ drawline(Vertex u, Vertex v, double w)
 void
 flushdraw(void)
 {
-	Point o, z;
-
-	line(viewfb, Pt(viewfb->r.max.x/2,0), Pt(viewfb->r.max.x/2,viewfb->r.max.y), Endsquare, Endarrow, 0, col[Ctext], ZP);
-	line(viewfb, Pt(0,viewfb->r.max.y/2), Pt(viewfb->r.max.x,viewfb->r.max.y/2), Endsquare, Endarrow, 0, col[Ctext], ZP);
-
-	Point pl[] = {
-		dim.min,
-		Pt(dim.max.x, dim.min.y),
-		dim.max,
-		Pt(dim.min.x, dim.max.y),
-		dim.min
-	};
-	poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, col[Cnode], v2p(view.center));
+	Point o;
 
 	o = v2p(view.pan);
+	draw(screen, screen->r, col[Cbg], nil, ZP);
 	draw(screen, screen->r, viewfb, nil, o);
-	//draw(screen, rectsubpt(screen->r, o), viewfb, nil, ZP);
 	flushimage(display, 1);
 }
 
 void
 cleardraw(void)
 {
-	dim = Rpt(viewfb->r.max, viewfb->r.min);
+	Graph *g;
+	Rectangle r, q;
+
+	dim = ZR;
+	r = Rpt(ZP, v2p(view.dim.v));
+	for(g=graphs; g<graphs+ngraphs; g++){
+		g->off = ZV;
+		dprint("cleardraw: graph %#p dim %.1f,%.1f\n", g, g->dim.v.x, g->dim.v.y);
+		q = Rpt(v2p(g->dim.o), v2p(addpt2(g->dim.o, g->dim.v)));
+		if(qΔx(g->dim) + Nodesz > Dx(r))
+			r.max.x = qΔx(g->dim) + Nodesz + 1;
+		if(qΔy(g->dim) + Nodesz > Dy(r))
+			r.max.y = qΔy(g->dim) + Nodesz + 1;
+		if(q.min.x < 0)
+			g->off.x = -q.min.x + Nodesz;
+		else if(q.min.x > 0)
+			g->off.x = -q.min.x;
+		if(q.min.y < 0)
+			g->off.y = -q.min.y + Nodesz;
+		else if(q.min.y > 0)
+			g->off.y = -q.min.y;
+	}
+	if(!eqrect(r, viewfb->r)){
+		view.dim.v = p2v(r.max);
+		resetdraw();
+	}
 	//lockdisplay(display);
 	// FIXME: unnecessary if view/pan is bounded
 	draw(screen, screen->r, col[Cbg], nil, ZP);
-	draw(viewfb, viewfb->r, col[Cbg], nil, ZP);
+	draw(viewfb, r, col[Cbg], nil, ZP);
+	if(debug){
+		Point pl[] = {
+			r.min,
+			Pt(r.max.x, r.min.y),
+			r.max,
+			Pt(r.min.x, r.max.y),
+			r.min
+		};
+		r = insetrect(r, 1);
+		poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, col[Ctext], ZP);
+		line(viewfb,
+			Pt(viewfb->r.max.x/2, 0),
+			Pt(viewfb->r.max.x/2, viewfb->r.max.y),
+			Endsquare, Endarrow, 0, col[Ctext], ZP);
+		line(viewfb,
+			Pt(0, viewfb->r.max.y/2),
+			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
+			Endsquare, Endarrow, 0, col[Ctext], ZP);
+	}
 	//unlockdisplay(display);
 }
 
 int
 resetdraw(void)
 {
-	viewr = Rpt(ZP, Pt(Dx(screen->r)+1, Dy(screen->r)+1));
-	hudr.min = addpt(screen->r.min, Pt(2, viewr.max.y+2));
-	hudr.max = addpt(hudr.min, Pt(screen->r.max.x, font->height*3));
+	viewr = Rpt(ZP, v2p(view.dim.v));
+	dprint("resetdraw %R\n", viewr);
+	hudr.min = addpt(screen->r.min, Pt(2, Dy(screen->r)+2));
+	hudr.max = addpt(hudr.min, Pt(Dx(screen->r), font->height*3));
 	freeimage(viewfb);
-	viewfb = eallocimage(viewr, 0, DBlack);
+	viewfb = eallocimage(viewr, 0, DNofill);
 	return 0;
 }
 

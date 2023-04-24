@@ -12,13 +12,13 @@ Qd(Vertex o, Vector v)
 double
 qΔx(Quad q)
 {
-	return q.v.x;
+	return q.v.x - q.o.x;
 }
 
 double
 qΔy(Quad q)
 {
-	return q.v.y;
+	return q.v.y - q.o.y;
 }
 
 int

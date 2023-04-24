@@ -70,6 +70,7 @@ int	initdrw(void);	/* plan9 already has initdraw(2) */
 int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);
+int shallowdraw(void);
 
 void	initrend(void);
 int	render(Graph*);

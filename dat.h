@@ -76,6 +76,7 @@ struct Graph{
 	Htab *id2n;
 	Layout *ll;
 	Quad dim;
+	Vertex off;
 };
 extern Graph *graphs;
 extern int ngraphs;

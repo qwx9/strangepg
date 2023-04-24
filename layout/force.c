@@ -83,29 +83,13 @@ compute(Graph *g)
 		if(δ > 0.0001)
 			δ *= ΔT;
 
-
 /* FIXME: kludge */
 {
-	Quad d;
-
-	//Quad d = Qd(view.dim.o, addpt2(view.dim.o, view.dim.v));
-	for(u=g->nodes.buf, d=u->q; u<ne; u++){
-		if(u->q.o.x < d.o.x)
-			d.o.x = u->q.o.x;
-		else if(d.v.x < u->q.o.x + u->q.v.x)
-			d.v.x = u->q.o.x + u->q.v.x;
-		if(u->q.o.y < d.o.y)
-			d.o.y = u->q.o.y;
-		else if(d.v.y < u->q.o.y + u->q.v.y)
-			d.v.y = u->q.o.y + u->q.v.y;
-	}
-	//g->dim = Qd(d.o, subpt2(d.v, d.o));
-	g->dim = Qd(d.o, subpt2(d.v, d.o));
-	dprint("dim %.2f,%.2f %.2f,%.2f\n", g->dim.o.x, g->dim.o.y, g->dim.v.x, g->dim.v.y);
+	render(g);
+	dprint("force: dim %.2f,%.2f %.2f,%.2f\n", g->dim.o.x, g->dim.o.y, g->dim.v.x, g->dim.v.y);
 	redraw();
 	sleep(1);
 }
-
 
 	}
 	free(Fu);

@@ -3,19 +3,21 @@
 
 View view;
 
-// FIXME: maybe we should start converting to integer coords here,
-// not in plan9, since we're looking at pixels now (excl. zoom)
-// also view stuff should probably also be in px coords
 void
 centergraph(Graph *g)
 {
-	Vector c, v;
+	Vector v;
 
-	c = divpt2(view.dim.v, 2);
-	v = divpt2(g->dim.v, 2);
-	view.center = addpt2(subpt2(c, v), divpt2(view.dim.v, 2));
-	view.center = subpt2(c, v);
-	//warn("centergraph %.2f,%.2f\n", view.center.x, view.center.y);
+	v = subpt2(g->dim.v, view.dim.v);
+	if(v.x > 0)
+		v.x /= 2;
+	else
+		v.x = 0;
+	if(v.y > 0)
+		v.y /= 2;
+	else
+		v.y = 0;
+	view.center = addpt2(g->off, v);
 }
 
 static int
@@ -44,7 +46,6 @@ drawedges(Graph *g)
 		if((u = id2n(g, e->from >> 1)) == nil
 		|| (v = id2n(g, e->to >> 1)) == nil)
 			return -1;
-		//q = Qd(v->q.o, subpt2(u->q.v, u->q.o));
 		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
 		// FIXME: shouldn't have to do translation at all
 		q = scaletrans(q, view.zoom, ZV);
@@ -87,7 +88,6 @@ drawui(void)
 {
 }
 
-
 // FIXME: until there is a need to do drawing asynchronously,
 // there's no need to distinguish draw and ui layers, it will
 // all be redrawn anyway
@@ -97,6 +97,13 @@ updatedraw(void)
 	drawui();
 	flushdraw();
 	return 0;
+}
+
+int
+shallowdraw(void)
+{
+	dprint("shallowdraw\n");
+	return updatedraw();
 }
 
 int

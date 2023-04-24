@@ -29,10 +29,10 @@ int
 keyevent(Rune r)
 {
 	switch(r){
-	case K↑: if(panview(Vec2(0,+16)) >= 0) redraw(); break;
-	case K↓: if(panview(Vec2(0,-16)) >= 0) redraw(); break;
-	case K→: if(panview(Vec2(-16,0)) >= 0) redraw(); break;
-	case K←: if(panview(Vec2(+16,0)) >= 0) redraw(); break;
+	case K↑: if(panview(Vec2(0,+16)) >= 0) shallowdraw(); break;
+	case K↓: if(panview(Vec2(0,-16)) >= 0) shallowdraw(); break;
+	case K→: if(panview(Vec2(-16,0)) >= 0) shallowdraw(); break;
+	case K←: if(panview(Vec2(+16,0)) >= 0) shallowdraw(); break;
 	default: break;	// FIXME: cmd(r)
 	}
 	return 0;
@@ -51,7 +51,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & Mrmb) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0){
 			dprint("pan: %s\n", vertfmt(&view.dim.o));
-			redraw();
+			shallowdraw();
 		}
 	}else if((b & (Mlmb | Mrmb)) == Mlmb | Mrmb){
 		// FIXME: zoom
