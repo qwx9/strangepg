@@ -5,7 +5,6 @@ OFILES=\
 	main.$O\
 	cmd/cmd.$O\
 	draw/draw.$O\
-	draw/geom.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
 	graph/graph.$O\

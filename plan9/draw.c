@@ -77,7 +77,7 @@ drawquad(Quad q)
 	Rectangle r;
 
 	q.v = addpt2(q.o, q.v);
-	r = Rpt(v2p(q.o), v2p(q.v));
+	r = Rpt(v2p(mulpt2(q.o, view.zoom)), v2p(mulpt2(q.v, view.zoom)));
 	if(debug){
 		if(dim.min.x > r.min.x)
 			dim.min.x = r.min.x;
@@ -103,8 +103,8 @@ drawquad(Quad q)
 int
 drawline(Vertex u, Vertex v, double w)
 {
-	u = addpt2(u, view.center);
-	v = addpt2(v, view.center);
+	u = addpt2(mulpt2(u, view.zoom), view.center);
+	v = addpt2(mulpt2(v, view.zoom), view.center);
 	line(viewfb, v2p(u), v2p(v), Endsquare, Endarrow, w, col[Cedge], ZP);
 	return 0;
 }

@@ -1,7 +1,5 @@
 #include "strpg.h"
 
-float zoom;
-
 static Vertex panmax;
 
 int
@@ -26,6 +24,20 @@ panview(Vector v)
 }
 
 int
+zoomview(Vector v)
+{
+	double Δ;
+
+	/* scalar projection of v onto (1,1); so, view.zoom in when dragging ↘ */
+	Δ = 0.01 * -(v.x + v.y) / 2;
+	dprint("view.zoomview %.1f,%.1f → Δ %.2f\n", v.x, v.y, Δ);
+	if(view.zoom + Δ < 0.1 || view.zoom + Δ > 10)
+		return -1;
+	view.zoom += Δ;
+	return 0;
+}
+
+int
 keyevent(Rune r)
 {
 	switch(r){
@@ -43,21 +55,22 @@ int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
 	USED(v);
-	if((b & Mlmb) == Mlmb){
+	if((b & 7) == Mlmb){
 		// FIXME: select
 		// FIXME: drag → move
-	}else if((b & Mmmb) == Mmmb){
+	}else if((b & 7) == Mmmb){
 		// FIXME: menu
-	}else if((b & Mrmb) == Mrmb){
+	}else if((b & 7) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0){
 			dprint("pan: %s\n", vertfmt(&view.dim.o));
 			shallowdraw();
 		}
-	}else if((b & (Mlmb | Mrmb)) == Mlmb | Mrmb){
-		// FIXME: zoom
+	}else if((b & 7) == (Mlmb | Mrmb)){
+		if(zoomview(subpt2(ZV, Δ)) >= 0){
+			dprint("pan: %s\n", vertfmt(&view.dim.o));
+			redraw();
+		}
 	}
-	// FIXME: possible: toggle floating centered mouse
-	// FIXME: bound view, in two steps
 	return 0;
 }
 
@@ -65,7 +78,8 @@ void
 resetui(void)
 {
 	view.dim.o = ZV;
-	view.zoom = 1.0;
+	if(view.zoom == 0.0)
+		view.zoom = 1.0;
 	panmax = view.dim.v;
 	//assert(!eqpt2(panmax, ZV));
 }

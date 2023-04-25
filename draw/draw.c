@@ -47,8 +47,6 @@ drawedges(Graph *g)
 		|| (v = id2n(g, e->to >> 1)) == nil)
 			return -1;
 		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
-		// FIXME: shouldn't have to do translation at all
-		q = scaletrans(q, view.zoom, ZV);
 		drawedge(q, e->w);
 	}
 	return 0;
@@ -57,14 +55,11 @@ drawedges(Graph *g)
 static int
 drawnodes(Graph *g)
 {
-	Quad q;
 	Node *u, *ue;
 
 	dprint("drawnodes dim %s\n", vertfmt(&g->dim.v));
-	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		q = scaletrans(u->q, view.zoom, ZV);
-		drawnode(q);
-	}
+	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++)
+		drawnode(u->q);
 	return 0;
 }
 
