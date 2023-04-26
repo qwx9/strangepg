@@ -19,41 +19,33 @@ gfa1seg(Graph *g, File *f)
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
-	addnode(g, strtoull(f->fld[1], nil, 0), f->fld[2]);
-	return 0;
+	return addnode(g, f->fld[1], f->fld[2]);
 }
 
 static int
-ugh(char *s, usize *u)
+todir(char *s)
 {
-	assert(u != nil);
-	if(s[0] == '+' && s[1] == 0){
-		*u |= Vforward;
-		return 0;
-	}else if(s[0] == '-' && s[1] == 0){
-		*u |= Vreverse;
-		return 0;
-	}
+	if(strncmp(s, "+", 2) == 0)
+		return Vforward;
+	else if(strncmp(s, "-", 2) == 0)
+		return Vreverse;
 	return -1;
 }
 
 static int
 gfa1link(Graph *g, File *f)
 {
-	usize u, v;
+	int d1, d2;
 
 	if(f->nf < 6){
 		werrstr("line %d: malformed link", f->nr);
 		return -1;
 	}
-	u = strtoull(f->fld[1], nil, 10) << 1;
-	v = strtoull(f->fld[3], nil, 10) << 1;
-	if(ugh(f->fld[2], &u) < 0 || ugh(f->fld[4], &v) < 0){
-		werrstr("line %d: malformed link", f->nr);
+	if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
+		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}
-	addedge(g, u, v, f->fld[5], 0.);
-	return 0;
+	return addedge(g, f->fld[1], f->fld[3], d1, d2, f->fld[5], 0.);
 }
 
 static int
@@ -89,7 +81,8 @@ loadgfa1(char *path)
 			f.err++;
 		}
 	}
-	if(f.err){
+	if(f.err == 10){
+		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
 	}

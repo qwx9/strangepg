@@ -27,8 +27,8 @@ int	eqpt2(Point2, Point2);
 
 #define idmap() kh_init(id)
 #define idnuke(h) kh_destroy(id, h)
-int	idput(Htab*, usize, usize);
-int	idget(Htab*, usize, usize*);
+int	idput(Htab*, char*, usize);
+int	idget(Htab*, char*, usize*);
 
 void	init(void);
 void	run(void);
@@ -49,11 +49,12 @@ void	run(void);
 
 int	errstr(char*, uint);
 
-Node*	id2n(Graph*, usize);
+Node*	id2n(Graph*, char*);
+Node*	e2n(Graph*, usize);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);
-int	addnode(Graph*, usize, char*);
-int	addedge(Graph*, usize, usize, char*, double);
+int	addnode(Graph*, char*, char*);
+int	addedge(Graph*, char*, char*, int, int, char*, double);
 void	rendernew(void);
 
 void	initlayout(void);

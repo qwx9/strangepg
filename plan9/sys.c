@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include <thread.h>
+#include <pool.h>
 
 mainstacksize = 16*1024;
 
@@ -83,6 +84,7 @@ quit(void)
 void
 threadmain(int argc, char **argv)
 {
+	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
 	if(parseargs(argc, argv) < 0)
 		sysfatal("usage");
 	run();

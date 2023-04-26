@@ -37,6 +37,7 @@ readrecord(File *ff)
 	bf = ff->aux;
 	free(ff->s);
 	ff->s = nil;
+	// FIXME: beware of \r
 	if((ff->s = Brdstr(bf, '\n', 0)) == nil){
 		bterm(ff);
 		return nil;

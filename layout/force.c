@@ -4,8 +4,8 @@
 /* force-directed layout */
 
 enum{
-	Length = 300,
-	Nrep = 1000,
+	Length = 100,
+	Nrep = 5000,
 };
 
 #define	ΔT	(1.0 - 1.0 / Nrep)		/* eg. δ *= 0.999 at every step */
@@ -60,7 +60,7 @@ compute(Graph *g)
 			}
 		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(e=u->in.buf,ee=e+u->in.len; e!=nil && e<ee; e++){
-				if((from = id2n(g, (*e)->from >> 1)) == nil)
+				if((from = e2n(g, (*e)->from)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->q.o, u->q.o);
 				Δ = diff(dv);

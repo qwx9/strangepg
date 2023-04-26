@@ -42,10 +42,10 @@ drawedges(Graph *g)
 	Node *u, *v;
 	Quad q;
 
+	// FIXME: orientation: at least choose a corner
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
-		if((u = id2n(g, e->from >> 1)) == nil
-		|| (v = id2n(g, e->to >> 1)) == nil)
-			return -1;
+		u = e2n(g, e->from);
+		v = e2n(g, e->to);
 		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
 		drawedge(q, e->w);
 	}

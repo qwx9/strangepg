@@ -9,15 +9,14 @@
  */
 
 int
-idput(Htab *h, usize k, usize v)
+idput(Htab *h, char *k, usize v)
 {
 	int ret;
 	khiter_t g;
 
-	dprint("idput %#p k=%zd v=%zd\n", h, k, v);
 	g = kh_put(id, h, k, &ret);
 	if(ret < 0){
-		werrstr("idmap %#p: could not insert %zd:%zd\n", h, k, v);
+		werrstr("idmap %#p: could not insert %s:%zd\n", h, k, v);
 		return -1;
 	}
 	kh_value(h, g) = v;
@@ -25,15 +24,18 @@ idput(Htab *h, usize k, usize v)
 }
 
 int
-idget(Htab *h, usize k, usize *v)
+idget(Htab *h, char *k, usize *v)
 {
 	khiter_t g;
 
+/*
+	char *kk; usize vv;
+	kh_foreach(h, kk, vv, {warn("%s:%zd\n", kk, vv);});
+*/
 	assert(v != nil);
-	//dprint("idget %#p k=%zd\n", h, k);
 	g = kh_get(id, h, k);
 	if(g == kh_end(h)){
-		werrstr("idmap %#p: no such key %zd\n", h, k);
+		werrstr("idmap %#p: no such key %s\n", h, k);
 		return -1;
 	}
 	*v = kh_value(h, g);

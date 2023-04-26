@@ -25,7 +25,7 @@ struct Vec{
 };
 
 #include "khash.h"
-KHASH_MAP_INIT_INT64(id, usize)
+KHASH_MAP_INIT_STR(id, usize)
 #define Htab khash_t(id)
 
 typedef Point2 Vertex;
@@ -58,7 +58,7 @@ extern int deflayout;
 
 /* FIXME: very unsafe mix of pointers and primitives with generic Vec */
 struct Node{
-	usize id;
+	char *id;
 	char *seq;
 	Vec in;
 	Vec out;
