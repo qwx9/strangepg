@@ -49,7 +49,7 @@ keyevent(Rune r)
 	case K→: if(panview(Vec2(-16,0)) >= 0) shallowdraw(); break;
 	case K←: if(panview(Vec2(+16,0)) >= 0) shallowdraw(); break;
 	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;
-	case 'a': showarrows ^= 1; break;
+	case 'a': showarrows ^= 1; triggerdraw(DTredraw); break;
 	default: break;	// FIXME: cmd(r)
 	}
 	return 0;
