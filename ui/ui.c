@@ -37,14 +37,18 @@ zoomview(Vector v)
 	return 0;
 }
 
+// FIXME: turn into commands?
 int
 keyevent(Rune r)
 {
+	Graph *g;
+
 	switch(r){
 	case K↑: if(panview(Vec2(0,+16)) >= 0) shallowdraw(); break;
 	case K↓: if(panview(Vec2(0,-16)) >= 0) shallowdraw(); break;
 	case K→: if(panview(Vec2(-16,0)) >= 0) shallowdraw(); break;
 	case K←: if(panview(Vec2(+16,0)) >= 0) shallowdraw(); break;
+	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;
 	default: break;	// FIXME: cmd(r)
 	}
 	return 0;
@@ -63,12 +67,12 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & 7) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0){
 			dprint("pan: %s\n", vertfmt(&view.dim.o));
-			shallowdraw();
+			triggerdraw(DTmove);
 		}
 	}else if((b & 7) == (Mlmb | Mrmb)){
 		if(zoomview(subpt2(ZV, Δ)) >= 0){
 			dprint("pan: %s\n", vertfmt(&view.dim.o));
-			redraw();
+			triggerdraw(DTredraw);
 		}
 	}
 	return 0;

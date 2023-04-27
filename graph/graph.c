@@ -72,15 +72,9 @@ rendernew(void)
 {
 	Graph *g;
 
-	for(g=graphs; g<graphs+ngraphs; g++){
-		if(g->ll != nil)	// FIXME: weak check << use dim?
-			continue;
-		dprint("rendernew %#p\n", g);
-		if(dolayout(&graphs[0], deflayout) < 0)
-			sysfatal("dolayout: %s\n", error());
-		if(render(&graphs[0]) < 0)
-			sysfatal("render: %s\n", error());
-	}
+	for(g=graphs; g<graphs+ngraphs; g++)
+		if(g->stale)
+			triggerlayout(g);
 }
 
 void
@@ -103,6 +97,6 @@ initgraph(void)
 	g->nodes = vec(0, sizeof(Node));
 	g->edges = vec(0, sizeof(Edge));
 	g->id2n = idmap();
-	srand(time(nil));
+	g->stale = 1;
 	return g;
 }

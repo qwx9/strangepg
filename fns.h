@@ -5,7 +5,6 @@ char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
 int	parseargs(int, char **);
-void	quit(void);
 #define panic(x) {warn((x)); abort();}
 
 void	vecnuke(Vec*);
@@ -59,6 +58,8 @@ void	rendernew(void);
 
 void	initlayout(void);
 int	dolayout(Graph*, int);
+int runlayout(Graph*);
+int	earlyexit(void);
 
 int	pushcmd(int, usize, int, uchar*);
 int	flushcmd(void);
@@ -72,6 +73,8 @@ int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);
+void	triggerdraw(ulong);
+void	triggerlayout(Graph*);
 
 void	initrend(void);
 int	render(Graph*);

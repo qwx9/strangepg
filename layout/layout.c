@@ -20,24 +20,25 @@ putnode(Node *u, int x, int y)
 int
 dolayout(Graph *g, int type)
 {
-	Layout *l;
-
 	if(g->nodes.len < 1){
 		werrstr("empty graph");
 		return -1;
 	}
-	if(type < 0 || type >= LLnil){
+	if(type < 0){
+		if(g->ll == nil)
+			g->ll = ll[deflayout];
+	}else if(type >= LLnil){
 		werrstr("invalid layout");
 		return -1;
-	}
-	l = ll[type];
-	assert(l != nil);
-	if(l->compute == nil){
+	}else
+		g->ll = ll[type];
+	assert(g->ll != nil);
+	if(g->ll->compute == nil){
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	g->ll = l;
-	return l->compute(g);
+	runlayout(g);
+	return 0;
 }
 
 void

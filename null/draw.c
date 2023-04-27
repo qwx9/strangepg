@@ -26,6 +26,6 @@ resetdraw(void)
 }
 
 int
-initdraw_(void)
+initdrw(void)
 {
 }

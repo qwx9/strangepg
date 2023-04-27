@@ -48,7 +48,11 @@ compute(Graph *g)
 	Fu = emalloc(g->nodes.len * sizeof *Fu);
 	u = g->nodes.buf;
 	ne = u + g->nodes.len;
+	dprint("compute %#p %d\n", g, getpid());
+	extern int die;
 	for(n=0; n<Nrep; n++){
+		if(earlyexit())
+			break;
 		memset(Fu, 0, g->nodes.len * sizeof *Fu);
 		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(v=g->nodes.buf; v<ne; v++){
@@ -82,17 +86,12 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
-
-/* FIXME: kludge */
-{
-	render(g);
-	dprint("force: dim %.2f,%.2f %.2f,%.2f\n", g->dim.o.x, g->dim.o.y, g->dim.v.x, g->dim.v.y);
-	redraw();
-	sleep(1);
-}
-
+		triggerdraw(DTrender);
+		if(debug)
+			sleep(10);
 	}
 	free(Fu);
+	triggerdraw(DTrender);
 	return 0;
 }
 

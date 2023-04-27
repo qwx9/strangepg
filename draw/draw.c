@@ -83,9 +83,6 @@ drawui(void)
 {
 }
 
-// FIXME: until there is a need to do drawing asynchronously,
-// there's no need to distinguish draw and ui layers, it will
-// all be redrawn anyway
 int
 updatedraw(void)
 {
@@ -104,9 +101,8 @@ shallowdraw(void)
 int
 redraw(void)
 {
-	dprint("redraw\n");
+	dprint("redraw %d\n", getpid());
 	cleardraw();
-	rendernew();
 	drawworld();
 	return updatedraw();
 }

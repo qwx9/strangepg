@@ -8,8 +8,6 @@ run(void)
 	init();
 	resetdraw();
 	flushcmd();
-	rendernew();
-	redraw();
 	evloop();
 }
 

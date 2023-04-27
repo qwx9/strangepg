@@ -3,6 +3,8 @@
 #include <draw.h>
 #include "drw.h"
 
+QLock drawlock;
+
 enum{
 	Cbg,
 	Ctext,
@@ -149,7 +151,6 @@ cleardraw(void)
 		view.dim.v = p2v(r.max);
 		resetdraw();
 	}
-	//lockdisplay(display);
 	// FIXME: unnecessary if view/pan is bounded
 	draw(screen, screen->r, col[Cbg], nil, ZP);
 	draw(viewfb, r, col[Cbg], nil, ZP);
@@ -172,7 +173,6 @@ cleardraw(void)
 			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
 			Endsquare, Endarrow, 0, col[Ctext], ZP);
 	}
-	//unlockdisplay(display);
 }
 
 int
@@ -193,8 +193,6 @@ initdrw(void)
 {
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
-	//display->locking = 1;
-	//unlockdisplay(display);
 	col[Cbg] = display->black;
 	col[Ctext] = display->white;
 	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, DYellow);

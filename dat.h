@@ -71,6 +71,8 @@ struct Edge{
 	double w;
 };
 struct Graph{
+	int stale;
+	int working;
 	Vec edges;
 	Vec nodes;
 	Htab *id2n;
@@ -91,6 +93,14 @@ enum{
 	FFgfa,
 	FFgfa2,
 	FFnil,
+};
+
+enum{
+	DTrender,
+	DTreinit,
+	DTreset,
+	DTredraw,
+	DTmove,
 };
 
 enum{

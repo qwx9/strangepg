@@ -6,6 +6,7 @@
 
 static Keyboardctl *kc;
 static Mousectl *mc;
+static Channel *wc, *dc;
 
 /*
 static int
@@ -25,7 +26,6 @@ k2e(Rune r)
 	case Kright: r = K→; break;
 	case Kup: r = K↑; break;
 	case Kdown: r = K↓; break;
-	default: dprint("k2e: unhandled key %C\n", r);
 	}
 	return r;
 }
@@ -33,20 +33,26 @@ k2e(Rune r)
 int
 evloop(void)
 {
+	int level;
 	Rune r;
 	Point Δ;
 	Mouse mold;
+	Graph *g;
 
 	enum{
 		Aresize,
 		Amouse,
 		Akbd,
+		Adraw,
+		Alayout,
 		Aend,
 	};
 	Alt a[] = {
 		[Aresize] {mc->resizec, nil, CHANRCV},
 		[Amouse] {mc->c, nil, CHANRCV},
 		[Akbd] {kc->c, &r, CHANRCV},
+		[Adraw] {dc, &level, CHANRCV},
+		[Alayout] {wc, &g, CHANRCV},
 		[Aend] {nil, nil, CHANEND},
 	};
 	mold = mc->Mouse;	/* likely blank */
@@ -55,9 +61,7 @@ evloop(void)
 		case Aresize:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			resetdraw();
-			resetui();
-			redraw();
+			triggerdraw(DTreinit);
 			mold.xy = mc->xy;
 			/* wet floor */
 		case Amouse:
@@ -78,8 +82,36 @@ evloop(void)
 			default: keyevent(k2e(r)); break;
 			}
 			break;
+		case Adraw:
+			switch(level){
+			case DTrender:
+				for(g=graphs; g<graphs+ngraphs; g++)
+					render(g);
+				redraw();
+				break;
+			case DTreinit:	resetui();	/* wet floor */
+			case DTreset:	resetdraw();	/* wet floor */
+			case DTredraw:	redraw(); break;
+			case DTmove:	shallowdraw(); break;
+			}
+			break;
+		case Alayout:
+			dolayout(g, -1);
+			break;
 		}
 	}
+}
+
+void
+triggerdraw(ulong level)
+{
+	nbsendul(dc, level);
+}
+
+void
+triggerlayout(Graph *g)
+{
+	nbsendp(wc, g);
 }
 
 void
@@ -89,4 +121,7 @@ initui(void)
 		sysfatal("initkeyboard: %r");
 	if((mc = initmouse(nil, screen)) == nil)
 		sysfatal("initmouse: %r");
+	if((dc = chancreate(sizeof(int), 1)) == nil
+	|| (wc = chancreate(sizeof(Graph *), 1)) == nil)
+		sysfatal("chancreate: %r");
 }
