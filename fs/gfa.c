@@ -1,6 +1,10 @@
 #include "strpg.h"
 #include "fs.h"
 
+/* assumptions:
+ * - all segments are defined before any links
+ */
+
 static int
 gfa1hdr(Graph *g, File *f)
 {
@@ -36,12 +40,19 @@ static int
 gfa1link(Graph *g, File *f)
 {
 	int d1, d2;
+	char *s, *t;
 
 	if(f->nf < 6){
-		werrstr("line %d: malformed link", f->nr);
-		return -1;
-	}
-	if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
+		s = f->fld[1] + strlen(f->fld[1]) - 1;
+		t = f->fld[2] + strlen(f->fld[2]) - 1;
+		if((d1 = todir(s)) < 0 || (d2 = todir(t)) < 0){
+			fprint(2, "%s %s\n", s, t);
+			werrstr("line %d: malformed link", f->nr);
+			return -1;
+		}
+		*s = *t = 0;
+		return addedge(g, f->fld[1], f->fld[2], d1, d2, f->fld[3], 0.);
+	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
 		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}

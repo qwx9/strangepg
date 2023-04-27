@@ -37,10 +37,14 @@ compute(Graph *g)
 	Node *u, *from, *v, *ne;
 	Edge **e, **ee;
 
+	if(g->edges.len < 2){
+		warn("no links to hand");
+		return -1;
+	}
 	/* initial random placement, but in same scale as springs */
 	for(u=g->nodes.buf, ne=u+g->nodes.len; u<ne; u++)
 		//putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
-		putnode(u, 10+nrand(Length), 10+nrand(Length));
+		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
 	K = ceil(sqrt((double)Length * Length / g->nodes.len));
 	/* arbitrary displacement minimum function */
 	ε = ceil(sqrt((double)Length * Length / g->edges.len));

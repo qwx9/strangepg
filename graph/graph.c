@@ -31,7 +31,7 @@ addnode(Graph *g, char *id, char *seq)
 	dprint("addnode %s %#p (vec sz %zd elsz %d)\n", id, (uchar *)g->nodes.buf + g->nodes.len-1, g->nodes.len, g->nodes.elsz);
 	if(id2n(g, id) != nil){
 		werrstr("duplicate node id");
-		return -1;
+		return 0;
 	}
 	memset(&n, 0, sizeof n);
 	n.id = estrdup(id);	// FIXME: necessary?
