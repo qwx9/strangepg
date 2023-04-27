@@ -11,7 +11,7 @@ checksize(Vec *v)
 	assert(v->len <= v->bufsz);
 	if(v->len + 1 < v->bufsz)
 		return v;
-	v = erealloc(v->buf,
+	v->buf = erealloc(v->buf,
 		(v->bufsz + Shardsz) * v->elsz,
 		v->bufsz * v->elsz);
 	v->bufsz += Shardsz;
@@ -79,7 +79,7 @@ vecpush(Vec *v, void *p, usize *ip)
 	uchar *t;
 
 	assert((uintptr)p > v->elsz);
-	v = checksize(v);
+	checksize(v);
 	i = v->elsz * v->len;
 	t = (uchar *)v->buf + i;
 	memcpy(t, p, v->elsz);
