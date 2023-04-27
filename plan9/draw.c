@@ -107,7 +107,7 @@ drawline(Vertex u, Vertex v, double w)
 {
 	u = addpt2(mulpt2(u, view.zoom), view.center);
 	v = addpt2(mulpt2(v, view.zoom), view.center);
-	line(viewfb, v2p(u), v2p(v), Endsquare, Endarrow, w, col[Cedge], ZP);
+	line(viewfb, v2p(u), v2p(v), Endsquare, showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
 	return 0;
 }
 

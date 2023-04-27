@@ -48,8 +48,6 @@ compute(Graph *g)
 	Fu = emalloc(g->nodes.len * sizeof *Fu);
 	u = g->nodes.buf;
 	ne = u + g->nodes.len;
-	dprint("compute %#p %d\n", g, getpid());
-	extern int die;
 	for(n=0; n<Nrep; n++){
 		if(earlyexit())
 			break;
@@ -86,9 +84,11 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
-		triggerdraw(DTrender);
-		if(debug)
+		if(debug){
+			triggerdraw(DTrender);
 			sleep(10);
+		}else if(n % 25 == 0)
+			triggerdraw(DTrender);
 	}
 	free(Fu);
 	triggerdraw(DTrender);
