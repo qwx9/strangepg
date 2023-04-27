@@ -18,6 +18,7 @@ wproc(void *gp)
 	g->stale = 0;
 	g->working = 0;
 	nbrecvul(echan);
+	triggerdraw(DTredraw);
 	threadexits(nil);
 }
 
