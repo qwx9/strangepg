@@ -2,7 +2,7 @@
 BIN=$home/bin/$objtype
 TARG=strpg
 OFILES=\
-	main.$O\
+	strpg.$O\
 	cmd/cmd.$O\
 	draw/draw.$O\
 	fs/fs.$O\
