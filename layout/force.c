@@ -93,7 +93,7 @@ compute(Graph *g)
 		if(debug){
 			triggerdraw(DTrender);
 			sleep(10);
-		}else if(n % 25 == 0)
+		}else if(drawstep && n % 25 == 0)
 			triggerdraw(DTrender);
 	}
 	free(Fu);

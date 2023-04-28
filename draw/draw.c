@@ -2,7 +2,7 @@
 #include "drw.h"
 
 View view;
-int showarrows;
+int showarrows, drawstep;
 
 void
 centergraph(Graph *g)

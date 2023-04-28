@@ -114,7 +114,7 @@ struct View{
 	double zoom;
 };
 extern View view;
-extern int showarrows;
+extern int showarrows, drawstep;
 
 enum{
 	Mlmb = 1<<0,

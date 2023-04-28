@@ -79,6 +79,7 @@ void
 threadmain(int argc, char **argv)
 {
 	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
+	//setfcr(getfcr() & ~FPPMASK | FPPSGL);
 	srand(time(nil));
 	if(parseargs(argc, argv) < 0)
 		sysfatal("usage");

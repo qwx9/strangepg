@@ -14,7 +14,7 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-l layout] FILE\n", argv0);
+	sysfatal("usage: %s [-Ds] [-l layout] [FILE]\n", argv0);
 }
 
 int
@@ -23,6 +23,7 @@ parseargs(int argc, char **argv)
 	char *s;
 
 	ARGBEGIN{
+	case 'D': debug = 1; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
@@ -34,7 +35,7 @@ parseargs(int argc, char **argv)
 		else
 			sysfatal("unknown layout type");
 		break;
-	case 'D': debug = 1; break;
+	case 's': drawstep = 1; break;
 	default: usage();
 	}ARGEND
 	while(*argv != nil){

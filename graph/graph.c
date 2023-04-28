@@ -48,7 +48,7 @@ int
 addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 {
 	usize i;
-	Edge e, *ep;
+	Edge e;
 	Node *u, *v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
