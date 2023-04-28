@@ -6,12 +6,12 @@ while(~ $1 -?){
 	switch($1){
 	case -d
 		pd=$2
-		shift 2
+		shift
 	case -i
 		pi=$2
-		shift 2
+		shift
 	}
-	shift 1
+	shift
 }
 if(! ~ $#* 0){
 	N=$1
