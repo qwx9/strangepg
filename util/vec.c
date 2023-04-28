@@ -91,7 +91,7 @@ vec(usize elsz)
 	memset(&v, 0, sizeof v);
 	v.elsz = elsz;
 	v.len = 0;
-	v.bufsz = 8;
+	v.bufsz = 2;
 	v.buf = emalloc(elsz * v.bufsz);
 	return v;
 }
