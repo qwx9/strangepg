@@ -1,20 +1,13 @@
 #include "strpg.h"
 
-/* slower, defensive implementation */
-enum{
-	Shardsz = 4096,
-};
-
 static Vec *
 checksize(Vec *v)
 {
 	assert(v->len <= v->bufsz);
 	if(v->len + 1 < v->bufsz)
 		return v;
-	v->buf = erealloc(v->buf,
-		(v->bufsz + Shardsz) * v->elsz,
-		v->bufsz * v->elsz);
-	v->bufsz += Shardsz;
+	v->buf = erealloc(v->buf, v->bufsz * v->elsz * 2, v->bufsz * v->elsz);
+	v->bufsz *= 2;
 	return v;
 }
 
@@ -90,7 +83,7 @@ vecpush(Vec *v, void *p, usize *ip)
 }
 
 Vec
-vec(usize len, usize elsz)
+vec(usize elsz)
 {
 	Vec v;
 
@@ -98,7 +91,7 @@ vec(usize len, usize elsz)
 	memset(&v, 0, sizeof v);
 	v.elsz = elsz;
 	v.len = 0;
-	v.bufsz = len > 0 ? len : Shardsz;
+	v.bufsz = 8;
 	v.buf = emalloc(elsz * v.bufsz);
 	return v;
 }

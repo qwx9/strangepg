@@ -13,7 +13,7 @@ void*	vecpoptail(Vec*);
 usize	vecindexof(Vec*, void*);
 void*	vecpush(Vec*, void*, usize*);
 void*	vecp(Vec*, usize);
-Vec	vec(usize, usize);
+Vec	vec(usize);
 
 Quad	Qd(Vertex, Vector);
 double	qΔx(Quad);

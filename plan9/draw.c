@@ -195,8 +195,8 @@ initdrw(void)
 		sysfatal("initdraw: %r");
 	col[Cbg] = display->black;
 	col[Ctext] = display->white;
-	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, DYellow);
-	col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777FF);
+	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0xffff00ff);
+	col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777ff);
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	return 0;

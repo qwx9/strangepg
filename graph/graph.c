@@ -36,8 +36,8 @@ addnode(Graph *g, char *id, char *seq)
 	memset(&n, 0, sizeof n);
 	n.id = estrdup(id);	// FIXME: necessary?
 	n.seq = estrdup(seq);
-	n.in = vec(0, sizeof(Edge*));
-	n.out = vec(0, sizeof(Edge*));
+	n.in = vec(sizeof(usize));
+	n.out = vec(sizeof(usize));
 	n.q = ZQ;
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, n.id, i);
@@ -47,6 +47,7 @@ addnode(Graph *g, char *id, char *seq)
 int
 addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 {
+	usize i;
 	Edge e, *ep;
 	Node *u, *v;
 
@@ -61,9 +62,9 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	e.to =  (v - (Node *)g->nodes.buf) << 1 | d2;
 	// FIXME: the memcpy'ing in vec makes this really dangerous
 	//	at least call it something other than push, it doesn't push
-	ep = vecpush(&g->edges, &e, nil);
-	vecpush(&u->out, &ep, nil);
-	vecpush(&v->in, &ep, nil);
+	vecpush(&g->edges, &e, &i);
+	vecpush(&u->out, &i, nil);
+	vecpush(&v->in, &i, nil);
 	return 0;
 }
 
@@ -94,8 +95,8 @@ initgraph(void)
 	graphs = erealloc(graphs,
 		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
 	g = graphs + ngraphs++;
-	g->nodes = vec(0, sizeof(Node));
-	g->edges = vec(0, sizeof(Edge));
+	g->nodes = vec(sizeof(Node));
+	g->edges = vec(sizeof(Edge));
 	g->id2n = idmap();
 	g->stale = 1;
 	return g;

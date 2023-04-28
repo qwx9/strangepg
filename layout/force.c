@@ -33,9 +33,10 @@ compute(Graph *g)
 {
 	int i, j, n;
 	double K, δ, R, Δ, ε;
+	usize *ep, *ee;
 	Vertex *Fu, dv;
 	Node *u, *from, *v, *ne;
-	Edge **e, **ee;
+	Edge *e;
 
 	if(g->edges.len < 2){
 		warn("no links to hand");
@@ -65,8 +66,9 @@ compute(Graph *g)
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, K)));
 			}
 		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
-			for(e=u->in.buf,ee=e+u->in.len; e!=nil && e<ee; e++){
-				if((from = e2n(g, (*e)->from)) == nil)
+			for(ep=u->in.buf,ee=ep+u->in.len; ep!=nil && ep<ee; ep++){
+				e = vecp(&g->edges, *ep);
+				if((from = e2n(g, e->from)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->q.o, u->q.o);
 				Δ = diff(dv);
