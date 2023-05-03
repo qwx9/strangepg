@@ -97,10 +97,10 @@ enum{
 
 enum{
 	DTrender,
-	DTreinit,
 	DTreset,
 	DTredraw,
 	DTmove,
+	DTresetui,
 };
 
 enum{
@@ -123,10 +123,11 @@ enum{
 	Mscrlup = 1<<3,	// FIXME: shouldn't be
 	Mscrldn = 1<<4,
 
-	K← = 0,
+	K← = 0x110000,	/* outside unicode range */
 	K→,
 	K↑,
 	K↓,
+	Kescape,
 };
 
 extern int debug;

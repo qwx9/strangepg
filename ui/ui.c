@@ -48,6 +48,7 @@ keyevent(Rune r)
 	case K↓: if(panview(Vec2(0,-16)) >= 0) shallowdraw(); break;
 	case K→: if(panview(Vec2(-16,0)) >= 0) shallowdraw(); break;
 	case K←: if(panview(Vec2(+16,0)) >= 0) shallowdraw(); break;
+	case Kescape: resetui(1); triggerdraw(DTredraw); break;
 	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;
 	case 'a': showarrows ^= 1; triggerdraw(DTredraw); break;
 	default: break;	// FIXME: cmd(r)
@@ -68,7 +69,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & 7) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0){
 			dprint("pan: %s\n", vertfmt(&view.dim.o));
-			triggerdraw(DTmove);
+			triggerdraw(DTredraw);
 		}
 	}else if((b & 7) == (Mlmb | Mrmb)){
 		if(zoomview(subpt2(ZV, Δ)) >= 0){
@@ -80,11 +81,17 @@ mouseevent(Vertex v, Vertex Δ, int b)
 }
 
 void
-resetui(void)
+resetui(int all)
 {
+	Vector v;
+
 	view.dim.o = ZV;
-	if(view.zoom == 0.0)
-		view.zoom = 1.0;
+	v = view.pan;
 	panmax = view.dim.v;
+	panview(v);
+	if(all){
+		view.pan = ZV;
+		view.zoom = 1.0;
+	}
 	//assert(!eqpt2(panmax, ZV));
 }

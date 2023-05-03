@@ -43,6 +43,12 @@ quadaddpt2(Quad q, Vector v)
 	return (Quad){addpt2(q.o, v), addpt2(q.v, v)};
 }
 
+Quad
+quadsubpt2(Quad q, Vector v)
+{
+	return (Quad){addpt2(q.o, v), subpt2(q.v, v)};
+}
+
 Vertex
 floorpt2(Vertex v)
 {

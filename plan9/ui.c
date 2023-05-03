@@ -26,6 +26,7 @@ k2e(Rune r)
 	case Kright: r = K→; break;
 	case Kup: r = K↑; break;
 	case Kdown: r = K↓; break;
+	case Kesc: r = Kescape; break;
 	}
 	return r;
 }
@@ -49,26 +50,26 @@ evloop(void)
 	};
 	Alt a[] = {
 		[Aresize] {mc->resizec, nil, CHANRCV},
-		[Amouse] {mc->c, nil, CHANRCV},
+		[Amouse] {mc->c, &mc->Mouse, CHANRCV},
 		[Akbd] {kc->c, &r, CHANRCV},
 		[Adraw] {dc, &level, CHANRCV},
 		[Alayout] {wc, &g, CHANRCV},
 		[Aend] {nil, nil, CHANEND},
 	};
 	mold = mc->Mouse;	/* likely blank */
+	mold.xy = Pt(-1,-1);	/* ignore first mouse delta */
 	for(;;){
 		switch(alt(a)){
 		case Aresize:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			triggerdraw(DTreinit);
+			resetui(0);
+			triggerdraw(DTreset);
 			mold.xy = mc->xy;
 			/* wet floor */
 		case Amouse:
-			if(a[Amouse].v == nil){	/* ignore first mouse delta */
-				a[Amouse].v = &mc->Mouse;
+			if(mold.xy.x < 0 || mold.xy.y < 0)
 				mold = mc->Mouse;
-			}
 			Δ = subpt(mc->xy, mold.xy);
 			// FIXME: scroll
 			mouseevent(Vec2(mc->xy.x, mc->xy.y), Vec2(Δ.x, Δ.y), mc->buttons & 7);
@@ -89,7 +90,7 @@ evloop(void)
 					render(g);
 				redraw();
 				break;
-			case DTreinit:	resetui();	/* wet floor */
+			case DTresetui:	resetui(0); redraw(); break;
 			case DTreset:	resetdraw();	/* wet floor */
 			case DTredraw:	redraw(); break;
 			case DTmove:	shallowdraw(); break;

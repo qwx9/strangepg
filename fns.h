@@ -21,6 +21,7 @@ double	qΔy(Quad);
 int	ptinquad(Vertex, Quad);
 Quad	insetquad(Quad, int);
 Quad	quadaddpt2(Quad, Vector);
+Quad	quadsubpt2(Quad, Vector);
 Vertex	floorpt2(Vertex);
 int	eqpt2(Point2, Point2);
 
@@ -83,7 +84,7 @@ int	panview(Vertex);
 void	initui(void);
 int	evloop(void);
 void	errmsg(char*, ...);
-void	resetui(void);
+void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
 char*	quadfmt(Quad*);

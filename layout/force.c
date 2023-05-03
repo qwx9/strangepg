@@ -44,7 +44,6 @@ compute(Graph *g)
 	}
 	/* initial random placement, but in same scale as springs */
 	for(u=g->nodes.buf, ne=u+g->nodes.len; u<ne; u++)
-		//putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
 		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
 	K = ceil(sqrt((double)Length * Length / g->nodes.len));
 	/* arbitrary displacement minimum function */

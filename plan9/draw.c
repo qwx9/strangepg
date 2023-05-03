@@ -71,26 +71,16 @@ vertfmt(Vertex *v)
 	return buf;
 }
 
-Rectangle dim;
-
 int
 drawquad(Quad q)
 {
 	Rectangle r;
 
-	q.v = addpt2(q.o, q.v);
-	r = Rpt(v2p(mulpt2(q.o, view.zoom)), v2p(mulpt2(q.v, view.zoom)));
-	if(debug){
-		if(dim.min.x > r.min.x)
-			dim.min.x = r.min.x;
-		if(dim.max.x < r.max.x)
-			dim.max.x = r.max.x;
-		if(dim.min.y > r.min.y)
-			dim.min.y = r.min.y;
-		if(dim.max.y < r.max.y)
-			dim.max.y = r.max.y;
-	}
-	r = rectaddpt(r, v2p(view.center));
+	q.v = addpt2(subpt2(mulpt2(addpt2(q.o, q.v), view.zoom), view.pan), view.center);
+	q.o = addpt2(subpt2(mulpt2(q.o, view.zoom), view.pan), view.center);
+	r = canonrect(Rpt(v2p(q.o), v2p(q.v)));
+	if(!rectXrect(r, viewfb->r))
+		return 0;
 	Point p[] = {
 		r.min,
 		Pt(r.max.x, r.min.y),
@@ -105,20 +95,22 @@ drawquad(Quad q)
 int
 drawline(Vertex u, Vertex v, double w)
 {
-	u = addpt2(mulpt2(u, view.zoom), view.center);
-	v = addpt2(mulpt2(v, view.zoom), view.center);
-	line(viewfb, v2p(u), v2p(v), Endsquare, showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	Rectangle r;
+
+	u = addpt2(subpt2(mulpt2(u, view.zoom), view.pan), view.center);
+	v = addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
+	r = Rpt(v2p(u), v2p(v));
+	if(!rectXrect(canonrect(r), viewfb->r))
+		return 0;
+	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
 	return 0;
 }
 
 void
 flushdraw(void)
 {
-	Point o;
-
-	o = v2p(view.pan);
 	draw(screen, screen->r, col[Cbg], nil, ZP);
-	draw(screen, screen->r, viewfb, nil, o);
+	draw(screen, screen->r, viewfb, nil, ZP);
 	flushimage(display, 1);
 }
 
@@ -128,8 +120,7 @@ cleardraw(void)
 	Graph *g;
 	Rectangle r, q;
 
-	dim = ZR;
-	r = Rpt(ZP, v2p(view.dim.v));
+	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
 	for(g=graphs; g<graphs+ngraphs; g++){
 		g->off = ZV;
 		dprint("cleardraw: graph %#p dim %.1f,%.1f\n", g, g->dim.v.x, g->dim.v.y);
@@ -178,12 +169,13 @@ cleardraw(void)
 int
 resetdraw(void)
 {
-	viewr = Rpt(ZP, v2p(view.dim.v));
+	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
-	hudr.min = addpt(screen->r.min, Pt(2, Dy(screen->r)+2));
-	hudr.max = addpt(hudr.min, Pt(Dx(screen->r), font->height*3));
 	freeimage(viewfb);
 	viewfb = eallocimage(viewr, 0, DNofill);
+	draw(screen, screen->r, col[Cbg], nil, ZP);
+	draw(viewfb, viewfb->r, col[Cbg], nil, ZP);
 	return 0;
 }
 

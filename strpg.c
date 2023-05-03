@@ -56,5 +56,5 @@ init(void)
 	initrend();
 	initdrw();
 	initui();
-	resetui();
+	resetui(1);
 }
