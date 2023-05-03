@@ -44,10 +44,10 @@ keyevent(Rune r)
 	Graph *g;
 
 	switch(r){
-	case K↑: if(panview(Vec2(0,+16)) >= 0) shallowdraw(); break;
-	case K↓: if(panview(Vec2(0,-16)) >= 0) shallowdraw(); break;
-	case K→: if(panview(Vec2(-16,0)) >= 0) shallowdraw(); break;
-	case K←: if(panview(Vec2(+16,0)) >= 0) shallowdraw(); break;
+	case K↑: if(panview(Vec2(0,+16)) >= 0) triggerdraw(DTredraw); break;
+	case K↓: if(panview(Vec2(0,-16)) >= 0) triggerdraw(DTredraw); break;
+	case K→: if(panview(Vec2(-16,0)) >= 0) triggerdraw(DTredraw); break;
+	case K←: if(panview(Vec2(+16,0)) >= 0) triggerdraw(DTredraw); break;
 	case Kescape: resetui(1); triggerdraw(DTredraw); break;
 	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;
 	case 'a': showarrows ^= 1; triggerdraw(DTredraw); break;
@@ -73,7 +73,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		}
 	}else if((b & 7) == (Mlmb | Mrmb)){
 		if(zoomview(subpt2(ZV, Δ)) >= 0){
-			dprint("pan: %s\n", vertfmt(&view.dim.o));
+			dprint("zoom: %.1f\n", view.zoom);
 			triggerdraw(DTredraw);
 		}
 	}
