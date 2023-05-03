@@ -34,6 +34,9 @@ zoomview(Vector v)
 	if(view.zoom + Δ < 0.1 || view.zoom + Δ > 10)
 		return -1;
 	view.zoom += Δ;
+	/* FIXME: this factor is crucial for centering, but not really sure
+	 * how to choose the right one */
+	view.pan = addpt2(view.pan, mulpt2(Vec2(Δ, Δ), 400));
 	return 0;
 }
 

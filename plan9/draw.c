@@ -76,7 +76,8 @@ drawquad(Quad q)
 {
 	Rectangle r;
 
-	q.v = addpt2(subpt2(mulpt2(addpt2(q.o, q.v), view.zoom), view.pan), view.center);
+	q.v = addpt2(q.o, q.v);
+	q.v = addpt2(subpt2(mulpt2(q.v, view.zoom), view.pan), view.center);
 	q.o = addpt2(subpt2(mulpt2(q.o, view.zoom), view.pan), view.center);
 	r = canonrect(Rpt(v2p(q.o), v2p(q.v)));
 	if(!rectXrect(r, viewfb->r))
