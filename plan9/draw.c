@@ -52,25 +52,6 @@ s2p(Vertex v)
 	return p;
 }
 
-// FIXME: custom fmt for linux??
-char *
-quadfmt(Quad *r)
-{
-	static char buf[128];
-
-	snprint(buf, sizeof buf, "[%.2f,%.2f][%.2f,%.2f]",
-		r->o.x, r->o.y, r->v.x, r->v.y);
-	return buf;
-}
-char *
-vertfmt(Vertex *v)
-{
-	static char buf[128];
-
-	snprint(buf, sizeof buf, "%.2f,%.2f", v->x, v->y);
-	return buf;
-}
-
 int
 drawquad(Quad q)
 {

@@ -71,7 +71,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		// FIXME: menu
 	}else if((b & 7) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0){
-			dprint("pan: %s\n", vertfmt(&view.dim.o));
+			dprint("pan: %s\n", shitprint('v', &view.dim.o));
 			triggerdraw(DTredraw);
 		}
 	}else if((b & 7) == (Mlmb | Mrmb)){

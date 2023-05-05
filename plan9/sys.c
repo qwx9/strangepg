@@ -4,6 +4,33 @@
 
 mainstacksize = 16*1024;
 
+/* FIXME: no fmt equivalent?? other than individual functions */
+char *
+shitprint(int type, void *w)
+{
+	char *p;
+	Quad *q;
+	Vertex *v;
+	static char buf[128][8];
+	static int idx;
+
+	p = (char *)buf + idx;
+	assert(nelem(buf[0]) == 8);
+	idx = idx + 1 & nelem(buf[0])-1;
+	switch(type){
+	case 'q':
+		q = w;
+		snprintf(p, sizeof *buf, "[%.1f,%.1f %.1f,%.1f]", q->o.x, q->o.y, q->v.x, q->v.y);
+		break;
+	case 'v':
+		v = w;
+		snprintf(p, sizeof *buf, "%.1f,%.1f", v->x, v->y);
+		break;
+	default: warn("shitprint: can't print this shit type %d\n", type); return nil;
+	}
+	return p;
+}
+
 char *
 error(void)
 {

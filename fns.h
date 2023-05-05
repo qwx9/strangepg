@@ -42,11 +42,6 @@ void	run(void);
 	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
 	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
-// FIXME: this is stupid
-#define NID(u) ((u)->id >> 1)
-#define NDIR(u) ((u)->id & 1)
-#define NDIRS(u) (((u)->id & 1) == 0 ? "+" : "-")
-
 int	errstr(char*, uint);
 
 Node*	id2n(Graph*, char*);
@@ -87,5 +82,4 @@ void	errmsg(char*, ...);
 void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
-char*	quadfmt(Quad*);
-char*	vertfmt(Vertex*);
+char*	shitprint(int, void*);

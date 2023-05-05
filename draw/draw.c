@@ -25,14 +25,14 @@ static int
 drawedge(Quad q, double w)
 {
 	Qd(q.o, addpt2(q.o, q.v));
-	dprint("drawedge %s\n", quadfmt(&q));
+	dprint("drawedge %s\n", shitprint('q', &q));
 	return drawline(q.o, q.v, w);
 }
 
 static int
 drawnode(Quad q)
 {
-	dprint("drawnode %s\n", quadfmt(&q));
+	dprint("drawnode %s\n", shitprint('q', &q));
 	return drawquad(q);
 }
 
@@ -58,7 +58,7 @@ drawnodes(Graph *g)
 {
 	Node *u, *ue;
 
-	dprint("drawnodes dim %s\n", vertfmt(&g->dim.v));
+	dprint("drawnodes dim %s\n", shitprint('v', &g->dim.v));
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++)
 		drawnode(u->q);
 	return 0;

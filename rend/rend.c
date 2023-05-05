@@ -16,7 +16,7 @@ rendershapes(Graph *g)
 	Vertex p;
 
 	for(d=ZQ, u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		dprint("render node %s\n", quadfmt(&u->q));
+		dprint("render node %s\n", shitprint('q', &u->q));
 		u->q.v = ZV;
 		rendernode(u);
 		p = addpt2(u->q.o, u->q.v);
