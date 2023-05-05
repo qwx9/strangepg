@@ -26,6 +26,7 @@ def pass2(sac, es, ein, eout):
 	def pop():
 		pass
 
+	# FIXME: what about in/out degrees 0 and 1 or 1 and 0?
 	def unchop():
 		# stupidest possible approach to start with
 		# unchopping two consecutive nodes is only possible if both
@@ -43,9 +44,8 @@ def pass2(sac, es, ein, eout):
 		EO = set()
 		print "sac[1]", sac[1]
 		for n in sac[1]:
-			EDI.update({n:ein[n]})		# node → edge id's
-			EDO.update({n:eout[n]})
-			print "n", n, "in", ein[n], "out", eout[n]
+			EDI.update({n:list(ein[n])[0]})		# node → edge id's
+			EDO.update({n:list(eout[n])[0]})		# ever only one element
 			EI |= ein[n]				# edge id's; to
 			EO |= eout[n]				# from
 		d = EI & EO
@@ -54,10 +54,10 @@ def pass2(sac, es, ein, eout):
 		print "EDI", EDI
 		print "EDO", EDO
 		print "d", d
-#		if not d:
-#			return
-		I = set([ es[e][1] for e in EI ])	# nodes; to (in)
-		O = set([ es[e][0] for e in EO ])	# from (out)
+		if not d:
+			return
+		I = set([ es[e][1] for e in d ])	# nodes; to (in)
+		O = set([ es[e][0] for e in d ])	# from (out)
 		m = I & O
 		print "I", I
 		print "O", O
@@ -65,8 +65,8 @@ def pass2(sac, es, ein, eout):
 		s = []
 		while d:
 			e = d.pop()
-			u = es[e][1]
-			v = es[e][0]
+			u = es[e][0]
+			v = es[e][1]
 			x = [u, v]
 			while u in m:	# no need to edit m, there's only one such entry
 				ew = EDI[u]	# w,u: want in[u], there can be only one also
@@ -95,6 +95,11 @@ def pass2(sac, es, ein, eout):
 		untangle()
 		break
 
+def elist(e, es):
+	s = ""
+	s = [ str(es[i][0]) + ">" + str(es[i][1]) for i in e ]
+	return ",".join(s)
+
 def pass1(gfa):
 	nodes = []
 	nid = {}
@@ -111,10 +116,9 @@ def pass1(gfa):
 			break
 		s = s.strip().split()
 		if s[0] == 'S':
-			i = len(nodes)
+			i = len(nid)
 			ein[i] = set()
 			eout[i] = set()
-			nodes += [s[1]]
 			nid[s[1]] = i
 			#seq[nn] = s[2]		# FIXME: write out directly
 		elif s[0] == 'L':
@@ -123,10 +127,13 @@ def pass1(gfa):
 			e = (u, v, s[2], s[4])
 			eout[u].add(len(es))
 			ein[v].add(len(es))
+			print len(es), "link", u, "→", v
 			es.append(e)
 			#ovlap[...]			# FIXME: write out directly
 	f.close()
-	for i in range(len(nodes)):
+	for i in range(len(nid)):
+		print i, ein[i], elist(ein[i], es), ":", eout[i], elist(eout[i], es)
+	for i in range(len(nid)):
 		c = max(len(ein[i]), len(eout[i]))
 		try:
 			sac[c].add(i)
