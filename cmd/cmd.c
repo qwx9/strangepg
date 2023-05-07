@@ -38,6 +38,12 @@ flushcmd(void)
 					return -1;
 				rendernew();
 				break;
+			case FFindex:
+				dprint("flushcmd: FFindex\n");
+				if(loadfs(FFindex, (char *)p) == nil)
+					return -1;
+				rendernew();
+				break;
 			default: warn("unknown file format %c\n", c);
 			}
 			break;

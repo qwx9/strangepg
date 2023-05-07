@@ -8,6 +8,7 @@ checksize(Vec *v)
 		return v;
 	v->buf = erealloc(v->buf, v->bufsz * 2, v->bufsz);
 	v->bufsz *= 2;
+	v->tail = (uchar *)v->buf + v->len * v->elsz;
 	return v;
 }
 
@@ -16,7 +17,10 @@ vecnuke(Vec *v)
 {
 	if(v == nil)
 		return;
+	memset(v->buf, 0xf1, v->bufsz);		/* FIXME: just let pool do it? */
 	free(v->buf);
+	v->buf = nil;
+	v->tail = nil;
 }
 
 usize
@@ -50,8 +54,9 @@ vecpoptail(Vec *v)
 	void *n;
 
 	assert(v->len > 0);
-	n = (uchar*)v->buf + (v->len - 1) * v->elsz;
+	n = v->tail;
 	v->len--;
+	v->tail = (uchar *)v->tail - v->elsz;
 	return n;
 }
 
@@ -74,6 +79,7 @@ vecresize(Vec *v, usize nel)
 	v->buf = erealloc(v->buf, nel * v->elsz, v->bufsz);
 	v->len = nel;
 	v->bufsz = v->len * v->elsz;
+	v->tail = (uchar *)v->buf + v->bufsz;
 }
 
 void *
@@ -90,11 +96,12 @@ vecpush(Vec *v, void *p, usize *ip)
 	v->len++;
 	if(ip != nil)
 		*ip = i / v->elsz;
+	v->tail = t + v->elsz;
 	return (void *)t;
 }
 
 Vec
-vec(usize elsz)
+vec(usize elsz, usize len)
 {
 	Vec v;
 
@@ -102,7 +109,8 @@ vec(usize elsz)
 	memset(&v, 0, sizeof v);
 	v.elsz = elsz;
 	v.len = 0;
-	v.bufsz = 2 * elsz;
+	v.bufsz = (len > 2 ? len : 2) * elsz;
 	v.buf = emalloc(v.bufsz);
+	v.tail = v.buf;
 	return v;
 }

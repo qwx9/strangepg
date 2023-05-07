@@ -36,8 +36,8 @@ addnode(Graph *g, char *id, char *seq)
 	memset(&n, 0, sizeof n);
 	n.id = estrdup(id);	// FIXME: necessary?
 	n.seq = estrdup(seq);
-	n.in = vec(sizeof(usize));
-	n.out = vec(sizeof(usize));
+	n.in = vec(sizeof(usize), 0);
+	n.out = vec(sizeof(usize), 0);
 	n.q = ZQ;
 	vecpush(&g->nodes, &n, &i);
 	return idput(g->id2n, n.id, i);
@@ -52,7 +52,9 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	Node *u, *v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint("addedge %s,%s:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", from, to, w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1, g->edges.len, g->edges.elsz);
+	dprint("addedge %s,%s:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", from, to,
+		w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1,
+		g->edges.len, g->edges.elsz);
 	e.overlap = estrdup(overlap);
 	e.w = w;
 	if((u = id2n(g, from)) == nil
@@ -95,8 +97,9 @@ initgraph(void)
 	graphs = erealloc(graphs,
 		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
 	g = graphs + ngraphs++;
-	g->nodes = vec(sizeof(Node));
-	g->edges = vec(sizeof(Edge));
+	g->nodes = vec(sizeof(Node), 0);
+	g->edges = vec(sizeof(Edge), 0);
+	g->levels = vec(sizeof(Level), 0);
 	g->id2n = idmap();
 	g->stale = 1;
 	return g;

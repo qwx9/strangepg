@@ -14,7 +14,7 @@ usize	vecindexof(Vec*, void*);
 void*	vecpush(Vec*, void*, usize*);
 void*	vecp(Vec*, usize);
 void	vecresize(Vec*, usize);
-Vec	vec(usize);
+Vec	vec(usize, usize);
 
 Quad	Qd(Vertex, Vector);
 double	qΔx(Quad);
@@ -63,6 +63,9 @@ int	flushcmd(void);
 
 void	initfs(void);
 Graph*	loadfs(int, char*);
+int	openfs(File*, char*);
+vlong	seekfs(File*, vlong);
+void	closefs(File*);
 
 // FIXME: initourdraw?
 int	initdrw(void);	/* plan9 already has initdraw(2) */

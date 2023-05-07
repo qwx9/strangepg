@@ -1,5 +1,6 @@
 typedef struct Vec Vec;
 typedef struct Graph Graph;
+typedef struct Level Level;
 typedef struct Shape Shape;
 typedef struct Quad Quad;
 typedef struct Obj Obj;
@@ -19,11 +20,14 @@ enum{
 
 struct Vec{
 	void *buf;
+	void *tail;
 	int elsz;
 	usize len;
 	usize bufsz;
 };
 
+/* FIXME: get rid of this, isolate it in its own corner, with
+ * pragma incomplete or w/e */
 #include "khash.h"
 KHASH_MAP_INIT_STR(id, usize)
 #define Htab khash_t(id)
@@ -57,6 +61,15 @@ struct Layout{
 extern int deflayout;
 
 /* FIXME: very unsafe mix of pointers and primitives with generic Vec */
+struct Level{
+	vlong noff;	/* absolute offset */
+	usize nlen;	/* length in bytes */
+	usize ntot;	/* cumulated total of elements */
+	vlong linkoff;	/* in/out link array */
+	vlong eoff;
+	usize elen;
+	usize etot;
+};
 struct Node{
 	char *id;
 	char *seq;
@@ -73,9 +86,12 @@ struct Edge{
 struct Graph{
 	int stale;
 	int working;
+	Level *level;
+	char *index;
+	Vec levels;
 	Vec edges;
 	Vec nodes;
-	Htab *id2n;
+	Htab *id2n;	// FIXME ← ?
 	Layout *ll;
 	Quad dim;
 	Vertex off;
@@ -91,7 +107,7 @@ enum{
 
 enum{
 	FFgfa,
-	FFgfa2,
+	FFindex,
 	FFnil,
 };
 

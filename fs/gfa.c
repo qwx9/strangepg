@@ -76,9 +76,10 @@ loadgfa1(char *path)
 
 	dprint("loadgfa1 %s\n", path);
 	if((g = initgraph()) == nil)
-		sysfatal("loadgfa1: ");
+		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
-	f.path = path;
+	if(openfs(&f, path) < 0)
+		return nil;
 	while(readrecord(&f) != nil && f.err < 10){
 		switch(f.fld[0][0]){
 		case 'H': parse = gfa1hdr; break;
@@ -92,12 +93,13 @@ loadgfa1(char *path)
 			f.err++;
 		}
 	}
+	dprint("done loading gfa\n");
 	if(f.err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
 	}
-	dprint("done loading gfa\n");
+	closefs(&f);
 	return g;
 }
 
