@@ -3,10 +3,10 @@
 static Vec *
 checksize(Vec *v)
 {
-	assert(v->len <= v->bufsz);
-	if(v->len + 1 < v->bufsz)
+	assert(v->len * v->elsz <= v->bufsz);
+	if((v->len + 1) * v->elsz < v->bufsz)
 		return v;
-	v->buf = erealloc(v->buf, v->bufsz * v->elsz * 2, v->bufsz * v->elsz);
+	v->buf = erealloc(v->buf, v->bufsz * 2, v->bufsz);
 	v->bufsz *= 2;
 	return v;
 }
@@ -65,6 +65,17 @@ vecp(Vec *v, usize i)
 	return p;
 }
 
+void
+vecresize(Vec *v, usize nel)
+{
+	assert(v->elsz > 0);
+	if(nel == v->len)
+		return;
+	v->buf = erealloc(v->buf, nel * v->elsz, v->bufsz);
+	v->len = nel;
+	v->bufsz = v->len * v->elsz;
+}
+
 void *
 vecpush(Vec *v, void *p, usize *ip)
 {
@@ -91,7 +102,7 @@ vec(usize elsz)
 	memset(&v, 0, sizeof v);
 	v.elsz = elsz;
 	v.len = 0;
-	v.bufsz = 2;
-	v.buf = emalloc(elsz * v.bufsz);
+	v.bufsz = 2 * elsz;
+	v.buf = emalloc(v.bufsz);
 	return v;
 }
