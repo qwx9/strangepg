@@ -7,6 +7,7 @@ OFILES=\
 	draw/draw.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
+	fs/index.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
 	layout/conga.$O\
