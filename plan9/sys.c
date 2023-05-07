@@ -14,8 +14,9 @@ shitprint(int type, void *w)
 	static char buf[128][8];
 	static int idx;
 
+	// FIXME: this whole thing stinks
+	return "";
 	p = (char *)buf + idx;
-	assert(nelem(buf[0]) == 8);
 	idx = idx + 1 & nelem(buf[0])-1;
 	switch(type){
 	case 'q':
