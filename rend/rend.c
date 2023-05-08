@@ -1,10 +1,89 @@
 #include "strpg.h"
 
-static int
-rendernode(Node *u)
+static double
+faceyourfears(Graph *g, Node *u)
 {
+	int n, sign;
+	usize *ip, *ie, us, them;
+	double θ, dθ, d;
+	Edge *e;
+	Node *v;
+	Vector Δ;
+
+	θ = 0.;
+	n = 0;
+	us = vecindexof(&g->nodes, u);
+	/* face outgoing */
+	if(u->out.len > 0){
+		for(ip=u->out.buf, ie=ip+u->out.len; ip<ie; ip++){
+			e = vecp(&g->edges, *ip);
+			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
+			/* FIXME: see this is why we don't want global edge list */
+			them = e->to >> 1;
+			if(us != e->from >> 1)
+				fprint(2, "us %zd from %zd to %zd\n", us, e->from>>1, e->to>>1);
+			if(them == us)
+				them = e->from >> 1;
+			if(them == us){
+				n--;
+				continue;
+			}
+			v = vecp(&g->nodes, them);
+			Δ = subpt2(v->q.o, u->q.o);
+			dθ = sign * atan2(Δ.y, Δ.x);
+			/* weight inversely proportional to distance: prefer
+			 * facing closer nodes */
+			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
+			θ -= dθ / 1;
+			n++;
+		}
+	}
+	/* face away from incoming */
+	if(u->in.len > 0){
+		for(ip=u->in.buf, ie=ip+u->in.len; ip<ie; ip++){
+			e = vecp(&g->edges, *ip);
+			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
+			/* FIXME: see this is why we don't want global edge list */
+			them = e->from >> 1;
+			if(us != e->to >> 1)
+				fprint(2, "us %zd from %zd to %zd\n", us, e->from>>1, e->to>>1);
+			if(them == us)
+				them = e->to >> 1;
+			if(them == us){
+				n--;
+				continue;
+			}
+			v = vecp(&g->nodes, them);
+			Δ = subpt2(u->q.o, v->q.o);
+			dθ = sign * atan2(Δ.y, Δ.x);
+			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
+			θ -= dθ / 1;
+			n++;
+		}
+	}
+	if(n > 0)
+		θ /= n;
+	θ -= PI / 4;
+	while(θ > 2*PI)
+		θ -= 2*PI;
+	while(θ < 2*PI)
+		θ += 2*PI;
+	return θ;
+}
+
+static int
+rendernode(Graph *g, Node *u)
+{
+	double vx, vy;
+
 	// FIXME: orientation, length
-	u->q.v = addpt2(u->q.v, Vec2(Nodesz, Nodesz));
+	// FIXME: fix the definition of Vertex if this shit doesn't help us at
+	//	all; adding o and v happens way too often, it's stupid and so is
+	//	this code
+	u->θ = faceyourfears(g, u);
+	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
+	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
+	u->q.v = Vec2(vx, vy);
 	return 0;
 }
 
@@ -18,7 +97,7 @@ rendershapes(Graph *g)
 	for(d=ZQ, u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		dprint("render node %s\n", shitprint('q', &u->q));
 		u->q.v = ZV;
-		rendernode(u);
+		rendernode(g, u);
 		p = addpt2(u->q.o, u->q.v);
 		if(p.x < d.o.x)
 			d.o.x = p.x;

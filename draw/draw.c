@@ -32,8 +32,11 @@ drawedge(Quad q, double w)
 static int
 drawnode(Quad q)
 {
+	int r;
+
 	dprint("drawnode %s\n", shitprint('q', &q));
-	return drawquad(q);
+	r = drawquad(q);
+	return r + drawline(q.o, addpt2(q.o, q.v), -1);
 }
 
 static int

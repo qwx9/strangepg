@@ -84,7 +84,7 @@ drawline(Vertex u, Vertex v, double w)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare, w<0?0:w, col[w<0?Cnode:Cedge], ZP);
 	return 0;
 }
 

@@ -76,6 +76,7 @@ struct Node{
 	Vec in;
 	Vec out;
 	Quad q;
+	double θ;
 };
 struct Edge{
 	usize from;
