@@ -75,7 +75,31 @@ drawquad(Quad q)
 }
 
 int
-drawline(Vertex u, Vertex v, double w)
+drawbezier(Vertex u, Vertex v, double w, double θ)
+{
+	Point p2, p3;
+	Rectangle r;
+
+	u = addpt2(subpt2(mulpt2(u, view.zoom), view.pan), view.center);
+	v = addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
+	r = Rpt(v2p(u), v2p(v));
+	if(!rectXrect(canonrect(r), viewfb->r))
+		return 0;
+	if(r.min.x - r.max.x > 4 * Nodesz)
+		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
+	else
+		p2 = addpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
+	if(r.min.y - r.max.y > 4 * Nodesz)
+		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
+	else
+		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
+	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
+		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	return 0;
+}
+
+int
+drawline(Vertex u, Vertex v, double w, int emph)
 {
 	Rectangle r;
 
@@ -84,7 +108,8 @@ drawline(Vertex u, Vertex v, double w)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare, w<0?0:w, col[w<0?Cnode:Cedge], ZP);
+	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
+		w, col[emph?Cnode:Cedge], ZP);
 	return 0;
 }
 

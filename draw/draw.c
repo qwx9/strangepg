@@ -22,11 +22,11 @@ centergraph(Graph *g)
 }
 
 static int
-drawedge(Quad q, double w)
+drawedge(Quad q, double θ, double w)
 {
 	Qd(q.o, addpt2(q.o, q.v));
 	dprint("drawedge %s\n", shitprint('q', &q));
-	return drawline(q.o, q.v, w);
+	return drawbezier(q.o, q.v, w, θ);
 }
 
 static int
@@ -36,12 +36,13 @@ drawnode(Quad q)
 
 	dprint("drawnode %s\n", shitprint('q', &q));
 	r = drawquad(q);
-	return r + drawline(q.o, addpt2(q.o, q.v), -1);
+	return r + drawline(q.o, addpt2(q.o, q.v), 0, 1);
 }
 
 static int
 drawedges(Graph *g)
 {
+	double Δθ;
 	Edge *e, *ee;
 	Node *u, *v;
 	Quad q;
@@ -50,8 +51,9 @@ drawedges(Graph *g)
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
+		Δθ = fabs(u->θ - v->θ);
 		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
-		drawedge(q, e->w);
+		drawedge(q, Δθ, e->w);
 	}
 	return 0;
 }

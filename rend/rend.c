@@ -31,6 +31,7 @@ faceyourfears(Graph *g, Node *u)
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(v->q.o, u->q.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
+			// FIXME: needs to be scaled down
 			/* weight inversely proportional to distance: prefer
 			 * facing closer nodes */
 			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
@@ -76,7 +77,7 @@ rendernode(Graph *g, Node *u)
 {
 	double vx, vy;
 
-	// FIXME: orientation, length
+	// FIXME: scale (relative) to sequence length
 	// FIXME: fix the definition of Vertex if this shit doesn't help us at
 	//	all; adding o and v happens way too often, it's stupid and so is
 	//	this code
