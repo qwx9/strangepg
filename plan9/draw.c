@@ -192,10 +192,17 @@ initdrw(void)
 {
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
-	col[Cbg] = display->black;
-	col[Ctext] = display->white;
-	col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0xffff00ff);
-	col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777ff);
+	if(!haxx0rz){
+		col[Cbg] = display->black;
+		col[Ctext] = display->white;
+		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0xffff00ff);
+		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777ff);
+	}else{
+		col[Cbg] = display->white;
+		col[Ctext] = eallocimage(Rect(0,0,1,1), screen->chan, 0x555555ff);
+		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0x3333ffff);
+		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x333333ff);
+	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	return 0;

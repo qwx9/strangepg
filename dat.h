@@ -132,6 +132,7 @@ struct View{
 };
 extern View view;
 extern int showarrows, drawstep;
+extern int haxx0rz;
 
 enum{
 	Mlmb = 1<<0,

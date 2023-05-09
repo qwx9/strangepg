@@ -1,6 +1,7 @@
 #include "strpg.h"
 
 int debug;
+int haxx0rz;
 
 void
 run(void)
@@ -14,7 +15,7 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Ds] [-l layout] [FILE]\n", argv0);
+	sysfatal("usage: %s [-Dbs] [-l layout] [FILE]\n", argv0);
 }
 
 int
@@ -24,6 +25,7 @@ parseargs(int argc, char **argv)
 
 	ARGBEGIN{
 	case 'D': debug = 1; break;
+	case 'b': haxx0rz = 1; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
