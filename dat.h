@@ -87,6 +87,7 @@ struct Edge{
 struct Graph{
 	int stale;
 	int working;
+	File *file;
 	Level *level;
 	char *index;
 	Vec levels;

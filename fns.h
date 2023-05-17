@@ -27,21 +27,15 @@ Vertex	floorpt2(Vertex);
 int	eqpt2(Point2, Point2);
 
 #define idmap() kh_init(id)
-#define idnuke(h) kh_destroy(id, h)
+void	idnuke(Htab*);
 int	idput(Htab*, char*, usize);
 int	idget(Htab*, char*, usize*);
+void	iddump(Htab*);
 
 void	init(void);
 void	run(void);
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
-
-#define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
-	(p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
-#define	GBIT64(p)	((u32int)(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8)|\
-	(((uchar*)(p))[2]<<16)|(((uchar*)(p))[3]<<24)) |\
-	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
-	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
 int	errstr(char*, uint);
 
@@ -61,11 +55,34 @@ int	earlyexit(void);
 int	pushcmd(int, usize, int, uchar*);
 int	flushcmd(void);
 
+#define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
+	(p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
+#define	GBIT64(p)	((u32int)(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8)|\
+	(((uchar*)(p))[2]<<16)|(((uchar*)(p))[3]<<24)) |\
+	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
+	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
+
 void	initfs(void);
 Graph*	loadfs(int, char*);
-int	openfs(File*, char*);
+int	openfs(File*, char*, int);
+File*	graphopenfs(char*, int, Graph*);
+int	writefs(File*, void*, int);
 vlong	seekfs(File*, vlong);
 void	closefs(File*);
+u8int	get8(File*);
+u16int	get16(File*);
+u32int	get32(File*);
+u64int	get64(File*);
+int	put64(File*, u64int);
+
+void	sysinit(void);
+int	sysopen(File*, int);
+int	syswrite(File*, void*, int);
+int	sysread(File*, void*, int);
+int	syswstatlen(File*, vlong);
+vlong	sysseek(File*, vlong);
+void	sysflush(File*);
+void	sysclose(File*);
 
 // FIXME: initourdraw?
 int	initdrw(void);	/* plan9 already has initdraw(2) */

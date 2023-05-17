@@ -72,34 +72,36 @@ loadgfa1(char *path)
 {
 	int (*parse)(Graph*, File*);
 	Graph *g;
-	File f;
+	File *f;
 
 	dprint("loadgfa1 %s\n", path);
 	if((g = initgraph()) == nil)
 		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
-	if(openfs(&f, path) < 0)
+	if((f = graphopenfs(path, OREAD, g)) == nil)
 		return nil;
-	while(readrecord(&f) != nil && f.err < 10){
-		switch(f.fld[0][0]){
+	while(readrecord(f) != nil && f->err < 10){
+		switch(f->fld[0][0]){
 		case 'H': parse = gfa1hdr; break;
 		case 'S': parse = gfa1seg; break;
 		case 'L': parse = gfa1link; break;
 		case 'P': parse = gfa1path; break;
-		default: werrstr("line %d: unknown record type %c", f.nr, *f.fld[0]); continue;
+		default: werrstr("line %d: unknown record type %c", f->nr, *f->fld[0]); continue;
 		}
-		if(parse(g, &f) < 0){
+		if(parse(g, f) < 0){
 			warn("loadgfa1: %s\n", error());
-			f.err++;
+			f->err++;
 		}
 	}
 	dprint("done loading gfa\n");
-	if(f.err == 10){
+	closefs(f);
+	free(g->file);
+	g->file = nil;
+	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
 	}
-	closefs(&f);
 	return g;
 }
 
@@ -109,6 +111,7 @@ save(Graph *)
 	return 0;
 }
 
+// FIXME: more handles? readnode/readedge, etc?
 static Filefmt ff = {
 	.name = "gfa",
 	.load = loadgfa1,
