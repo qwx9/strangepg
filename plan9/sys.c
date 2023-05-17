@@ -1,8 +1,5 @@
 #include "strpg.h"
 #include <thread.h>
-#include <pool.h>
-
-mainstacksize = 16*1024;
 
 /* FIXME: no fmt equivalent?? other than individual functions */
 char *
@@ -101,16 +98,4 @@ emalloc(usize n)
 		sysfatal("emalloc: %r");
 	setmalloctag(p, getcallerpc(&n));
 	return p;
-}
-
-void
-threadmain(int argc, char **argv)
-{
-	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
-	//setfcr(getfcr() & ~FPPMASK | FPPSGL);
-	srand(time(nil));
-	if(parseargs(argc, argv) < 0)
-		sysfatal("usage");
-	run();
-	threadexitsall(nil);
 }
