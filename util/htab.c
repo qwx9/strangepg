@@ -8,6 +8,26 @@
  * hardly be a bottleneck globally unless something has gone very wrong.
  */
 
+void
+iddump(Htab *h)
+{
+	khiter_t g;
+	char *kk;
+	usize vv;
+
+	kh_foreach(h, kk, vv, {warn("%s:%zd\n", kk, vv);});
+}
+
+void
+idnuke(Htab *h)
+{
+	char *k;
+	usize v;
+
+	kh_foreach(h, k, v, {(v); free(k);});
+	kh_destroy(id, h);
+}
+
 int
 idput(Htab *h, char *k, usize v)
 {
@@ -28,10 +48,6 @@ idget(Htab *h, char *k, usize *v)
 {
 	khiter_t g;
 
-/*
-	char *kk; usize vv;
-	kh_foreach(h, kk, vv, {warn("%s:%zd\n", kk, vv);});
-*/
 	assert(v != nil);
 	g = kh_get(id, h, k);
 	if(g == kh_end(h)){
