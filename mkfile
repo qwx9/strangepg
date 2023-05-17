@@ -1,6 +1,8 @@
 </$objtype/mkfile
 BIN=$home/bin/$objtype
-TARG=strpg
+TARG=\
+	strpg\
+
 OFILES=\
 	strpg.$O\
 	cmd/cmd.$O\
@@ -18,6 +20,7 @@ OFILES=\
 	plan9/draw.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\
+	plan9/main.$O\
 	plan9/sys.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
@@ -33,7 +36,7 @@ HFILES=\
 	plan9/strpg.h\
 	util/khash.h\
 
-</sys/src/cmd/mkone
+</sys/src/cmd/mkmany
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
