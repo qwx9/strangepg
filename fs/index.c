@@ -82,7 +82,7 @@ loadlevel(Graph *g, int nl)
 	lp = vecp(&g->levels, nl);
 	if(lp == g->level)
 		return 0;
-	if(openfs(&f, g->index) < 0)
+	if(openfs(&f, g->index, OREAD) < 0)
 		return -1;
 	if(readnodes(g, lp, &f) < 0)
 		return -1;
@@ -113,7 +113,7 @@ loaddicts(char *path)
 	if((g = initgraph()) == nil)
 		sysfatal("loadindex: %r");
 	memset(&f, 0, sizeof f);
-	if(openfs(&f, path) < 0)
+	if(openfs(&f, path, OREAD) < 0)
 		return nil;
 	get64(&f);	// nnodes
 	get64(&f);	// nedges
