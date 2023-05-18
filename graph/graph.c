@@ -40,7 +40,7 @@ addnode(Graph *g, char *id, char *seq)
 	n.in = vec(sizeof(usize), 0);
 	n.out = vec(sizeof(usize), 0);
 	n.q = ZQ;
-	vecpush(&g->nodes, &n, &i);
+	veccopy(&g->nodes, &n, &i);
 	return idput(g->id2n, estrdup(id), i);
 }
 
@@ -64,11 +64,9 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 		return -1;
 	e.from = (u - (Node *)g->nodes.buf) << 1 | d1;
 	e.to =  (v - (Node *)g->nodes.buf) << 1 | d2;
-	// FIXME: the memcpy'ing in vec makes this really dangerous
-	//	at least call it something other than push, it doesn't push
-	vecpush(&g->edges, &e, &i);
-	vecpush(&u->out, &i, nil);
-	vecpush(&v->in, &i, nil);
+	veccopy(&g->edges, &e, &i);
+	veccopy(&u->out, &i, nil);
+	veccopy(&v->in, &i, nil);
 	return 0;
 }
 

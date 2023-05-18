@@ -46,7 +46,7 @@ loadlevel(Graph *g, int lvl)
 			n.w = getdbl(f);
 			if(get32(f) < lvl)	/* expiration date */
 				continue;
-			vecpush(&g->nodes, &n, &i);
+			veccopy(&g->nodes, &n, &i);
 		}
 	}
 	seekfs(f, lp->eoff);
@@ -59,11 +59,11 @@ loadlevel(Graph *g, int lvl)
 			e.w = getdbl(f);
 			if(get32(f) < lvl)	/* expiration date */
 				continue;
-			vecpush(&g->edges, &e, &i);
+			veccopy(&g->edges, &e, &i);
 			up = vecp(&g->nodes, e.from >> 1);
 			vp = vecp(&g->nodes, e.to >> 1);
-			vecpush(&up->out, &i, nil);
-			vecpush(&vp->in, &i, nil);
+			veccopy(&up->out, &i, nil);
+			veccopy(&vp->in, &i, nil);
 		}
 	}
 	closefs(f);

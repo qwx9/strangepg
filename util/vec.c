@@ -83,7 +83,7 @@ vecresize(Vec *v, usize nel)
 }
 
 void *
-vecpush(Vec *v, void *p, usize *ip)
+veccopy(Vec *v, void *p, usize *ip)
 {
 	usize i;
 	uchar *t;
