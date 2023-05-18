@@ -11,7 +11,6 @@
 void
 iddump(Htab *h)
 {
-	khiter_t g;
 	char *kk;
 	usize vv;
 
@@ -24,7 +23,7 @@ idnuke(Htab *h)
 	char *k;
 	usize v;
 
-	kh_foreach(h, k, v, {(v); free(k);});
+	kh_foreach(h, k, v, {USED(v); free(k);});
 	kh_destroy(id, h);
 }
 

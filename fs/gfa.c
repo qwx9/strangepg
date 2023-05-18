@@ -95,8 +95,8 @@ loadgfa1(char *path)
 	}
 	dprint("done loading gfa\n");
 	closefs(f);
-	free(g->file);
-	g->file = nil;
+	free(g->index);
+	g->index = nil;
 	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);

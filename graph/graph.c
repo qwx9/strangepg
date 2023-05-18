@@ -33,14 +33,15 @@ addnode(Graph *g, char *id, char *seq)
 		werrstr("duplicate node id");
 		return 0;
 	}
+	USED(id, seq);
 	memset(&n, 0, sizeof n);
-	n.id = estrdup(id);	// FIXME: necessary?
-	n.seq = estrdup(seq);
+	n.id = 0;
+	n.seq = 0;
 	n.in = vec(sizeof(usize), 0);
 	n.out = vec(sizeof(usize), 0);
 	n.q = ZQ;
 	vecpush(&g->nodes, &n, &i);
-	return idput(g->id2n, n.id, i);
+	return idput(g->id2n, estrdup(id), i);
 }
 
 /* id's in edges are always packed with direction bit */
@@ -55,7 +56,8 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	dprint("addedge %s,%s:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", from, to,
 		w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1,
 		g->edges.len, g->edges.elsz);
-	e.overlap = estrdup(overlap);
+	USED(overlap);
+	e.overlap = 0;
 	e.w = w;
 	if((u = id2n(g, from)) == nil
 	|| (v = id2n(g, to)) == nil)

@@ -60,40 +60,46 @@ struct Layout{
 };
 extern int deflayout;
 
-/* FIXME: very unsafe mix of pointers and primitives with generic Vec */
 struct Level{
 	vlong noff;	/* absolute offset */
-	usize nlen;	/* length in bytes */
-	usize ntot;	/* cumulated total of elements */
-	vlong linkoff;	/* in/out link array */
+	usize nnel;	/* number of nodes/supernodes for level */
+	usize ntot;	/* cumulated total of nodes/supernodes */
 	vlong eoff;
-	usize elen;
+	usize enel;
 	usize etot;
 };
 struct Node{
-	char *id;
-	char *seq;
+	vlong id;
+	vlong seq;
+	//char *id;v
+	//char *seq;
 	Vec in;
 	Vec out;
+	double w;
 	Quad q;
 	double θ;
 };
 struct Edge{
 	usize from;
 	usize to;
-	char *overlap;
+	//char *overlap;
+	vlong overlap;
 	double w;
 };
+/* FIXME: very unsafe mix of pointers and primitives with
+ * generic Vec */
 struct Graph{
 	int stale;
 	int working;
-	File *file;
-	Level *level;
-	char *index;
+	File *index;
+	Level *lvl;
+	usize nnodes;	/* totals for all levels */
+	usize nedges;
+	usize nlevels;
 	Vec levels;
 	Vec edges;
 	Vec nodes;
-	Htab *id2n;	// FIXME ← ?
+	Htab *id2n;	// FIXME ← remove, gfa specific
 	Layout *ll;
 	Quad dim;
 	Vertex off;

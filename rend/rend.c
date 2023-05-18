@@ -10,6 +10,13 @@ faceyourfears(Graph *g, Node *u)
 	Node *v;
 	Vector Δ;
 
+	/* FIXME:
+	 * - fix perpendicular orientations
+	 *	=> look at outgoing: then dignore things "behind" usa
+	 * - out/in
+	 * - optionally don't show nodes at all, just have points
+	 */
+
 	θ = 0.;
 	n = 0;
 	us = vecindexof(&g->nodes, u);
@@ -33,8 +40,10 @@ faceyourfears(Graph *g, Node *u)
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
 			/* weight inversely proportional to distance: prefer
-			 * facing closer nodes */
+			 * facing closer nodes
+			 * also node weights */
 			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
+			USED(d);
 			θ -= dθ / 1;
 			n++;
 		}
@@ -57,7 +66,9 @@ faceyourfears(Graph *g, Node *u)
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(u->q.o, v->q.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
+			/* FIXME: see comment above */
 			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
+			USED(d);
 			θ -= dθ / 1;
 			n++;
 		}
