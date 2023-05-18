@@ -6,23 +6,27 @@
 QLock drawlock;
 
 enum{
+	Cscr,
 	Cbg,
 	Ctext,
 	Cnode,
 	Cedge,
+	Cemph,
 	Cend,
 };
 static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
 static Image *viewfb;
+static int viewop = SoverD;
+static int blitop = SoverD;
 
 static Image *
-eallocimage(Rectangle r, int repl, ulong col)
+eallocimage(Rectangle r, ulong chan, int repl, ulong col)
 {
 	Image *i;
 
-	if((i = allocimage(display, r, screen->chan, repl, col)) == nil)
+	if((i = allocimage(display, r, chan, repl, col)) == nil)
 		sysfatal("allocimage: %r");
 	return i;
 }
@@ -70,7 +74,7 @@ drawquad(Quad q)
 		Pt(r.min.x, r.max.y),
 		r.min
 	};
-	poly(viewfb, p, nelem(p), Endsquare, Endsquare, 0, col[Cnode], ZP);
+	polyop(viewfb, p, nelem(p), 0, 0, 1, col[Cnode], ZP, viewop);
 	return 0;
 }
 
@@ -93,8 +97,8 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
-	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	bezierop(viewfb, r.min, p2, p3, r.max, Endsquare,
+		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP, viewop);
 	return 0;
 }
 
@@ -108,16 +112,16 @@ drawline(Vertex u, Vertex v, double w, int emph)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
-		w, col[emph?Cnode:Cedge], ZP);
+	lineop(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
+		w, col[emph?Cemph:Cedge], ZP, viewop);
 	return 0;
 }
 
 void
 flushdraw(void)
 {
-	draw(screen, screen->r, col[Cbg], nil, ZP);
-	draw(screen, screen->r, viewfb, nil, ZP);
+	drawop(screen, screen->r, col[Cscr], nil, ZP, S);
+	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
 	flushimage(display, 1);
 }
 
@@ -150,8 +154,8 @@ cleardraw(void)
 		resetdraw();
 	}
 	// FIXME: unnecessary if view/pan is bounded
-	draw(screen, screen->r, col[Cbg], nil, ZP);
-	draw(viewfb, r, col[Cbg], nil, ZP);
+	drawop(screen, screen->r, col[Cscr], nil, ZP, S);
+	drawop(viewfb, viewr, col[Cbg], nil, ZP, S);
 	if(debug){
 		Point pl[] = {
 			r.min,
@@ -180,9 +184,8 @@ resetdraw(void)
 	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);
-	viewfb = eallocimage(viewr, 0, DNofill);
-	draw(screen, screen->r, col[Cbg], nil, ZP);
-	draw(viewfb, viewfb->r, col[Cbg], nil, ZP);
+	viewfb = eallocimage(viewr, XRGB32, 0, DTransparent);
+	draw(screen, screen->r, col[Cscr], nil, ZP);
 	return 0;
 }
 
@@ -193,15 +196,19 @@ initdrw(void)
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
 	if(!haxx0rz){
-		col[Cbg] = display->black;
+		col[Cscr] = display->white;
+		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
 		col[Ctext] = display->white;
-		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0xffff00ff);
-		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x777777ff);
+		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0xaf));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x777777ff, 0x7f));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
 	}else{
-		col[Cbg] = display->white;
-		col[Ctext] = eallocimage(Rect(0,0,1,1), screen->chan, 0x555555ff);
-		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 0x3333ffff);
-		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 0x333333ff);
+		col[Cscr] = display->black;
+		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
+		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x5555557f, 0x7f));
+		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x7f));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x333333ff, 0x3f));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
 	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
