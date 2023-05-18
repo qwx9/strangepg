@@ -18,8 +18,6 @@ static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
 static Image *viewfb;
-static int viewop = SoverD;
-static int blitop = SoverD;
 
 static Image *
 eallocimage(Rectangle r, ulong chan, int repl, ulong col)
@@ -74,7 +72,7 @@ drawquad(Quad q)
 		Pt(r.min.x, r.max.y),
 		r.min
 	};
-	polyop(viewfb, p, nelem(p), 0, 0, 1, col[Cnode], ZP, viewop);
+	poly(viewfb, p, nelem(p), 0, 0, 1, col[Cnode], ZP);
 	return 0;
 }
 
@@ -97,8 +95,8 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
-	bezierop(viewfb, r.min, p2, p3, r.max, Endsquare,
-		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP, viewop);
+	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
+		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
 	return 0;
 }
 
@@ -112,8 +110,8 @@ drawline(Vertex u, Vertex v, double w, int emph)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	lineop(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
-		w, col[emph?Cemph:Cedge], ZP, viewop);
+	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
+		w, col[emph?Cemph:Cedge], ZP);
 	return 0;
 }
 
