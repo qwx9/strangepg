@@ -33,7 +33,7 @@ loadlevel(Graph *g, int lvl)
 	vecresize(&g->edges, lp->etot);
 	if(Δl <= 0)
 		return 0;
-	f = g->index;
+	f = g->file;
 	seekfs(f, lp->noff);
 	for(l=g->lvl; l<=lp; l++){
 		for(i=0; i<lp->nnel; i++){
@@ -83,7 +83,7 @@ loaddicts(char *path)
 	f = emalloc(sizeof *f);
 	if(openfs(f, path, OREAD) < 0)
 		return nil;
-	g->index = f;
+	g->file = f;
 	g->nnodes = get64(f);
 	g->nedges = get64(f);
 	g->nlevels = get64(f);

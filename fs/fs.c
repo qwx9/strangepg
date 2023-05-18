@@ -105,11 +105,11 @@ openfs(File *f, char *path, int mode)
 File *
 graphopenfs(char *path, int mode, Graph *g)
 {
-	assert(g->index == nil);
-	g->index = emalloc(sizeof *g->index);
-	if(openfs(g->index, path, mode) < 0)
+	assert(g->file == nil);
+	g->file = emalloc(sizeof *g->file);
+	if(openfs(g->file, path, mode) < 0)
 		return nil;
-	return g->index;
+	return g->file;
 }
 
 Graph*

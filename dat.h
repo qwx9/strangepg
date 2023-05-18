@@ -86,12 +86,10 @@ struct Edge{
 	vlong overlap;
 	double w;
 };
-/* FIXME: very unsafe mix of pointers and primitives with
- * generic Vec */
 struct Graph{
 	int stale;
 	int working;
-	File *index;
+	File *file;
 	Level *lvl;
 	usize nnodes;	/* totals for all levels */
 	usize nedges;
@@ -99,7 +97,7 @@ struct Graph{
 	Vec levels;
 	Vec edges;
 	Vec nodes;
-	Htab *id2n;	// FIXME ← remove, gfa specific
+	Htab *id2n;
 	Layout *ll;
 	Quad dim;
 	Vertex off;
