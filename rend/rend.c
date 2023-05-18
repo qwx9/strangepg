@@ -13,6 +13,7 @@ faceyourfears(Graph *g, Node *u)
 	/* FIXME:
 	 * - fix perpendicular orientations
 	 *	=> look at outgoing: then dignore things "behind" usa
+	 * - take into account orientation?
 	 * - out/in
 	 * - optionally don't show nodes at all, just have points
 	 */
@@ -27,13 +28,13 @@ faceyourfears(Graph *g, Node *u)
 			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
 			/* FIXME: see this is why we don't want global edge list */
 			them = e->to >> 1;
-			if(us != e->from >> 1)
-				fprint(2, "us %zd from %zd to %zd\n", us, e->from>>1, e->to>>1);
-			if(them == us)
-				them = e->from >> 1;
+			assert(us == e->from >> 1);
 			if(them == us){
-				n--;
-				continue;
+				them = e->from >> 1;
+				if(them == us){
+					n--;
+					continue;
+				}
 			}
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(v->q.o, u->q.o);
@@ -42,8 +43,7 @@ faceyourfears(Graph *g, Node *u)
 			/* weight inversely proportional to distance: prefer
 			 * facing closer nodes
 			 * also node weights */
-			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			USED(d);
+			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
 			θ -= dθ / 1;
 			n++;
 		}
@@ -53,22 +53,22 @@ faceyourfears(Graph *g, Node *u)
 		for(ip=u->in.buf, ie=ip+u->in.len; ip<ie; ip++){
 			e = vecp(&g->edges, *ip);
 			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
-			/* FIXME: see this is why we don't want global edge list */
 			them = e->from >> 1;
-			if(us != e->to >> 1)
-				fprint(2, "us %zd from %zd to %zd\n", us, e->from>>1, e->to>>1);
-			if(them == us)
-				them = e->to >> 1;
+			assert(us == e->to >> 1);
 			if(them == us){
-				n--;
-				continue;
+				them = e->to >> 1;
+				if(them == us){
+					n--;
+					continue;
+				}
 			}
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(u->q.o, v->q.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
+			if(dθ >= PI || dθ < PI)
+				continue;
 			/* FIXME: see comment above */
-			d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			USED(d);
+			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
 			θ -= dθ / 1;
 			n++;
 		}
