@@ -79,8 +79,8 @@ drawworld(void)
 			continue;
 		centergraph(g);
 		dprint("drawworld: draw graph %#p\n", g);
-		drawnodes(g);
 		drawedges(g);
+		drawnodes(g);
 	}
 }
 
