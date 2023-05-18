@@ -76,6 +76,15 @@ get64(File *f)
 	return (u64int)get32(f) << 32 | v;
 }
 
+double
+getdbl(File *f)
+{
+	union{ u64int v; double d; } u;
+
+	u.v = get64(f);
+	return u.d;
+}
+
 int
 put64(File *f, u64int v)
 {
@@ -96,11 +105,11 @@ openfs(File *f, char *path, int mode)
 File *
 graphopenfs(char *path, int mode, Graph *g)
 {
-	assert(g->file == nil);
-	g->file = emalloc(sizeof *g->file);
-	if(openfs(g->file, path, mode) < 0)
+	assert(g->index == nil);
+	g->index = emalloc(sizeof *g->index);
+	if(openfs(g->index, path, mode) < 0)
 		return nil;
-	return g->file;
+	return g->index;
 }
 
 Graph*

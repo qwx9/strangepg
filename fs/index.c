@@ -1,135 +1,102 @@
 #include "strpg.h"
 #include "fs.h"
 
-/* file format:
- * header[] ldict[] nodes[] edges[] edgelinks[] meta[]
- * header: nnodes[8] nedges[8] nlevels[8]
- * ldict: { nodeoff[8] nnodes[8] nodetot[8] inoutoff[8]
- *          edgeoff[8] nedges[8] edgetot[8] }[nlevels]
- * nodes: { nin[8] nout[8] }[nnodes]
- * edges: { from[7] fromdir[1] to[7] todir[1] }[nedges]
- * edgelinks: { edge[8] }[∑nin+nout ∀nodes]
- *	same order as nodes
- * meta: classified.
- * assuming allows random access for nodes and edges since they are of
- * fixed size.
- */
+/* NOTE: in a directed graph, arcs are (tail,head) between two end points,
+ * tail and head, rather than the reverse; an edge's head degree is its
+ * left /from outfree */
 
-/* FIXME: no input validation whatsoever; could be done on the go, or
- * at the end once all sizes are known */
+/* FIXME: possibility: R trees or something to select which branch to
+ * expand, instead of all of them; this would require storing things
+ * again amenable for a dfs, but could  */
+
+/* FIXME: updateable layout: add/remove edges from already computed forcefield layout */
+
+static File meta;
+static vlong metaoff;	/* FIXME: handle meta */
 
 static int
-readedges(Graph *g, Level *lp, File *f)
+loadlevel(Graph *g, int lvl)
 {
-	usize nn;
-	Edge *e, *es, *ee;
+	usize i;
+	intptr Δl;
+	Level *l, *lp;
+	Node n, *up, *vp;
+	Edge e;
+	File *f;
 
-	if(g->level >= lp)
+	/* recheck rest of the code either to make it work the same way, or to
+	 * do that here */
+	lp = vecp(&g->levels, lvl);
+	Δl = lp - g->lvl;
+	// FIXME: free vecs and shit
+	vecresize(&g->nodes, lp->ntot);
+	vecresize(&g->edges, lp->etot);
+	if(Δl <= 0)
 		return 0;
-	es = g->edges.tail;
-	nn = lp->etot - g->level->etot;
-	/* don't do any caching for now */
-	vecresize(&g->edges, g->edges.len + nn);
-	seekfs(f, lp->eoff);
-	for(e=es, ee=e+nn; e<ee; e++){
-		e->from = get64(f);
-		e->to = get64(f);
-	}
-	return 0;
-}
-
-static int
-readnodes(Graph *g, Level *lp, File *f)
-{
-	usize n, nn, *ep, *ee;
-	Node *u, *us, *ue;
-
-	if(g->level >= lp)
-		return 0;
-	us = g->nodes.tail;
-	nn = lp->ntot - g->level->ntot;
-	/* don't do any caching for now */
-	vecresize(&g->nodes, g->nodes.len + nn);
+	f = g->index;
 	seekfs(f, lp->noff);
-	for(u=us, ue=u+nn; u<ue; u++){
-		if((n = get64(f)) > 0)
-			u->in = vec(sizeof(usize), n);
-		if((n = get64(f)) > 0)
-			u->out = vec(sizeof(usize), n);
+	for(l=g->lvl; l<=lp; l++){
+		for(i=0; i<lp->nnel; i++){
+			n.id = get64(f);
+			n.seq = get64(f);
+			/* fuck it; this is hardly any kind of bottleneck and
+			 * hardly different than having node dict, offsets, lengths */
+			n.out = vec(sizeof(usize), get32(f));
+			n.in = vec(sizeof(usize), get32(f));
+			n.w = getdbl(f);
+			if(get32(f) < lvl)	/* expiration date */
+				continue;
+			vecpush(&g->nodes, &n, &i);
+		}
 	}
-	seekfs(f, lp->linkoff);
-	for(u=us, ue=u+nn; u<ue; u++){
-		for(ep=u->in.buf, ee=ep+u->in.len; ep<ee; ep++)
-			*ep = get64(f);
-		for(ep=u->out.buf, ee=ep+u->out.len; ep<ee; ep++)
-			*ep = get64(f);
+	seekfs(f, lp->eoff);
+	for(l=g->lvl; l<=lp; l++){
+		/* FIXME: redundancies with gfa */
+		for(i=0; i<lp->enel; i++){
+			e.overlap = get64(f);
+			e.from = get64(f);
+			e.to = get64(f);
+			e.w = getdbl(f);
+			if(get32(f) < lvl)	/* expiration date */
+				continue;
+			vecpush(&g->edges, &e, &i);
+			up = vecp(&g->nodes, e.from >> 1);
+			vp = vecp(&g->nodes, e.to >> 1);
+			vecpush(&up->out, &i, nil);
+			vecpush(&vp->in, &i, nil);
+		}
 	}
+	closefs(f);
 	return 0;
 }
 
-/* indices in g->nodes/g->edges are the same as in the index file */
-int
-loadlevel(Graph *g, int nl)
-{
-	File f;
-	Level *lp;
-
-	if(g->index == nil){
-		werrstr("no index");
-		return -1;
-	}
-	assert(nl >= 0 && nl < g->levels.len);
-	lp = vecp(&g->levels, nl);
-	if(lp == g->level)
-		return 0;
-	if(openfs(&f, g->index) < 0)
-		return -1;
-	if(readnodes(g, lp, &f) < 0)
-		return -1;
-	if(readedges(g, lp, &f) < 0)
-		return -1;
-	closefs(&f);
-	g->level = lp;
-	g->stale = 1;
-	return 0;
-}
-
-/* FIXME: later: partitioning: subtrees based on
- * location/locality/topology (simple quadtrees?) */
-/* FIXME: don't load anything besides the offset tables;
- * once loaded, don't free upper levels, just append,
- * unless we run out of memory */
-/* FIXME: error checking */
-/* FIXME: preprocess metadata as well, appended to index */
-static Graph*
+static Graph *
 loaddicts(char *path)
 {
-	usize n;
-	File f;
+	File *f;
 	Level *lp, *le;
 	Graph *g;
 
 	dprint("loadindex %s\n", path);
 	if((g = initgraph()) == nil)
 		sysfatal("loadindex: %r");
-	memset(&f, 0, sizeof f);
-	if(openfs(&f, path) < 0)
+	f = emalloc(sizeof *f);
+	if(openfs(f, path, OREAD) < 0)
 		return nil;
-	get64(&f);	// nnodes
-	get64(&f);	// nedges
-	n = get64(&f);
-	vecresize(&g->levels, n);
-	for(lp=g->levels.buf, le=lp+n; lp<le; lp++){
-		lp->noff = get64(&f);
-		lp->nlen = get64(&f);
-		lp->ntot = get64(&f);
-		lp->linkoff = get64(&f);
-		lp->eoff = get64(&f);
-		lp->elen = get64(&f);
-		lp->etot = get64(&f);
+	g->index = f;
+	g->nnodes = get64(f);
+	g->nedges = get64(f);
+	g->nlevels = get64(f);
+	g->levels = vec(sizeof(Level), g->nlevels);
+	for(lp=g->levels.buf, le=lp+g->nlevels; lp<le; lp++){
+		lp->noff = get64(f);
+		lp->nnel = get64(f);
+		lp->ntot = get64(f);
+		lp->eoff = get64(f);
+		lp->enel = get64(f);
+		lp->etot = get64(f);
 	}
-	closefs(&f);
-	g->index = estrdup(path);
+	closefs(f);
 	return g;
 }
 

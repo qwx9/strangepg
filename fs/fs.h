@@ -14,6 +14,7 @@ struct File{
 struct Filefmt{
 	char *name;
 	Graph* (*load)(char *);
+	int (*chlev)(char *);
 	int (*save)(Graph*);
 };
 extern Filefmt fftab[FFnil];
