@@ -35,13 +35,13 @@ flushcmd(void)
 			case FFgfa:
 				dprint("flushcmd: FFgfa\n");
 				if(loadfs(FFgfa, (char *)p) == nil)
-					return -1;
+					sysfatal("loadfs: %r");
 				rendernew();
 				break;
 			case FFindex:
 				dprint("flushcmd: FFindex\n");
 				if(loadfs(FFindex, (char *)p) == nil)
-					return -1;
+					sysfatal("loadfs: %r");
 				rendernew();
 				break;
 			default: warn("unknown file format %c\n", c);
