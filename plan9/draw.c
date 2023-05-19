@@ -108,17 +108,23 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 	Point p2, p3;
 	Rectangle r;
 
+	// FIXME: wrappers for conversion + get rid of stupid origin+vec interface
 	u = addpt2(subpt2(mulpt2(u, view.zoom), view.pan), view.center);
 	v = addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	// FIXME: calc angle
-	if(r.min.x - r.max.x > 4 * Nodesz)
+
+	double nθ = atan2(u.x - v.x, u.y - v.y);
+	//fprint(2, "θ %f θ´ %f\n", θ, nθ);
+	θ = nθ;
+
+	// FIXME: adjustments for short edges and rotation
+	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p2 = addpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
-	if(r.min.y - r.max.y > 4 * Nodesz)
+	if(r.min.y - r.max.y > ceil(4 * Nodesz * view.zoom))
 		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));

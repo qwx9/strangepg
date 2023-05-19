@@ -66,11 +66,11 @@ faceyourfears(Graph *g, Node *u)
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
-			if(dθ >= PI || dθ < PI)
-				continue;
+			//if(dθ >= PI/2 || dθ < PI/2)
+			//	continue;
 			/* FIXME: see comment above */
 			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			θ -= dθ / 1;
+			θ -= dθ / 2;
 			n++;
 		}
 	}
