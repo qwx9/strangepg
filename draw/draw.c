@@ -21,32 +21,35 @@ centergraph(Graph *g)
 	view.center = addpt2(g->off, v);
 }
 
+// shitprint: maybe just do qk1's va()? but no custom fmt's
+
 static int
-drawedge(Quad q, double θ, double w)
+drawedge(Quad q, double w)
 {
 	Qd(q.o, addpt2(q.o, q.v));
 	dprint("drawedge %s\n", shitprint('q', &q));
-	return drawbezier(q.o, q.v, w, θ);
+	return drawbezier(q.o, q.v, w);
 }
 
 static int
 drawnode(Quad p, Quad q)
 {
+
 	dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
-	return drawquad2(p, q);
+	drawquad2(p, q, 1);
+	return drawquad2(p, q, 0);
 }
 
 static int
 drawnodevec(Quad q)
 {
-	dprint("drawnode %s\n", shitprint('q', &q));
+	dprint("drawnodevec %s\n", shitprint('q', &q));
 	return drawline(q.o, addpt2(q.o, q.v), 0, 1);
 }
 
 static int
 drawedges(Graph *g)
 {
-	double Δθ;
 	Edge *e, *ee;
 	Node *u, *v;
 	Quad q;
@@ -55,9 +58,8 @@ drawedges(Graph *g)
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
-		Δθ = fabs(u->θ - v->θ);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
-		drawedge(q, Δθ, e->w);
+		drawedge(q, e->w);
 	}
 	return 0;
 }

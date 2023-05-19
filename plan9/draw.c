@@ -10,7 +10,10 @@ enum{
 	Cbg,
 	Ctext,
 	Cnode,
+	Cnodesh,
+	Cnodesh2,
 	Cedge,
+	Cedgesh,
 	Cemph,
 	Cend,
 };
@@ -55,7 +58,7 @@ s2p(Vertex v)
 }
 
 int
-drawquad2(Quad q1, Quad q2)
+drawquad2(Quad q1, Quad q2, int sh)
 {
 	Rectangle r1, r2;
 
@@ -76,7 +79,11 @@ drawquad2(Quad q1, Quad q2)
 		r2.max,
 		r1.max,
 	};
-	fillpoly(viewfb, p, nelem(p), ~0, col[Cnode], ZP);
+	if(sh){
+		polyop(viewfb, p, nelem(p), 0, 0, 1, col[Cnodesh], ZP, SatopD);
+//		polyop(viewfb, p, nelem(p), 1, 1, 2, col[Cnodesh2], ZP, SatopD);
+	}else
+		fillpoly(viewfb, p, nelem(p), 1, col[Cnode], ZP);
 	return 0;
 }
 
@@ -99,12 +106,14 @@ drawquad(Quad q)
 		r.min
 	};
 	poly(viewfb, p, nelem(p), 0, 0, 2, col[Cemph], ZP);
+	
 	return 0;
 }
 
 int
-drawbezier(Vertex u, Vertex v, double w, double θ)
+drawbezier(Vertex u, Vertex v, double w)
 {
+	double θ;
 	Point p2, p3;
 	Rectangle r;
 
@@ -114,11 +123,7 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-
-	double nθ = atan2(u.x - v.x, u.y - v.y);
-	//fprint(2, "θ %f θ´ %f\n", θ, nθ);
-	θ = nθ;
-
+	θ = atan2(u.x - v.x, u.y - v.y);
 	// FIXME: adjustments for short edges and rotation
 	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
@@ -130,6 +135,8 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
+		showarrows ? Endarrow : Endsquare, 1+w, col[Cedgesh], ZP);
 	return 0;
 }
 
@@ -231,14 +238,20 @@ initdrw(void)
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
 		col[Ctext] = display->white;
 		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0xaf));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x777777ff, 0x7f));
+		col[Cnodesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x2f));
+		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
+		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x777777ff, 0x3f));
 		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
 	}else{
 		col[Cscr] = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
 		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x5555557f, 0x7f));
 		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x7f));
+		col[Cnodesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x4f));
+		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x0f));
 		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x333333ff, 0x3f));
+		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x333333ff, 0x0f));
 		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
 	}
 	view.dim.o = ZV;
