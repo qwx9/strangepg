@@ -76,7 +76,9 @@ struct Node{
 	Vec in;
 	Vec out;
 	double w;
-	Quad q;
+	Quad q1;		/* bounding polygon */
+	Quad q2;
+	Quad vrect;		/* direction/length vector */
 	double θ;
 };
 struct Edge{

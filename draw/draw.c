@@ -30,13 +30,17 @@ drawedge(Quad q, double θ, double w)
 }
 
 static int
-drawnode(Quad q)
+drawnode(Quad p, Quad q)
 {
-	int r;
+	dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
+	return drawquad2(p, q);
+}
 
+static int
+drawnodevec(Quad q)
+{
 	dprint("drawnode %s\n", shitprint('q', &q));
-	r = drawquad(q);
-	return r + drawline(q.o, addpt2(q.o, q.v), 0, 1);
+	return drawline(q.o, addpt2(q.o, q.v), 0, 1);
 }
 
 static int
@@ -52,7 +56,7 @@ drawedges(Graph *g)
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
 		Δθ = fabs(u->θ - v->θ);
-		q = Qd(addpt2(u->q.o, u->q.v), v->q.o);
+		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
 		drawedge(q, Δθ, e->w);
 	}
 	return 0;
@@ -64,8 +68,11 @@ drawnodes(Graph *g)
 	Node *u, *ue;
 
 	dprint("drawnodes dim %s\n", shitprint('v', &g->dim.v));
-	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++)
-		drawnode(u->q);
+	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
+		if(showarrows)
+			drawnodevec(u->vrect);
+		drawnode(u->q1, u->q2);
+	}
 	return 0;
 }
 

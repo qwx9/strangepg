@@ -18,6 +18,7 @@ faceyourfears(Graph *g, Node *u)
 	 * - optionally don't show nodes at all, just have points
 	 */
 
+	USED(d);
 	θ = 0.;
 	n = 0;
 	us = vecindexof(&g->nodes, u);
@@ -37,7 +38,7 @@ faceyourfears(Graph *g, Node *u)
 				}
 			}
 			v = vecp(&g->nodes, them);
-			Δ = subpt2(v->q.o, u->q.o);
+			Δ = subpt2(v->vrect.o, u->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
 			/* weight inversely proportional to distance: prefer
@@ -63,7 +64,7 @@ faceyourfears(Graph *g, Node *u)
 				}
 			}
 			v = vecp(&g->nodes, them);
-			Δ = subpt2(u->q.o, v->q.o);
+			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			if(dθ >= PI || dθ < PI)
 				continue;
@@ -86,16 +87,39 @@ faceyourfears(Graph *g, Node *u)
 static int
 rendernode(Graph *g, Node *u)
 {
-	double vx, vy;
+	double θ, vx, vy, rx, ry, sx, sy;
 
-	// FIXME: scale (relative) to sequence length
+	// FIXME: scale length to sequence length (relative)
 	// FIXME: fix the definition of Vertex if this shit doesn't help us at
 	//	all; adding o and v happens way too often, it's stupid and so is
 	//	this code
 	u->θ = faceyourfears(g, u);
 	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
 	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
-	u->q.v = Vec2(vx, vy);
+	u->vrect.v = Vec2(vx, vy);
+	u->q1 = u->vrect;
+	u->q2 = u->vrect;
+	θ = u->θ;
+	if(fabs(u->θ) >= PI/2)
+		θ += PI/2;
+	else
+		θ -= PI/2;
+	rx = Nodesz/8 * (cos(θ) - sin(θ));
+	ry = Nodesz/8 * (sin(θ) + cos(θ));
+	if(fabs(u->θ) >= PI/2)
+		θ -= PI;
+	else
+		θ += PI;
+	sx = Nodesz/4 * (cos(θ) - sin(θ));
+	sy = Nodesz/4 * (sin(θ) + cos(θ));
+	u->q1.o.x += rx;
+	u->q1.o.y += ry;
+	u->q1.v.x = u->q1.v.x + sx;
+	u->q1.v.y = u->q1.v.y + sy;
+	u->q2.o.x -= rx;
+	u->q2.o.y -= ry;
+	u->q2.v.x = u->q2.v.x - sx;
+	u->q2.v.y = u->q2.v.y - sy;
 	return 0;
 }
 
@@ -107,10 +131,10 @@ rendershapes(Graph *g)
 	Vertex p;
 
 	for(d=ZQ, u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		dprint("render node %s\n", shitprint('q', &u->q));
-		u->q.v = ZV;
+		dprint("render node %s\n", shitprint('q', &u->vrect));
+		u->vrect.v = ZV;
 		rendernode(g, u);
-		p = addpt2(u->q.o, u->q.v);
+		p = addpt2(u->vrect.o, u->vrect.v);
 		if(p.x < d.o.x)
 			d.o.x = p.x;
 		else if(p.x > d.v.x)

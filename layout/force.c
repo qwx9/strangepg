@@ -60,7 +60,7 @@ compute(Graph *g)
 			for(v=g->nodes.buf; v<ne; v++){
 				if(v == u)
 					continue;
-				dv = subpt2(u->q.o, v->q.o);
+				dv = subpt2(u->q1.o, v->vrect.o);
 				Δ = diff(dv);
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, K)));
 			}
@@ -69,7 +69,7 @@ compute(Graph *g)
 				e = vecp(&g->edges, *ep);
 				if((from = e2n(g, e->from)) == nil)
 					panic("phase error -- missing incident node");
-				dv = subpt2(from->q.o, u->q.o);
+				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);
 				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
 				Fu[i] = addpt2(Fu[i], dv);
@@ -80,7 +80,7 @@ compute(Graph *g)
 			dv = Fu[i];
 			Δ = diff(dv);
 			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));
-			u->q.o = addpt2(u->q.o, dv);
+			u->vrect.o = addpt2(u->vrect.o, dv);
 			if(R < Δ)
 				R = Δ;
 		}

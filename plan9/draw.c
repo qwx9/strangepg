@@ -55,6 +55,32 @@ s2p(Vertex v)
 }
 
 int
+drawquad2(Quad q1, Quad q2)
+{
+	Rectangle r1, r2;
+
+	q1.v = addpt2(q1.o, q1.v);
+	q2.v = addpt2(q2.o, q2.v);
+	q1.v = addpt2(subpt2(mulpt2(q1.v, view.zoom), view.pan), view.center);
+	q1.o = addpt2(subpt2(mulpt2(q1.o, view.zoom), view.pan), view.center);
+	q2.v = addpt2(subpt2(mulpt2(q2.v, view.zoom), view.pan), view.center);
+	q2.o = addpt2(subpt2(mulpt2(q2.o, view.zoom), view.pan), view.center);
+	r1 = Rpt(v2p(q1.o), v2p(q2.v));
+	r2 = Rpt(v2p(q2.o), v2p(q1.v));
+	if(!rectXrect(r1, viewfb->r) && !rectXrect(r2, viewfb->r))
+		return 0;
+	Point p[] = {
+		r1.max,
+		r1.min,
+		r2.min,
+		r2.max,
+		r1.max,
+	};
+	fillpoly(viewfb, p, nelem(p), ~0, col[Cnode], ZP);
+	return 0;
+}
+
+int
 drawquad(Quad q)
 {
 	Rectangle r;
@@ -72,7 +98,7 @@ drawquad(Quad q)
 		Pt(r.min.x, r.max.y),
 		r.min
 	};
-	poly(viewfb, p, nelem(p), 0, 0, 1, col[Cnode], ZP);
+	poly(viewfb, p, nelem(p), 0, 0, 2, col[Cemph], ZP);
 	return 0;
 }
 
@@ -87,6 +113,7 @@ drawbezier(Vertex u, Vertex v, double w, double θ)
 	r = Rpt(v2p(u), v2p(v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
+	// FIXME: calc angle
 	if(r.min.x - r.max.x > 4 * Nodesz)
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
