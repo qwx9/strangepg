@@ -72,7 +72,12 @@ def put64(f, v):
 	f.write(pack("Q", v))
 
 
+# FIXME: we're mixing up tail and head? edges are (tail, head), so
+#	from should be tail, to should be head? then node extremities are
+#	tail's tail and head's head?
 # FIXME: are we actually relabeling nodes/edges when fixating them?
+# FIXME: need to rename stuff with id's going backwards, remembering that
+#	supernodes are apart and of arbitrary numbers
 
 Blksz = 64 * 1024 * 1024
 
@@ -228,10 +233,11 @@ class Seymourbutz:
 			noff += i[1]
 			eoff += i[3]
 		return f.tell()
-	def writehdr2(self, f, noff, eoff, moff):
+	def writehdr2(self, f, doff, noff, eoff, moff):
 		put64(f, self.nodetot)		# repetition, defensive
 		put64(f, self.edgetot)
 		put64(f, self.nlevel)
+		put64(f, doff)
 		put64(f, noff)
 		put64(f, eoff)
 		put64(f, moff)
@@ -243,16 +249,18 @@ class Seymourbutz:
 		put64(f, 0)
 		put64(f, 0)
 		put64(f, 0)
+		put64(f, 0)
+		return f.tell()
 	def mkindex(self):
 		self.fedge.f.close()
 		self.fnode.f.close()
 		f = open(self.outpath, "wb")
-		self.writehdr(f)
+		dd = self.writehdr(f)
 		dn = self.writedict(f)
 		de = self.writenodes(f)
 		dm = self.writeedges(f)
 		self.writemeta(f)
-		self.writehdr2(f, dn, de, dm)
+		self.writehdr2(f, dd, dn, de, dm)
 		f.close()
 
 	def addlevel(self, nodes, edges):
