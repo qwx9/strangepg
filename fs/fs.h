@@ -14,11 +14,12 @@ struct File{
 struct Filefmt{
 	char *name;
 	Graph* (*load)(char *);
-	int (*chlev)(char *);
+	int (*chlev)(Graph*, int);
 	int (*save)(Graph*);
 };
 extern Filefmt fftab[FFnil];
 
 Filefmt*	reggfa(void);
+Filefmt*	regindex(void);
 char*	readrecord(File*);
 void	regfs(Filefmt*);

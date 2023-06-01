@@ -5,20 +5,19 @@ faceyourfears(Graph *g, Node *u)
 {
 	int n, sign;
 	usize *ip, *ie, us, them;
-	double θ, dθ, d;
+	double θ, dθ;
 	Edge *e;
 	Node *v;
 	Vector Δ;
 
 	/* FIXME:
 	 * - fix perpendicular orientations
-	 *	=> look at outgoing: then dignore things "behind" usa
+	 *	=> look at outgoing: then dignore things "behind" us
 	 * - take into account orientation?
 	 * - out/in
 	 * - optionally don't show nodes at all, just have points
 	 */
 
-	USED(d);
 	θ = 0.;
 	n = 0;
 	us = vecindexof(&g->nodes, u);

@@ -95,8 +95,8 @@ loadgfa1(char *path)
 	}
 	dprint("done loading gfa\n");
 	closefs(f);
-	free(g->file);
-	g->file = nil;
+	free(g->infile);
+	g->infile = nil;
 	idnuke(g->id2n);
 	g->id2n = nil;
 	if(f->err == 10){

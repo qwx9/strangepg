@@ -71,7 +71,7 @@ struct Level{
 struct Node{
 	vlong id;
 	vlong seq;
-	//char *id;v
+	//char *id;
 	//char *seq;
 	Vec in;
 	Vec out;
@@ -80,6 +80,8 @@ struct Node{
 	Quad q2;
 	Quad vrect;		/* direction/length vector */
 	double θ;
+	int erased;
+	int parent;
 };
 struct Edge{
 	usize from;
@@ -87,12 +89,18 @@ struct Edge{
 	//char *overlap;
 	vlong overlap;
 	double w;
+	int erased;
+	int parent;
 };
 struct Graph{
 	int stale;
 	int working;
-	File *file;
-	Level *lvl;
+	File *infile;
+	int level;
+	vlong doff;	/* FIXME: foutoir + layer violation */
+	vlong noff;
+	vlong eoff;
+	vlong moff;
 	usize nnodes;	/* totals for all levels */
 	usize nedges;
 	usize nlevels;
@@ -155,4 +163,5 @@ enum{
 	Kescape,
 };
 
+extern int indexed;
 extern int debug;

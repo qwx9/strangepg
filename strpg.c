@@ -1,6 +1,7 @@
 #include "strpg.h"
 
 int debug;
+int indexed;
 int haxx0rz;
 
 void
@@ -26,6 +27,7 @@ parseargs(int argc, char **argv)
 	ARGBEGIN{
 	case 'D': debug = 1; break;
 	case 'b': haxx0rz = 1; break;
+	case 'i': indexed = 1; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
@@ -41,7 +43,7 @@ parseargs(int argc, char **argv)
 	default: usage();
 	}ARGEND
 	while(*argv != nil){
-		if(pushcmd(COMload, strlen(*argv), FFgfa, (uchar *)*argv) < 0)
+		if(pushcmd(COMload, strlen(*argv), indexed?FFindex:FFgfa, (uchar *)*argv) < 0)
 			warn("error loading %s: %r\n", *argv);
 		argv++;
 	}

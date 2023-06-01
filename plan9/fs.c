@@ -50,6 +50,12 @@ sysseek(File *f, vlong off)
 	return Bseek(f->aux, off, 0);
 }
 
+vlong
+systell(File *f)
+{
+	return Bseek(f->aux, 0, 1);
+}
+
 int
 syswrite(File *f, void *buf, int n)
 {

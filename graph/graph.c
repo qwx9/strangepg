@@ -3,6 +3,26 @@
 Graph *graphs;
 int ngraphs;
 
+/* not actually editing anything, but this is not transparent, unless
+ * it provides an iterator, otherwise we'll always have to check the
+ * value of .erased */
+void
+removenode(Graph *g, Node *n)
+{
+	USED(g);
+	n->erased = 1;
+}
+void
+removeedge(Graph *g, usize i)
+{
+	Edge *e;
+
+	// FIXME: this must "remove" the edge from both ends, make sure,
+	// though this should be enough
+	e = vecp(&g->edges, i);
+	e->erased = 1;
+}
+
 Node *
 id2n(Graph *g, char *k)
 {
@@ -22,6 +42,28 @@ e2n(Graph *g, usize n)
 	return vecp(&g->nodes, n);
 }
 
+/* don't know about this... */
+Node
+newnode(void)
+{
+	Node n = {0};
+
+	n.id = -1;
+	n.seq = -1;
+	n.vrect = ZQ;
+	n.q1 = ZQ;
+	n.q2 = ZQ;
+	return n;
+}
+Edge
+newedge(void)
+{
+	Edge e = {0};
+
+	e.overlap = -1;
+	return e;
+}
+
 int
 addnode(Graph *g, char *id, char *seq)
 {
@@ -34,14 +76,10 @@ addnode(Graph *g, char *id, char *seq)
 		return 0;
 	}
 	USED(id, seq);
-	memset(&n, 0, sizeof n);
-	n.id = 0;
-	n.seq = 0;
+	n = newnode();
 	n.in = vec(sizeof(usize), 0);
 	n.out = vec(sizeof(usize), 0);
-	n.vrect = ZQ;
-	n.q1 = ZQ;
-	n.q2 = ZQ;
+	n.parent = -1;
 	veccopy(&g->nodes, &n, &i);
 	return idput(g->id2n, estrdup(id), i);
 }
@@ -59,7 +97,7 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 		w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1,
 		g->edges.len, g->edges.elsz);
 	USED(overlap);
-	e.overlap = 0;
+	e = newedge();
 	e.w = w;
 	if((u = id2n(g, from)) == nil
 	|| (v = id2n(g, to)) == nil)
@@ -87,7 +125,6 @@ nukegraph(Graph *g)
 {
 	vecnuke(&g->edges);
 	vecnuke(&g->nodes);
-	idnuke(g->id2n);
 	memset(g, 0, sizeof *g);
 }
 

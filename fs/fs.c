@@ -94,6 +94,12 @@ put64(File *f, u64int v)
 	return writefs(f, u, sizeof u);
 }
 
+vlong
+tellfs(File *f)
+{
+	return systell(f);
+}
+
 int
 openfs(File *f, char *path, int mode)
 {
@@ -105,17 +111,18 @@ openfs(File *f, char *path, int mode)
 File *
 graphopenfs(char *path, int mode, Graph *g)
 {
-	assert(g->file == nil);
-	g->file = emalloc(sizeof *g->file);
-	if(openfs(g->file, path, mode) < 0)
+	assert(g->infile == nil);
+	g->infile = emalloc(sizeof *g->infile);
+	if(openfs(g->infile, path, mode) < 0)
 		return nil;
-	return g->file;
+	return g->infile;
 }
 
 Graph*
 loadfs(int type, char *path)
 {
 	Filefmt *f;
+	Graph *g;
 
 	if(type < 0 || type >= nelem(ff)){
 		werrstr("invalid fs type");
@@ -127,11 +134,16 @@ loadfs(int type, char *path)
 		werrstr("unimplemented fs type");
 		return nil;
 	}
-	return f->load(path);
+	if((g = f->load(path)) == nil)
+		return nil;
+	if(f->chlev != nil)
+		f->chlev(g, 0);
+	return g;
 }
 
 void
 initfs(void)
 {
 	ff[FFgfa] = reggfa();
+	ff[FFindex] = regindex();
 }
