@@ -69,6 +69,7 @@ breadth-first coarsening hierarchy index, first naive attempt
 """
 
 def put64(f, v):
+	print "put64", v
 	f.write(pack("Q", v))
 
 
@@ -103,12 +104,14 @@ class Writer:
 		self.bank += 1
 		return f
 	def write(self, v):
+		print "write", v
 		if self.off < 0:
 			self.startblock()
 		self.f.write(pack("Q", v))
 		self.f.seek(-16, 1)
 		self.off -= 8
 		self.cursz += 8
+		print "writer", self.prefix, self.bank, self.lastsz, self.cursz, self.off
 	def endrecord(self):
 		self.lastsz = self.cursz
 		self.cursz = 0
@@ -132,11 +135,13 @@ class Node:
 	def __str__(self):
 		return str(self.ein) + ":" + str(self.eout) + " w=" + str(self.w) + \
 			" par=" + str(self.parent)
+	# write backwards
 	def write(self, f):
-		f.write(len(self.eout))
-		f.write(len(self.ein))
-		f.write(self.w)
+		print "write node: " + str(self)
 		f.write(self.parent)
+		f.write(self.w)
+		f.write(len(self.ein))
+		f.write(len(self.eout))
 
 class Edge:
 	def __init__(self, head, dh, tail, dt):
@@ -159,11 +164,13 @@ class Edge:
 		return self.h >> 1
 	def tail(self):
 		return self.t >> 1
+	# write backwards
 	def write(self, f):
-		f.write(self.h)
-		f.write(self.t)
-		f.write(self.w)
+		print "write edge: " + str(self)
 		f.write(self.parent)
+		f.write(self.w)
+		f.write(self.t)
+		f.write(self.h)
 
 class Seymourbutz:
 	def __init__(self, path):
@@ -211,9 +218,11 @@ class Seymourbutz:
 	def writemeta(self, f):
 		pass
 	def writeedges(self, f):
+		print "writeedges"
 		self.fedge.cat(f)
 		return f.tell()
 	def writenodes(self, f):
+		print "writenodes"
 		self.fnode.cat(f)
 		return f.tell()
 	def writedict(self, f):
@@ -221,9 +230,10 @@ class Seymourbutz:
 		eoff = 0
 		nn = 0
 		ne = 0
+		print "writedict"
 		for i in self.llist:
 			nn += i[0]
-			ne += i[1]
+			ne += i[2]
 			put64(f, noff)
 			put64(f, i[0])
 			put64(f, nn)
@@ -234,6 +244,8 @@ class Seymourbutz:
 			eoff += i[3]
 		return f.tell()
 	def writehdr2(self, f, doff, noff, eoff, moff):
+		print "writehdr2"
+		f.seek(0)
 		put64(f, self.nodetot)		# repetition, defensive
 		put64(f, self.edgetot)
 		put64(f, self.nlevel)
@@ -242,6 +254,7 @@ class Seymourbutz:
 		put64(f, eoff)
 		put64(f, moff)
 	def writehdr(self, f):
+		print "writehdr"
 		put64(f, self.nodetot)
 		put64(f, self.edgetot)
 		put64(f, self.nlevel)
