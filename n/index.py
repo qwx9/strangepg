@@ -6,6 +6,8 @@ import shutil
 from struct import pack
 
 """
+NOTE: this is now full(er) of lies
+
 breadth-first coarsening hierarchy index, first naive attempt
 - pass 1: load entire gfa first (red flag!), count incoming and outgoing
   degrees for each node → buckets of degree n
@@ -32,10 +34,10 @@ breadth-first coarsening hierarchy index, first naive attempt
 		nout[8] nin[8] weight[8] parent[8]
 	}[nnode]
 	nodes: {
-		head[8] tail[8] weight[8] parent[8]
+		tail[8] head[8] weight[8] parent[8]
 	}[nedge]
 	meta: unspecified; collection of nul terminated strings
-- note: ]---[head  (node)  tail]---[
+- note: ]---[tail  (node)  head]---[
 - at each iteration, nodes and edges to be merged on the upper zoom level
   are directly written to disk rather than stored in memory
 - thus higher zoom levels are prepended to lower ones;  we cannot prepend
@@ -58,7 +60,7 @@ breadth-first coarsening hierarchy index, first naive attempt
   they are declared and the moment they spawn children
 - this tries hard to keep memory usage low and favoring disk access;  for
   higher scale, we can avoid loading the graph entirely or even counting
-  by using shell tools;  presort gfa by link records by head node, forward
+  by using shell tools;  presort gfa by link records by tail node, forward
   first (sort -u +0dr -1 +1d -2 +2nr dicks.gfa), then count outgoing per
   node (using sort +0n -1 +1d;  both can be done in a single awk script)
 - supernodes and superedges right now are individual nodes/edges created
@@ -72,59 +74,8 @@ def put64(f, v):
 	print "put64", v
 	f.write(pack("Q", v))
 
-
-# FIXME: we're mixing up tail and head? edges are (tail, head), so
-#	from should be tail, to should be head? then node extremities are
-#	tail's tail and head's head?
-# FIXME: are we actually relabeling nodes/edges when fixating them?
-# FIXME: need to rename stuff with id's going backwards, remembering that
-#	supernodes are apart and of arbitrary numbers
-
-Blksz = 64 * 1024 * 1024
-
-class Writer:
-	def __init__(self, prefix):
-		self.prefix = prefix
-		self.bank = 0
-		self.f = None
-		self.lastsz = 0			# last record's size in bytes
-		self.cursz = 0
-		self.off = -1			# in current block only
-	def startblock(self):
-		if not self.f is None:
-			self.f.close()
-		self.f = self.mkblock()
-	def mkblock(self, suffix=""):
-		path = self.prefix + ".%03d" % self.bank + suffix
-		f = open(path, "wb")
-		f.seek(Blksz - 1)
-		f.write("\00")
-		f.seek(-8, 1)
-		self.off = Blksz - 8		# writing quads only
-		self.bank += 1
-		return f
-	def write(self, v):
-		print "write", v
-		if self.off < 0:
-			self.startblock()
-		self.f.write(pack("Q", v))
-		self.f.seek(-16, 1)
-		self.off -= 8
-		self.cursz += 8
-		print "writer", self.prefix, self.bank, self.lastsz, self.cursz, self.off
-	def endrecord(self):
-		self.lastsz = self.cursz
-		self.cursz = 0
-	def cat(self, f):
-		for i in range(0, self.bank):
-			path = self.prefix + ".%03d" % i
-			ff = open(path, "rb")
-			# first file is sparse
-			if i == 0:
-				ff.seek(self.off)
-			shutil.copyfileobj(ff, f)	# default length = 16k??
-			ff.close()
-			os.remove(path)
+sizeofNode = 4 * 8
+sizeofEdge = 4 * 8
 
 class Node:
 	def __init__(self, w=1):
@@ -132,60 +83,60 @@ class Node:
 		self.eout = set()
 		self.w = w
 		self.parent = None
+		self.tag = None
 	def __str__(self):
 		return str(self.ein) + ":" + str(self.eout) + " w=" + str(self.w) + \
 			" par=" + str(self.parent)
-	# write backwards
 	def write(self, f):
-		print "write node: " + str(self)
-		f.write(self.parent)
-		f.write(self.w)
-		f.write(len(self.ein))
+		print "write node: ", str(self), "as", self.tag
 		f.write(len(self.eout))
+		f.write(len(self.ein))
+		f.write(self.w)
+		f.write(self.parent)
 
+# FIXME: fixated nodes/edges should gc themselves once fixated? (be invalidated)
 class Edge:
-	def __init__(self, head, dh, tail, dt):
-		dh = 1 if dh == "-" else 0
+	def __init__(self, tail, dt, head, dh):
 		dt = 1 if dt == "-" else 0
-		self.h = head << 1 | dh
+		dh = 1 if dh == "-" else 0
 		self.t = tail << 1 | dt
+		self.h = head << 1 | dh
 		self.w = 1
 		self.parent = None
 		self.recordsize = 4 * 8
+		self.tag = None
 	def __str__(self):
-		return ("<" if self.h & 1 else ">") + str(self.h>>1) \
-			+ ("<" if self.t & 1 else ">") + str(self.t>>1) \
+		return ("<" if self.t & 1 else ">") + str(self.t>>1) \
+			+ ("<" if self.h & 1 else ">") + str(self.h>>1) \
 			+ " w=" + str(self.w) + " par=" + str(self.parent)
-	def remap(self, h, t):
-		self.h = h << 1 | self.h & 1
+	def remap(self, t, h):
 		self.t = t << 1 | self.t & 1
+		self.h = h << 1 | self.h & 1
 	# defensive functions
 	def head(self):
 		return self.h >> 1
 	def tail(self):
 		return self.t >> 1
-	# write backwards
 	def write(self, f):
 		print "write edge: " + str(self)
-		f.write(self.parent)
-		f.write(self.w)
 		f.write(self.t)
 		f.write(self.h)
+		f.write(self.w)
+		f.write(self.parent)
 
 class Seymourbutz:
 	def __init__(self, path):
+		self.tag = 0
 		self.path = path
 		self.nodes = []
 		self.edges = []
-		self.llist = []
 		self.sac = {}
 		self.nlevel = 0
-		self.nodetot = 0
-		self.edgetot = 0
-		self.fnode = Writer(path + ".node")
-		self.fedge = Writer(path + ".edge")
+		self.didx = []
+		self.nidx = []
+		self.eidx = []
 		self.outpath = path + ".idx"
-		self.readgfa(self.path)
+
 	def addnode(self, id, seq, nmap):
 		nmap[id] = len(self.nodes)
 		self.nodes.append(Node())
@@ -201,9 +152,9 @@ class Seymourbutz:
 		self.edges.append(Edge(u, du, v, dv))
 		#overlap
 		print "edge", len(self.edges)-1, self.edges[len(self.edges)-1]
-	def readgfa(self, path):
+	def readgfa(self):
 		nmap = {}
-		f = open(path)
+		f = open(self.path)
 		while True:
 			s = f.readline()
 			if not s:
@@ -214,79 +165,94 @@ class Seymourbutz:
 			elif s[0] == 'L':
 				self.addedge(s[1], s[2], s[3], s[4], s[5], nmap)
 		f.close()
+	def countdeg(self):
+		for i in range(len(self.nodes)):
+			c = max(len(self.nodes[i].ein), len(self.nodes[i].eout))
+			try:
+				self.sac[c].add(i)
+			except:
+				self.sac[c] = set([i])
 
+	# going left to right, there should never be a reference to anything that
+	# doesn't exist yet at a given level
 	def writemeta(self, f):
 		pass
+	def gettag(self, n):
+		tag = self.nodes[n].tag
+		print n, str(self.nodes[n])
+		assert(tag)
+		return tag
 	def writeedges(self, f):
 		print "writeedges"
-		self.fedge.cat(f)
+		for i,e in enumerate(self.eidx):
+			u = self.edges[e]
+			u.tag = i
+			# fuck me
+			u.remap(self.gettag(u.tail()), self.gettag(u.head()))
+			u.write(f)
 		return f.tell()
+	# tagging: change of coordinates system, from `n' (nodes 1..N and
+	# appended new supernodes) to `i' (from first to last uncovered node
+	# of any type)
 	def writenodes(self, f):
 		print "writenodes"
-		self.fnode.cat(f)
+		for i,n in enumerate(self.nidx):
+			u = self.nodes[n]
+			u.tag = i
+			u.parent = self.gettag(u.parent)
+			u.write(f)
 		return f.tell()
 	def writedict(self, f):
 		noff = 0	# offsets are relative to start of section
 		eoff = 0
-		nn = 0
-		ne = 0
+		ntot = 0
+		etot = 0
 		print "writedict"
-		for i in self.llist:
-			nn += i[0]
-			ne += i[2]
+		for i in self.didx:
+			ntot += i[0]
 			put64(f, noff)
 			put64(f, i[0])
-			put64(f, nn)
+			put64(f, ntot)
+			noff += i[0] * sizeofNode
+			etot += i[1]
 			put64(f, eoff)
-			put64(f, i[2])
-			put64(f, ne)
-			noff += i[1]
-			eoff += i[3]
+			put64(f, i[1])
+			put64(f, etot)
+			eoff += i[1] * sizeofEdge
 		return f.tell()
-	def writehdr2(self, f, doff, noff, eoff, moff):
+	def writehdr(self, f, dd, dn, de, dm):
 		print "writehdr2"
-		f.seek(0)
-		put64(f, self.nodetot)		# repetition, defensive
-		put64(f, self.edgetot)
-		put64(f, self.nlevel)
-		put64(f, doff)
-		put64(f, noff)
-		put64(f, eoff)
-		put64(f, moff)
+		f.seek(3 * 8)
+		put64(f, dd)
+		put64(f, dn)
+		put64(f, de)
+		put64(f, dm)
 	def writehdr(self, f):
 		print "writehdr"
-		put64(f, self.nodetot)
-		put64(f, self.edgetot)
+		put64(f, len(self.nidx))
+		put64(f, len(self.eidx))
 		put64(f, self.nlevel)
-		# placeholders: offsets to sections
+		# placeholders: offsets to sections (avoiding precalculating them)
 		put64(f, 0)
 		put64(f, 0)
 		put64(f, 0)
 		put64(f, 0)
 		return f.tell()
 	def mkindex(self):
-		self.fedge.f.close()
-		self.fnode.f.close()
 		f = open(self.outpath, "wb")
 		dd = self.writehdr(f)
 		dn = self.writedict(f)
 		de = self.writenodes(f)
+		assert(de == dd + sizeofNode * len(self.nidx))
 		dm = self.writeedges(f)
+		assert(dm == de + sizeofEdge * len(self.eidx))
 		self.writemeta(f)
 		self.writehdr2(f, dd, dn, de, dm)
 		f.close()
-
-	def addlevel(self, nodes, edges):
-		for n in nodes:
-			self.nodes[n].write(self.fnode)
-		self.fnode.endrecord()
-		for e in edges:
-			self.edges[e].write(self.fedge)
-		self.fedge.endrecord()
-		self.llist.append(( \
-			len(nodes), self.fnode.lastsz, len(edges), self.fedge.lastsz))
-		self.nodetot += len(nodes)
-		self.edgetot += len(edges)
+	def addlevel(self, nids, eids):
+		self.didx = [(len(nids), len(eids))] + self.didx
+		self.nidx = nids + self.nidx
+		self.eidx = eids + self.eidx
 		self.nlevel += 1
 
 	# FIXME: paper model assumes only one entry per edge,
@@ -328,25 +294,25 @@ class Seymourbutz:
 			print lvle
 			e = self.edges[e]
 			e.parent = sid
-			n = e.tail
+			n = e.head()
 			# multiple incoming edges from the same node need to be contracted
 			if n in dc:
 				e.w += 1
 			else:
 				dc[n] = 1
-				e.remap(sid, e.tail())
+				e.remap(sid, e.head())
 		for e in s.ein:
 			print "checking edge ", str(e), ": ", str(self.edges[e])
 			lvle.append(e)
 			print lvle
 			e = self.edges[e]
 			e.parent = sid
-			n = e.head
+			n = e.tail()
 			if n in dc:
 				e.w += 1
 			else:
 				dc[n] = 1
-				e.remap(e.head(), sid)
+				e.remap(e.tail(), sid)
 		self.sac[max(len(u.ein), len(u.eout))].add(len(self.nodes)-1)
 		for i in lvln:
 			print "lvln", self.nlevel, i, self.nodes[i]
@@ -355,11 +321,17 @@ class Seymourbutz:
 		return True
 	def fuse(self):
 		print "try fuse"
-		c = max(self.sac.keys())
 		# if level is empty:
 		# get nodes with highest total degree
 		# merge into new supernode
 		# insert supernode in hierarchical tree
+		c = max(self.sac.keys())
+		l = []
+		for i in self.sac[c]:
+			print "fuse", i, "neighborhood"
+			s = [i]
+			s += [ self.edges[e].head() for e in self.nodes[i].eout ]
+			s += [ self.edges[e].tail() for e in self.nodes[i].ein ]
 		return None
 	def pop(self):
 		print "try pop"
@@ -393,8 +365,8 @@ class Seymourbutz:
 		print "intersection", dupe
 		if not dupe:
 			return False
-		I = set([ self.edges[e].tail() for e in dupe ])
-		O = set([ self.edges[e].head() for e in dupe ])
+		I = set([ self.edges[e].head() for e in dupe ])
+		O = set([ self.edges[e].tail() for e in dupe ])
 		m = I & O
 		print "I", I
 		print "O", O
@@ -402,18 +374,18 @@ class Seymourbutz:
 		s = []
 		while dupe:
 			e = dupe.pop()
-			u = self.edges[e].head()
-			v = self.edges[e].tail()
+			u = self.edges[e].tail()
+			v = self.edges[e].head()
 			x = [u, v]
 			while u in m:	# no need to edit m, there's only one such entry
 				ew = sin[u]	# w,u: want in[u], there can be only one also
-				w = self.edges[ew].head()
+				w = self.edges[ew].tail()
 				x.append(w)
 				dupe.discard(ew)
 				u = w
 			while v in m:
 				ew = sout[v]	# u,v
-				w = self.edges[ew].tail()
+				w = self.edges[ew].head()
 				x.append(w)
 				dupe.discard(ew)
 				v = w
@@ -421,14 +393,8 @@ class Seymourbutz:
 		print s
 		assert(len(s) > 0)
 		return s
-	def countdeg(self):
-		for i in range(len(self.nodes)):
-			c = max(len(self.nodes[i].ein), len(self.nodes[i].eout))
-			try:
-				self.sac[c].add(i)
-			except:
-				self.sac[c] = set([i])
 	def mktree(self):
+		# FIXME: while more than one remain, unless break captures all
 		while True:
 			l = self.unchop()
 			# FIXME: unimplemented
@@ -439,6 +405,7 @@ class Seymourbutz:
 				l = self.fuse()
 			if not l:
 				print "cannot reduce further??"
+				self.addlevel(range(len(self.nodes)), range(len(self.edges)))
 				break
 			lvln = []
 			lvle = []
@@ -450,6 +417,7 @@ class Seymourbutz:
 for i in sys.argv[1:]:
 	print "processing", i
 	s = Seymourbutz(i)
+	s.readgfa()
 	s.countdeg()	# avoidable
 	s.mktree()
 	s.mkindex()
