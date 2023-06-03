@@ -39,14 +39,18 @@ static Node *
 readnode(File *f, Graph *g)
 {
 	usize i;
-	Node n, *parent;
+	vlong parent;
+	Node n;
 
+	fprint(2, "readnode\n");
 	n = newnode();
 	n.out = vec(sizeof(usize), get64(f));
 	n.in = vec(sizeof(usize), get64(f));
-	n.w = getdbl(f);
-	parent = vecp(g->nodes.buf, get64(f));
-	fulltrotsky(parent, g);
+	n.w = get64(f);
+	parent = get64(f);
+	fprint(2, "parent %lld\n", parent);
+	if(parent >= 0)
+		fulltrotsky(vecp(g->nodes.buf, parent), g);
 	veccopy(&g->nodes, &n, &i);
 	return (Node *)g->nodes.buf + i;
 }
@@ -59,6 +63,7 @@ readedge(File *f, Graph *g)
 	Edge e;
 	Node *up, *vp;
 
+	fprint(2, "readedge\n");
 	e = newedge();
 	e.from = get64(f);
 	e.to = get64(f);
@@ -77,29 +82,29 @@ loadlevel(Graph *g, int lvl)
 {
 	int i;
 	File *f;
-	Level *l, *lp;
+	Level *l, *le;
 
-	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->nlevels);
+	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->levels.len);
 	fprint(2, "loadlevel %d %zd\n", lvl, g->levels.len);
-	if(lvl > g->levels.len){
+	if(lvl < 0 || lvl >= g->levels.len){
 		werrstr("no such level %d", lvl);
 		return -1;
 	}
-	if(lvl == g->level){
+	if(g->level > 0 && g->level == lvl){
 		werrstr("loadlevel: not reloading same zoom level");
 		return -1;
 	}
-	/* recheck rest of the code either to make it work the same way, or to
-	 * do that here */
-	lp = vecp(&g->levels, lvl);
-	fprint(2, "%d lp %zd %zd %zd %zd\n", lvl, lp->nnel, lp->ntot, lp->enel, lp->etot);
-
-	l = (Level *)g->levels.buf + lvl;
-
 	f = g->infile;
 
+	l = vecp(&g->levels, g->level);
+	le = vecp(&g->levels, lvl);
+	if(l <= le)
+		le++;
+	else
+		le--;
+
 	/* zoom out: unwind descent */
-	for(; l>lp; l--){
+	for(; l>le; l--){
 
 		// FIXME
 
@@ -107,7 +112,7 @@ loadlevel(Graph *g, int lvl)
 	/* zoom in: descend tree
 	 * current implementation probably doesn't make it safe to process all
 	 * nodes then all edges in one go */
-	for(; l<lp; l++){
+	for(; l<le; l++){
 		seekfs(f, l->noff);
 		for(i=0; i<l->nnel; i++)
 			readnode(f, g);
@@ -115,20 +120,21 @@ loadlevel(Graph *g, int lvl)
 		for(i=0; i<l->enel; i++)
 			readedge(f, g);
 	}
-	for(i=0; i<g->nodes.len; i++)
-		fprint(2, "n %p\n", vecp(&g->nodes, i));
+	for(i=0; i<g->nodes.len; i++){
+		Node *n = vecp(&g->nodes, i);
+		fprint(2, "n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
+	}
 	for(i=0; i<g->edges.len; i++)
 		fprint(2, "e %p\n", vecp(&g->edges, i));
-	closefs(f);
-	g->stale = 1;
+	g->stale = 1;	/* FIXME: stale sooner? real time updates */
 	return 0;
 }
 /* the actual dictionary alone does not take much memory */
 static Graph *
 loaddicts(char *path)
 {
+	int i;
 	File *f;
-	Level *lp, *le;
 	Graph *g;
 
 	dprint("loadindex %s\n", path);
@@ -147,18 +153,19 @@ loaddicts(char *path)
 	g->moff = get64(f);
 	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->nlevels);
 	g->levels = vec(sizeof(Level), g->nlevels);
-	for(lp=g->levels.buf, le=lp+g->nlevels; lp<le; lp++){
-		lp->noff = g->noff + get64(f);
-		lp->nnel = get64(f);
-		lp->ntot = get64(f);
-		lp->eoff = g->eoff + get64(f);
-		lp->enel = get64(f);
-		lp->etot = get64(f);
-		fprint(2, "level %zd %zx %zx %zx %zx %zx %zx\n",
-			lp - (Level*)g->levels.buf, lp->noff, lp->nnel, lp->ntot,
-			lp->eoff, lp->enel, lp->etot);
+	for(i=0; i<g->nlevels; i++){
+		Level l = {0};
+		l.noff = g->noff + get64(f);
+		l.nnel = get64(f);
+		l.ntot = get64(f);
+		l.eoff = g->eoff + get64(f);
+		l.enel = get64(f);
+		l.etot = get64(f);
+		fprint(2, "level %d: N %zx %zx %zx E %zx %zx %zx\n",
+			i, l.noff, l.nnel, l.ntot, l.eoff, l.enel, l.etot);
+		veccopy(&g->levels, &l, nil);
 	}
-	closefs(f);
+	/* file remains open */
 	return g;
 }
 

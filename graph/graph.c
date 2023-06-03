@@ -139,6 +139,7 @@ initgraph(void)
 	g->nodes = vec(sizeof(Node), 0);
 	g->edges = vec(sizeof(Edge), 0);
 	g->levels = vec(sizeof(Level), 0);
+	g->level = 0;
 	g->id2n = idmap();
 	g->stale = 1;
 	return g;
