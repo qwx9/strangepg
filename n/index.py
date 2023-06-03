@@ -71,14 +71,13 @@ breadth-first coarsening hierarchy index, first naive attempt
 """
 
 def put64(f, v):
-	print "put64", v
-	f.write(pack("Q", v))
+	f.write(pack("q", v))
 
 sizeofNode = 4 * 8
 sizeofEdge = 4 * 8
 
 class Node:
-	def __init__(self, w=1):
+	def __init__(self, w=1.0):
 		self.ein = set()
 		self.eout = set()
 		self.w = w
@@ -86,15 +85,14 @@ class Node:
 		self.tag = None
 	def __str__(self):
 		return str(self.ein) + ":" + str(self.eout) + " w=" + str(self.w) + \
-			" par=" + str(self.parent)
+			" par=" + str(self.parent) + " as=" + str(self.tag)
 	def write(self, f):
-		print "write node: ", str(self), "as", self.tag
-		f.write(len(self.eout))
-		f.write(len(self.ein))
-		f.write(self.w)
-		f.write(self.parent)
+		print "write node", self
+		put64(f, len(self.eout))
+		put64(f, len(self.ein))
+		put64(f, self.w)
+		put64(f, self.parent if self.parent else -1)
 
-# FIXME: fixated nodes/edges should gc themselves once fixated? (be invalidated)
 class Edge:
 	def __init__(self, tail, dt, head, dh):
 		dt = 1 if dt == "-" else 0
@@ -118,11 +116,11 @@ class Edge:
 	def tail(self):
 		return self.t >> 1
 	def write(self, f):
-		print "write edge: " + str(self)
-		f.write(self.t)
-		f.write(self.h)
-		f.write(self.w)
-		f.write(self.parent)
+		print "write edge", self
+		put64(f, self.t)
+		put64(f, self.h)
+		put64(f, self.w)
+		put64(f, self.parent if self.parent else -1)
 
 class Seymourbutz:
 	def __init__(self, path):
@@ -131,6 +129,7 @@ class Seymourbutz:
 		self.nodes = []
 		self.edges = []
 		self.sac = {}
+		self.df = 0
 		self.nlevel = 0
 		self.didx = []
 		self.nidx = []
@@ -172,35 +171,39 @@ class Seymourbutz:
 				self.sac[c].add(i)
 			except:
 				self.sac[c] = set([i])
+			self.df += 1
 
 	# going left to right, there should never be a reference to anything that
 	# doesn't exist yet at a given level
 	def writemeta(self, f):
 		pass
 	def gettag(self, n):
+		if n is None:
+			return None
 		tag = self.nodes[n].tag
-		print n, str(self.nodes[n])
-		assert(tag)
+		assert(not tag is None)
 		return tag
 	def writeedges(self, f):
 		print "writeedges"
+		print self.eidx
 		for i,e in enumerate(self.eidx):
-			u = self.edges[e]
-			u.tag = i
-			# fuck me
-			u.remap(self.gettag(u.tail()), self.gettag(u.head()))
-			u.write(f)
+			# ARGH
+			e.remap(self.gettag(e.tail()), self.gettag(e.head()))
+			e.write(f)
 		return f.tell()
 	# tagging: change of coordinates system, from `n' (nodes 1..N and
 	# appended new supernodes) to `i' (from first to last uncovered node
 	# of any type)
 	def writenodes(self, f):
 		print "writenodes"
+		print self.nidx
 		for i,n in enumerate(self.nidx):
 			u = self.nodes[n]
 			u.tag = i
 			u.parent = self.gettag(u.parent)
 			u.write(f)
+		for i in self.nidx:
+			print self.nodes[i]
 		return f.tell()
 	def writedict(self, f):
 		noff = 0	# offsets are relative to start of section
@@ -220,9 +223,12 @@ class Seymourbutz:
 			put64(f, etot)
 			eoff += i[1] * sizeofEdge
 		return f.tell()
-	def writehdr(self, f, dd, dn, de, dm):
+	def writehdr2(self, f, dd, dn, de, dm):
 		print "writehdr2"
-		f.seek(3 * 8)
+		f.seek(0)
+		put64(f, len(self.nidx))
+		put64(f, len(self.eidx))
+		put64(f, self.nlevel)
 		put64(f, dd)
 		put64(f, dn)
 		put64(f, de)
@@ -243,7 +249,7 @@ class Seymourbutz:
 		dd = self.writehdr(f)
 		dn = self.writedict(f)
 		de = self.writenodes(f)
-		assert(de == dd + sizeofNode * len(self.nidx))
+		assert(de == dn + sizeofNode * len(self.nidx))
 		dm = self.writeedges(f)
 		assert(dm == de + sizeofEdge * len(self.eidx))
 		self.writemeta(f)
@@ -259,14 +265,12 @@ class Seymourbutz:
 	# not one for each node
 	def merge(self, l, lvln, lvle):
 		print "merge:", l
-		s = Node(0)
+		s = Node()
 		sid = len(self.nodes)
 		self.nodes.append(s)
 		# it's not possible for two distinct nodes to use the same in/out edge
 		# as another, ie. there will never be duplicates within ein or eout,
 		# only between them
-		ein = set()
-		eout = set()
 		for i in l:
 			u = self.nodes[i]
 			u.parent = sid
@@ -274,6 +278,7 @@ class Seymourbutz:
 			c = max(len(u.ein), len(u.eout))
 			print c, self.sac[c]
 			self.sac[c].discard(i)
+			self.df -= 1
 			s.ein |= u.ein
 			s.eout |= u.eout
 			lvln.append(i)
@@ -283,17 +288,21 @@ class Seymourbutz:
 		s.ein -= dup
 		s.eout -= dup
 		for e in dup:
-			self.edges[e].parent = sid
+			e = self.edges[e]
+			e.parent = sid
 			lvle.append(e)
 		# contract now redundant edges
 		# FIXME: ignoring orientation here (both sides)
 		dc = {}
 		for e in s.eout:
-			print "checking edge ", str(e), ": ", str(self.edges[e])
-			lvle.append(e)
-			print lvle
+			print "checking edge ", str(e), "::", self.edges[e]
 			e = self.edges[e]
 			e.parent = sid
+			z = Edge(e.tail(), e.t&1, e.head(), e.h&1)
+			z.parent = e.parent
+			z.w = e.w
+			lvle.append(z)
+			print lvle
 			n = e.head()
 			# multiple incoming edges from the same node need to be contracted
 			if n in dc:
@@ -302,11 +311,14 @@ class Seymourbutz:
 				dc[n] = 1
 				e.remap(sid, e.head())
 		for e in s.ein:
-			print "checking edge ", str(e), ": ", str(self.edges[e])
-			lvle.append(e)
-			print lvle
+			print "checking edge ", str(e), "::", self.edges[e]
 			e = self.edges[e]
 			e.parent = sid
+			z = Edge(e.tail(), e.t&1, e.head(), e.h&1)
+			z.parent = e.parent
+			z.w = e.w
+			lvle.append(z)
+			print lvle
 			n = e.tail()
 			if n in dc:
 				e.w += 1
@@ -314,28 +326,35 @@ class Seymourbutz:
 				dc[n] = 1
 				e.remap(e.tail(), sid)
 		self.sac[max(len(u.ein), len(u.eout))].add(len(self.nodes)-1)
+		self.df += 1
 		for i in lvln:
 			print "lvln", self.nlevel, i, self.nodes[i]
-		for i in lvle:
-			print "lvle", self.nlevel, i, self.edges[i]
+		for e in lvle:
+			print "lvle", self.nlevel, e
 		return True
+
+	# FIXME: merge NON INTERSECTING, or all together
 	def fuse(self):
 		print "try fuse"
-		# if level is empty:
-		# get nodes with highest total degree
-		# merge into new supernode
-		# insert supernode in hierarchical tree
+		# if level is empty, just fudge it and get nodes with highest tota
+		# degree to merge into new supernodes; do so with *non-intersecting*
+		# ones first, else merge all into one ultranode
 		c = max(self.sac.keys())
-		l = []
+		#l = []
+		l = set()
 		for i in self.sac[c]:
-			print "fuse", i, "neighborhood"
-			s = [i]
-			s += [ self.edges[e].head() for e in self.nodes[i].eout ]
-			s += [ self.edges[e].tail() for e in self.nodes[i].ein ]
-		return None
+			s = set((i,))
+			s |= set([self.edges[e].head() for e in self.nodes[i].eout])
+			s |= set([self.edges[e].tail() for e in self.nodes[i].ein ])
+			print "fuse", i, "neighborhood:", s
+			#l.append(s)
+			l |= s
+		return [l]
+
 	def pop(self):
 		print "try pop"
 		return None
+
 	# FIXME: 5+5+, 5+5-, 5+4+, 4-5+ and the like, make sure this still works
 	# this IGNORES orientation; merge does not
 	def unchop(self):
@@ -394,8 +413,9 @@ class Seymourbutz:
 		assert(len(s) > 0)
 		return s
 	def mktree(self):
+		print "df", self.df
 		# FIXME: while more than one remain, unless break captures all
-		while True:
+		while self.df > 1:
 			l = self.unchop()
 			# FIXME: unimplemented
 			if not l:
@@ -413,6 +433,8 @@ class Seymourbutz:
 				self.merge(i, lvln, lvle)
 			print lvln, lvle
 			self.addlevel(lvln, lvle)
+		if self.df == 1:
+			self.addlevel([len(self.nodes)-1], list())
 
 for i in sys.argv[1:]:
 	print "processing", i
