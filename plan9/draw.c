@@ -108,7 +108,7 @@ int
 drawquad2(Quad q1, Quad q2, int sh, int c)
 {
 	Rectangle r1, r2;
-	Image *cc;
+	Pal *cp;
 
 	q1.v = addpt2(q1.o, q1.v);
 	q2.v = addpt2(q2.o, q2.v);
@@ -120,7 +120,7 @@ drawquad2(Quad q1, Quad q2, int sh, int c)
 	r2 = Rpt(v2p(q2.o), v2p(q1.v));
 	if(!rectXrect(r1, viewfb->r) && !rectXrect(r2, viewfb->r))
 		return 0;
-	cc = nodepal[c % nelem(nodepal)].i;
+	cp = &nodepal[c % nelem(nodepal)];
 	Point p[] = {
 		r1.max,
 		r1.min,
@@ -129,11 +129,11 @@ drawquad2(Quad q1, Quad q2, int sh, int c)
 		r1.max,
 	};
 	if(sh){
-		polyop(viewfb, p, nelem(p), 0, 0, 1, cc, ZP, SatopD);
-//		polyop(viewfb, p, nelem(p), 0, 0, 1, col[Cnodesh], ZP, SatopD);
+//		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
+		polyop(viewfb, p, nelem(p), 1, 1, 2, cp->alt, ZP, SatopD);
 //		polyop(viewfb, p, nelem(p), 1, 1, 2, col[Cnodesh2], ZP, SatopD);
 	}else
-		fillpoly(viewfb, p, nelem(p), ~0, cc, ZP);
+		fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
 	return 0;
 }
 
@@ -294,7 +294,7 @@ initdrw(void)
 		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
 		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
 		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x777777ff, 0x3f));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xdd));
 	}else{
 		col[Cscr] = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
@@ -302,12 +302,15 @@ initdrw(void)
 		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x7f));
 		col[Cnodesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x4f));
 		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x0f));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x333333ff, 0x3f));
-		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x333333ff, 0x0f));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xaf));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x3f));
+		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x0f));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xdd));
 	}
-	for(p=nodepal; p<nodepal+nelem(nodepal); p++)
-		p->i = eallocimage(Rect(0,0,1,1), screen->chan, 1, p->col);
+	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
+//		p->i = eallocimage(Rect(0,0,1,1), screen->chan, 1, p->col);
+		p->i = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(p->col, 0xaa));
+		p->alt = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(p->col, 0x3f));
+	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	return 0;
