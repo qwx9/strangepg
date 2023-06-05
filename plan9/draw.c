@@ -272,7 +272,7 @@ resetdraw(void)
 	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);
-	viewfb = eallocimage(viewr, XRGB32, 0, DTransparent);
+	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, haxx0rz ? DNofill : DTransparent);
 	draw(screen, screen->r, col[Cscr], nil, ZP);
 	return 0;
 }
@@ -286,16 +286,6 @@ initdrw(void)
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
 	if(!haxx0rz){
-		col[Cscr] = display->white;
-		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
-		col[Ctext] = display->white;
-		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0xaf));
-		col[Cnodesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x2f));
-		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DYellow, 0x10));
-		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x777777ff, 0x3f));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xdd));
-	}else{
 		col[Cscr] = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
 		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x5555557f, 0x7f));
@@ -305,11 +295,20 @@ initdrw(void)
 		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x3f));
 		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x0f));
 		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xdd));
+	}else{
+		col[Cscr] = display->black;
+		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
+		col[Ctext] = display->black;
+		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
+		col[Cnodesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
+		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
+		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
+		col[Cedgesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, 0x777777ff);
+		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DRed);
 	}
 	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
-//		p->i = eallocimage(Rect(0,0,1,1), screen->chan, 1, p->col);
-		p->i = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(p->col, 0xaa));
-		p->alt = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(p->col, 0x3f));
+		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0xaa));
+		p->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0x3f));
 	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
