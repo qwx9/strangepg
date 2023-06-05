@@ -32,7 +32,7 @@ static int
 compute(Graph *g)
 {
 	int i, j, n;
-	double K, δ, R, Δ, ε;
+	double K, δ, R, Δ, ε, l;
 	usize *ep, *ee;
 	Vertex *Fu, dv;
 	Node *u, *from, *v, *ne;
@@ -42,12 +42,17 @@ compute(Graph *g)
 		warn("no links to hand");
 		return -1;
 	}
+	l = sqrt(view.dim.v.x*view.dim.v.x+view.dim.v.y*view.dim.v.y)
+		/ (16. / log10(g->nodes.len + g->edges.len));
 	/* initial random placement, but in same scale as springs */
 	for(u=g->nodes.buf, ne=u+g->nodes.len; u<ne; u++)
+	if(!noui)
+		putnode(u, nrand(l) - l / 2, nrand(l) - l / 2);
+	else
 		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
-	K = ceil(sqrt((double)Length * Length / g->nodes.len));
+	K = ceil(sqrt(l * l / g->nodes.len));
 	/* arbitrary displacement minimum function */
-	ε = ceil(sqrt((double)Length * Length / g->edges.len));
+	ε = ceil(sqrt(l * l / g->edges.len));
 	δ = 1.0;
 	Fu = emalloc(g->nodes.len * sizeof *Fu);
 	u = g->nodes.buf;
@@ -84,7 +89,7 @@ compute(Graph *g)
 			if(R < Δ)
 				R = Δ;
 		}
-		dprint("R %.2f ε %.2f K %.2f δ %.2f\n", R, ε, K, δ);
+		dprint("R %.2f ε %.2f K %.2f δ %.2f n %d\n", R, ε, K, δ, n);
 		if(R < ε)
 			break;
 		if(δ > 0.0001)

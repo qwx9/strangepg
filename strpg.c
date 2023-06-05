@@ -3,14 +3,17 @@
 int debug;
 int indexed;
 int haxx0rz;
+int noui;
 
 void
 run(void)
 {
 	init();
-	resetdraw();
+	if(!noui)
+		resetdraw();
 	flushcmd();
-	evloop();
+	if(!noui)
+		evloop();
 }
 
 static void
@@ -39,6 +42,7 @@ parseargs(int argc, char **argv)
 		else
 			sysfatal("unknown layout type");
 		break;
+	case 'n': noui = 1; break;
 	case 's': drawstep = 1; break;
 	default: usage();
 	}ARGEND
@@ -58,6 +62,8 @@ init(void)
 	initfs();
 	initlayout();
 	initrend();
+	if(noui)
+		return;
 	initdrw();
 	initui();
 	resetui(1);

@@ -25,7 +25,7 @@ wproc(void *gp)
 int
 earlyexit(void)
 {
-	return nbrecvul(echan) != 0;
+	return !noui ? nbrecvul(echan) != 0 : 0;
 }
 
 int
@@ -42,7 +42,9 @@ runlayout(Graph *g)
 		}
 	}
 	g->working = 1;
-	if(proccreate(wproc, g, mainstacksize) < 0)
+	if(noui)
+		wproc(g);
+	else if(proccreate(wproc, g, mainstacksize) < 0)
 		sysfatal("proccreate: %r");
 	return 0;
 }

@@ -106,13 +106,18 @@ evloop(void)
 void
 triggerdraw(ulong level)
 {
+	if(noui)
+		return;
 	nbsendul(dc, level);
 }
 
 void
 triggerlayout(Graph *g)
 {
-	nbsendp(wc, g);
+	if(!noui)
+		nbsendp(wc, g);
+	else
+		dolayout(g, -1);
 }
 
 void

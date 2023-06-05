@@ -165,3 +165,4 @@ enum{
 
 extern int indexed;
 extern int debug;
+extern int noui;
