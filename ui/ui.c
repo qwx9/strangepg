@@ -52,6 +52,8 @@ keyevent(Rune r)
 	case K→: if(panview(Vec2(-16,0)) >= 0) triggerdraw(DTredraw); break;
 	case K←: if(panview(Vec2(+16,0)) >= 0) triggerdraw(DTredraw); break;
 	case Kescape: resetui(1); triggerdraw(DTredraw); break;
+	case '+': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level+1); break;
+	case '-': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level-1); break;
 	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;
 	case 'a': showarrows ^= 1; triggerdraw(DTredraw); break;
 	default: break;	// FIXME: cmd(r)

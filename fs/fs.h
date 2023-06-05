@@ -17,7 +17,6 @@ struct Filefmt{
 	int (*chlev)(Graph*, int);
 	int (*save)(Graph*);
 };
-extern Filefmt fftab[FFnil];
 
 Filefmt*	reggfa(void);
 Filefmt*	regindex(void);

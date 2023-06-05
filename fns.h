@@ -70,6 +70,7 @@ void	initfs(void);
 Graph*	loadfs(int, char*);
 int	openfs(File*, char*, int);
 File*	graphopenfs(char*, int, Graph*);
+int	chlevel(Graph*, int);
 int	writefs(File*, void*, int);
 vlong	seekfs(File*, vlong);
 vlong	tellfs(File*);

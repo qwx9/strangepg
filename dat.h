@@ -95,6 +95,7 @@ struct Edge{
 struct Graph{
 	int stale;
 	int working;
+	int type;
 	File *infile;
 	int level;
 	vlong doff;	/* FIXME: foutoir + layer violation */

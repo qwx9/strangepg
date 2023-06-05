@@ -1,7 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 
-static Filefmt *ff[FFnil];
+static Filefmt *fftab[FFnil];
 
 void
 closefs(File *f)
@@ -121,29 +121,49 @@ graphopenfs(char *path, int mode, Graph *g)
 Graph*
 loadfs(int type, char *path)
 {
-	Filefmt *f;
+	Filefmt *ff;
 	Graph *g;
 
-	if(type < 0 || type >= nelem(ff)){
+	if(type < 0 || type >= nelem(fftab)){
 		werrstr("invalid fs type");
 		return nil;
 	}
-	f = ff[type];
-	assert(f != nil);
-	if(f->load == nil){
+	ff = fftab[type];
+	assert(ff != nil);
+	if(ff->load == nil){
 		werrstr("unimplemented fs type");
 		return nil;
 	}
-	if((g = f->load(path)) == nil)
+	if((g = ff->load(path)) == nil)
 		return nil;
-	if(f->chlev != nil)
-		f->chlev(g, 0);
+	g->type = type;
+	if(ff->chlev != nil
+	&& ff->chlev(g, 1) < 0)
+		return nil;
 	return g;
+}
+
+int
+chlevel(Graph *g, int n)
+{
+	Filefmt *ff;
+
+	assert(g->type >= 0 && g->type < nelem(fftab));
+	ff = fftab[g->type];
+	if(g == nil || ff->chlev == nil || n < 0 || n >= g->levels.len)
+		return -1;
+	if(g->infile == nil || g->nlevels <= 0 || g->levels.len <= 0){
+		werrstr("no loaded levels");
+		return -1;
+	}
+	if(ff->chlev(g, n) < 0)
+		return -1;
+	return 0;
 }
 
 void
 initfs(void)
 {
-	ff[FFgfa] = reggfa();
-	ff[FFindex] = regindex();
+	fftab[FFgfa] = reggfa();
+	fftab[FFindex] = regindex();
 }

@@ -126,6 +126,7 @@ loadlevel(Graph *g, int lvl)
 	}
 	for(i=0; i<g->edges.len; i++)
 		fprint(2, "e %p\n", vecp(&g->edges, i));
+	g->level = lvl;
 	g->stale = 1;	/* FIXME: stale sooner? real time updates */
 	return 0;
 }
