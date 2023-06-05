@@ -50,7 +50,7 @@ readnode(File *f, Graph *g)
 	parent = get64(f);
 	fprint(2, "parent %lld\n", parent);
 	if(parent >= 0)
-		fulltrotsky(vecp(g->nodes.buf, parent), g);
+		fulltrotsky(vecp(&g->nodes, parent), g);
 	veccopy(&g->nodes, &n, &i);
 	return (Node *)g->nodes.buf + i;
 }
