@@ -1,6 +1,12 @@
 #include "strpg.h"
 #include <thread.h>
 
+void
+quit(void)
+{
+	threadexitsall(nil);
+}
+
 /* FIXME: no fmt equivalent?? other than individual functions */
 char *
 shitprint(int type, void *w)

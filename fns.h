@@ -111,3 +111,4 @@ void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
 char*	shitprint(int, void*);
+void	quit(void);
