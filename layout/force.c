@@ -67,7 +67,7 @@ compute(Graph *g)
 					continue;
 				dv = subpt2(u->q1.o, v->vrect.o);
 				Δ = diff(dv);
-				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), repulsion(Δ, K)));
+				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->w * repulsion(Δ, K)));
 			}
 		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(ep=u->in.buf,ee=ep+u->in.len; ep!=nil && ep<ee; ep++){
@@ -77,9 +77,13 @@ compute(Graph *g)
 				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);
 				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
-				Fu[i] = addpt2(Fu[i], dv);
+				Fu[i] = addpt2(Fu[i], mulpt2(dv, e->w));
 				j = vecindexof(&g->nodes, from);
-				Fu[j] = subpt2(Fu[j], dv);
+				if(e->w < 1){
+					assert(e->w > 0.0);
+					Fu[j] = subpt2(Fu[j], dv);
+				}else
+					Fu[j] = subpt2(Fu[j], divpt2(dv, e->w));
 			}
 		for(u=g->nodes.buf, R=0, i=0; u<ne; i++, u++){
 			dv = Fu[i];

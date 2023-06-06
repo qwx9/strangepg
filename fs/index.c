@@ -82,6 +82,7 @@ loadlevel(Graph *g, int lvl)
 {
 	int i;
 	File *f;
+	Edge *e;
 	Level *l, *le;
 
 	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->levels.len);
@@ -122,10 +123,13 @@ loadlevel(Graph *g, int lvl)
 	}
 	for(i=0; i<g->nodes.len; i++){
 		Node *n = vecp(&g->nodes, i);
-		fprint(2, "n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
+		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
 	}
-	for(i=0; i<g->edges.len; i++)
-		fprint(2, "e %p\n", vecp(&g->edges, i));
+	for(i=0; i<g->edges.len; i++){
+		e = vecp(&g->edges, i);
+		dprint("e %p w %.1f t %zd (%zd) h %zd (%zd)\n", e, e->w,
+			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
+	}
 	g->level = lvl;
 	g->stale = 1;	/* FIXME: stale sooner? real time updates */
 	return 0;

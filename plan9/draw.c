@@ -129,16 +129,16 @@ drawquad2(Quad q1, Quad q2, int sh, int c)
 		r1.max,
 	};
 	if(sh){
+		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
 //		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
-		polyop(viewfb, p, nelem(p), 1, 1, 2, cp->alt, ZP, SatopD);
-//		polyop(viewfb, p, nelem(p), 1, 1, 2, col[Cnodesh2], ZP, SatopD);
+//		polyop(viewfb, p, nelem(p), 0, 0, 2, col[Cnodesh2], ZP, SatopD);
 	}else
 		fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
 	return 0;
 }
 
 int
-drawquad(Quad q)
+drawquad(Quad q, int w)
 {
 	Rectangle r;
 
@@ -155,7 +155,7 @@ drawquad(Quad q)
 		Pt(r.min.x, r.max.y),
 		r.min
 	};
-	poly(viewfb, p, nelem(p), 0, 0, 2, col[Cemph], ZP);
+	poly(viewfb, p, nelem(p), 0, 0, w, col[Cemph], ZP);
 	
 	return 0;
 }

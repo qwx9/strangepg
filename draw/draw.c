@@ -34,7 +34,6 @@ drawedge(Quad q, double w)
 static int
 drawnode(Quad p, Quad q, int c)
 {
-
 	dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
 	drawquad2(p, q, 1, c);
 	return drawquad2(p, q, 0, c);

@@ -79,6 +79,7 @@ addnode(Graph *g, char *id, char *seq)
 	n = newnode();
 	n.in = vec(sizeof(usize), 0);
 	n.out = vec(sizeof(usize), 0);
+	n.w = 1.0;
 	n.parent = -1;
 	veccopy(&g->nodes, &n, &i);
 	return idput(g->id2n, estrdup(id), i);
