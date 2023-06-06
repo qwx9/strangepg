@@ -114,6 +114,8 @@ triggerdraw(ulong level)
 void
 triggerlayout(Graph *g)
 {
+	if(g->working)
+		return;
 	if(!noui)
 		nbsendp(wc, g);
 	else
