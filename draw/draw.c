@@ -4,21 +4,25 @@
 View view;
 int showarrows, drawstep;
 
-void
-centergraph(Graph *g)
+Vertex
+centerscalept2(Vertex v)
 {
-	Vector v;
+	return addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
+	//return mulpt2(addpt2(subpt2(v, view.pan), view.center), view.zoom);
+}
 
-	v = subpt2(g->dim.v, view.dim.v);
-	if(v.x > 0)
-		v.x /= 2;
-	else
-		v.x = 0;
-	if(v.y > 0)
-		v.y /= 2;
-	else
-		v.y = 0;
-	view.center = addpt2(g->off, v);
+Quad
+centerscalequad(Quad q)
+{
+	q.v = addpt2(q.o, q.v);
+	return (Quad){centerscalept2(q.o), centerscalept2(q.v)};
+}
+
+void
+drawguides(void)
+{
+	drawline(Qd(ZV, view.center), 0, 1);
+	drawline(Qd(ZV, view.pan), 0, 2);
 }
 
 // shitprint: maybe just do qk1's va()? but no custom fmt's
@@ -26,9 +30,8 @@ centergraph(Graph *g)
 static int
 drawedge(Quad q, double w)
 {
-	Qd(q.o, addpt2(q.o, q.v));
 	dprint("drawedge %s\n", shitprint('q', &q));
-	return drawbezier(q.o, q.v, w);
+	return drawbezier(q, w);
 }
 
 static int
@@ -43,7 +46,7 @@ static int
 drawnodevec(Quad q)
 {
 	dprint("drawnodevec %s\n", shitprint('q', &q));
-	return drawline(q.o, addpt2(q.o, q.v), 0, 1);
+	return drawline(q, 0, 1);
 }
 
 static int
@@ -54,6 +57,7 @@ drawedges(Graph *g)
 	Quad q;
 
 	// FIXME: orientation: at least choose a corner
+	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
@@ -85,11 +89,14 @@ drawworld(void)
 	for(g=graphs; g<graphs+ngraphs; g++){
 		if(g->ll == nil)	// FIXME: weak check
 			continue;
-		centergraph(g);
 		dprint("drawworld: draw graph %#p\n", g);
 		drawedges(g);
 		drawnodes(g);
+		if(debug)
+			drawline(Qd(ZV, g->off), 0, g - graphs + 3);
 	}
+	if(debug)
+		drawguides();
 }
 
 static void

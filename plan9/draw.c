@@ -104,18 +104,21 @@ s2p(Vertex v)
 	return p;
 }
 
+static Rectangle
+centerscalerect(Quad q)
+{
+	q = centerscalequad(q);
+	return Rpt(v2p(q.o), v2p(q.v));
+}
+
 int
 drawquad2(Quad q1, Quad q2, int sh, int c)
 {
 	Rectangle r1, r2;
 	Pal *cp;
 
-	q1.v = addpt2(q1.o, q1.v);
-	q2.v = addpt2(q2.o, q2.v);
-	q1.v = addpt2(subpt2(mulpt2(q1.v, view.zoom), view.pan), view.center);
-	q1.o = addpt2(subpt2(mulpt2(q1.o, view.zoom), view.pan), view.center);
-	q2.v = addpt2(subpt2(mulpt2(q2.v, view.zoom), view.pan), view.center);
-	q2.o = addpt2(subpt2(mulpt2(q2.o, view.zoom), view.pan), view.center);
+	q1 = centerscalequad(q1);
+	q2 = centerscalequad(q2);
 	r1 = Rpt(v2p(q1.o), v2p(q2.v));
 	r2 = Rpt(v2p(q2.o), v2p(q1.v));
 	if(!rectXrect(r1, viewfb->r) && !rectXrect(r2, viewfb->r))
@@ -142,10 +145,7 @@ drawquad(Quad q, int w)
 {
 	Rectangle r;
 
-	q.v = addpt2(q.o, q.v);
-	q.v = addpt2(subpt2(mulpt2(q.v, view.zoom), view.pan), view.center);
-	q.o = addpt2(subpt2(mulpt2(q.o, view.zoom), view.pan), view.center);
-	r = canonrect(Rpt(v2p(q.o), v2p(q.v)));
+	r = canonrect(centerscalerect(q));
 	if(!rectXrect(r, viewfb->r))
 		return 0;
 	Point p[] = {
@@ -161,19 +161,17 @@ drawquad(Quad q, int w)
 }
 
 int
-drawbezier(Vertex u, Vertex v, double w)
+drawbezier(Quad q, double w)
 {
 	double θ;
 	Point p2, p3;
 	Rectangle r;
 
-	// FIXME: wrappers for conversion + get rid of stupid origin+vec interface
-	u = addpt2(subpt2(mulpt2(u, view.zoom), view.pan), view.center);
-	v = addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
-	r = Rpt(v2p(u), v2p(v));
+	q.v = subpt2(q.v, q.o);	// FIXME
+	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	θ = atan2(u.x - v.x, u.y - v.y);
+	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
 	// FIXME: adjustments for short edges and rotation
 	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
@@ -191,17 +189,21 @@ drawbezier(Vertex u, Vertex v, double w)
 }
 
 int
-drawline(Vertex u, Vertex v, double w, int emph)
+drawline(Quad q, double w, int emph)
 {
 	Rectangle r;
+	Image *c;
 
-	u = addpt2(subpt2(mulpt2(u, view.zoom), view.pan), view.center);
-	v = addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
-	r = Rpt(v2p(u), v2p(v));
+	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	line(viewfb, r.min, r.max, Endsquare, showarrows ? Endarrow : Endsquare,
-		w, col[emph?Cemph:Cedge], ZP);
+	switch(emph){
+	case 0: c = col[Cedge]; break;
+	case 1: c = col[Cemph]; break;
+	default: c = nodepal[emph % nelem(nodepal)].i; break;
+	}
+	line(viewfb, r.min, r.max, Endsquare, showarrows||emph ? Endarrow : Endsquare,
+		w, c, ZP);
 	return 0;
 }
 
@@ -269,6 +271,7 @@ int
 resetdraw(void)
 {
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	view.center = divpt2(view.dim.v, 2);
 	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);

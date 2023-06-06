@@ -6,6 +6,7 @@ int
 panview(Vector v)
 {
 	dprint("panview to %.2f,%.2f\n", v.x, v.y);
+	//v = floorpt2(addpt2(divpt2(v, view.zoom), view.pan));
 	v = floorpt2(addpt2(v, view.pan));
 	/* FIXME
 	if(p.x < -panmax.x / 2)
@@ -26,7 +27,7 @@ panview(Vector v)
 int
 zoomview(Vector v)
 {
-	double Δ;
+	double Δ, Δp;
 
 	/* scalar projection of v onto (1,1); so, view.zoom in when dragging ↘ */
 	Δ = 0.01 * -(v.x + v.y) / 2;
@@ -34,9 +35,6 @@ zoomview(Vector v)
 	if(view.zoom + Δ < 0.1 || view.zoom + Δ > 10)
 		return -1;
 	view.zoom += Δ;
-	/* FIXME: this factor is crucial for centering, but not really sure
-	 * how to choose the right one */
-	view.pan = addpt2(view.pan, mulpt2(Vec2(Δ, Δ), 400));
 	return 0;
 }
 
@@ -88,12 +86,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 void
 resetui(int all)
 {
-	Vector v;
-
 	view.dim.o = ZV;
-	v = view.pan;
 	panmax = view.dim.v;
-	panview(v);
 	if(all){
 		view.pan = ZV;
 		view.zoom = 1.0;
