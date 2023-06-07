@@ -157,11 +157,12 @@ enum{
 	Mscrlup = 1<<3,	// FIXME: shouldn't be
 	Mscrldn = 1<<4,
 
-	K← = 0x110000,	/* outside unicode range */
-	K→,
-	K↑,
-	K↓,
-	Kescape,
+	/* unicode arrows, children's compilers, mandrake */
+	KBleft = 0x110000,	/* outside unicode range */
+	KBright,
+	KBup,
+	KBdown,
+	KBescape,
 };
 
 extern int indexed;

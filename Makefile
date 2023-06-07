@@ -5,27 +5,34 @@ INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
 
 OBJS:=\
-	main.o\
+	strpg.o\
 	cmd/cmd.o\
 	draw/draw.o\
-	draw/geom.o\
 	fs/fs.o\
 	fs/gfa.o\
+	fs/index.o\
 	graph/graph.o\
 	graph/vertex.o\
-	layout/layout.o\
 	layout/conga.o\
+	layout/force.o\
+	layout/layout.o\
+	layout/random.o\
 	linux/draw.o\
+	linux/geom.o\
 	linux/ui.o\
 	linux/sys.o\
 	rend/rend.o\
 	ui/ui.o\
+	util/htab.o\
+	util/vec.o\
 
 CC?= clang
 OFLAGS?= -O2 -pipe -march=native
+# doesn't even work, what bullshit
+CFLAGS+=-fextended-identifiers -finput-charset=UTF-8
 CFLAGS?= $(OFLAGS)
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
-SFLAGS?= -std=c99
+SFLAGS?= -std=c11
 IFLAGS?=\
 	-I.\
 	-Ilinux\
@@ -37,6 +44,7 @@ IFLAGS?=\
 	-Ilinux\
 	-Irend\
 	-Iui\
+	-Iutil\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=

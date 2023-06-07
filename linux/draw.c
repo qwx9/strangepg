@@ -10,9 +10,6 @@ struct{
 	SDL_Texture *tex;
 } sdl;
 
-int	SDL_RenderFillRect(SDL_Renderer*, SDL_Rect*);
-int	SDL_RenderDrawLine(SDL_Renderer*, int, int, int, int);
-
 /* NOTE: index must be shifted right one */
 
 static long lastflip;	/* ms */

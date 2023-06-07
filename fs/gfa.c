@@ -6,13 +6,12 @@
  */
 
 static int
-gfa1hdr(Graph *g, File *f)
+gfa1hdr(Graph *, File *f)
 {
 	if(f->nf < 2){
 		werrstr("line %d: malformed header", f->nr);
 		return -1;
 	}
-	USED(g);
 	return 0;
 }
 
@@ -60,9 +59,8 @@ gfa1link(Graph *g, File *f)
 }
 
 static int
-gfa1path(Graph *g, File *f)
+gfa1path(Graph *, File *)
 {
-	USED(g, f);
 	return 0;
 }
 

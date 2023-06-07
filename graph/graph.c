@@ -7,9 +7,8 @@ int ngraphs;
  * it provides an iterator, otherwise we'll always have to check the
  * value of .erased */
 void
-removenode(Graph *g, Node *n)
+removenode(Graph *, Node *n)
 {
-	USED(g);
 	n->erased = 1;
 }
 void
@@ -65,7 +64,7 @@ newedge(void)
 }
 
 int
-addnode(Graph *g, char *id, char *seq)
+addnode(Graph *g, char *id, char *)
 {
 	usize i;
 	Node n;
@@ -75,7 +74,6 @@ addnode(Graph *g, char *id, char *seq)
 		werrstr("duplicate node id");
 		return 0;
 	}
-	USED(id, seq);
 	n = newnode();
 	n.in = vec(sizeof(usize), 0);
 	n.out = vec(sizeof(usize), 0);

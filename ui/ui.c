@@ -27,7 +27,7 @@ panview(Vector v)
 int
 zoomview(Vector v)
 {
-	double Δ, Δp;
+	double Δ;
 
 	/* scalar projection of v onto (1,1); so, view.zoom in when dragging ↘ */
 	Δ = 0.01 * -(v.x + v.y) / 2;
@@ -45,11 +45,11 @@ keyevent(Rune r)
 	Graph *g;
 
 	switch(r){
-	case K↑: if(panview(Vec2(0,+16)) >= 0) triggerdraw(DTredraw); break;
-	case K↓: if(panview(Vec2(0,-16)) >= 0) triggerdraw(DTredraw); break;
-	case K→: if(panview(Vec2(-16,0)) >= 0) triggerdraw(DTredraw); break;
-	case K←: if(panview(Vec2(+16,0)) >= 0) triggerdraw(DTredraw); break;
-	case Kescape: resetui(1); triggerdraw(DTredraw); break;
+	case KBup: if(panview(Vec2(0,+16)) >= 0) triggerdraw(DTredraw); break;
+	case KBdown: if(panview(Vec2(0,-16)) >= 0) triggerdraw(DTredraw); break;
+	case KBright: if(panview(Vec2(-16,0)) >= 0) triggerdraw(DTredraw); break;
+	case KBleft: if(panview(Vec2(+16,0)) >= 0) triggerdraw(DTredraw); break;
+	case KBescape: resetui(1); triggerdraw(DTredraw); break;
 	case '+': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level+1); break;
 	case '-': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level-1); break;
 	case 'R': for(g=graphs; g<graphs+ngraphs; g++) g->stale = 1; rendernew(); break;

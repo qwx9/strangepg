@@ -22,11 +22,11 @@ static int
 k2e(Rune r)
 {
 	switch(r){
-	case Kleft: r = K←; break;
-	case Kright: r = K→; break;
-	case Kup: r = K↑; break;
-	case Kdown: r = K↓; break;
-	case Kesc: r = Kescape; break;
+	case Kleft: r = KBleft; break;
+	case Kright: r = KBright; break;
+	case Kup: r = KBup; break;
+	case Kdown: r = KBdown; break;
+	case Kesc: r = KBescape; break;
 	}
 	return r;
 }
