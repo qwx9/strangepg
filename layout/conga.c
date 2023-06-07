@@ -13,6 +13,7 @@ compute(Graph *g)
 
 	for(u=g->nodes.buf, ue=u+g->nodes.len, x=0; u<ue; u++, x+=Nodesz+10*Ptsz)
 		putnode(u, x, 0);
+	triggerdraw(DTrender);
 	return 0;
 }
 
