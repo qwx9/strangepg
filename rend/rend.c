@@ -25,6 +25,7 @@ faceyourfears(Graph *g, Node *u)
 	if(u->out.len > 0){
 		for(ip=u->out.buf, ie=ip+u->out.len; ip<ie; ip++){
 			e = vecp(&g->edges, *ip);
+			// FIXME: helpers
 			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
 			/* FIXME: see this is why we don't want global edge list */
 			them = e->to >> 1;
@@ -44,7 +45,7 @@ faceyourfears(Graph *g, Node *u)
 			 * facing closer nodes
 			 * also node weights */
 			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			θ -= dθ / 1;
+			θ -= dθ;
 			n++;
 		}
 	}
@@ -65,20 +66,18 @@ faceyourfears(Graph *g, Node *u)
 			v = vecp(&g->nodes, them);
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
-			//if(dθ >= PI/2 || dθ < PI/2)
-			//	continue;
 			/* FIXME: see comment above */
 			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			θ -= dθ / 2;
+			θ -= dθ;
 			n++;
 		}
 	}
 	if(n > 0)
 		θ /= n;
-	θ -= PI / 4;
-	while(θ > 2*PI)
+	θ -= PI / 4;	/* upper left to bottom right corner */
+	while(θ >= 2*PI)
 		θ -= 2*PI;
-	while(θ < 2*PI)
+	while(θ < 0)
 		θ += 2*PI;
 	return θ;
 }
