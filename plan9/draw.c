@@ -117,6 +117,8 @@ drawquad2(Quad q1, Quad q2, int sh, int c)
 	Rectangle r1, r2;
 	Pal *cp;
 
+	if(haxx0rz && (showarrows || sh))
+		return 0;
 	q1 = centerscalequad(q1);
 	q2 = centerscalequad(q2);
 	r1 = Rpt(v2p(q1.o), v2p(q2.v));
@@ -167,6 +169,7 @@ drawbezier(Quad q, double w)
 	Point p2, p3;
 	Rectangle r;
 
+	w -= 1.;
 	q.v = subpt2(q.v, q.o);	// FIXME
 	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
@@ -183,8 +186,9 @@ drawbezier(Quad q, double w)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
-	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-		showarrows ? Endarrow : Endsquare, 1+w, col[Cedgesh], ZP);
+	if(!haxx0rz)
+		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
+			showarrows ? Endarrow : Endsquare, 1+w, col[Cedgesh], ZP);
 	return 0;
 }
 
@@ -305,7 +309,7 @@ initdrw(void)
 		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
 		col[Cnodesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
 		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
-		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
+		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, 0x777777ff);
 		col[Cedgesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, 0x777777ff);
 		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DRed);
 	}
