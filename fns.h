@@ -99,7 +99,7 @@ int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);
-void	triggerdraw(ulong);
+void	triggerdraw(uint);
 void	triggerlayout(Graph*);
 
 void	initrend(void);

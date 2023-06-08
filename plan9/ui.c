@@ -104,7 +104,7 @@ evloop(void)
 }
 
 void
-triggerdraw(ulong level)
+triggerdraw(uint level)
 {
 	if(noui)
 		return;
