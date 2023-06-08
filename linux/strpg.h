@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#define __USE_XOPEN fuckyourundefs
 #include <inttypes.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -56,6 +55,8 @@ extern char *argv0;
 				(*_argt? _argt: argv[1]? (argc--, *++argv): ((x), abort(), (char*)0)))
 
 #define	ARGC()		_argc
+
+int nrand(int);
 
 /* /sys/include/geometry.h */
 typedef struct Point2 Point2;

@@ -1,5 +1,6 @@
-#include "strpg.h"	/* FIXME: this sucks */
+#include "strpg.h"
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -7,6 +8,13 @@
 char *argv0;
 
 static char errbuf[1024];
+
+// FIXME: kill it
+char *
+shitprint(int, void *)
+{
+	return "";
+}
 
 int
 errstr(char *err, uint nerr)
@@ -59,17 +67,27 @@ msec(void)
 {
 	struct timeval tv;
 
-	if(gettimeofday(&tv, nil) < 0){
+	if(gettimeofday(&tv, NULL) < 0){
 		warn("gettimeofday: error %d\n", errno);
 		return -1;
 	}
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
+char *
+estrdup(char *s)
+{
+	char *p;
+
+	if((p = strdup(s)) == NULL)
+		sysfatal("strdup: %r");
+	return p;
+}
+
 void *
 erealloc(void *p, usize n, usize oldn)
 {
-	if((p = realloc(p, n)) == nil)
+	if((p = realloc(p, n)) == NULL)
 		sysfatal("realloc: %r");
 	if(n > oldn)
 		memset((uchar *)p + oldn, 0, n - oldn);
@@ -81,7 +99,7 @@ emalloc(usize n)
 {
 	void *p;
 
-	if((p = calloc(1, n)) == nil)
+	if((p = calloc(1, n)) == NULL)
 		sysfatal("emalloc: %r");
 	return p;
 }

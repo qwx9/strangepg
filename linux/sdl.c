@@ -29,7 +29,7 @@ setcol(usize id)
 }
 
 int
-drawquad(Quad q)
+drawquad(Quad q, int)
 {
 	SDL_Rect rr;
 
@@ -41,8 +41,14 @@ drawquad(Quad q)
 	return 0;
 }
 
-static int
-drawline(Quad q, double w)
+int
+drawquad2(Quad, Quad, int, int)
+{
+	return 0;
+}
+
+int
+drawline(Quad q, double w, int)
 {
 	SDL_Rect rr;
 
@@ -51,6 +57,12 @@ drawline(Quad q, double w)
 		return -1;
 	}
 	// render to pointer image (probably not Rend function?
+	return 0;
+}
+
+int
+drawbezier(Quad, double)
+{
 	return 0;
 }
 

@@ -4,13 +4,6 @@ BINTARGET:= $(PROGRAM)
 INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
 
-
-#	linux/draw.o\
-#	linux/fs.o\
-#	linux/ui.o\
-#	linux/sdl.o\
-#	linux/sys.o\
-
 OBJS:=\
 	strpg.o\
 	cmd/cmd.o\
@@ -24,15 +17,17 @@ OBJS:=\
 	layout/force.o\
 	layout/layout.o\
 	layout/random.o\
-	null/draw.o\
-	null/fs.o\
-	null/layout.o\
-	null/sys.o\
-	null/ui.o\
+	linux/draw.o\
+	linux/fs.o\
+	linux/layout.o\
+	linux/sdl.o\
+	linux/sys.o\
+	linux/ui.o\
 	rend/rend.o\
 	ui/ui.o\
 	util/geom.o\
 	util/htab.o\
+	util/nrand.o\
 	util/vec.o\
 
 CC?= clang
@@ -40,6 +35,7 @@ OFLAGS?= -O2 -pipe -march=native
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
 CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
+CFLAGS+= -D_XOPEN_SOURCE=500
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
@@ -69,6 +65,10 @@ ifdef DEBUG
 			 -Wsuggest-attribute=const -Wswitch-default -Wunused        \
 			 -Wvariadic-macros
 	CFLAGS+= -g -O0
+else
+	WFLAGS+= -Wno-unknown-pragmas -Wno-unused-value \
+			-Wno-unused-function -Wno-unused-parameter \
+			-Wno-unused-variable
 endif
 ifdef STATIC
 	LDFLAGS+= -static
