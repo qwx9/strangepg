@@ -2,9 +2,17 @@
 
 char *argv0;
 
+// FIXME: kill it
+char *
+shitprint(int, void *)
+{
+	return "";
+}
+
 int
 errstr(char *, uint)
 {
+	return 0;
 }
 
 void
@@ -26,6 +34,12 @@ vlong
 msec(void)
 {
 	return 0LL;
+}
+
+char *
+estrdup(char *)
+{
+	return nil;
 }
 
 void *
