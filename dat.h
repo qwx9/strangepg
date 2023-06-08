@@ -136,10 +136,6 @@ enum{
 	DTresetui,
 };
 
-enum{
-	Vdefw = 800,
-	Vdefh = 600,
-};
 struct View{
 	Quad dim;
 	Vector pan;

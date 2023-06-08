@@ -86,7 +86,6 @@ mouseevent(Vertex v, Vertex Δ, int b)
 void
 resetui(int all)
 {
-	view.dim.o = ZV;
 	panmax = view.dim.v;
 	if(all){
 		view.pan = ZV;

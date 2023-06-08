@@ -4,24 +4,36 @@
 #include <sys/time.h>
 #include <errno.h>
 
-int debug;
 char *argv0;
 
-static char err[512];
+static char errbuf[1024];
 
-char *
-errstr(void)
+int
+errstr(char *err, uint nerr)
 {
-	return err[0] != 0 ? err : "";
+	uint n;
+
+	n = sizeof errbuf < nerr ? sizeof errbuf : nerr;
+	strncpy(err, errbuf, n - 1);
+	err[n-1] = 0;
+	*errbuf = 0;
+	return 0;
 }
 
 void
 werrstr(char *fmt, ...)
 {
 	va_list arg;
-	memset(err, 0, sizeof err);
+	memset(errbuf, 0, sizeof errbuf);
 	va_start(arg, fmt);
-	vsnprintf(err, sizeof err, fmt, arg);
+	vsnprintf(errbuf, sizeof errbuf, fmt, arg);
+	va_end(arg);
+}
+
+void
+vawarn(char *fmt, va_list arg)
+{
+	vfprintf(stderr, fmt, arg);
 	va_end(arg);
 }
 
@@ -31,21 +43,14 @@ sysfatal(char *fmt, ...)
 	va_list arg;
 
 	va_start(arg, fmt);
-	vfprintf(stderr, fmt, arg);
-	va_end(arg);
+	vawarn(fmt, arg);
 	exit(66);
 }
 
-void
-warn(char *fmt, ...)
+char *
+error(void)
 {
-	va_list arg;
-
-	if(debug <= 0)
-		return;
-	va_start(arg, fmt);
-	vfprintf(stderr, fmt, arg);
-	va_end(arg);
+	return errbuf;
 }
 
 /* FIXME: check */

@@ -6,6 +6,26 @@ int haxx0rz;
 int noui;
 
 void
+warn(char *fmt, ...)
+{
+	va_list arg;
+
+	va_start(arg, fmt);
+	vawarn(fmt, arg);
+}
+
+void
+dprint(char *fmt, ...)
+{
+	va_list arg;
+
+	if(!debug)
+		return;
+	va_start(arg, fmt);
+	vawarn(fmt, arg);
+}
+
+void
 run(void)
 {
 	init();

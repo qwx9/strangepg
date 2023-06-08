@@ -42,13 +42,11 @@ readnode(File *f, Graph *g)
 	vlong parent;
 	Node n;
 
-	fprint(2, "readnode\n");
 	n = newnode();
 	n.out = vec(sizeof(usize), get64(f));
 	n.in = vec(sizeof(usize), get64(f));
 	n.w = get64(f);
 	parent = get64(f);
-	fprint(2, "parent %lld\n", parent);
 	if(parent >= 0)
 		fulltrotsky(vecp(&g->nodes, parent), g);
 	veccopy(&g->nodes, &n, &i);
@@ -63,7 +61,6 @@ readedge(File *f, Graph *g)
 	Edge e;
 	Node *up, *vp;
 
-	fprint(2, "readedge\n");
 	e = newedge();
 	e.from = get64(f);
 	e.to = get64(f);
@@ -85,8 +82,6 @@ loadlevel(Graph *g, int lvl)
 	Edge *e;
 	Level *l, *le;
 
-	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->levels.len);
-	fprint(2, "loadlevel %d %zd\n", lvl, g->levels.len);
 	if(lvl < 0 || lvl >= g->levels.len){
 		werrstr("no such level %d", lvl);
 		return -1;
@@ -156,7 +151,6 @@ loaddicts(char *path)
 	g->noff = get64(f);
 	g->eoff = get64(f);
 	g->moff = get64(f);
-	fprint(2, "%zd %zd %zd\n", g->nnodes, g->nedges, g->nlevels);
 	g->levels = vec(sizeof(Level), g->nlevels);
 	for(i=0; i<g->nlevels; i++){
 		Level l = {0};
@@ -166,8 +160,6 @@ loaddicts(char *path)
 		l.eoff = g->eoff + get64(f);
 		l.enel = get64(f);
 		l.etot = get64(f);
-		fprint(2, "level %d: N %zx %zx %zx E %zx %zx %zx\n",
-			i, l.noff, l.nnel, l.ntot, l.eoff, l.enel, l.etot);
 		veccopy(&g->levels, &l, nil);
 	}
 	/* file remains open */

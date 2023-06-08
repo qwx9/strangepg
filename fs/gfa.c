@@ -45,7 +45,6 @@ gfa1link(Graph *g, File *f)
 		s = f->fld[1] + strlen(f->fld[1]) - 1;
 		t = f->fld[2] + strlen(f->fld[2]) - 1;
 		if((d1 = todir(s)) < 0 || (d2 = todir(t)) < 0){
-			fprint(2, "%s %s\n", s, t);
 			werrstr("line %d: malformed link", f->nr);
 			return -1;
 		}

@@ -1,5 +1,6 @@
 void	warn(char*, ...);
 void	dprint(char*, ...);
+void	vawarn(char*, va_list);
 char*	error(void);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);

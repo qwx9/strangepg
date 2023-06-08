@@ -1,8 +1,10 @@
 #include <stdlib.h>
+#define __USE_XOPEN fuckyourundefs
 #include <inttypes.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <math.h>
 
 /* u.h */
 #define nil		((void*)0)
@@ -30,6 +32,8 @@ typedef uint64_t u64int;
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
 #define USED(x) (void)(x)
+#define SET(x)	(x = *(&(x)))
+#define PI	M_PI
 #define	OREAD	O_RDONLY
 
 extern char *argv0;
@@ -55,9 +59,14 @@ extern char *argv0;
 
 /* /sys/include/geometry.h */
 typedef struct Point2 Point2;
+typedef struct Point3 Point3;
 
 struct Point2 {
 	double x, y, w;
+};
+
+struct Point3 {
+	double x, y, z, w;
 };
 
 /* utils */
@@ -77,9 +86,26 @@ double vec2len(Point2);
 Point2 normvec2(Point2);
 int edgeptcmp(Point2, Point2, Point2);
 int ptinpoly(Point2, Point2*, ulong);
+/* Point3 */
+Point3 Pt3(double, double, double, double);
+Point3 Vec3(double, double, double);
+Point3 addpt3(Point3, Point3);
+Point3 subpt3(Point3, Point3);
+Point3 mulpt3(Point3, double);
+Point3 divpt3(Point3, double);
+Point3 lerp3(Point3, Point3, double);
+double dotvec3(Point3, Point3);
+Point3 crossvec3(Point3, Point3);
+double vec3len(Point3);
+Point3 normvec3(Point3);
 
 //#define const
 //#define nil NULL
+
+enum{
+	Vdefw = 800,
+	Vdefh = 600,
+};
 
 #include "khash.h"
 #include "dat.h"

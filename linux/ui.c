@@ -61,3 +61,8 @@ evloop(void)
 		// FIXME: pan/thrdhold
 	}
 }
+
+void
+initui(void)
+{
+}

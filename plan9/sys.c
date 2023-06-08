@@ -45,28 +45,10 @@ error(void)
 }
 
 void
-warn(char *fmt, ...)
+vawarn(char *fmt, va_list arg)
 {
-	char s[256];
-	va_list arg;
-
-	va_start(arg, fmt);
-	vseprint(s, s+sizeof s, fmt, arg);
+	vfprint(2, fmt, arg);
 	va_end(arg);
-	fprint(2, "%s", s);
-}
-
-void
-dprint(char *fmt, ...)
-{
-	char s[256];
-	va_list arg;
-
-	if(!debug)
-		return;
-	va_start(arg, fmt);
-	vseprint(s, s+sizeof s, fmt, arg);
-	fprint(2, "%s", s);
 }
 
 vlong

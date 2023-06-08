@@ -4,6 +4,13 @@ BINTARGET:= $(PROGRAM)
 INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
 
+
+#	linux/draw.o\
+#	linux/fs.o\
+#	linux/ui.o\
+#	linux/sdl.o\
+#	linux/sys.o\
+
 OBJS:=\
 	strpg.o\
 	cmd/cmd.o\
@@ -17,22 +24,24 @@ OBJS:=\
 	layout/force.o\
 	layout/layout.o\
 	layout/random.o\
-	linux/draw.o\
-	linux/geom.o\
-	linux/ui.o\
-	linux/sys.o\
+	null/draw.o\
+	null/fs.o\
+	null/layout.o\
+	null/sys.o\
+	null/ui.o\
 	rend/rend.o\
 	ui/ui.o\
+	util/geom.o\
 	util/htab.o\
 	util/vec.o\
 
 CC?= clang
 OFLAGS?= -O2 -pipe -march=native
-# doesn't even work, what bullshit
-CFLAGS+=-fextended-identifiers -finput-charset=UTF-8
 CFLAGS?= $(OFLAGS)
+# doesn't even work, what bullshit
+CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
-SFLAGS?= -std=c11
+SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
 	-Ilinux\
@@ -48,7 +57,8 @@ IFLAGS?=\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
-LDLIBS?= -lSDL2 -lSDL2_gfx -lm
+LDLIBS?= -lSDL2 -lm
+#LDLIBS?= -lSDL2 -lSDL2_gfx -lm
 
 ifdef DEBUG
 	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual                \

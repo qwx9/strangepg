@@ -1,6 +1,6 @@
 #include "strpg.h"
 
 void
-resetui(void)
+initui(void)
 {
 }
