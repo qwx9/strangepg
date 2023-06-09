@@ -103,23 +103,3 @@ emalloc(usize n)
 		sysfatal("emalloc: %r");
 	return p;
 }
-
-static void
-usage(void)
-{
-	fprintf(stderr, "usage: %s\n", argv0);
-	exit(1);
-}
-
-int
-main(int argc, char **argv)
-{
-	ARGBEGIN{
-	default: usage();
-	}ARGEND
-	if(parseargs(argc, argv) < 0)
-		usage();
-	init();
-	evloop();
-	return 0;
-}

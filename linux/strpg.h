@@ -6,7 +6,7 @@
 #include <math.h>
 
 /* u.h */
-#define nil		((void*)0)
+//#define nil		((void*)0)
 typedef	unsigned short	ushort;
 typedef	unsigned char	uchar;
 typedef unsigned int ulong;	/* assumed 32 bit */
@@ -34,6 +34,8 @@ typedef uint64_t u64int;
 #define SET(x)	(x = *(&(x)))
 #define PI	M_PI
 #define	OREAD	O_RDONLY
+#define	OWRITE	O_WRONLY
+#define ORDWR	O_RDWR
 
 extern char *argv0;
 #define	ARGBEGIN	for((argv0||(argv0=*argv)),argv++,argc--;\
@@ -46,7 +48,7 @@ extern char *argv0;
 					argc--; argv++; break;\
 				}\
 				_argc = 0;\
-				while(*_args && (_args++))\
+				while(_argc = *_args++)\
 				switch(_argc)
 #define	ARGEND		SET(_argt);USED((_argt,_argc,_args));}USED((argv, argc));
 #define	ARGF()		(_argt=_args, _args="",\
@@ -57,6 +59,7 @@ extern char *argv0;
 #define	ARGC()		_argc
 
 int nrand(int);
+int	getfields(char*, char**, int, int, char*);
 
 /* /sys/include/geometry.h */
 typedef struct Point2 Point2;
@@ -101,7 +104,7 @@ double vec3len(Point3);
 Point3 normvec3(Point3);
 
 //#define const
-//#define nil NULL
+#define nil NULL	// better for them to be interchangeable here
 
 enum{
 	Vdefw = 800,

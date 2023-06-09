@@ -20,12 +20,14 @@ OBJS:=\
 	linux/draw.o\
 	linux/fs.o\
 	linux/layout.o\
+	linux/main.o\
 	linux/sdl.o\
 	linux/sys.o\
 	linux/ui.o\
 	rend/rend.o\
 	ui/ui.o\
 	util/geom.o\
+	util/getfields.o\
 	util/htab.o\
 	util/nrand.o\
 	util/vec.o\
@@ -35,7 +37,9 @@ OFLAGS?= -O2 -pipe -march=native
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
 CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
-CFLAGS+= -D_XOPEN_SOURCE=500
+# _XOPEN_SOURCE: M_PI et al
+# _POSIX_C_SOURCE >= 200809L: getline
+CFLAGS+= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=500
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
