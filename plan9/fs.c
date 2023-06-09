@@ -51,9 +51,9 @@ sysseek(File *f, vlong off)
 }
 
 vlong
-systell(File *f)
+sysftell(File *f)
 {
-	return Bseek(f->aux, 0, 1);
+	return Boffset(f->aux);
 }
 
 int
@@ -74,8 +74,8 @@ readrecord(File *f)
 {
 	Biobuf *bf;
 
-	assert(f->aux != nil);
 	assert(f != nil && f->path != nil);
+	assert(f->aux != nil);
 	bf = f->aux;
 	free(f->s);
 	f->foff = Boffset(bf);

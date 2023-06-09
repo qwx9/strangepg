@@ -88,7 +88,7 @@ int	sysopen(File*, int);
 int	syswrite(File*, void*, int);
 int	sysread(File*, void*, int);
 int	syswstatlen(File*, vlong);
-vlong	systell(File*);
+vlong	sysftell(File*);
 vlong	sysseek(File*, vlong);
 void	sysflush(File*);
 void	sysclose(File*);

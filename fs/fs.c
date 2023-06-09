@@ -97,7 +97,7 @@ put64(File *f, u64int v)
 vlong
 tellfs(File *f)
 {
-	return systell(f);
+	return sysftell(f);
 }
 
 int
