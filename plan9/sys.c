@@ -2,7 +2,7 @@
 #include <thread.h>
 
 void
-quit(void)
+sysquit(void)
 {
 	threadexitsall(nil);
 }

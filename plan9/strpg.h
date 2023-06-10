@@ -4,5 +4,7 @@
 #include "dat.h"
 #include "fns.h"
 
+void	startdrawclock(void);
+
 #pragma	varargck	argpos	warn	1
 #pragma	varargck	argpos	dprint	1

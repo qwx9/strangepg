@@ -5,7 +5,6 @@ TARG=\
 
 OFILES=\
 	strpg.$O\
-	cmd/cmd.$O\
 	draw/draw.$O\
 	fs/fs.$O\
 	fs/gfa.$O\

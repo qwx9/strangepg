@@ -143,11 +143,12 @@ rendershapes(Graph *g)
 			d.v.y = p.y;
 	}
 	g->dim = d;
+	reqdraw(Reqredraw);
 	return 0;
 }
 
 int
-render(Graph *g)
+renderlayout(Graph *g)
 {
 	if(g->nodes.len < 1){
 		werrstr("empty graph");

@@ -4,7 +4,7 @@
 /* addnodes() already spawns nodes with random coordinates, so
  * no need to do anything */
 
-static int
+static void
 compute(Graph *g)
 {
 	int x;
@@ -12,8 +12,6 @@ compute(Graph *g)
 
 	for(u=g->nodes.buf, ue=u+g->nodes.len, x=0; u<ue; u++, x+=Nodesz+10*Ptsz)
 		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
-	triggerdraw(DTrender);
-	return 0;
 }
 
 static Layout ll = {

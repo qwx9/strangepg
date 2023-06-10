@@ -1,9 +1,11 @@
 #include "strpg.h"
 
 int debug;
-int indexed;
 int haxx0rz;
 int noui;
+
+static int intype;
+static char **filev;
 
 void
 warn(char *fmt, ...)
@@ -26,14 +28,25 @@ dprint(char *fmt, ...)
 }
 
 void
+quit(void)
+{
+	sysquit();
+}
+
+void
 run(void)
 {
+	char *s;
+
 	init();
-	if(!noui)
-		resetdraw();
-	flushcmd();
-	if(!noui)
-		evloop();
+	while((s = *filev++) != nil)
+		if(loadfs(s, intype) < 0)
+			sysfatal("loadfs: could not load %s\n", s);
+	if(noui){
+		// FIXME: quit main thread, let the layoutees finish on their own
+		return;
+	}
+	evloop();
 }
 
 static void
@@ -47,10 +60,11 @@ parseargs(int argc, char **argv)
 {
 	char *s;
 
+	intype = FFgfa;
 	ARGBEGIN{
 	case 'D': debug = 1; break;
 	case 'b': haxx0rz = 1; break;
-	case 'i': indexed = 1; break;
+	case 'i': intype = FFindex; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
@@ -66,13 +80,7 @@ parseargs(int argc, char **argv)
 	case 's': drawstep = 1; break;
 	default: usage();
 	}ARGEND
-	while(*argv != nil){
-		if(pushcmd(COMload, strlen(*argv), indexed?FFindex:FFgfa, (uchar *)*argv) < 0)
-			warn("error loading %s: %r\n", *argv);
-		argv++;
-	}
-	if(argc > 1 && pushcmd(COMredraw, 0, 0, nil) < 0)
-		warn("error sending %s: %r\n", *argv);
+	filev = argv;
 	return 0;
 }
 
@@ -84,7 +92,7 @@ init(void)
 	initrend();
 	if(noui)
 		return;
-	initdrw();
+	initalldraw();
 	initui();
 	resetui(1);
 }

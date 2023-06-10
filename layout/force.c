@@ -28,7 +28,7 @@ repulsion(double d, double k)
     return k * k / d;
 }
 
-static int
+static void
 compute(Graph *g)
 {
 	int i, j, n;
@@ -40,7 +40,8 @@ compute(Graph *g)
 
 	if(g->edges.len < 2){
 		warn("no links to hand");
-		return -1;
+		// FIXME: error exit
+		return;
 	}
 	l = sqrt(view.dim.v.x*view.dim.v.x+view.dim.v.y*view.dim.v.y)
 		/ (16. / log10(g->nodes.len + g->edges.len));
@@ -58,8 +59,6 @@ compute(Graph *g)
 	u = g->nodes.buf;
 	ne = u + g->nodes.len;
 	for(n=0; n<Nrep; n++){
-		if(earlyexit())
-			break;
 		memset(Fu, 0, g->nodes.len * sizeof *Fu);
 		for(u=g->nodes.buf, i=0; u<ne; i++, u++)
 			for(v=g->nodes.buf; v<ne; v++){
@@ -98,15 +97,8 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
-		if(debug){
-			triggerdraw(DTrender);
-			sleep(10);
-		}else if(drawstep && n % 25 == 0)
-			triggerdraw(DTrender);
 	}
 	free(Fu);
-	triggerdraw(DTrender);
-	return 0;
 }
 
 static Layout ll = {

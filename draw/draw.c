@@ -30,14 +30,14 @@ drawguides(void)
 static int
 drawedge(Quad q, double w)
 {
-	dprint("drawedge %s\n", shitprint('q', &q));
+	//dprint("drawedge %s\n", shitprint('q', &q));
 	return drawbezier(q, w);
 }
 
 static int
 drawnode(Quad p, Quad q, int c)
 {
-	dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
+	//dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
 	drawquad2(p, q, 1, c);
 	return drawquad2(p, q, 0, c);
 }
@@ -45,7 +45,7 @@ drawnode(Quad p, Quad q, int c)
 static int
 drawnodevec(Quad q)
 {
-	dprint("drawnodevec %s\n", shitprint('q', &q));
+	//dprint("drawnodevec %s\n", shitprint('q', &q));
 	return drawline(q, 0, 1);
 }
 
@@ -87,7 +87,7 @@ drawworld(void)
 	Graph *g;
 
 	for(g=graphs; g<graphs+ngraphs; g++){
-		if(g->ll == nil)	// FIXME: weak check
+		if(g->layout.ll == nil)
 			continue;
 		dprint("drawworld: draw graph %#p\n", g);
 		drawedges(g);
@@ -126,4 +126,12 @@ redraw(void)
 	cleardraw();
 	drawworld();
 	return updatedraw();
+}
+
+/* threading and relaying commands is left up to the os stuff, screw it */
+int
+initalldraw(void)
+{
+	initsysdraw();
+	return 0;
 }

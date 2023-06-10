@@ -7,6 +7,7 @@ typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
 typedef struct Layout Layout;
+typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
 
@@ -56,9 +57,14 @@ enum{
 };
 struct Layout{
 	char *name;
-	int (*compute)(Graph*);
+	void (*compute)(Graph*);
 };
 extern int deflayout;
+
+struct Layouting{
+	int tid;
+	Layout *ll;
+};
 
 struct Level{
 	vlong noff;	/* absolute offset */
@@ -93,8 +99,7 @@ struct Edge{
 	int parent;
 };
 struct Graph{
-	int stale;
-	int working;
+	/* FIXME: put these into their own Fs struct: source file */
 	int type;
 	File *infile;
 	int level;
@@ -109,7 +114,7 @@ struct Graph{
 	Vec edges;
 	Vec nodes;
 	Htab *id2n;
-	Layout *ll;
+	Layouting layout;
 	Quad dim;
 	Vertex off;
 };
@@ -117,23 +122,17 @@ extern Graph *graphs;
 extern int ngraphs;
 
 enum{
-	COMload = 'l',
-	COMredraw = 'R',
-	COMnil,
-};
-
-enum{
 	FFgfa,
 	FFindex,
+	FFlevel,
 	FFnil,
 };
 
 enum{
-	DTrender,
-	DTreset,
-	DTredraw,
-	DTmove,
-	DTresetui,
+	Reqresetdraw,
+	Reqredraw,
+	Reqshallowdraw,
+	Reqresetui,
 };
 
 struct View{

@@ -50,15 +50,14 @@ Node	newnode(void);
 Edge	newedge(void);
 int	addnode(Graph*, char*, char*);
 int	addedge(Graph*, char*, char*, int, int, char*, double);
-void	rendernew(void);
 
 void	initlayout(void);
-int	dolayout(Graph*, int);
-int runlayout(Graph*);
-int	earlyexit(void);
-
-int	pushcmd(int, usize, int, uchar*);
-int	flushcmd(void);
+int	newlayout(Graph*, int);
+int	resetlayout(Graph*);
+void	stoplayout(Graph*);
+void	runlayout(Graph*);
+int	updatelayout(Graph*);
+void	putnode(Node*, int, int);
 
 #define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
 	(p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
@@ -68,7 +67,7 @@ int	flushcmd(void);
 	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
 void	initfs(void);
-Graph*	loadfs(int, char*);
+int	loadfs(char*, int);
 int	openfs(File*, char*, int);
 File*	graphopenfs(char*, int, Graph*);
 int	chlevel(Graph*, int);
@@ -92,22 +91,23 @@ vlong	sysftell(File*);
 vlong	sysseek(File*, vlong);
 void	sysflush(File*);
 void	sysclose(File*);
+void	sysquit(void);
 
-// FIXME: initourdraw?
-int	initdrw(void);	/* plan9 already has initdraw(2) */
+int	initalldraw(void);
+int	initsysdraw(void);
 int	resetdraw(void);
 int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);
-void	triggerdraw(uint);
-void	triggerlayout(Graph*);
+void	reqdraw(int);
 
 void	initrend(void);
-int	render(Graph*);
+int	renderlayout(Graph*);
 
-int	panview(Vertex);
+int	panview(Vector);
+int	zoomview(Vector);
 void	initui(void);
-int	evloop(void);
+void	evloop(void);
 void	errmsg(char*, ...);
 void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);

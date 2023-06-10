@@ -110,16 +110,6 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 }
 
 void
-rendernew(void)
-{
-	Graph *g;
-
-	for(g=graphs; g<graphs+ngraphs; g++)
-		if(g->stale)
-			triggerlayout(g);
-}
-
-void
 nukegraph(Graph *g)
 {
 	vecnuke(&g->edges);
@@ -140,6 +130,6 @@ initgraph(void)
 	g->levels = vec(sizeof(Level), 0);
 	g->level = 0;
 	g->id2n = idmap();
-	g->stale = 1;
+	g->layout.tid = -1;
 	return g;
 }

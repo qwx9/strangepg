@@ -1,50 +1,37 @@
 #include "strpg.h"
 #include <thread.h>
 
-static Channel *echan;
-
 static void
-wproc(void *gp)
+layproc(void *gp)
 {
 	Graph *g;
-	Layout *l;
+	Layout *ll;
 
-	threadsetname("workproc");
+	threadsetname("layproc");
 	g = gp;
-	assert((l = g->ll) != nil);
-	dprint("new job %d: compute layout %s for graph %#p\n", getpid(), l->name, g);
-	if(l->compute(g) < 0)
-		warn("compute: %r");
-	g->stale = 0;
-	g->working = 0;
-	nbrecvul(echan);
-	triggerdraw(DTredraw);
+	ll = g->layout.ll;
+	dprint("new job job %d layout %s g %#p\n", getpid(), ll->name, g);
+	ll->compute(g);
+	renderlayout(g);
+	g->layout.tid = -1;
 	threadexits(nil);
 }
 
-int
-earlyexit(void)
+void
+stoplayout(Graph *g)
 {
-	return !noui ? nbrecvul(echan) != 0 : 0;
+	if(g->layout.tid < 0)
+		return;
+	threadkill(g->layout.tid);
+	g->layout.tid = -1;
 }
 
-int
+void
 runlayout(Graph *g)
 {
-	if(echan == nil && (echan = chancreate(sizeof(ulong), 0)) == nil)
-		sysfatal("chancreate: %r");
-	dprint("runlayout %s %#p\n", g->ll == nil ? "" : g->ll->name, g);
-	if(g->working){
-		nbsendul(echan, 0);
-		while(wait() != nil){
-			warn("runlayout: still waiting\n");
-			sleep(10);
-		}
-	}
-	g->working = 1;
-	if(noui)
-		wproc(g);
-	else if(proccreate(wproc, g, mainstacksize) < 0)
-		sysfatal("proccreate: %r");
-	return 0;
+	stoplayout(g);
+	if((g->layout.tid = proccreate(layproc, g, mainstacksize)) < 0)
+		sysfatal("proccreate drawproc: %r");
+	if(!noui)
+		startdrawclock();
 }

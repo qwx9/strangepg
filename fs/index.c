@@ -126,8 +126,7 @@ loadlevel(Graph *g, int lvl)
 			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
 	}
 	g->level = lvl;
-	g->stale = 1;	/* FIXME: stale sooner? real time updates */
-	return 0;
+	return updatelayout(g);
 }
 /* the actual dictionary alone does not take much memory */
 static Graph *

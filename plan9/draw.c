@@ -68,6 +68,8 @@ static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
 static Image *viewfb;
+static Channel *drawc, *ticc;
+static int ttid = -1;
 
 static Image *
 eallocimage(Rectangle r, ulong chan, int repl, ulong col)
@@ -284,9 +286,86 @@ resetdraw(void)
 	return 0;
 }
 
+static void
+drawproc(void *)
+{
+	int req;
+	Graph *g;
+
+	enum{
+		Aredraw,
+		Arefresh,
+		Aend,
+	};
+	Alt a[] = {
+		[Aredraw] {drawc, &req, CHANRCV},
+		[Arefresh] {ticc, &g, CHANRCV},
+		[Aend] {nil, nil, CHANEND},
+	};
+	resetdraw();
+	for(;;){
+		switch(alt(a)){
+		case Aredraw:
+			switch(req){
+			case Reqresetdraw: resetdraw(); resetui(0); redraw(); break;
+			case Reqresetui: resetui(1); redraw(); break;
+			case Reqredraw: redraw(); break;
+			case Reqshallowdraw: shallowdraw(); break;
+			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
+			}
+			break;
+		case Arefresh: renderlayout(g); redraw(); break;
+		}
+	}
+}
+
+void
+reqdraw(int r)
+{
+	nbsend(drawc, &r);
+}
+
+static void
+ticproc(void *)
+{
+	int n;
+	vlong t, t0, Δt, step;
+	Graph *g;
+
+	t0 = nsec();
+	step = drawstep ? Nsec/1000 : Nsec/72;
+	for(;;){
+		for(g=graphs, n=0; g<graphs+ngraphs; g++)
+			if(g->layout.tid >= 0){
+				dprint("tic: refresh %#p\n", g);
+				sendp(ticc, g);
+				n++;
+			}
+		if(n == 0)
+			break;
+		reqdraw(Reqredraw);
+		t = nsec();
+		Δt = t - t0;
+		t0 += step * (1 + Δt / step);
+		if(Δt < step)
+			sleep((step - Δt) / 1000000);
+	}
+	ttid = -1;
+	threadexits(nil);
+}
+
+void
+startdrawclock(void)
+{
+	if(ttid >= 0)
+		return;
+	if((ttid = proccreate(ticproc, nil, mainstacksize)) < 0)
+		sysfatal("proccreate ticproc: %r");
+}
+
 // FIXME: colors/styles do not belong here
 int
-initdrw(void)
+initsysdraw(void)
 {
 	Pal *p;
 
@@ -319,5 +398,10 @@ initdrw(void)
 	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	if((drawc = chancreate(sizeof(int), 2)) == nil
+	|| (ticc = chancreate(sizeof(Graph*), 16)) == nil)
+		sysfatal("chancreate: %r");
+	if(proccreate(drawproc, nil, mainstacksize) < 0)
+		sysfatal("proccreate drawproc: %r");
 	return 0;
 }
