@@ -20,7 +20,7 @@ faceyourfears(Graph *g, Node *u)
 
 	θ = 0.;
 	n = 0;
-	us = vecindexof(&g->nodes, u);
+	us = u - g->nodes;
 	/* face outgoing */
 	if(u->out.len > 0){
 		for(ip=u->out.buf, ie=ip+u->out.len; ip<ie; ip++){
@@ -37,7 +37,7 @@ faceyourfears(Graph *g, Node *u)
 					continue;
 				}
 			}
-			v = vecp(&g->nodes, them);
+			v = g->nodes + them;
 			Δ = subpt2(v->vrect.o, u->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
@@ -63,7 +63,7 @@ faceyourfears(Graph *g, Node *u)
 					continue;
 				}
 			}
-			v = vecp(&g->nodes, them);
+			v = g->nodes + them;
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			/* FIXME: see comment above */
@@ -128,8 +128,8 @@ rendershapes(Graph *g)
 	Quad d;
 	Vertex p;
 
-	for(d=ZQ, u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
-		dprint("render node %s\n", shitprint('q', &u->vrect));
+	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+		dprint("render node %.1f,%.1f:%.1f,%.1f\n", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
 		rendernode(g, u);
 		p = addpt2(u->vrect.o, u->vrect.v);
@@ -150,7 +150,7 @@ rendershapes(Graph *g)
 int
 renderlayout(Graph *g)
 {
-	if(g->nodes.len < 1){
+	if(dylen(g->nodes) < 1){
 		werrstr("empty graph");
 		return -1;
 	}

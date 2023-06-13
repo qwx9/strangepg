@@ -38,7 +38,6 @@ fulltrotsky(Node *lev, Graph *g)
 static Node *
 readnode(File *f, Graph *g)
 {
-	usize i;
 	vlong parent;
 	Node n;
 
@@ -48,9 +47,9 @@ readnode(File *f, Graph *g)
 	n.w = get64(f);
 	parent = get64(f);
 	if(parent >= 0)
-		fulltrotsky(vecp(&g->nodes, parent), g);
-	veccopy(&g->nodes, &n, &i);
-	return (Node *)g->nodes.buf + i;
+		fulltrotsky(g->nodes+parent, g);
+	dypush(g->nodes, n);
+	return g->nodes + dylen(g->nodes) - 1;
 }
 /* don't try to be clever about reclaiming edges for now,
  * just delete old, add new */
@@ -67,8 +66,8 @@ readedge(File *f, Graph *g)
 	e.w = get64(f);
 	e.parent = get64(f);
 	veccopy(&g->edges, &e, &i);
-	up = vecp(&g->nodes, e.from >> 1);
-	vp = vecp(&g->nodes, e.to >> 1);
+	up = g->nodes + (e.from >> 1);
+	vp = g->nodes + (e.to >> 1);
 	veccopy(&up->out, &i, nil);
 	veccopy(&vp->in, &i, nil);
 	return (Edge *)g->edges.buf + i;
@@ -116,8 +115,8 @@ loadlevel(Graph *g, int lvl)
 		for(i=0; i<l->enel; i++)
 			readedge(f, g);
 	}
-	for(i=0; i<g->nodes.len; i++){
-		Node *n = vecp(&g->nodes, i);
+	for(i=0; i<dylen(g->nodes); i++){
+		Node *n = g->nodes + i;
 		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
 	}
 	for(i=0; i<g->edges.len; i++){

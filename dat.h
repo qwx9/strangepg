@@ -113,7 +113,7 @@ struct Graph{
 	usize nlevels;
 	Vec levels;
 	Vec edges;
-	Vec nodes;
+	Node *nodes;
 	Htab *id2n;
 	Layouting layout;
 	Quad dim;

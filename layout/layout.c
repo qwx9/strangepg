@@ -39,7 +39,7 @@ newlayout(Graph *g, int type)
 	Layout *ll;
 
 	stoplayout(g);
-	if(g->nodes.len < 1){
+	if(dylen(g->nodes) < 1){
 		werrstr("empty graph");
 		return -1;
 	}

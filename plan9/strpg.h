@@ -3,6 +3,7 @@
 #include <geometry.h>
 #include "dat.h"
 #include "fns.h"
+#include "dynar.h"
 
 void	startdrawclock(void);
 

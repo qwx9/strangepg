@@ -79,10 +79,10 @@ drawnodes(Graph *g)
 	Node *u, *ue;
 
 	dprint("drawnodes dim %.1f,%.1f\n", g->dim.v.x, g->dim.v.y);
-	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
+	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u->θ, u - (Node *)g->nodes.buf);
+		drawnode(u->q1, u->q2, u->θ, u - g->nodes);
 	}
 	return 0;
 }
