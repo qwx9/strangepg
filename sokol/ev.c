@@ -12,9 +12,8 @@ evloop(void)
 	struct timespec t;
 
 	for(;;){
-		t.tv_sec = 0;
-		t.tv_nsec = 1000000;
-		nanosleep(&t, NULL);
+		glfwWaitEvents();
+		/* FIXME: ... */
 	}
 }
 

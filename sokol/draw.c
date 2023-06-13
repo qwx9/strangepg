@@ -5,7 +5,7 @@
 #include "drw.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
-#define SOKOL_DEBUG
+//#define SOKOL_DEBUG
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_gp.h"
@@ -33,6 +33,7 @@ drawline(Quad q, double w, int emph)
 int
 drawbezier(Quad q, double w)
 {
+	// FIXME
 	//q = centerscalequad(q);
 	return drawline(q, w, 0);
 }
@@ -85,7 +86,6 @@ flushdraw(void)
 	sg_end_pass();
 	sg_commit();
 	glfwSwapBuffers(win);
-	glfwPollEvents();	// FIXME: blocking?
 }
 
 void
@@ -107,32 +107,6 @@ reqdraw(int r)
 }
 
 static void
-mkwin(void)
-{
-	if((win = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
-		sysfatal("glfwCreateWindow");
-	glfwMakeContextCurrent(win);
-	glfwSwapInterval(1000/60.f);	// FIXME: ?
-		// this essentially dispenses us from needing a time proc
-}
-
-static void
-initgl(void)
-{
-	int w, h;
-
-	if(!glfwInit())
-		sysfatal("glfwInit");
-	mkwin();
-	sg_desc desc = { .logger.func = slog_func };
-	sg_setup(&desc);
-	assert(sg_isvalid());
-	sgp_desc sgpdesc = {0};
-	sgp_setup(&sgpdesc);
-	assert(sgp_is_valid());
-}
-
-static void
 resetdraw(void)
 {
 	// FIXME: ?
@@ -146,30 +120,30 @@ drawproc(void *ch)
 	chan_t *chans[1];
 	int *chanv[nelem(chans)];
 
-	initgl();
 	chans[0] = ch;
 	chanv[0] = &c;	/* FIXME: what the fuck this api */
+	glfwMakeContextCurrent(win);
+	glfwSwapInterval(1000/60.f);	// FIXME: can be paused, set to 0?
+	glfwGetFramebufferSize(win, &w, &h);	// FIXME: any reason why we need to check every frame? resize events aren't events?
 	while(!glfwWindowShouldClose(win)){
-		glfwGetFramebufferSize(win, &w, &h);
-		sgp_begin(w, h);
-		// FIXME: blocking recv
+		// FIXME: blocking recv: put to sleep until we wake it up
+		// see pthreads or fix chans
 		switch(chan_select(chans, nelem(chans), chanv, NULL, 0, NULL)){
 		case 0:
+			sgp_begin(w, h);
 			switch(c){
 			case Reqresetdraw: resetdraw(); resetui(1); redraw(); break;
 			case Reqredraw: redraw(); break;
 			case Reqshallowdraw: shallowdraw(); break;
 			}
+			flushdraw();
 			break;
 		case -1:
-			redraw();	// FIXME
+			//redraw();	// FIXME
+			lsleep(1000000);
 			break;
 		}
-		flushdraw();
 	}
-	sgp_shutdown();
-	sg_shutdown();
-	glfwTerminate();
 	pthread_exit(NULL);
 }
 
@@ -177,8 +151,39 @@ static void
 quitdraw(void)
 {
 	pthread_kill(wth, SIGTERM);
+	sgp_shutdown();
+	sg_shutdown();
+	glfwTerminate();
 }
 
+void
+glerr(int err, const char *desc)
+{
+	fprintf(stderr, "glerr %d: %s\n", err, desc);
+}
+
+static void
+initgl(void)
+{
+	int w, h;
+	sg_desc desc = {
+		.logger.func = slog_func,
+	};
+	sgp_desc sgpdesc = { 0 };
+
+	if(!glfwInit())
+		sysfatal("glfwInit");
+	glfwSetErrorCallback(glerr);
+	if((win = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
+		sysfatal("glfwCreateWindow");
+	glfwMakeContextCurrent(win);
+	sg_setup(&desc);
+	assert(sg_isvalid());
+	sgp_setup(&sgpdesc);
+	assert(sgp_is_valid());
+}
+
+// FIXME: error handling
 int
 initsysdraw(void)
 {
@@ -186,9 +191,10 @@ initsysdraw(void)
 
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Vdefw, Vdefh);
-	atexit(quitdraw);
+	initgl();
 	if((drawc = chan_init(sizeof(int))) == nil)
 		sysfatal("initsysdraw: chancreate");
+	atexit(quitdraw);
 	if((r = pthread_create(&wth, NULL, drawproc, drawc)) != 0)
 		sysfatal("initsysdraw: pthread_create: %d", r);
 	return 0;
