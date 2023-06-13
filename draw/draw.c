@@ -15,7 +15,9 @@ Quad
 centerscalequad(Quad q)
 {
 	q.v = addpt2(q.o, q.v);
-	return (Quad){centerscalept2(q.o), centerscalept2(q.v)};
+	q.o = centerscalept2(q.o);
+	q.v = centerscalept2(q.v);
+	return q;
 }
 
 void
@@ -34,7 +36,6 @@ drawedge(Quad q, double w)
 {
 	dprint("drawedge %.1f,%.1f:%.1f,%.1f\n", q.o.x, q.o.y, q.v.x, q.v.y);
 	q.v = subpt2(q.v, q.o);	// FIXME
-	q = centerscalequad(q);
 	return drawbezier(q, w);
 }
 
@@ -42,8 +43,6 @@ static int
 drawnode(Quad p, Quad q, double θ, int c)
 {
 	dprint("drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f\n", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	p = centerscalequad(p);
-	q = centerscalequad(q);
 	drawquad2(p, q, θ, 1, c);
 	return drawquad2(p, q, θ, 0, c);
 }
@@ -52,7 +51,6 @@ static int
 drawnodevec(Quad q)
 {
 	dprint("drawnodevec %.1f,%.1f:%.1f,%.1f\n", q.o.x, q.o.y, q.v.x, q.v.y);
-	q = centerscalequad(q);
 	return drawline(q, 0, 1);
 }
 

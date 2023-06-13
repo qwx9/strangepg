@@ -121,9 +121,11 @@ drawquad2(Quad q1, Quad q2, double, int sh, int c)
 
 	if(haxx0rz && (showarrows || sh))
 		return 0;
+	q1 = centerscalequad(q1);
+	q2 = centerscalequad(q2);
 	r1 = Rpt(v2p(q1.o), v2p(q2.v));
 	r2 = Rpt(v2p(q2.o), v2p(q1.v));
-	if(!rectXrect(r1, viewfb->r) && !rectXrect(r2, viewfb->r))
+	if(!rectXrect(canonrect(r1), viewfb->r) && !rectXrect(canonrect(r2), viewfb->r))
 		return 0;
 	cp = &nodepal[c % nelem(nodepal)];
 	Point p[] = {
@@ -147,9 +149,8 @@ drawquad(Quad q, double, int w)
 {
 	Rectangle r;
 
-	r = Rpt(v2p(q.o), v2p(q.v));
-	r = canonrect(r);
-	if(!rectXrect(r, viewfb->r))
+	r = centerscalerect(q);
+	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	Point p[] = {
 		r.min,
@@ -171,7 +172,7 @@ drawbezier(Quad q, double w)
 	Rectangle r;
 
 	w -= 1.;
-	r = Rpt(v2p(q.o), v2p(q.v));
+	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
@@ -198,7 +199,7 @@ drawline(Quad q, double w, int emph)
 	Rectangle r;
 	Image *c;
 
-	r = Rpt(v2p(q.o), v2p(q.v));
+	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	switch(emph){
