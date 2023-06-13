@@ -107,13 +107,15 @@ Point3 normvec3(Point3);
 #define nil NULL	// better for them to be interchangeable here
 
 enum{
-	Vdefw = 800,
-	Vdefh = 600,
+	Vdefw = 1280,
+	Vdefh = 800,
 };
 
-#include "khash.h"
+#include "lib/khash.h"
+KHASH_MAP_INIT_STR(id, usize)
 #include "dat.h"
 #include "fns.h"
+#include "dynar.h"
 
 void	werrstr(char*, ...);
 void	sysfatal(char*, ...);

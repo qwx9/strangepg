@@ -11,7 +11,6 @@ typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
 
-// FIXME: possibly avoidable; see after command impl
 #pragma incomplete File
 
 enum{
@@ -27,10 +26,6 @@ struct Vec{
 	usize bufsz;
 };
 
-/* FIXME: get rid of this, isolate it in its own corner, with
- * pragma incomplete or w/e */
-#include "khash.h"
-KHASH_MAP_INIT_STR(id, usize)
 #define Htab khash_t(id)
 
 typedef Point2 Vertex;

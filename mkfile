@@ -32,8 +32,9 @@ HFILES=\
 	draw/drw.h\
 	fs/fs.h\
 	layout/layout.h\
+	lib/khash.h\
 	plan9/strpg.h\
-	util/khash.h\
+	util/dynar.h\
 
 </sys/src/cmd/mkmany
 
