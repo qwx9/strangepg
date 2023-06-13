@@ -50,7 +50,7 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Dbs] [-l layout] [FILE]\n", argv0);
+	sysfatal("usage: %s [-Dbins] [-l layout] [FILE]\n", argv0);
 }
 
 int
