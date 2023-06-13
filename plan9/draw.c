@@ -224,7 +224,6 @@ static int
 resetdraw(void)
 {
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	view.center = divpt2(view.dim.v, 2);
 	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);

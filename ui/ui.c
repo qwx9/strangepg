@@ -90,6 +90,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 void
 resetui(int all)
 {
+	view.center = divpt2(view.dim.v, 2);
+	dprint("resetui center %.1f,%.1f\n", view.center.x, view.center.y);
 	panmax = view.dim.v;
 	if(all){
 		view.pan = ZV;

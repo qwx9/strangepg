@@ -5,6 +5,7 @@
 #include "drw.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
+#define SOKOL_DEBUG
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_gp.h"
@@ -19,10 +20,11 @@ static sg_pass_action pass_action; // FIXME
 int
 drawline(Quad q, double w, int emph)
 {
+	q = centerscalequad(q);
 	sgp_push_transform();
-	sgp_translate(q.o.x, q.o.y);
-	sgp_set_color(1.0f, 0.0f, 0.0f, 1.0f);
-	sgp_draw_filled_rect(0, 0, q.v.x - q.o.x, q.v.y - q.o.y);
+	sgp_set_color(0.0f, 1.0f, 0.0f, 1.0f);
+	//sgp_scale(view.zoom, view.zoom);
+	sgp_draw_line(q.o.x, q.o.y, q.v.x, q.v.y);
 	sgp_reset_color();
 	sgp_pop_transform();
 	return 0;
@@ -31,18 +33,19 @@ drawline(Quad q, double w, int emph)
 int
 drawbezier(Quad q, double w)
 {
-	return 0;
+	//q = centerscalequad(q);
+	return drawline(q, w, 0);
 }
 
 int
 drawquad(Quad q, double θ, int)
 {
-	// FIXME: weight?
+	q = centerscalequad(q);	// FIXME: part of transform?
 	sgp_push_transform();
-	sgp_translate(q.o.x, q.o.y);
+	//sgp_scale(view.zoom, view.zoom);
+	sgp_translate(view.pan.x, view.pan.y);
 	sgp_set_color(1.0f, 0.0f, 0.0f, 1.0f);
-	sgp_rotate(θ);
-	sgp_draw_filled_rect(0, 0, q.v.x - q.o.x, q.v.y - q.o.y);
+	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x - q.o.x, q.v.y - q.o.y);
 	sgp_reset_color();
 	sgp_pop_transform();
 	return 0;
@@ -51,12 +54,20 @@ drawquad(Quad q, double θ, int)
 int
 drawquad2(Quad q1, Quad q2, double θ, int, int)
 {
-	// FIXME
-	sgp_push_transform();
-	sgp_translate(q1.o.x, q1.o.y);
+	Vertex v;
+
+	q1 = centerscalequad(q1);	// FIXME: part of transform?
+	q2 = centerscalequad(q2);
 	sgp_set_color(1.0f, 1.0f, 0.0f, 1.0f);
-	sgp_rotate(θ);
-	sgp_draw_filled_rect(0, 0, q2.v.x - q1.v.x, q2.v.y - q1.v.y);
+	sgp_draw_line(q1.o.x, q1.o.y, q1.v.x, q1.v.y);
+	//sgp_draw_line(q2.o.x, q2.o.y, q2.v.x, q2.v.y);
+	sgp_reset_color();
+	sgp_push_transform();
+	sgp_set_color(1.0f, 0.0f, 1.0f, 1.0f);
+	//sgp_rotate(θ);
+	//sgp_scale(view.zoom, view.zoom);
+	//sgp_translate(view.pan.x, view.pan.y);
+	sgp_draw_filled_rect(q1.o.x, q1.o.y, q1.v.x - q1.o.x, q1.v.y - q1.o.y);
 	sgp_reset_color();
 	sgp_pop_transform();
 	return 0;
@@ -101,7 +112,8 @@ mkwin(void)
 	if((win = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
 		sysfatal("glfwCreateWindow");
 	glfwMakeContextCurrent(win);
-	glfwSwapInterval(1);	// FIXME: what is this?
+	glfwSwapInterval(1000/60.f);	// FIXME: ?
+		// this essentially dispenses us from needing a time proc
 }
 
 static void
@@ -137,17 +149,6 @@ drawproc(void *ch)
 	initgl();
 	chans[0] = ch;
 	chanv[0] = &c;	/* FIXME: what the fuck this api */
-
-	/* default pass action, clear to red */
-/*
-	pass_action = (sg_pass_action){
-	    .colors[0] = {
-	    	.load_action = SG_LOADACTION_CLEAR,
-	    	.clear_value = { 1.0f, 0.0f, 0.0f, 1.0f },
-	    },
-	};
-*/
-
 	while(!glfwWindowShouldClose(win)){
 		glfwGetFramebufferSize(win, &w, &h);
 		sgp_begin(w, h);

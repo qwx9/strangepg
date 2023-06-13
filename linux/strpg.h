@@ -107,7 +107,7 @@ Point3 normvec3(Point3);
 #define nil NULL	// better for them to be interchangeable here
 
 enum{
-	Vdefw = 1280,
+	Vdefw = 800,
 	Vdefh = 800,
 };
 
