@@ -95,7 +95,7 @@ void	sysquit(void);
 
 int	initalldraw(void);
 int	initsysdraw(void);
-int	resetdraw(void);
+// FIXME: ?
 int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);

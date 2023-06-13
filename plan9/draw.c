@@ -114,15 +114,13 @@ centerscalerect(Quad q)
 }
 
 int
-drawquad2(Quad q1, Quad q2, int sh, int c)
+drawquad2(Quad q1, Quad q2, double, int sh, int c)
 {
 	Rectangle r1, r2;
 	Pal *cp;
 
 	if(haxx0rz && (showarrows || sh))
 		return 0;
-	q1 = centerscalequad(q1);
-	q2 = centerscalequad(q2);
 	r1 = Rpt(v2p(q1.o), v2p(q2.v));
 	r2 = Rpt(v2p(q2.o), v2p(q1.v));
 	if(!rectXrect(r1, viewfb->r) && !rectXrect(r2, viewfb->r))
@@ -145,11 +143,12 @@ drawquad2(Quad q1, Quad q2, int sh, int c)
 }
 
 int
-drawquad(Quad q, int w)
+drawquad(Quad q, double, int w)
 {
 	Rectangle r;
 
-	r = canonrect(centerscalerect(q));
+	r = Rpt(v2p(q.o), v2p(q.v));
+	r = canonrect(r);
 	if(!rectXrect(r, viewfb->r))
 		return 0;
 	Point p[] = {
@@ -172,8 +171,7 @@ drawbezier(Quad q, double w)
 	Rectangle r;
 
 	w -= 1.;
-	q.v = subpt2(q.v, q.o);	// FIXME
-	r = centerscalerect(q);
+	r = Rpt(v2p(q.o), v2p(q.v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
@@ -200,7 +198,7 @@ drawline(Quad q, double w, int emph)
 	Rectangle r;
 	Image *c;
 
-	r = centerscalerect(q);
+	r = Rpt(v2p(q.o), v2p(q.v));
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	switch(emph){
@@ -219,6 +217,19 @@ flushdraw(void)
 	drawop(screen, screen->r, col[Cscr], nil, ZP, S);
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
 	flushimage(display, 1);
+}
+
+static int
+resetdraw(void)
+{
+	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	view.center = divpt2(view.dim.v, 2);
+	viewr = rectsubpt(screen->r, screen->r.min);
+	dprint("resetdraw %R\n", viewr);
+	freeimage(viewfb);
+	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, haxx0rz ? DNofill : DTransparent);
+	draw(screen, screen->r, col[Cscr], nil, ZP);
+	return 0;
 }
 
 void
@@ -245,6 +256,7 @@ cleardraw(void)
 		else if(q.min.y > 0)
 			g->off.y = -q.min.y;
 	}
+	// FIXME: ???
 	if(!eqrect(r, viewfb->r)){
 		view.dim.v = p2v(r.max);
 		resetdraw();
@@ -273,19 +285,6 @@ cleardraw(void)
 	}
 }
 
-int
-resetdraw(void)
-{
-	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	view.center = divpt2(view.dim.v, 2);
-	viewr = rectsubpt(screen->r, screen->r.min);
-	dprint("resetdraw %R\n", viewr);
-	freeimage(viewfb);
-	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, haxx0rz ? DNofill : DTransparent);
-	draw(screen, screen->r, col[Cscr], nil, ZP);
-	return 0;
-}
-
 static void
 drawproc(void *)
 {
@@ -307,14 +306,14 @@ drawproc(void *)
 		switch(alt(a)){
 		case Aredraw:
 			switch(req){
-			case Reqresetdraw: resetdraw(); resetui(0); redraw(); break;
-			case Reqresetui: resetui(1); redraw(); break;
-			case Reqredraw: redraw(); break;
-			case Reqshallowdraw: shallowdraw(); break;
+			case Reqresetdraw: resetdraw(); resetui(1); redraw(); flushdraw(); break;
+			case Reqresetui: resetui(1); redraw(); flushdraw(); break;
+			case Reqredraw: redraw(); flushdraw(); break;
+			case Reqshallowdraw: shallowdraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
-		case Arefresh: renderlayout(g); redraw(); break;
+		case Arefresh: renderlayout(g); redraw(); flushdraw(); break;
 		}
 	}
 }

@@ -27,25 +27,32 @@ drawguides(void)
 
 // shitprint: maybe just do qk1's va()? but no custom fmt's
 
+/* FIXME: the interfaces here need refactoring, too cumbersome and
+ * redundant */
 static int
 drawedge(Quad q, double w)
 {
-	//dprint("drawedge %s\n", shitprint('q', &q));
+	dprint("drawedge %.1f,%.1f:%.1f,%.1f\n", q.o.x, q.o.y, q.v.x, q.v.y);
+	q.v = subpt2(q.v, q.o);	// FIXME
+	q = centerscalequad(q);
 	return drawbezier(q, w);
 }
 
 static int
-drawnode(Quad p, Quad q, int c)
+drawnode(Quad p, Quad q, double θ, int c)
 {
-	//dprint("drawnode2 %s %s\n", shitprint('q', &p), shitprint('q', &q));
-	drawquad2(p, q, 1, c);
-	return drawquad2(p, q, 0, c);
+	dprint("drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f\n", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
+	p = centerscalequad(p);
+	q = centerscalequad(q);
+	drawquad2(p, q, θ, 1, c);
+	return drawquad2(p, q, θ, 0, c);
 }
 
 static int
 drawnodevec(Quad q)
 {
-	//dprint("drawnodevec %s\n", shitprint('q', &q));
+	dprint("drawnodevec %.1f,%.1f:%.1f,%.1f\n", q.o.x, q.o.y, q.v.x, q.v.y);
+	q = centerscalequad(q);
 	return drawline(q, 0, 1);
 }
 
@@ -56,7 +63,6 @@ drawedges(Graph *g)
 	Node *u, *v;
 	Quad q;
 
-	// FIXME: orientation: at least choose a corner
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
 		u = e2n(g, e->from);
@@ -72,11 +78,11 @@ drawnodes(Graph *g)
 {
 	Node *u, *ue;
 
-	dprint("drawnodes dim %s\n", shitprint('v', &g->dim.v));
+	dprint("drawnodes dim %.1f,%.1f\n", g->dim.v.x, g->dim.v.y);
 	for(u=g->nodes.buf, ue=u+g->nodes.len; u<ue; u++){
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u - (Node *)g->nodes.buf);
+		drawnode(u->q1, u->q2, u->θ, u - (Node *)g->nodes.buf);
 	}
 	return 0;
 }
@@ -108,7 +114,6 @@ int
 updatedraw(void)
 {
 	drawui();
-	flushdraw();
 	return 0;
 }
 
