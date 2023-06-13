@@ -117,3 +117,5 @@ enum{
 
 void	werrstr(char*, ...);
 void	sysfatal(char*, ...);
+
+void	lsleep(vlong);

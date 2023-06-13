@@ -63,6 +63,7 @@ extern int deflayout;
 
 struct Layouting{
 	int tid;
+	void *aux;
 	Layout *ll;
 };
 

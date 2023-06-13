@@ -4,6 +4,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <time.h>
+#include <pthread.h>
 
 char *argv0;
 
@@ -14,6 +16,12 @@ char *
 shitprint(int, void *)
 {
 	return "";
+}
+
+void
+sysquit(void)
+{
+	pthread_exit(NULL);
 }
 
 int
@@ -72,6 +80,15 @@ msec(void)
 		return -1;
 	}
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+void
+lsleep(vlong ns)
+{
+	struct timespec t = {0};
+
+	t.tv_nsec = ns;
+	nanosleep(&t, NULL);
 }
 
 char *

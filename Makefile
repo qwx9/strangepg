@@ -5,8 +5,15 @@ INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
 
 OBJS:=\
-	strpg.o\
-	cmd/cmd.o\
+	lib/chan.o\
+	lib/queue.o\
+	linux/fs.o\
+	linux/layout.o\
+	linux/main.o\
+	linux/sys.o\
+	sokol/flextgl/flextGL.o\
+	sokol/draw.o\
+	sokol/ev.o\
 	draw/draw.o\
 	fs/fs.o\
 	fs/gfa.o\
@@ -17,13 +24,6 @@ OBJS:=\
 	layout/force.o\
 	layout/layout.o\
 	layout/random.o\
-	linux/draw.o\
-	linux/fs.o\
-	linux/layout.o\
-	linux/main.o\
-	linux/sdl.o\
-	linux/sys.o\
-	linux/ui.o\
 	rend/rend.o\
 	ui/ui.o\
 	util/geom.o\
@@ -31,6 +31,7 @@ OBJS:=\
 	util/htab.o\
 	util/nrand.o\
 	util/vec.o\
+	strpg.o\
 
 CC?= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -40,12 +41,12 @@ CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 # _XOPEN_SOURCE: M_PI et al
 # _POSIX_C_SOURCE >= 200809L: getline
 CFLAGS+= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=500
+CFLAGS+= -pthread
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
 	-Ilinux\
-	-Icmd\
 	-Idraw\
 	-Ifs\
 	-Igraph\
@@ -57,8 +58,7 @@ IFLAGS?=\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
-LDLIBS?= -lSDL2 -lm
-#LDLIBS?= -lSDL2 -lSDL2_gfx -lm
+LDLIBS?= -lGL -lglfw -lm
 
 ifdef DEBUG
 	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual                \
@@ -98,8 +98,8 @@ prepare:
 $(BINTARGET):	$(OBJS)
 	$(CC) $(OBJS) -o $(BINTARGET) $(LDLIBS) $(LDFLAGS)
 
-$(O)/%.o:	%.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+#$(O)/%.o:	%.c
+#	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 install:
 	install -d -m755 $(BINDIR)
