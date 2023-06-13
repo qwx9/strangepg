@@ -42,10 +42,8 @@ run(void)
 	while((s = *filev++) != nil)
 		if(loadfs(s, intype) < 0)
 			sysfatal("loadfs: could not load %s\n", s);
-	if(noui){
-		// FIXME: quit main thread, let the layoutees finish on their own
-		return;
-	}
+	if(noui)
+		quit();
 	evloop();
 }
 

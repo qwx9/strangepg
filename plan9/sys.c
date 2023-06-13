@@ -4,7 +4,11 @@
 void
 sysquit(void)
 {
-	threadexitsall(nil);
+	/* FIXME: inelegant */
+	if(noui)
+		threadexits(nil);
+	else
+		threadexitsall(nil);
 }
 
 /* FIXME: no fmt equivalent?? other than individual functions */
