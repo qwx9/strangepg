@@ -67,6 +67,7 @@ gfa1path(Graph *, File *)
 static Graph*
 loadgfa1(char *path)
 {
+	int nerr;
 	int (*parse)(Graph*, File*);
 	Graph *g;
 	File *f;
@@ -91,12 +92,13 @@ loadgfa1(char *path)
 		}
 	}
 	dprint("done loading gfa\n");
+	nerr = f->err;
 	closefs(f);
 	free(g->infile);
 	g->infile = nil;
 	idnuke(g->id2n);
 	g->id2n = nil;
-	if(f->err == 10){
+	if(nerr == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
