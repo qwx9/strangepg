@@ -67,7 +67,6 @@ gfa1path(Graph *, File *)
 static Graph*
 loadgfa1(char *path)
 {
-	int nerr;
 	int (*parse)(Graph*, File*);
 	Graph *g;
 	File *f;
@@ -92,13 +91,10 @@ loadgfa1(char *path)
 		}
 	}
 	dprint("done loading gfa\n");
-	nerr = f->err;
 	closefs(f);
-	free(g->infile);
-	g->infile = nil;
 	idnuke(g->id2n);
 	g->id2n = nil;
-	if(nerr == 10){
+	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
@@ -112,7 +108,6 @@ save(Graph *)
 	return 0;
 }
 
-// FIXME: more handles? readnode/readedge, etc?
 static Filefmt ff = {
 	.name = "gfa",
 	.load = loadgfa1,
