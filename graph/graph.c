@@ -29,7 +29,8 @@ id2n(Graph *g, char *k)
 
 	if(idget(g->id2n, k, &v) < 0)
 		return nil;
-	return vecp(&g->nodes, v);
+	assert(v < dylen(g->nodes));
+	return g->nodes + v;
 }
 
 /* n is an unshifted packed node with orientation */
@@ -37,8 +38,8 @@ Node *
 e2n(Graph *g, usize n)
 {
 	n >>= 1;
-	assert(n < g->nodes.len);
-	return vecp(&g->nodes, n);
+	assert(n < dylen(g->nodes));
+	return g->nodes + n;
 }
 
 /* don't know about this... */
@@ -66,10 +67,9 @@ newedge(void)
 int
 addnode(Graph *g, char *id, char *)
 {
-	usize i;
 	Node n;
 
-	dprint("addnode %s %#p (vec sz %zd elsz %d)\n", id, (uchar *)g->nodes.buf + g->nodes.len-1, g->nodes.len, g->nodes.elsz);
+	dprint("addnode id=%s (vec sz %zd)\n", id, dylen(g->nodes));
 	if(id2n(g, id) != nil){
 		werrstr("duplicate node id");
 		return 0;
@@ -79,8 +79,8 @@ addnode(Graph *g, char *id, char *)
 	n.out = vec(sizeof(usize), 0);
 	n.w = 1.0;
 	n.parent = -1;
-	veccopy(&g->nodes, &n, &i);
-	return idput(g->id2n, estrdup(id), i);
+	dypush(g->nodes, n);
+	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
 }
 
 /* id's in edges are always packed with direction bit */
@@ -101,8 +101,8 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	if((u = id2n(g, from)) == nil
 	|| (v = id2n(g, to)) == nil)
 		return -1;
-	e.from = (u - (Node *)g->nodes.buf) << 1 | d1;
-	e.to =  (v - (Node *)g->nodes.buf) << 1 | d2;
+	e.from = u - g->nodes << 1 | d1;
+	e.to =  v - g->nodes << 1 | d2;
 	veccopy(&g->edges, &e, &i);
 	veccopy(&u->out, &i, nil);
 	veccopy(&v->in, &i, nil);
@@ -113,7 +113,7 @@ void
 nukegraph(Graph *g)
 {
 	vecnuke(&g->edges);
-	vecnuke(&g->nodes);
+	dyfree(g->nodes);
 	memset(g, 0, sizeof *g);
 }
 
@@ -125,7 +125,7 @@ initgraph(void)
 	graphs = erealloc(graphs,
 		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
 	g = graphs + ngraphs++;
-	g->nodes = vec(sizeof(Node), 0);
+	g->nodes = nil;
 	g->edges = vec(sizeof(Edge), 0);
 	g->levels = vec(sizeof(Level), 0);
 	g->level = 0;
