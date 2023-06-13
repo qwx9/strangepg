@@ -7,6 +7,9 @@ BINDIR:= $(INSTALLPREFIX)/bin
 OBJS:=\
 	lib/chan.o\
 	lib/queue.o\
+	lib/plan9/geom.o\
+	lib/plan9/getfields.o\
+	lib/plan9/nrand.o\
 	linux/fs.o\
 	linux/layout.o\
 	linux/main.o\
@@ -26,10 +29,7 @@ OBJS:=\
 	layout/random.o\
 	rend/rend.o\
 	ui/ui.o\
-	util/geom.o\
-	util/getfields.o\
 	util/htab.o\
-	util/nrand.o\
 	util/vec.o\
 	strpg.o\
 
