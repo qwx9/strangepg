@@ -130,11 +130,3 @@ redraw(void)
 	drawworld();
 	return updatedraw();
 }
-
-/* threading and relaying commands is left up to the os stuff, screw it */
-int
-initalldraw(void)
-{
-	initsysdraw();
-	return 0;
-}

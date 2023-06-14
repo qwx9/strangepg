@@ -16,7 +16,6 @@ OBJS:=\
 	linux/sys.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
-	sokol/ev.o\
 	draw/draw.o\
 	fs/fs.o\
 	fs/gfa.o\
@@ -46,7 +45,6 @@ WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
-	-Ilinux\
 	-Idraw\
 	-Ifs\
 	-Igraph\

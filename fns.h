@@ -93,9 +93,7 @@ void	sysflush(File*);
 void	sysclose(File*);
 void	sysquit(void);
 
-int	initalldraw(void);
 int	initsysdraw(void);
-// FIXME: ?
 int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);

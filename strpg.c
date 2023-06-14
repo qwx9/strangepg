@@ -90,7 +90,7 @@ init(void)
 	initrend();
 	if(noui)
 		return;
-	initalldraw();
+	initsysdraw();
 	initui();
 	resetui(1);
 }

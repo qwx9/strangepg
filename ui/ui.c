@@ -47,6 +47,7 @@ keyevent(Rune r)
 {
 	Graph *g;
 
+	dprint("keyevent %d\n", r);
 	switch(r){
 	case KBup: if(panview(Vec2(0,+16)) >= 0) reqdraw(Reqredraw); break;
 	case KBdown: if(panview(Vec2(0,-16)) >= 0) reqdraw(Reqredraw); break;

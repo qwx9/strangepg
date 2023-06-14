@@ -1,21 +1,18 @@
 #include "strpg.h"
 #include <signal.h>
-#include <pthread.h>
 #include "lib/chan.h"
 #include "drw.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
-//#define SOKOL_DEBUG
+#define SOKOL_DEBUG
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_gp.h"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
-static pthread_t wth;
 static chan_t *drawc;
-static GLFWwindow *win;
-static sg_pass_action pass_action; // FIXME
+static GLFWwindow *glw;
 
 int
 drawline(Quad q, double w, int emph)
@@ -75,93 +72,141 @@ drawquad2(Quad q1, Quad q2, double θ, int, int)
 }
 
 void
-flushdraw(void)
-{
-	int w, h;
-
-	glfwGetFramebufferSize(win, &w, &h);	// just use win?
-	sg_begin_default_pass(&pass_action, w, h);
-	sgp_flush();
-	sgp_end();
-	sg_end_pass();
-	sg_commit();
-	glfwSwapBuffers(win);
-}
-
-void
 cleardraw(void)
 {
 	// FIXME: more stuff in plan9 version
-	// draw background
 	sgp_set_color(.0f, .0f, .0f, 1.0f);
 	sgp_clear();
 	sgp_reset_color();
 }
 
-void
-reqdraw(int r)
-{
-	dprint("reqdraw %d\n", r);	/* FIXME: non-blocking */
-	if(chan_send(drawc, &r) < 0)
-		sysfatal("reqdraw: chan_send");
-}
-
-static void
-resetdraw(void)
-{
-	// FIXME: ?
-}
-
-static void*
-drawproc(void *ch)
-{
-	int w, h, c;
-	float g;
-	chan_t *chans[1];
-	int *chanv[nelem(chans)];
-
-	chans[0] = ch;
-	chanv[0] = &c;	/* FIXME: what the fuck this api */
-	glfwMakeContextCurrent(win);
-	glfwSwapInterval(1000/60.f);	// FIXME: can be paused, set to 0?
-	glfwGetFramebufferSize(win, &w, &h);	// FIXME: any reason why we need to check every frame? resize events aren't events?
-	while(!glfwWindowShouldClose(win)){
-		// FIXME: blocking recv: put to sleep until we wake it up
-		// see pthreads or fix chans
-		switch(chan_select(chans, nelem(chans), chanv, NULL, 0, NULL)){
-		case 0:
-			sgp_begin(w, h);
-			switch(c){
-			case Reqresetdraw: resetdraw(); resetui(1); redraw(); break;
-			case Reqredraw: redraw(); break;
-			case Reqshallowdraw: shallowdraw(); break;
-			}
-			flushdraw();
-			break;
-		case -1:
-			//redraw();	// FIXME
-			lsleep(1000000);
-			break;
-		}
-	}
-	pthread_exit(NULL);
-}
-
 static void
 quitdraw(void)
 {
-	pthread_kill(wth, SIGTERM);
 	sgp_shutdown();
 	sg_shutdown();
 	glfwTerminate();
 }
 
 void
-glerr(int err, const char *desc)
+evloop(void)
 {
-	fprintf(stderr, "glerr %d: %s\n", err, desc);
+	int r;
+	sg_pass_action pass_action = {0};
+
+	glfwMakeContextCurrent(glw);
+	glfwSwapInterval(1);
+	while(!glfwWindowShouldClose(glw)){
+		sgp_begin(view.dim.v.x, view.dim.v.y);
+		redraw();
+		sg_begin_default_pass(&pass_action, view.dim.v.x, view.dim.v.y);
+		sgp_flush();
+		sgp_end();
+		sg_end_pass();
+		sg_commit();
+		glfwSwapBuffers(glw);
+		glfwWaitEvents();
+		while(chan_size(drawc) > 0){
+			r = -1;
+			if(chan_recv_int32(drawc, &r) < 0)
+				sysfatal("chan_recv");	// FIXME: errno/errstr
+			continue;
+			switch(r){
+			case Reqresetdraw: /* wet floor */
+			case Reqresetui: resetui(1); /* wet floor */
+			case Reqredraw: /* wet floor */
+			case Reqshallowdraw: break;
+			default: warn("reqdraw: unknown req %d", r); return;
+			}
+		}
+	}
+	quitdraw();
 }
 
+void
+reqdraw(int r)
+{
+	if(chan_send_int32(drawc, r) < 0)
+		sysfatal("chan_send");	// FIXME: errno/errstr
+	glfwPostEmptyEvent();
+}
+
+static void
+mouseev(GLFWwindow *, int b, int action, int mod)
+{
+	if(action != GLFW_PRESS)
+		return;
+	switch(b){
+	default: return;
+	}
+	/*
+	if(mouseevent(b) < 0)
+		warn("invalid input key %d\n", b);
+	*/
+}
+
+/* could be split this way as well as per usual, but not sure it has
+ * any advantage here besides not dicking with modifiers */
+/*
+static void
+ukeyev(GLFWwindow *, unsigned int u)
+{
+	Rune r;
+
+	warn("ukeyev %d\n", u);
+	switch(u){
+	case 'q': glfwSetWindowShouldClose(glw, GLFW_TRUE); return;
+	case '-': r = '-'; break;
+	case '+': r = '+'; break;
+	case 'R': r = 'R'; break;
+	case 'a': r = 'a'; break;
+	default: return;
+	}
+	if(keyevent(r) < 0)
+		warn("invalid input key %d\n", r);
+}
+*/
+
+static void
+keyev(GLFWwindow *, int k, int, int action, int mod)
+{
+	Rune r;
+
+	if(action != GLFW_PRESS)
+		return;
+	warn("keyev %d\n", k);
+	switch(k){
+	case GLFW_KEY_DELETE: /* wet floor */
+	case GLFW_KEY_Q: glfwSetWindowShouldClose(glw, GLFW_TRUE); return;
+	case GLFW_KEY_UP: r = KBup; break;
+	case GLFW_KEY_DOWN: r = KBdown; break;
+	case GLFW_KEY_LEFT: r = KBleft; break;
+	case GLFW_KEY_RIGHT: r = KBright; break;
+	case GLFW_KEY_ESCAPE: r = KBescape; break;
+	case GLFW_KEY_MINUS: r = '-'; break;
+	case GLFW_KEY_EQUAL: if(mod & GLFW_MOD_SHIFT) r = '+'; break;
+	case GLFW_KEY_R: r = 'R'; break;
+	case GLFW_KEY_A: if(mod & GLFW_MOD_SHIFT) r ='a'; break;
+	default: return;
+	}
+	if(keyevent(r) < 0)
+		warn("invalid input key %d\n", k);
+}
+
+static void
+resizeev(GLFWwindow *glw, int w, int h)
+{
+	view.dim.v = Vec2(w, h);
+	resetui(1);
+}
+
+static void
+glerr(int err, const char *desc)
+{
+	warn("glerr %d: %s\n", err, desc);
+}
+
+/* FIXME: error handling + error strings */
 static void
 initgl(void)
 {
@@ -174,28 +219,33 @@ initgl(void)
 	if(!glfwInit())
 		sysfatal("glfwInit");
 	glfwSetErrorCallback(glerr);
-	if((win = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
+	if((glw = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
 		sysfatal("glfwCreateWindow");
-	glfwMakeContextCurrent(win);
+	glfwMakeContextCurrent(glw);
 	sg_setup(&desc);
 	assert(sg_isvalid());
 	sgp_setup(&sgpdesc);
 	assert(sgp_is_valid());
 }
 
-// FIXME: error handling
+/* FIXME: error handling + error strings */
 int
 initsysdraw(void)
 {
-	int r;
-
-	view.dim.o = ZV;
+	view.dim.o = ZV;	/* FIXME: horrible */
 	view.dim.v = Vec2(Vdefw, Vdefh);
 	initgl();
-	if((drawc = chan_init(sizeof(int))) == nil)
+	//glfwSetCharCallback(glw, ukeyev);
+	glfwSetKeyCallback(glw, keyev);
+	glfwSetMouseButtonCallback(glw, mouseev);
+	glfwSetFramebufferSizeCallback(glw, resizeev);
+	if((drawc = chan_init(166*sizeof(int))) == nil)
 		sysfatal("initsysdraw: chancreate");
-	atexit(quitdraw);
-	if((r = pthread_create(&wth, NULL, drawproc, drawc)) != 0)
-		sysfatal("initsysdraw: pthread_create: %d", r);
+	//atexit(quitdraw);
 	return 0;
+}
+
+void
+initui(void)
+{
 }
