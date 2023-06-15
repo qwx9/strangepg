@@ -80,6 +80,7 @@ struct Node{
 	double w;
 	Quad q1;		/* bounding polygon */
 	Quad q2;
+	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	double θ;
 	int erased;

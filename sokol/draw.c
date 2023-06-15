@@ -19,7 +19,7 @@ drawline(Quad q, double w, int emph)
 {
 	q = centerscalequad(q);
 	sgp_push_transform();
-	sgp_set_color(0.0f, 1.0f, 0.0f, 1.0f);
+	sgp_set_color(0.7f, 0.7f, 0.7f, 0.7f);
 	//sgp_scale(view.zoom, view.zoom);
 	sgp_draw_line(q.o.x, q.o.y, q.v.x, q.v.y);
 	sgp_reset_color();
@@ -42,32 +42,47 @@ drawquad(Quad q, double θ, int)
 	sgp_push_transform();
 	//sgp_scale(view.zoom, view.zoom);
 	sgp_translate(view.pan.x, view.pan.y);
-	sgp_set_color(1.0f, 0.0f, 0.0f, 1.0f);
+	sgp_set_color(0.7f, 0.7f, 0.7f, 0.7f);
 	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x - q.o.x, q.v.y - q.o.y);
 	sgp_reset_color();
 	sgp_pop_transform();
 	return 0;
 }
 
+/* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
+/* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
-drawquad2(Quad q1, Quad q2, double θ, int, int)
+drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int)
 {
-	Vertex v;
+	sgp_reset_color();
 
-	q1 = centerscalequad(q1);	// FIXME: part of transform?
-	q2 = centerscalequad(q2);
-	sgp_set_color(1.0f, 1.0f, 0.0f, 1.0f);
-	sgp_draw_line(q1.o.x, q1.o.y, q1.v.x, q1.v.y);
-	//sgp_draw_line(q2.o.x, q2.o.y, q2.v.x, q2.v.y);
-	sgp_reset_color();
+	if(sh)
+		return 0;
 	sgp_push_transform();
-	sgp_set_color(1.0f, 0.0f, 1.0f, 1.0f);
-	//sgp_rotate(θ);
-	//sgp_scale(view.zoom, view.zoom);
-	//sgp_translate(view.pan.x, view.pan.y);
-	sgp_draw_filled_rect(q1.o.x, q1.o.y, q1.v.x - q1.o.x, q1.v.y - q1.o.y);
-	sgp_reset_color();
+	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
+	sgp_scale(view.zoom, view.zoom);
+
+	sgp_set_color(1.0f, 0.0f, 0.0f, 0.9f);
+	// FIXME: systematic "error"s in rend.c
+	sgp_rotate_at(θ+PI/4, q.o.x, q.o.y);
+	q.o = subpt2(q.o, Vec2(0, Nodesz/8));	// FIXME: layer violation
+	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x, q.v.y);
 	sgp_pop_transform();
+
+	if(debug){
+		sgp_set_color(0.0f, 1.0f, 0.0f, 0.8f);
+		sgp_draw_filled_rect(q1.o.x, q1.o.y, 1, 1);
+		sgp_set_color(1.0f, 1.0f, 0.0f, 0.8f);
+		sgp_draw_filled_rect(q1.o.x+q1.v.x, q1.o.y+q1.v.y, 1, 1);
+		q1 = centerscalequad(q1);
+		q2 = centerscalequad(q2);
+		sgp_set_color(1.0f, 1.0f, 1.0f, 1.0f);
+		sgp_draw_line(q1.o.x, q1.o.y, q1.v.x, q1.v.y);
+		sgp_set_color(0.8f, 0.8f, 0.8f, 1.0f);
+		sgp_draw_line(q2.o.x, q2.o.y, q2.v.x, q2.v.y);
+	}
+	sgp_reset_color();
+
 	return 0;
 }
 
@@ -98,7 +113,9 @@ evloop(void)
 	glfwSwapInterval(1);
 	while(!glfwWindowShouldClose(glw)){
 		sgp_begin(view.dim.v.x, view.dim.v.y);
+		sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
 		redraw();
+		sgp_set_blend_mode(SGP_BLENDMODE_NONE);
 		sg_begin_default_pass(&pass_action, view.dim.v.x, view.dim.v.y);
 		sgp_flush();
 		sgp_end();

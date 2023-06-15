@@ -40,11 +40,11 @@ drawedge(Quad q, double w)
 }
 
 static int
-drawnode(Quad p, Quad q, double θ, int c)
+drawnode(Quad p, Quad q, Quad u, double θ, int c)
 {
 	dprint("drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f\n", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	drawquad2(p, q, θ, 1, c);
-	return drawquad2(p, q, θ, 0, c);
+	drawquad2(p, q, u, θ, 1, c);
+	return drawquad2(p, q, u, θ, 0, c);
 }
 
 static int
@@ -80,7 +80,7 @@ drawnodes(Graph *g)
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u->θ, u - g->nodes);
+		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes);
 	}
 	return 0;
 }

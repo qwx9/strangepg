@@ -91,6 +91,7 @@ rendernode(Graph *g, Node *u)
 	// FIXME: fix the definition of Vertex if this shit doesn't help us at
 	//	all; adding o and v happens way too often, it's stupid and so is
 	//	this code
+	// ^- just have upper left corner, width, height, angle
 	u->θ = faceyourfears(g, u);
 	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
 	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
@@ -118,6 +119,9 @@ rendernode(Graph *g, Node *u)
 	u->q2.o.y -= ry;
 	u->q2.v.x = u->q2.v.x - sx;
 	u->q2.v.y = u->q2.v.y - sy;
+	u->shape.o = u->vrect.o;
+	// FIXME: both dimensions are erroneous
+	u->shape.v = Vec2(Nodesz+PI, Nodesz/4);	// FIXME: systematic error above
 	return 0;
 }
 

@@ -114,7 +114,7 @@ centerscalerect(Quad q)
 }
 
 int
-drawquad2(Quad q1, Quad q2, double, int sh, int c)
+drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c)
 {
 	Rectangle r1, r2;
 	Pal *cp;
