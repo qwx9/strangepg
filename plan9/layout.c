@@ -10,6 +10,7 @@ layproc(void *gp)
 	threadsetname("layproc");
 	g = gp;
 	ll = g->layout.ll;
+	// FIXME: race, ll can be nil??
 	dprint("new job job %d layout %s g %#p\n", getpid(), ll->name, g);
 	ll->compute(g);
 	renderlayout(g);

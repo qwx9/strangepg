@@ -55,7 +55,7 @@ static Pal nodepal[] = {
 static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
-static Image *viewfb;
+static Image *viewfb, *scrcol, *edgesh;
 static Channel *drawc, *ticc;
 static int ttid = -1;
 
@@ -148,7 +148,6 @@ drawquad(Quad q, double, int w)
 		r.min
 	};
 	poly(viewfb, p, nelem(p), 0, 0, w, col[Cemph], ZP);
-	
 	return 0;
 }
 
@@ -177,7 +176,7 @@ drawbezier(Quad q, double w)
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
 	if(!haxx0rz)
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, 1+w, col[Cedgesh], ZP);
+			showarrows ? Endarrow : Endsquare, 1+w, edgesh, ZP);
 	return 0;
 }
 
@@ -203,7 +202,7 @@ drawline(Quad q, double w, int emph)
 void
 flushdraw(void)
 {
-	drawop(screen, screen->r, col[Cscr], nil, ZP, S);
+	drawop(screen, screen->r, scrcol, nil, ZP, S);
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
 	flushimage(display, 1);
 }
@@ -216,7 +215,7 @@ resetdraw(void)
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);
 	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, haxx0rz ? DNofill : DTransparent);
-	draw(screen, screen->r, col[Cscr], nil, ZP);
+	draw(screen, screen->r, scrcol, nil, ZP);
 	return 0;
 }
 
@@ -250,7 +249,7 @@ cleardraw(void)
 		resetdraw();
 	}
 	// FIXME: unnecessary if view/pan is bounded
-	drawop(screen, screen->r, col[Cscr], nil, ZP, S);
+	drawop(screen, screen->r, scrcol, nil, ZP, S);
 	drawop(viewfb, viewr, col[Cbg], nil, ZP, S);
 	if(debug){
 		Point pl[] = {
@@ -350,7 +349,12 @@ startdrawclock(void)
 		sysfatal("proccreate ticproc: %r");
 }
 
-// FIXME: colors/styles do not belong here
+u32int
+p2col(Color *c, int alpha)
+{
+	return setalpha(c->r << 24 | c->g << 16 | c->b << 8 | 0xff, alpha);
+}
+
 int
 initsysdraw(void)
 {
@@ -359,25 +363,21 @@ initsysdraw(void)
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
 	if(!haxx0rz){
-		col[Cscr] = display->black;
+		scrcol = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
-		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0x5555557f, 0x7f));
-		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x7f));
-		col[Cnodesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x4f));
-		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DBlue, 0x0f));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x3f));
-		col[Cedgesh] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(0xbbbbbbff, 0x0f));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, setalpha(DRed, 0xdd));
+		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0x7f));
+		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cnode, 0x7f));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0x7f));
+		edgesh = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme1+Cedge, 0x0f));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cemph, 0xdd));
 	}else{
-		col[Cscr] = display->black;
+		scrcol = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
-		col[Ctext] = display->black;
-		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
-		col[Cnodesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
-		col[Cnodesh2] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DYellow);
-		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, 0x777777ff);
-		col[Cedgesh] = eallocimage(Rect(0,0,1,1), screen->chan, 1, 0x777777ff);
-		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, DRed);
+		col[Ctext] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Ctext, 0x7f));
+		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cnode, 0x7f));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cedge, 0x7f));
+		edgesh = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cedge, 0x0f));
+		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cemph, 0xdd));
 	}
 	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
 		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0xaa));

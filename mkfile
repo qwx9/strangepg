@@ -5,6 +5,7 @@ TARG=\
 
 OFILES=\
 	strpg.$O\
+	draw/color.$O\
 	draw/draw.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
