@@ -17,13 +17,17 @@ static GLFWwindow *glw;
 int
 drawline(Quad q, double w, int emph)
 {
-	q = centerscalequad(q);
+	Color *c;
+
 	sgp_push_transform();
-	sgp_set_color(0.7f, 0.7f, 0.7f, 0.7f);
-	//sgp_scale(view.zoom, view.zoom);
-	sgp_draw_line(q.o.x, q.o.y, q.v.x, q.v.y);
+	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
+	sgp_scale(view.zoom, view.zoom);
+	c = &(haxx0rz ? theme2 : theme1)[Cedge];
+	sgp_set_color(c->r / 255.f, c->g / 255.f, c->b / 255.f, 0.8f);
+	sgp_draw_line(q.o.x, q.o.y, q.o.x+q.v.x, q.o.y+q.v.y);
 	sgp_reset_color();
 	sgp_pop_transform();
+	sgp_reset_color();
 	return 0;
 }
 
@@ -35,6 +39,7 @@ drawbezier(Quad q, double w)
 	return drawline(q, w, 0);
 }
 
+// FIXME: update or remove
 int
 drawquad(Quad q, double θ, int)
 {
@@ -42,7 +47,7 @@ drawquad(Quad q, double θ, int)
 	sgp_push_transform();
 	//sgp_scale(view.zoom, view.zoom);
 	sgp_translate(view.pan.x, view.pan.y);
-	sgp_set_color(0.7f, 0.7f, 0.7f, 0.7f);
+	sgp_set_color(0.1f, 0.7f, 0.7f, 0.7f);
 	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x - q.o.x, q.v.y - q.o.y);
 	sgp_reset_color();
 	sgp_pop_transform();
@@ -52,9 +57,9 @@ drawquad(Quad q, double θ, int)
 /* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
 /* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
-drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int)
+drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int nc)
 {
-	sgp_reset_color();
+	Color *c;
 
 	if(sh)
 		return 0;
@@ -62,11 +67,13 @@ drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int)
 	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
 	sgp_scale(view.zoom, view.zoom);
 
-	sgp_set_color(1.0f, 0.0f, 0.0f, 0.9f);
+	c = palette + nc % palsz;
+	sgp_set_color(c->r / 255.f, c->g / 255.f, c->b / 255.f, 0.8f);
 	// FIXME: systematic "error"s in rend.c
 	sgp_rotate_at(θ+PI/4, q.o.x, q.o.y);
 	q.o = subpt2(q.o, Vec2(0, Nodesz/8));	// FIXME: layer violation
 	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x, q.v.y);
+	sgp_reset_color();
 	sgp_pop_transform();
 
 	if(debug){
@@ -80,17 +87,19 @@ drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int)
 		sgp_draw_line(q1.o.x, q1.o.y, q1.v.x, q1.v.y);
 		sgp_set_color(0.8f, 0.8f, 0.8f, 1.0f);
 		sgp_draw_line(q2.o.x, q2.o.y, q2.v.x, q2.v.y);
+		sgp_reset_color();
 	}
-	sgp_reset_color();
-
 	return 0;
 }
 
 void
 cleardraw(void)
 {
+	Color *c;
+
 	// FIXME: more stuff in plan9 version
-	sgp_set_color(.0f, .0f, .0f, 1.0f);
+	c = &(haxx0rz ? theme2 : theme1)[Cbg];
+	sgp_set_color(c->r / 255.f, c->g / 255.f, c->b / 255.f, 1.0f);
 	sgp_clear();
 	sgp_reset_color();
 }

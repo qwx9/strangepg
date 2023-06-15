@@ -16,6 +16,7 @@ OBJS:=\
 	linux/sys.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
+	draw/color.o\
 	draw/draw.o\
 	fs/fs.o\
 	fs/gfa.o\

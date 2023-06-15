@@ -52,18 +52,6 @@ static Pal nodepal[] = {
 	{0xffff99ff, nil, nil},
 };
 
-enum{
-	Cscr,
-	Cbg,
-	Ctext,
-	Cnode,
-	Cnodesh,
-	Cnodesh2,
-	Cedge,
-	Cedgesh,
-	Cemph,
-	Cend,
-};
 static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
