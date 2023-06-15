@@ -131,18 +131,53 @@ reqdraw(int r)
 	glfwPostEmptyEvent();
 }
 
+typedef struct Mouse Mouse;
+struct Mouse{
+	double x;
+	double y;
+	double ox;
+	double oy;
+	int b;
+};
+static Mouse ms;
+
 static void
-mouseev(GLFWwindow *, int b, int action, int mod)
+mouseposev(GLFWwindow *, double x, double y)
 {
-	if(action != GLFW_PRESS)
-		return;
-	switch(b){
-	default: return;
+	double Δx, Δy;
+
+	if(ms.b != 0){
+		Δx = x - ms.ox;
+		Δy = y - ms.oy;
+		if(mouseevent(Vec2(x, y), Vec2(Δx, Δy), ms.b) < 0)
+			warn("mouseev\n");
+		ms.ox = x;
+		ms.oy = y;
 	}
-	/*
-	if(mouseevent(b) < 0)
-		warn("invalid input key %d\n", b);
-	*/
+	ms.x = x;
+	ms.x = y;
+}
+
+static void
+mousebutev(GLFWwindow *w, int b, int action, int mod)
+{
+	int m;
+	double x, y;
+
+	switch(b){
+	case GLFW_MOUSE_BUTTON_LEFT: m = Mlmb; break;
+	case GLFW_MOUSE_BUTTON_MIDDLE: m = Mmmb; break;
+	case GLFW_MOUSE_BUTTON_RIGHT: m = Mrmb; break;
+	default: warn("mouseev: unhandled mouse button %d\n", b); return;
+	}
+	if(action == GLFW_RELEASE)
+		ms.b = ms.b & ~m;
+	else
+		ms.b = ms.b | m;
+	glfwGetCursorPos(w, &x, &y);
+	ms.ox = x;
+	ms.oy = y;
+	mouseposev(w, x, y);
 }
 
 /* could be split this way as well as per usual, but not sure it has
@@ -172,7 +207,7 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 {
 	Rune r;
 
-	if(action != GLFW_PRESS)
+	if(action == GLFW_RELEASE)
 		return;
 	warn("keyev %d\n", k);
 	switch(k){
@@ -190,7 +225,7 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 	default: return;
 	}
 	if(keyevent(r) < 0)
-		warn("invalid input key %d\n", k);
+		warn("keyev: invalid input key %d\n", k);
 }
 
 static void
@@ -237,7 +272,8 @@ initsysdraw(void)
 	initgl();
 	//glfwSetCharCallback(glw, ukeyev);
 	glfwSetKeyCallback(glw, keyev);
-	glfwSetMouseButtonCallback(glw, mouseev);
+	glfwSetMouseButtonCallback(glw, mousebutev);
+	glfwSetCursorPosCallback(glw, mouseposev);
 	glfwSetFramebufferSizeCallback(glw, resizeev);
 	if((drawc = chan_init(166*sizeof(int))) == nil)
 		sysfatal("initsysdraw: chancreate");
