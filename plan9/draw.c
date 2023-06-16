@@ -12,45 +12,7 @@ struct Pal{
 	Image *alt;
 };
 
-static Pal nodepal[] = {
-	/* 12 class paired */
-	{0x1f78b4ff, nil, nil},
-	{0x33a02cff, nil, nil},
-	{0xe31a1cff, nil, nil},
-	{0xff7f00ff, nil, nil},
-	{0x6a3d9aff, nil, nil},
-	{0xb15928ff, nil, nil},
-	/* some bandage */
-	{0x8080ffff, nil, nil},
-	{0x8ec65eff, nil, nil},
-	{0xc76758ff, nil, nil},
-	{0xc893f0ff, nil, nil},
-	{0xca9560ff, nil, nil},
-	{0x7f5f67ff, nil, nil},
-	{0xb160c9ff, nil, nil},
-	{0x5fc69fff, nil, nil},
-	{0xc96088ff, nil, nil},
-	/* 12 class set3 */
-	{0x8dd3c7ff, nil, nil},
-	{0xbebadaff, nil, nil},
-	{0xfb8072ff, nil, nil},
-	{0x80b1d3ff, nil, nil},
-	{0xfdb462ff, nil, nil},
-	{0xb3de69ff, nil, nil},
-	{0xfccde5ff, nil, nil},
-	{0xd9d9d9ff, nil, nil},
-	{0xbc80bdff, nil, nil},
-	{0xccebc5ff, nil, nil},
-	{0xffed6fff, nil, nil},
-	{0xffffb3ff, nil, nil},
-	/* 12 class paired, pale counterparts */
-	{0xa6cee3ff, nil, nil},
-	{0xb2df8aff, nil, nil},
-	{0xfb9a99ff, nil, nil},
-	{0xfdbf6fff, nil, nil},
-	{0xcab2d6ff, nil, nil},
-	{0xffff99ff, nil, nil},
-};
+static Pal nodepal[nelem(palette)];
 
 static Image *col[Cend];
 static Point panmax;
@@ -164,11 +126,11 @@ drawbezier(Quad q, double w)
 		return 0;
 	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
 	// FIXME: adjustments for short edges and rotation
-	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
+	if(fabs(r.min.x - r.max.x) > ceil(4 * Nodesz * view.zoom))
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p2 = addpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
-	if(r.min.y - r.max.y > ceil(4 * Nodesz * view.zoom))
+	if(fabs(r.min.y - r.max.y) > ceil(4 * Nodesz * view.zoom))
 		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
@@ -176,7 +138,7 @@ drawbezier(Quad q, double w)
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
 	if(!haxx0rz)
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, 1+w, edgesh, ZP);
+			showarrows ? Endarrow : Endsquare, 0+w, edgesh, ZP);
 	return 0;
 }
 
@@ -380,7 +342,8 @@ initsysdraw(void)
 		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cemph, 0xdd));
 	}
 	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
-		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0xaa));
+		p->col = p2col(&palette[p - nodepal], haxx0rz ? 0xff : 0x7f);
+		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, p->col);
 		p->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0x3f));
 	}
 	view.dim.o = ZV;

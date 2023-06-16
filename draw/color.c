@@ -16,7 +16,7 @@ Color theme2[Cend] = {
 	[Cemph] {0xff, 0x00, 0x00},
 };
 
-Color palette[] = {
+Color palette[Palsz] = {
 	/* 12 class paired */
 	{0x1f, 0x78, 0xb4},
 	{0x33, 0xa0, 0x2c},
@@ -55,4 +55,3 @@ Color palette[] = {
 	{0xca, 0xb2, 0xd6},
 	{0xff, 0xff, 0x99},
 };
-int palsz = nelem(palette);

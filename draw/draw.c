@@ -51,7 +51,7 @@ static int
 drawnodevec(Quad q)
 {
 	dprint("drawnodevec %.1f,%.1f:%.1f,%.1f\n", q.o.x, q.o.y, q.v.x, q.v.y);
-	return drawline(q, 0, 1);
+	return drawline(q, MAX(0, view.zoom - 1), 1);
 }
 
 static int
@@ -66,7 +66,7 @@ drawedges(Graph *g)
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
-		drawedge(q, e->w);
+		drawedge(q, e->w * view.zoom);
 	}
 	return 0;
 }

@@ -21,5 +21,7 @@ struct Color{
 	int b;
 };
 extern Color theme1[Cend], theme2[Cend];
-extern Color palette[];
-extern int palsz;
+enum{
+	Palsz = 6+9+12+6,,
+};
+extern Color palette[Palsz];

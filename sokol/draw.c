@@ -67,7 +67,7 @@ drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int nc)
 	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
 	sgp_scale(view.zoom, view.zoom);
 
-	c = palette + nc % palsz;
+	c = palette + nc % nelem(palette);
 	sgp_set_color(c->r / 255.f, c->g / 255.f, c->b / 255.f, 0.8f);
 	// FIXME: systematic "error"s in rend.c
 	sgp_rotate_at(θ+PI/4, q.o.x, q.o.y);

@@ -38,6 +38,7 @@ compute(Graph *g)
 	Node *u, *from, *v, *ne;
 	Edge *e;
 
+	//sleep(1000);
 	if(g->edges.len < 2){
 		warn("no links to hand");
 		// FIXME: error exit
