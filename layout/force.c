@@ -4,7 +4,7 @@
 /* force-directed layout */
 
 enum{
-	Length = 100,
+	Length = 150,
 	Nrep = 5000,
 };
 
@@ -31,7 +31,7 @@ repulsion(double d, double k)
 static void
 compute(Graph *g)
 {
-	int i, j, n;
+	int i, j, n, x, y;
 	double K, δ, R, Δ, ε, l;
 	usize *ep, *ee;
 	Vertex *Fu, dv;
@@ -44,14 +44,12 @@ compute(Graph *g)
 		// FIXME: error exit
 		return;
 	}
-	l = sqrt(view.dim.v.x*view.dim.v.x+view.dim.v.y*view.dim.v.y)
-		/ (16. / log10(dylen(g->nodes) + g->edges.len));
+	l = Length;
 	/* initial random placement, but in same scale as springs */
-	for(u=g->nodes, ne=u+dylen(g->nodes); u<ne; u++)
-	if(!noui)
-		putnode(u, nrand(l) - l / 2, nrand(l) - l / 2);
-	else
-		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
+	for(u=g->nodes, ne=u+dylen(g->nodes), x=0, y=0; u<ne; u++){
+		x = y = nrand(l);
+		putnode(u, x, y);
+	}
 	K = ceil(sqrt(l * l / dylen(g->nodes)));
 	/* arbitrary displacement minimum function */
 	ε = ceil(sqrt(l * l / g->edges.len));
@@ -98,6 +96,7 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
+		yield();
 	}
 	free(Fu);
 }

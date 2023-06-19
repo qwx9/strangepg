@@ -10,10 +10,8 @@ layproc(void *gp)
 	threadsetname("layproc");
 	g = gp;
 	ll = g->layout.ll;
-	// FIXME: race, ll can be nil??
 	dprint("new job job %d layout %s g %#p\n", getpid(), ll->name, g);
 	ll->compute(g);
-	renderlayout(g);
 	g->layout.tid = -1;
 	threadexits(nil);
 }
@@ -30,9 +28,8 @@ stoplayout(Graph *g)
 void
 runlayout(Graph *g)
 {
-	stoplayout(g);
 	if((g->layout.tid = proccreate(layproc, g, mainstacksize)) < 0)
-		sysfatal("proccreate drawproc: %r");
+		sysfatal("runlayout: %r");
 	if(!noui)
 		startdrawclock();
 }

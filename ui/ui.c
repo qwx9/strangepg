@@ -41,7 +41,6 @@ zoomview(Vector v)
 	return 0;
 }
 
-// FIXME: turn into commands?
 int
 keyevent(Rune r)
 {

@@ -22,6 +22,6 @@ struct Color{
 };
 extern Color theme1[Cend], theme2[Cend];
 enum{
-	Palsz = 6+9+12+6,,
+	Palsz = 6+9+12+6,
 };
 extern Color palette[Palsz];

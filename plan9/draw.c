@@ -120,25 +120,24 @@ drawbezier(Quad q, double w)
 	Point p2, p3;
 	Rectangle r;
 
-	w -= 1.;
 	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
 	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
 	// FIXME: adjustments for short edges and rotation
-	if(fabs(r.min.x - r.max.x) > ceil(4 * Nodesz * view.zoom))
+	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
 		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p2 = addpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
-	if(fabs(r.min.y - r.max.y) > ceil(4 * Nodesz * view.zoom))
+	if(r.min.y - r.max.y > ceil(4 * Nodesz * view.zoom))
 		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
-	if(!haxx0rz)
+	if(!haxx0rz && view.zoom > 1.)
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, 0+w, edgesh, ZP);
+			showarrows ? Endarrow : Endsquare, w+1, edgesh, ZP);
 	return 0;
 }
 
@@ -240,6 +239,7 @@ drawproc(void *)
 	int req;
 	Graph *g;
 
+	threadsetname("drawproc");
 	enum{
 		Aredraw,
 		Arefresh,
@@ -255,14 +255,14 @@ drawproc(void *)
 		switch(alt(a)){
 		case Aredraw:
 			switch(req){
-			case Reqresetdraw: resetdraw(); resetui(1); redraw(); flushdraw(); break;
-			case Reqresetui: resetui(1); redraw(); flushdraw(); break;
+			case Reqresetdraw: resetdraw(); /* wet floor */
+			case Reqresetui: resetui(1);	/* wet floor */
 			case Reqredraw: redraw(); flushdraw(); break;
 			case Reqshallowdraw: shallowdraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
-		case Arefresh: renderlayout(g); redraw(); flushdraw(); break;
+		case Arefresh: renderlayout(g); break;
 		}
 	}
 }
@@ -276,22 +276,19 @@ reqdraw(int r)
 static void
 ticproc(void *)
 {
-	int n;
 	vlong t, t0, Δt, step;
 	Graph *g;
 
+	threadsetname("ticproc");
 	t0 = nsec();
-	step = drawstep ? Nsec/1000 : Nsec/72;
+	step = drawstep ? Nsec/140 : Nsec/60;
 	for(;;){
-		for(g=graphs, n=0; g<graphs+ngraphs; g++)
-			if(g->layout.tid >= 0){
-				dprint("tic: refresh %#p\n", g);
-				sendp(ticc, g);
-				n++;
-			}
-		if(n == 0)
+		for(g=graphs; g<graphs+ngraphs; g++)
+			if(g->layout.tid >= 0)
+				break;
+		if(g == graphs + ngraphs)
 			break;
-		reqdraw(Reqredraw);
+		sendp(ticc, g);
 		t = nsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);
@@ -327,10 +324,10 @@ initsysdraw(void)
 	if(!haxx0rz){
 		scrcol = display->black;
 		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
-		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0x7f));
-		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cnode, 0x7f));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0x7f));
-		edgesh = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme1+Cedge, 0x0f));
+		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0xdd));
+		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cnode, 0xdd));
+		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0xaa));
+		edgesh = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0x20));
 		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cemph, 0xdd));
 	}else{
 		scrcol = display->black;
@@ -342,14 +339,14 @@ initsysdraw(void)
 		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cemph, 0xdd));
 	}
 	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
-		p->col = p2col(&palette[p - nodepal], haxx0rz ? 0xff : 0x7f);
+		p->col = p2col(&palette[p - nodepal], haxx0rz ? 0xff : 0xbb);
 		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, p->col);
-		p->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0x3f));
+		p->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0x7f));
 	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	if((drawc = chancreate(sizeof(int), 2)) == nil
-	|| (ticc = chancreate(sizeof(Graph*), 16)) == nil)
+	if((drawc = chancreate(sizeof(int), 4)) == nil
+	|| (ticc = chancreate(sizeof(Graph*), 2)) == nil)
 		sysfatal("chancreate: %r");
 	if(proccreate(drawproc, nil, mainstacksize) < 0)
 		sysfatal("proccreate drawproc: %r");
