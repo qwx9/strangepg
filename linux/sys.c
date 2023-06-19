@@ -91,6 +91,11 @@ lsleep(vlong ns)
 	nanosleep(&t, NULL);
 }
 
+void
+yield(void)
+{
+}
+
 char *
 estrdup(char *s)
 {
