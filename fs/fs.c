@@ -140,7 +140,7 @@ loadfs(char *path, int type)
 	if(ff->chlev != nil
 	&& ff->chlev(g, 1) < 0)
 		return -1;
-	return newlayout(g, -1);
+	return 0;
 }
 
 int

@@ -49,6 +49,7 @@ readnode(File *f, Graph *g)
 	if(parent >= 0)
 		fulltrotsky(g->nodes+parent, g);
 	dypush(g->nodes, n);
+	g->len++;
 	return g->nodes + dylen(g->nodes) - 1;
 }
 /* don't try to be clever about reclaiming edges for now,
@@ -81,6 +82,7 @@ loadlevel(Graph *g, int lvl)
 	Edge *e;
 	Level *l, *le;
 
+	dprint("loading level %d from %s\n", lvl, g->infile->path);
 	if(lvl < 0 || lvl >= g->levels.len){
 		werrstr("no such level %d", lvl);
 		return -1;
@@ -116,6 +118,8 @@ loadlevel(Graph *g, int lvl)
 			readedge(f, g);
 	}
 	for(i=0; i<dylen(g->nodes); i++){
+		if(g->nodes[i].erased)
+			continue;
 		Node *n = g->nodes + i;
 		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
 	}
@@ -125,7 +129,10 @@ loadlevel(Graph *g, int lvl)
 			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
 	}
 	g->level = lvl;
-	return updatelayout(g);
+	if(g->layout.ll == nil)
+		return newlayout(g, -1);
+	else
+		return updatelayout(g);
 }
 /* the actual dictionary alone does not take much memory */
 static Graph *
@@ -161,6 +168,7 @@ loaddicts(char *path)
 		veccopy(&g->levels, &l, nil);
 	}
 	/* file remains open */
+	dprint("done loading\n");
 	return g;
 }
 

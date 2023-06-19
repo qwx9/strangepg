@@ -78,6 +78,8 @@ drawnodes(Graph *g)
 
 	dprint("drawnodes dim %.1f,%.1f\n", g->dim.v.x, g->dim.v.y);
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+		if(u->erased)
+			continue;
 		if(showarrows)
 			drawnodevec(u->vrect);
 		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes);

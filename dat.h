@@ -107,6 +107,7 @@ struct Graph{
 	usize nnodes;	/* totals for all levels */
 	usize nedges;
 	usize nlevels;
+	usize len;		/* effective length after coarsening */
 	Vec levels;
 	Vec edges;
 	Node *nodes;

@@ -47,19 +47,23 @@ compute(Graph *g)
 	l = Length;
 	/* initial random placement, but in same scale as springs */
 	for(u=g->nodes, ne=u+dylen(g->nodes), x=0, y=0; u<ne; u++){
+		if(u->erased)
+			continue;
 		x = y = nrand(l);
 		putnode(u, x, y);
 	}
-	K = ceil(sqrt(l * l / dylen(g->nodes)));
+	K = ceil(sqrt(l * l / g->len));
 	/* arbitrary displacement minimum function */
 	ε = ceil(sqrt(l * l / g->edges.len));
 	δ = 1.0;
-	Fu = emalloc(dylen(g->nodes) * sizeof *Fu);
+	Fu = emalloc(g->len * sizeof *Fu);
 	u = g->nodes;
 	ne = u + dylen(g->nodes);
 	for(n=0; n<Nrep; n++){
-		memset(Fu, 0, dylen(g->nodes) * sizeof *Fu);
-		for(u=g->nodes, i=0; u<ne; i++, u++)
+		memset(Fu, 0, g->len * sizeof *Fu);
+		for(u=g->nodes, i=0; u<ne; i++, u++){
+			if(u->erased)
+				continue;
 			for(v=g->nodes; v<ne; v++){
 				if(v == u)
 					continue;
@@ -67,7 +71,10 @@ compute(Graph *g)
 				Δ = diff(dv);
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->w * repulsion(Δ, K)));
 			}
-		for(u=g->nodes, i=0; u<ne; i++, u++)
+		}
+		for(u=g->nodes, i=0; u<ne; i++, u++){
+			if(u->erased)
+				continue;
 			for(ep=u->in.buf,ee=ep+u->in.len; ep!=nil && ep<ee; ep++){
 				e = vecp(&g->edges, *ep);
 				if((from = e2n(g, e->from)) == nil)
@@ -83,7 +90,10 @@ compute(Graph *g)
 				}else
 					Fu[j] = subpt2(Fu[j], divpt2(dv, e->w));
 			}
+		}
 		for(u=g->nodes, R=0, i=0; u<ne; i++, u++){
+			if(u->erased)
+				continue;
 			dv = Fu[i];
 			Δ = diff(dv);
 			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));

@@ -41,7 +41,7 @@ run(void)
 	init();
 	while((s = *filev++) != nil)
 		if(loadfs(s, intype) < 0)
-			sysfatal("loadfs: could not load %s\n", s);
+			sysfatal("loadfs: could not load %s: %r\n", s);
 	if(noui)
 		quit();
 	evloop();

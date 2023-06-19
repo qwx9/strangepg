@@ -133,6 +133,8 @@ rendershapes(Graph *g)
 	Vertex p;
 
 	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+		if(u->erased)
+			continue;
 		dprint("render node %.1f,%.1f:%.1f,%.1f\n", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
 		rendernode(g, u);
@@ -154,7 +156,7 @@ rendershapes(Graph *g)
 int
 renderlayout(Graph *g)
 {
-	if(dylen(g->nodes) < 1){
+	if(g->len < 1){
 		werrstr("empty graph");
 		return -1;
 	}

@@ -7,9 +7,11 @@ int ngraphs;
  * it provides an iterator, otherwise we'll always have to check the
  * value of .erased */
 void
-removenode(Graph *, Node *n)
+removenode(Graph *g, Node *n)
 {
 	n->erased = 1;
+	g->len--;
+	memset(n, 0, sizeof *n);
 }
 void
 removeedge(Graph *g, usize i)
@@ -80,6 +82,7 @@ addnode(Graph *g, char *id, char *)
 	n.w = 1.0;
 	n.parent = -1;
 	dypush(g->nodes, n);
+	g->len++;
 	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
 }
 
