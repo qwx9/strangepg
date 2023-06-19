@@ -129,10 +129,9 @@ loadlevel(Graph *g, int lvl)
 			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
 	}
 	g->level = lvl;
-	if(g->layout.ll == nil)
-		return newlayout(g, -1);
-	else
+	if(g->layout.ll != nil)
 		return updatelayout(g);
+	return 0;
 }
 /* the actual dictionary alone does not take much memory */
 static Graph *
