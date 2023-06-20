@@ -39,14 +39,14 @@ compute(Graph *g)
 	Edge *e;
 
 	//sleep(1000);
-	if(g->edges.len < 2){
-		warn("no links to hand");
+	if(dylen(g->edges) < 2){
+		warn("no links to hand\n");
 		// FIXME: error exit
 		return;
 	}
 	l = Length;
 	/* initial random placement, but in same scale as springs */
-	for(u=g->nodes, ne=u+dylen(g->nodes), x=0, y=0; u<ne; u++){
+	for(u=g->nodes, ne=u+dylen(g->nodes); u<ne; u++){
 		if(u->erased)
 			continue;
 		x = y = nrand(l);
@@ -54,7 +54,7 @@ compute(Graph *g)
 	}
 	K = ceil(sqrt(l * l / g->len));
 	/* arbitrary displacement minimum function */
-	ε = ceil(sqrt(l * l / g->edges.len));
+	ε = ceil(sqrt(l * l / dylen(g->edges)));
 	δ = 1.0;
 	Fu = emalloc(g->len * sizeof *Fu);
 	u = g->nodes;
@@ -75,8 +75,8 @@ compute(Graph *g)
 		for(u=g->nodes, i=0; u<ne; i++, u++){
 			if(u->erased)
 				continue;
-			for(ep=u->in.buf,ee=ep+u->in.len; ep!=nil && ep<ee; ep++){
-				e = vecp(&g->edges, *ep);
+			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
+				e = g->edges + *ep;
 				if((from = e2n(g, e->from)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);

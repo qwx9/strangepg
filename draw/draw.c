@@ -62,7 +62,7 @@ drawedges(Graph *g)
 	Quad q;
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
-	for(e=g->edges.buf, ee=e+g->edges.len; e<ee; e++){
+	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
 		u = e2n(g, e->from);
 		v = e2n(g, e->to);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);

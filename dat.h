@@ -75,8 +75,8 @@ struct Node{
 	vlong seq;
 	//char *id;
 	//char *seq;
-	Vec in;
-	Vec out;
+	usize *in;		/* dynamic array */
+	usize *out;		/* dynamic array */
 	double w;
 	Quad q1;		/* bounding polygon */
 	Quad q2;
@@ -108,9 +108,9 @@ struct Graph{
 	usize nedges;
 	usize nlevels;
 	usize len;		/* effective length after coarsening */
-	Vec levels;
-	Vec edges;
-	Node *nodes;
+	Level *levels;	/* dynamic array */
+	Edge *edges;	/* dynamic array */
+	Node *nodes;	/* dynamic array */
 	Htab *id2n;
 	Layouting layout;
 	Quad dim;

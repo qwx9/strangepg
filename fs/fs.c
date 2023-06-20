@@ -138,7 +138,7 @@ loadfs(char *path, int type)
 		return -1;
 	g->type = type;
 	if(ff->chlev != nil
-	&& ff->chlev(g, 1) < 0)
+	&& ff->chlev(g, g->level) < 0)
 		return -1;
 	return newlayout(g, -1);
 }
@@ -151,15 +151,24 @@ chlevel(Graph *g, int n)
 	assert(g->type >= 0 && g->type < nelem(fftab));
 	stoplayout(g);
 	ff = fftab[g->type];
-	if(g == nil || ff->chlev == nil || n < 0 || n >= g->levels.len)
+	if(g == nil || ff->chlev == nil || n < 0 || n >= dylen(g->levels))
 		return -1;
-	if(g->infile == nil || g->nlevels <= 0 || g->levels.len <= 0){
+	if(g->infile == nil || g->nlevels <= 0 || dylen(g->levels) <= 0){
 		werrstr("no loaded levels");
 		return -1;
 	}
 	if(ff->chlev(g, n) < 0)
 		return -1;
 	return 0;
+}
+
+void
+freefs(File *f)
+{
+	if(f == nil)
+		return;
+	free(f->path);
+	free(f);
 }
 
 void

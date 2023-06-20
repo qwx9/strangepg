@@ -22,9 +22,9 @@ faceyourfears(Graph *g, Node *u)
 	n = 0;
 	us = u - g->nodes;
 	/* face outgoing */
-	if(u->out.len > 0){
-		for(ip=u->out.buf, ie=ip+u->out.len; ip<ie; ip++){
-			e = vecp(&g->edges, *ip);
+	if(dylen(u->out) > 0){
+		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
+			e = g->edges + *ip;
 			// FIXME: helpers
 			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
 			/* FIXME: see this is why we don't want global edge list */
@@ -50,9 +50,9 @@ faceyourfears(Graph *g, Node *u)
 		}
 	}
 	/* face away from incoming */
-	if(u->in.len > 0){
-		for(ip=u->in.buf, ie=ip+u->in.len; ip<ie; ip++){
-			e = vecp(&g->edges, *ip);
+	if(dylen(u->in) > 0){
+		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
+			e = g->edges + *ip;
 			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
 			them = e->from >> 1;
 			assert(us == e->to >> 1);

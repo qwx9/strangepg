@@ -75,6 +75,7 @@ loadgfa1(char *path)
 	if((g = initgraph()) == nil)
 		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
+	g->id2n = idmap();
 	if((f = graphopenfs(path, OREAD, g)) == nil)
 		return nil;
 	while(readrecord(f) != nil && f->err < 10){

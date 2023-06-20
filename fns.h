@@ -8,15 +8,6 @@ void*	emalloc(usize);
 int	parseargs(int, char **);
 #define panic(x) {warn((x)); abort();}
 
-void	vecnuke(Vec*);
-void*	vecget(Vec*, usize);
-void*	vecpoptail(Vec*);
-usize	vecindexof(Vec*, void*);
-void*	veccopy(Vec*, void*, usize*);
-void*	vecp(Vec*, usize);
-void	vecresize(Vec*, usize);
-Vec	vec(usize, usize);
-
 Quad	Qd(Vertex, Vector);
 double	qΔx(Quad);
 double	qΔy(Quad);
@@ -67,6 +58,7 @@ void	putnode(Node*, int, int);
 	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
 
 void	initfs(void);
+void	freefs(File*);
 int	loadfs(char*, int);
 int	openfs(File*, char*, int);
 File*	graphopenfs(char*, int, Graph*);

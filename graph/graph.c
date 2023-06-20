@@ -20,7 +20,7 @@ removeedge(Graph *g, usize i)
 
 	// FIXME: this must "remove" the edge from both ends, make sure,
 	// though this should be enough
-	e = vecp(&g->edges, i);
+	e = g->edges + i;
 	e->erased = 1;
 }
 
@@ -77,8 +77,6 @@ addnode(Graph *g, char *id, char *)
 		return 0;
 	}
 	n = newnode();
-	n.in = vec(sizeof(usize), 0);
-	n.out = vec(sizeof(usize), 0);
 	n.w = 1.0;
 	n.parent = -1;
 	dypush(g->nodes, n);
@@ -95,9 +93,8 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	Node *u, *v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint("addedge %s,%s:%.2f len=%zd %#p (vec sz %zd elsz %d)\n", from, to,
-		w, g->edges.len, (uchar *)g->edges.buf + g->edges.len-1,
-		g->edges.len, g->edges.elsz);
+	dprint("addedge %s,%s:%.2f len=%zd %#p\n", from, to,
+		w, dylen(g->edges), g->edges + dylen(g->edges)-1);
 	USED(overlap);
 	e = newedge();
 	e.w = w;
@@ -106,17 +103,29 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 		return -1;
 	e.from = u - g->nodes << 1 | d1;
 	e.to =  v - g->nodes << 1 | d2;
-	veccopy(&g->edges, &e, &i);
-	veccopy(&u->out, &i, nil);
-	veccopy(&v->in, &i, nil);
+	dypush(g->edges, e);
+	i = dylen(g->edges) - 1;
+	dypush(u->out, i);
+	dypush(v->in, i);
 	return 0;
 }
 
 void
 nukegraph(Graph *g)
 {
-	vecnuke(&g->edges);
+	Node *n;
+
+	dyfree(g->edges);
+	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
+		dyfree(n->in);
+		dyfree(n->out);
+	}
 	dyfree(g->nodes);
+	dyfree(g->levels);
+	freefs(g->infile);
+	free(g->layout.aux);
+	if(g->id2n != nil)
+		idnuke(g->id2n);
 	memset(g, 0, sizeof *g);
 }
 
@@ -128,11 +137,6 @@ initgraph(void)
 	graphs = erealloc(graphs,
 		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
 	g = graphs + ngraphs++;
-	g->nodes = nil;
-	g->edges = vec(sizeof(Edge), 0);
-	g->levels = vec(sizeof(Level), 0);
-	g->level = 0;
-	g->id2n = idmap();
 	g->layout.tid = -1;
 	return g;
 }

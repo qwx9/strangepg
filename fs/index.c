@@ -24,10 +24,10 @@ fulltrotsky(Node *lev, Graph *g)
 	usize *ip, *ie;
 
 	/* castrate */
-	for(ip=lev->out.buf, ie=ip+lev->out.len; ip<ie; ip++)
+	for(ip=lev->out, ie=ip+dylen(lev->out); ip<ie; ip++)
 		removeedge(g, *ip >> 1);
 	/* excommunicate */
-	for(ip=lev->in.buf, ie=ip+lev->in.len; ip<ie; ip++)
+	for(ip=lev->in, ie=ip+dylen(lev->in); ip<ie; ip++)
 		removeedge(g, *ip >> 1);
 	/* erase */
 	lev->erased = 1;
@@ -42,12 +42,14 @@ readnode(File *f, Graph *g)
 	Node n;
 
 	n = newnode();
-	n.out = vec(sizeof(usize), get64(f));
-	n.in = vec(sizeof(usize), get64(f));
+	get64(f);	// invec
+	get64(f);	// outvec
 	n.w = get64(f);
 	parent = get64(f);
-	if(parent >= 0)
+	if(parent >= 0){
+		assert(g->nodes != nil);
 		fulltrotsky(g->nodes+parent, g);
+	}
 	dypush(g->nodes, n);
 	g->len++;
 	return g->nodes + dylen(g->nodes) - 1;
@@ -59,19 +61,22 @@ readedge(File *f, Graph *g)
 {
 	usize i;
 	Edge e;
-	Node *up, *vp;
+	Node *up, *vp, *ne;
 
 	e = newedge();
 	e.from = get64(f);
 	e.to = get64(f);
 	e.w = get64(f);
 	e.parent = get64(f);
-	veccopy(&g->edges, &e, &i);
+	dypush(g->edges, e);
 	up = g->nodes + (e.from >> 1);
 	vp = g->nodes + (e.to >> 1);
-	veccopy(&up->out, &i, nil);
-	veccopy(&vp->in, &i, nil);
-	return (Edge *)g->edges.buf + i;
+	ne = g->nodes + dylen(g->nodes);
+	assert(up < ne && vp < ne);
+	i = dylen(g->edges) - 1;
+	dypush(up->out, i);
+	dypush(vp->in, i);
+	return g->edges + i;
 }
 
 static int
@@ -83,7 +88,7 @@ loadlevel(Graph *g, int lvl)
 	Level *l, *le;
 
 	dprint("loading level %d from %s\n", lvl, g->infile->path);
-	if(lvl < 0 || lvl >= g->levels.len){
+	if(lvl < 0 || lvl >= dylen(g->levels)){
 		werrstr("no such level %d", lvl);
 		return -1;
 	}
@@ -93,8 +98,8 @@ loadlevel(Graph *g, int lvl)
 	}
 	f = g->infile;
 
-	l = vecp(&g->levels, g->level);
-	le = vecp(&g->levels, lvl);
+	l = g->levels + g->level;
+	le = g->levels + lvl;
 	if(l <= le)
 		le++;
 	else
@@ -121,10 +126,12 @@ loadlevel(Graph *g, int lvl)
 		if(g->nodes[i].erased)
 			continue;
 		Node *n = g->nodes + i;
-		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, n->in.len, n->out.len, n->w, n->parent, n->erased);
+		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, dylen(n->in), dylen(n->out), n->w, n->parent, n->erased);
 	}
-	for(i=0; i<g->edges.len; i++){
-		e = vecp(&g->edges, i);
+	for(i=0; i<dylen(g->edges); i++){
+		if(g->edges[i].erased)
+			continue;
+		e = g->edges + i;
 		dprint("e %p w %.1f t %zd (%zd) h %zd (%zd)\n", e, e->w,
 			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
 	}
@@ -155,7 +162,6 @@ loaddicts(char *path)
 	g->noff = get64(f);
 	g->eoff = get64(f);
 	g->moff = get64(f);
-	g->levels = vec(sizeof(Level), g->nlevels);
 	for(i=0; i<g->nlevels; i++){
 		Level l = {0};
 		l.noff = g->noff + get64(f);
@@ -164,7 +170,7 @@ loaddicts(char *path)
 		l.eoff = g->eoff + get64(f);
 		l.enel = get64(f);
 		l.etot = get64(f);
-		veccopy(&g->levels, &l, nil);
+		dypush(g->levels, l);
 	}
 	/* file remains open */
 	dprint("done loading\n");
