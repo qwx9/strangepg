@@ -236,6 +236,7 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 	if(action == GLFW_RELEASE)
 		return;
 	warn("keyev %d\n", k);
+	r = 0;
 	switch(k){
 	case GLFW_KEY_DELETE: /* wet floor */
 	case GLFW_KEY_Q: glfwSetWindowShouldClose(glw, GLFW_TRUE); return;

@@ -127,7 +127,7 @@ shallowdraw(void)
 int
 redraw(void)
 {
-	dprint("redraw %d\n", getpid());
+	dprint("redraw\n");
 	cleardraw();
 	drawworld();
 	return updatedraw();

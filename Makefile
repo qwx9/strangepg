@@ -30,7 +30,6 @@ OBJS:=\
 	rend/rend.o\
 	ui/ui.o\
 	util/htab.o\
-	util/vec.o\
 	strpg.o\
 
 CC?= clang
@@ -71,7 +70,8 @@ ifdef DEBUG
 else
 	WFLAGS+= -Wno-unknown-pragmas -Wno-unused-value \
 			-Wno-unused-function -Wno-unused-parameter \
-			-Wno-unused-variable
+			-Wno-unused-variable -Wno-sign-compare \
+			-Wno-discarded-qualifiers
 endif
 ifdef STATIC
 	LDFLAGS+= -static
