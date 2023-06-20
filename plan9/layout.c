@@ -13,6 +13,7 @@ layproc(void *gp)
 	dprint("new job job %d layout %s g %#p\n", getpid(), ll->name, g);
 	ll->compute(g);
 	g->layout.tid = -1;
+	reqdraw(Reqrefresh);
 	threadexits(nil);
 }
 

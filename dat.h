@@ -131,6 +131,7 @@ enum{
 	Reqredraw,
 	Reqshallowdraw,
 	Reqresetui,
+	Reqrefresh,
 };
 
 struct View{
