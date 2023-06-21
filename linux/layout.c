@@ -24,7 +24,7 @@ stoplayout(Graph *g)
 {
 	if(g->layout.tid < 0)
 		return;
-	pthread_kill(*(pthread_t*)g->layout.aux, SIGTERM);
+	pthread_cancel(*(pthread_t*)g->layout.aux);
 	g->layout.tid = -1;
 	memset(g->layout.aux, 0, sizeof(pthread_t));
 }
