@@ -136,16 +136,17 @@ evloop(void)
 			r = -1;
 			if(chan_recv_int32(drawc, &r) < 0)
 				sysfatal("chan_recv");	// FIXME: errno/errstr
-			continue;
 			switch(r){
 			case Reqresetdraw: /* wet floor */
 			case Reqresetui: resetui(1); /* wet floor */
 			case Reqredraw: /* wet floor */
 			case Reqshallowdraw: break;
-			case Reqrefresh: rerender(); break;
+			case Reqrefresh: rerender(1); break;
 			default: warn("reqdraw: unknown req %d", r); return;
 			}
 		}
+		if(drawstep && rerender(0))
+			glfwPostEmptyEvent();
 	}
 	quitdraw();
 }

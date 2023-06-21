@@ -156,11 +156,31 @@ rendershapes(Graph *g)
 int
 renderlayout(Graph *g)
 {
+	dprint("renderlayout %#p\n", g);
 	if(g->len < 1){
 		werrstr("empty graph");
 		return -1;
 	}
 	return rendershapes(g);
+}
+
+/* FIXME: no locking: changing the node and edge arrays is prohibited,
+ * but nothing enforces it ⇒ danger zone (would suffice to hold a lock
+ * here and when changing the graph) */
+int
+rerender(int force)
+{
+	int r;
+	Graph *g;
+
+	r = 0;
+	for(g=graphs; g<graphs+ngraphs; g++)
+		/* FIXME: racy without force */
+		if(force || g->layout.tid >= 0){
+			renderlayout(g);
+			r = 1;
+		}
+	return r;
 }
 
 void

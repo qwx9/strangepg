@@ -93,7 +93,7 @@ void	reqdraw(int);
 
 void	initrend(void);
 int	renderlayout(Graph*);
-void	rerender(void);
+int	rerender(int);
 
 int	panview(Vector);
 int	zoomview(Vector);
