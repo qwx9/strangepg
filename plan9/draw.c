@@ -17,7 +17,7 @@ static Pal nodepal[nelem(palette)];
 static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
-static Image *viewfb, *scrcol, *edgesh;
+static Image *viewfb, *edgesh;
 static Channel *drawc, *ticc;
 static int ttid = -1;
 
@@ -163,7 +163,6 @@ drawline(Quad q, double w, int emph)
 void
 flushdraw(void)
 {
-	drawop(screen, screen->r, scrcol, nil, ZP, S);
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
 	flushimage(display, 1);
 }
@@ -175,8 +174,7 @@ resetdraw(void)
 	viewr = rectsubpt(screen->r, screen->r.min);
 	dprint("resetdraw %R\n", viewr);
 	freeimage(viewfb);
-	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, haxx0rz ? DNofill : DTransparent);
-	draw(screen, screen->r, scrcol, nil, ZP);
+	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
 	return 0;
 }
 
@@ -209,8 +207,6 @@ cleardraw(void)
 		view.dim.v = p2v(r.max);
 		resetdraw();
 	}
-	// FIXME: unnecessary if view/pan is bounded
-	drawop(screen, screen->r, scrcol, nil, ZP, S);
 	drawop(viewfb, viewr, col[Cbg], nil, ZP, S);
 	if(debug){
 		Point pl[] = {
@@ -259,7 +255,7 @@ drawproc(void *)
 			case Reqresetui: resetui(1);	/* wet floor */
 			case Reqredraw: redraw(); flushdraw(); break;
 			case Reqshallowdraw: shallowdraw(); flushdraw(); break;
-			case Reqrefresh: rerender(); redraw(); flushdraw(); break;
+			case Reqrefresh: rerender(1); redraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
@@ -323,16 +319,14 @@ initsysdraw(void)
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
 	if(!haxx0rz){
-		scrcol = display->black;
-		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DNotacolor);
+		col[Cbg] = display->white;
 		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0xdd));
 		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cnode, 0xdd));
 		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0xaa));
 		edgesh = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0x20));
 		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cemph, 0xdd));
 	}else{
-		scrcol = display->black;
-		col[Cbg] = eallocimage(Rect(0,0,1,1), XRGB32, 1, DTransparent);
+		col[Cbg] = display->black;
 		col[Ctext] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Ctext, 0x7f));
 		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cnode, 0x7f));
 		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cedge, 0x7f));
