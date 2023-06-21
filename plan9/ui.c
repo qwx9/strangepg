@@ -46,7 +46,7 @@ evloop(void)
 		case Aresize:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			reqdraw(Reqresetdraw);	// FIXME: make sure
+			reqdraw(Reqresetdraw);
 			mold.xy = mc->xy;
 			/* wet floor */
 		case Amouse:

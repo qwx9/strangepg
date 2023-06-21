@@ -142,6 +142,7 @@ evloop(void)
 			case Reqresetui: resetui(1); /* wet floor */
 			case Reqredraw: /* wet floor */
 			case Reqshallowdraw: break;
+			case Reqrefresh: rerender(); break;
 			default: warn("reqdraw: unknown req %d", r); return;
 			}
 		}
