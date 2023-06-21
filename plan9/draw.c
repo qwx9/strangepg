@@ -259,7 +259,11 @@ drawproc(void *)
 			case Reqresetui: resetui(1);	/* wet floor */
 			case Reqredraw: redraw(); flushdraw(); break;
 			case Reqshallowdraw: shallowdraw(); flushdraw(); break;
-			case Reqrefresh: renderlayout(g); break;
+			case Reqrefresh:
+				for(g=graphs; g<graphs+ngraphs; g++)
+					if(g->layout.tid >= 0)
+						renderlayout(g);
+				break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
