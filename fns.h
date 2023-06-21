@@ -1,5 +1,5 @@
 void	warn(char*, ...);
-void	dprint(char*, ...);
+void	dprint(int, char*, ...);
 void	vawarn(char*, va_list);
 char*	error(void);
 char*	estrdup(char*);

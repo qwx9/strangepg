@@ -101,7 +101,7 @@ compute(Graph *g)
 			if(R < Δ)
 				R = Δ;
 		}
-		dprint("R %.2f ε %.2f K %.2f δ %.2f n %d\n", R, ε, K, δ, n);
+		dprint(Debuglayout, "R %.2f ε %.2f K %.2f δ %.2f n %d\n", R, ε, K, δ, n);
 		if(R < ε)
 			break;
 		if(δ > 0.0001)

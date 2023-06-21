@@ -52,7 +52,7 @@ newlayout(Graph *g, int type)
 		ll = lltab[type];
 	assert(ll != nil);
 	g->layout.ll = ll;
-	dprint("newlayout g %#p ll %#p %s\n", g, ll, ll->name);
+	dprint(Debuglayout, "newlayout g %#p ll %#p %s\n", g, ll, ll->name);
 	if(ll->compute == nil){
 		werrstr("unimplemented fs type");
 		return -1;

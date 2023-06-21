@@ -23,12 +23,17 @@ fulltrotsky(Node *lev, Graph *g)
 {
 	usize *ip, *ie;
 
+	dprint(Debugcoarse, "fulltrotsky node %#p %zd\n", lev, lev-g->nodes);
 	/* castrate */
-	for(ip=lev->out, ie=ip+dylen(lev->out); ip<ie; ip++)
-		removeedge(g, *ip >> 1);
+	for(ip=lev->out, ie=ip+dylen(lev->out); ip<ie; ip++){
+		dprint(Debugcoarse, "fulltrotsky edge %zd\n", *ip);
+		removeedge(g, *ip >> 1);	// FIXME: why shifted?
+	}
 	/* excommunicate */
-	for(ip=lev->in, ie=ip+dylen(lev->in); ip<ie; ip++)
+	for(ip=lev->in, ie=ip+dylen(lev->in); ip<ie; ip++){
+		dprint(Debugcoarse, "fulltrotsky edge %zd\n", *ip);
 		removeedge(g, *ip >> 1);
+	}
 	/* erase */
 	lev->erased = 1;
 }
@@ -87,7 +92,7 @@ loadlevel(Graph *g, int lvl)
 	Edge *e;
 	Level *l, *le;
 
-	dprint("loading level %d from %s\n", lvl, g->infile->path);
+	dprint(Debugcoarse, "loading level %d from %s\n", lvl, g->infile->path);
 	if(lvl < 0 || lvl >= dylen(g->levels)){
 		werrstr("no such level %d", lvl);
 		return -1;
@@ -126,13 +131,13 @@ loadlevel(Graph *g, int lvl)
 		if(g->nodes[i].erased)
 			continue;
 		Node *n = g->nodes + i;
-		dprint("n %p in %zd out %zd w %.1f par %d erased %d\n", n, dylen(n->in), dylen(n->out), n->w, n->parent, n->erased);
+		dprint(Debugcoarse, "n %p in %zd out %zd w %.1f par %d erased %d\n", n, dylen(n->in), dylen(n->out), n->w, n->parent, n->erased);
 	}
 	for(i=0; i<dylen(g->edges); i++){
 		if(g->edges[i].erased)
 			continue;
 		e = g->edges + i;
-		dprint("e %p w %.1f t %zd (%zd) h %zd (%zd)\n", e, e->w,
+		dprint(Debugcoarse, "e %p w %.1f t %zd (%zd) h %zd (%zd)\n", e, e->w,
 			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
 	}
 	g->level = lvl;
@@ -148,7 +153,7 @@ loaddicts(char *path)
 	File *f;
 	Graph *g;
 
-	dprint("loadindex %s\n", path);
+	dprint(Debugcoarse, "loadindex %s\n", path);
 	if((g = initgraph()) == nil)
 		sysfatal("loadindex: %r");
 	f = emalloc(sizeof *f);
@@ -173,7 +178,7 @@ loaddicts(char *path)
 		dypush(g->levels, l);
 	}
 	/* file remains open */
-	dprint("done loading\n");
+	dprint(Debugcoarse, "done loading\n");
 	return g;
 }
 

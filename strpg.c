@@ -17,11 +17,11 @@ warn(char *fmt, ...)
 }
 
 void
-dprint(char *fmt, ...)
+dprint(int flags, char *fmt, ...)
 {
 	va_list arg;
 
-	if(!debug)
+	if((debug & flags) == 0)
 		return;
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
@@ -60,7 +60,25 @@ parseargs(int argc, char **argv)
 
 	intype = FFgfa;
 	ARGBEGIN{
-	case 'D': debug = 1; break;
+	case 'D':
+		s = EARGF(usage());
+		if(strcmp(s, "draw") == 0)
+			debug |= Debugdraw;
+		else if(strcmp(s, "render") == 0)
+			debug |= Debugrender;
+		else if(strcmp(s, "layout") == 0)
+			debug |= Debuglayout;
+		else if(strcmp(s, "fs") == 0)
+			debug |= Debugfs;
+		else if(strcmp(s, "coarse") == 0)
+			debug |= Debugcoarse;
+		else if(strcmp(s, "all") == 0)
+			debug |= Debugtheworld;
+		else{
+			warn("unknown debug component %s\n", s);
+			usage();
+		}
+		break;
 	case 'b': haxx0rz = 1; break;
 	case 'i': intype = FFindex; break;
 	case 'l':

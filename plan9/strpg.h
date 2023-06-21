@@ -10,4 +10,4 @@ KHASH_MAP_INIT_STR(id, usize)
 void	startdrawclock(void);
 
 #pragma	varargck	argpos	warn	1
-#pragma	varargck	argpos	dprint	1
+#pragma	varargck	argpos	dprint	2

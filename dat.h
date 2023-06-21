@@ -151,6 +151,13 @@ enum{
 	Mscrlup = 1<<3,	// FIXME: shouldn't be
 	Mscrldn = 1<<4,
 
+	Debugdraw = 1<<0,
+	Debugrender = 1<<1,
+	Debuglayout = 1<<2,
+	Debugfs = 1<<3,
+	Debugcoarse = 1<<4,
+	Debugtheworld = 0xffffffff,
+
 	/* unicode arrows, children's compilers, mandrake */
 	KBleft = 0x110000,	/* outside unicode range */
 	KBright,

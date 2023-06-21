@@ -71,7 +71,7 @@ addnode(Graph *g, char *id, char *)
 {
 	Node n;
 
-	dprint("addnode id=%s (vec sz %zd)\n", id, dylen(g->nodes));
+	dprint(Debugtheworld, "addnode id=%s (vec sz %zd)\n", id, dylen(g->nodes));
 	if(id2n(g, id) != nil){
 		werrstr("duplicate node id");
 		return 0;
@@ -93,7 +93,7 @@ addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
 	Node *u, *v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint("addedge %s,%s:%.2f len=%zd %#p\n", from, to,
+	dprint(Debugtheworld, "addedge %s,%s:%.2f len=%zd %#p\n", from, to,
 		w, dylen(g->edges), g->edges + dylen(g->edges)-1);
 	USED(overlap);
 	e = newedge();

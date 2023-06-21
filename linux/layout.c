@@ -12,7 +12,7 @@ layproc(void *gp)
 	g = gp;
 	g->layout.tid = 0;
 	ll = g->layout.ll;
-	dprint("new job job %d layout %s g %#p\n", getpid(), ll->name, g);
+	dprint(Debuglayout, "new job job %d layout %s g %#p\n", getpid(), ll->name, g);
 	ll->compute(g);
 	renderlayout(g);
 	g->layout.tid = -1;
