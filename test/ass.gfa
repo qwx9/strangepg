@@ -1,0 +1,20 @@
+H	VN:Z:1.0
+S	a	*
+S	h	*
+S	c	*
+S	e	*
+S	b	*
+S	8	*
+S	4	*
+S	3	*
+S	d	*
+L	a	+	a	-	0M
+L	a	+	b	+	0M
+L	a	+	c	+	0M
+L	a	+	8	+	0M
+L	a	+	4	-	0M
+L	h	+	3	+	0M
+L	c	+	d	+	0M
+L	e	-	d	+	0M
+L	c	+	c	-	0M
+L	h	-	a	-	0M
