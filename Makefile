@@ -20,6 +20,7 @@ OBJS:=\
 	fs/fs.o\
 	fs/gfa.o\
 	fs/index.o\
+	fs/load.o\
 	graph/graph.o\
 	graph/vertex.o\
 	layout/conga.o\
