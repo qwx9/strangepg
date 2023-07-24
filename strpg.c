@@ -1,8 +1,6 @@
 #include "strpg.h"
 
-int debug;
 int haxx0rz;
-int noui;
 
 static int intype;
 static char **filev;
