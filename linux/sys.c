@@ -7,6 +7,8 @@
 #include <time.h>
 #include <pthread.h>
 
+int noui, debug;
+
 char *argv0;
 
 static char errbuf[1024];

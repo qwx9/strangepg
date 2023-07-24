@@ -121,3 +121,5 @@ void	werrstr(char*, ...);
 void	sysfatal(char*, ...);
 
 void	lsleep(vlong);
+
+extern int mainstacksize;

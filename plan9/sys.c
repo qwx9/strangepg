@@ -2,6 +2,8 @@
 #include <thread.h>
 #include <pool.h>
 
+int noui, debug;
+
 void
 sysquit(void)
 {
