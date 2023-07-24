@@ -12,7 +12,6 @@ OBJS:=\
 	lib/plan9/nrand.o\
 	linux/fs.o\
 	linux/layout.o\
-	linux/main.o\
 	linux/sys.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\

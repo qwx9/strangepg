@@ -125,3 +125,8 @@ emalloc(usize n)
 		sysfatal("emalloc: %r");
 	return p;
 }
+
+void
+sysinit(void)
+{
+}

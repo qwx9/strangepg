@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include <thread.h>
+#include <pool.h>
 
 void
 sysquit(void)
@@ -90,4 +91,10 @@ emalloc(usize n)
 		sysfatal("emalloc: %r");
 	setmalloctag(p, getcallerpc(&n));
 	return p;
+}
+
+void
+sysinit(void)
+{
+	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
 }

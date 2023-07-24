@@ -112,3 +112,16 @@ init(void)
 	initui();
 	resetui(1);
 }
+
+/* note: npe already sets mainstacksize higher before renaming main */
+int
+main(int argc, char **argv)
+{
+	sysinit();
+	srand(time(nil));
+	if(parseargs(argc, argv) < 0)
+		sysfatal("usage");
+	run();
+	sysquit();
+	return 0;
+}

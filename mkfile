@@ -21,7 +21,6 @@ OFILES=\
 	plan9/draw.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\
-	plan9/main.$O\
 	plan9/sys.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
