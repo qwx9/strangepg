@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
+#include <time.h>
 
 /* u.h */
 //#define nil		((void*)0)
