@@ -30,6 +30,7 @@ OBJS:=\
 	rend/rend.o\
 	ui/ui.o\
 	util/htab.o\
+	util/print.o\
 	strpg.o\
 
 CC?= clang

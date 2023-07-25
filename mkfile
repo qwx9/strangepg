@@ -26,6 +26,7 @@ OFILES=\
 	plan9/ui.$O\
 	ui/ui.$O\
 	util/htab.$O\
+	util/print.$O\
 
 HFILES=\
 	dat.h\
