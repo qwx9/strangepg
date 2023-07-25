@@ -24,19 +24,19 @@ nodeidx = open("'$tmp.2'", "wb")
 nodedeg = open("'$tmp.3'", "wb")
 edges = open("'$tmp.4'", "wb")
 hdr = open("'$tmp.1'", "wb")
-i = 0
+nn = 0
 ne = 0
 for l in fileinput.input():
 	s = l.rstrip("\n").split()
 	d = int(s[0])
 	u = int(s[1])
-	nodeidx.write(pack("Q", i))
-	nodedeg.write(pack("Q", d))
-	for i in range(2, 2+d):
-		edges.write(pack("Q", int(s[i])))
+	nodeidx.write(pack("Q", u))
+	nodedeg.write(pack("I", d))
+	for e in range(2, 2+d):
+		edges.write(pack("Q", int(s[e])))
 		ne += 1
-	i += 1
-hdr.write(pack("Q", i))
+	nn += 1
+hdr.write(pack("Q", nn))
 hdr.write(pack("Q", ne))
 hdr.close()
 nodeidx.close()
