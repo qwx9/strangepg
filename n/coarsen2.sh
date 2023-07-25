@@ -21,14 +21,14 @@ BEGIN{
 # FIXME: must be backwards... → numbered temp files
 #	warning: avoid locale problems
 END{
-	news = NN
-	olds = NN
-	for(i=1; i<=NE; i++){
-		u = off[i]
-		v = e2n[i]
-		printf "e %d u %d v %d\tdeg %d w %d\n", i, n2s[u], n2s[v], deg[u], weight[u]
-	}
+	olds = NN + 1
+	news = olds
 	while(NE > 0){
+		for(i=1; i<=NE; i++){
+			u = off[i]
+			v = e2n[i]
+			printf "e %d u %d v %d\tdeg %d w %d\n", i, n2s[u], n2s[v], deg[u], weight[u]
+		}
 		ne = NE
 		i = 1
 		newi = 1
@@ -86,7 +86,6 @@ END{
 		olds = news
 		NE = newe - 1
 		NN = newi - 1
-		break
 	}
 	for(i=1; i<=NE; i++){
 		u = off[i]
