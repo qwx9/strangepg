@@ -87,7 +87,7 @@ main(int argc, char **argv)
 	IGraph *g;
 
 	ARGBEGIN{
-	case 'D': debug = -1UL; break;
+	case 'D': debug = Debugtheworld; break;
 	case 'e': external = 1; break;
 	}ARGEND
 	if(*argv == nil)
@@ -122,20 +122,20 @@ main(int argc, char **argv)
 			}
 		}
 		newi = newe = 0;
-		for(e=0, i=0; e<ne; i++){
+		for(e=0, i=0; i<nn; i++){
 			u = g->nodei[i];
+			oldd = g->degree[u];
+			d = g->degree[u] = 0;
 			s = g->super[u];
 			dprint(Debugtheworld, "- check node %llux\tu=%llux\ts=%llux\tdeg %d\n",
 					i, u, g->super[u], g->degree[u]);
-			oldd = g->degree[u];
-			g->degree[u] = 0;
 			alreadymerged = issuper = hasedges = 0;
 			if(s >= olds){
 				dprint(Debugtheworld, "\t→ add missing edges from node %llux already part of super %llux\n",
 					u, s);
-				hasedges = issuper = 1;
+				alreadymerged = hasedges = issuper = 1;
 			}
-			for(d=0; d<oldd; d++){
+			for(; d<oldd; d++){
 				v = g->edge[e+d];
 				t = g->super[v];
 				dprint(Debugtheworld, "\t→ edge u=%llux\tv=%llux\tt=%llux\te=%llux\tdeg %d\n",
@@ -164,13 +164,13 @@ main(int argc, char **argv)
 				dprint(Debugtheworld, "\t\tremove int edge %llux,%llux (u=%llux)\n",
 					s, t, u);
 				warn("%llux,%d:", v, g->weight[v]);
-				nn--;
 			}
 			e += d;
 			warn("|");
 		}
 		olds = news;
 		ne = newe;
+		nn = newi;
 		warn("\n");
 	}
 	if(debug){
