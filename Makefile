@@ -33,7 +33,7 @@ OBJS:=\
 	util/print.o\
 	strpg.o\
 
-CC?= clang
+CC= clang
 OFLAGS?= -O2 -pipe -march=native
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
