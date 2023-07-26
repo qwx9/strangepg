@@ -1,5 +1,8 @@
 PROGRAM:= strpg
 BINTARGET:= $(PROGRAM)
+ALLTARGETS:= $(BINTARGET)\
+	coarsen2\
+
 INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
 
@@ -32,13 +35,17 @@ OBJS:=\
 	util/print.o\
 	strpg.o\
 
-COARSEN2OBJS=\
+COARSEN2OBJS:=\
 	fs/fs.o\
 	lib/plan9/getfields.o\
 	linux/fs.o\
 	linux/sys.o\
 	n/coarsen2.o\
 	util/print.o\
+
+ALLOBJS:=\
+	$(OBJS)\
+	$(COARSEN2OBJS)\
 
 CC= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -99,26 +106,22 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-all:	$(BINTARGET) coarsen2
-
-prepare:
-	mkdir -p $(O)
+all:	$(ALLTARGETS)
 
 $(BINTARGET):	$(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDLIBS) $(LDFLAGS)
+	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 coarsen2:	$(COARSEN2OBJS)
-	$(CC) $(COARSEN2OBJS) -o $@ $(LDLIBS) $(LDFLAGS)
+	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 install:
 	install -d -m755 $(BINDIR)
-	install -m755 $(BINTARGET) $(BINDIR)
+	install -m755 $(ALLTARGETS) $(BINDIR)
 
 uninstall:
-	rm $(BINDIR)/$(PROGRAM)
+	for i in $(ALLTARGETS); do \
+		rm $(BINDIR)/$$i; \
+	done
 
 clean:
-	rm -f $(OBJS) $(BINTARGET)
-
-distclean:
-	rm -rf $(O)
+	rm -f $(ALLOBJS) $(ALLTARGETS)
