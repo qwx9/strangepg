@@ -1,5 +1,4 @@
 PROGRAM:= strpg
-#BINTARGET:= $(O)/$(PROGRAM)
 BINTARGET:= $(PROGRAM)
 INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
@@ -32,6 +31,14 @@ OBJS:=\
 	util/htab.o\
 	util/print.o\
 	strpg.o\
+
+COARSEN2OBJ=\
+	fs/fs.o\
+	lib/plan9/getfields.o\
+	linux/fs.o\
+	linux/sys.o\
+	n/coarsen2.o\
+	util/print.o\
 
 CC= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -98,8 +105,8 @@ prepare:
 $(BINTARGET):	$(OBJS)
 	$(CC) $(OBJS) -o $(BINTARGET) $(LDLIBS) $(LDFLAGS)
 
-#$(O)/%.o:	%.c
-#	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+coarsen2:	$(COARSEN2OBJS)
+	$(CC) $(COARSEN2OBJS) -o $(BINTARGET) $(LDLIBS) $(LDFLAGS)
 
 install:
 	install -d -m755 $(BINDIR)

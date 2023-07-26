@@ -2,7 +2,7 @@
 BIN=$home/bin/$objtype
 TARG=\
 	strpg\
-	coarsen\
+	coarsen2\
 
 OFILES=\
 	strpg.$O\
@@ -47,7 +47,7 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
 
-$O.coarsen: n/coarsen.$O util/htab.$O plan9/sys.$O
+$O.coarsen2: n/coarsen2.$O plan9/sys.$O plan9/fs.$O fs/fs.$O util/print.$O
 	$LD $LDFLAGS -o $target $prereq
 
 CLEANFILES=$OFILES
