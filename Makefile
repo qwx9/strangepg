@@ -32,7 +32,7 @@ OBJS:=\
 	util/print.o\
 	strpg.o\
 
-COARSEN2OBJ=\
+COARSEN2OBJS=\
 	fs/fs.o\
 	lib/plan9/getfields.o\
 	linux/fs.o\
@@ -97,16 +97,16 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-all:	$(BINTARGET)
+all:	$(BINTARGET) coarsen2
 
 prepare:
 	mkdir -p $(O)
 
 $(BINTARGET):	$(OBJS)
-	$(CC) $(OBJS) -o $(BINTARGET) $(LDLIBS) $(LDFLAGS)
+	$(CC) $(OBJS) -o $@ $(LDLIBS) $(LDFLAGS)
 
 coarsen2:	$(COARSEN2OBJS)
-	$(CC) $(COARSEN2OBJS) -o $(BINTARGET) $(LDLIBS) $(LDFLAGS)
+	$(CC) $(COARSEN2OBJS) -o $@ $(LDLIBS) $(LDFLAGS)
 
 install:
 	install -d -m755 $(BINDIR)
