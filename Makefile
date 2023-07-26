@@ -81,14 +81,15 @@ ifdef DEBUG
 			 -Wredundant-decls -Wshadow -Wstack-protector               \
 			 -Wsuggest-attribute=const -Wswitch-default -Wunused        \
 			 -Wvariadic-macros
-	CFLAGS+= -g -O0
+	CFLAGS+= -g -glldb -O0
 else
 	# c2x for omitting parameter names in a function definition
+	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
 	WFLAGS+= -Wno-unknown-pragmas -Wno-unused-value \
 			-Wno-unused-function -Wno-unused-parameter \
 			-Wno-unused-variable -Wno-sign-compare \
 			-Wno-ignored-qualifiers \
-			-Wno-c2x-extensions
+			-Wno-c2x-extensions -Wno-gnu-designator
 endif
 ifdef STATIC
 	LDFLAGS+= -static
