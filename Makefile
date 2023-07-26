@@ -76,10 +76,12 @@ ifdef DEBUG
 			 -Wvariadic-macros
 	CFLAGS+= -g -O0
 else
+	# c2x for omitting parameter names in a function definition
 	WFLAGS+= -Wno-unknown-pragmas -Wno-unused-value \
 			-Wno-unused-function -Wno-unused-parameter \
 			-Wno-unused-variable -Wno-sign-compare \
-			-Wno-discarded-qualifiers
+			-Wno-ignored-qualifiers \
+			-Wno-c2x-extensions
 endif
 ifdef STATIC
 	LDFLAGS+= -static
