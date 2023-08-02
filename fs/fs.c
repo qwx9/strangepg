@@ -22,8 +22,13 @@ int
 writefs(File *f, void *buf, int n)
 {
 	assert(f->aux != nil && buf != nil);
-	if(syswrite(f, buf, n) != n)
+	if(syswrite(f, buf, n) != n){
+		if(debug & Debugtheworld){
+			fprint(2, "writefs: short write: %r\n");
+			abort();
+		}
 		sysfatal("writefs: short write: %r");
+	}
 	return 0;
 }
 
@@ -84,6 +89,15 @@ getdbl(File *f)
 }
 
 int
+put32(File *f, u32int v)
+{
+	uchar u[4];
+
+	PBIT32(u, v);
+	return writefs(f, u, sizeof u);
+}
+
+int
 put64(File *f, u64int v)
 {
 	uchar u[8];
@@ -99,11 +113,27 @@ tellfs(File *f)
 }
 
 int
+opentmpfs(File *f, int mode)
+{
+	char *p;
+
+	if((p = sysmktmp()) == nil)
+		return -1;
+	return openfs(f, p, mode);
+}
+
+int
 openfs(File *f, char *path, int mode)
 {
 	assert(f->aux == nil && f->path == nil);
 	f->path = estrdup(path);
 	return sysopen(f, mode);
+}
+
+int
+fdopenfs(File *f, int fd, int mode)
+{
+	return sysfdopen(f, fd, mode);
 }
 
 void

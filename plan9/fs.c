@@ -14,6 +14,17 @@ sysopen(File *f, int mode)
 	return 0;
 }
 
+int
+sysfdopen(File *f, int fd, int mode)
+{
+	Biobuf *bf;
+
+	if((bf = Bfdopen(fd, mode)) == nil)
+		return -1;
+	f->aux = bf;
+	return 0;
+}
+
 void
 sysclose(File *f)
 {
@@ -54,6 +65,19 @@ vlong
 sysftell(File *f)
 {
 	return Boffset(f->aux);
+}
+
+char *
+sysmktmp(void)
+{
+	char *p;
+	static char s[64];
+
+	snprint(s, sizeof s, "/tmp/strpg.%d.crsXXXXXXXXXXX", getpid());
+	p = mktemp(s);
+	if(strcmp(p, "/") == 0)
+		return nil;
+	return p;
 }
 
 int

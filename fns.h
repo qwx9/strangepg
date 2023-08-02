@@ -50,37 +50,38 @@ void	runlayout(Graph*);
 int	updatelayout(Graph*);
 void	putnode(Node*, int, int);
 
-#define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
-	(p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
-#define	GBIT64(p)	((u32int)(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8)|\
-	(((uchar*)(p))[2]<<16)|(((uchar*)(p))[3]<<24)) |\
-	((uvlong)(((uchar*)(p))[4]|(((uchar*)(p))[5]<<8)|\
-	(((uchar*)(p))[6]<<16)|(((uchar*)(p))[7]<<24)) << 32))
-
 void	initfs(void);
 void	freefs(File*);
 int	loadfs(char*, int);
 int	openfs(File*, char*, int);
+int	fdopenfs(File*, int, int);
 File*	graphopenfs(char*, int, Graph*);
 int	chlevel(Graph*, int);
+int	readfs(File*, void*, int);
 int	writefs(File*, void*, int);
 vlong	seekfs(File*, vlong);
 vlong	tellfs(File*);
+int	opentmpfs(File*, int);
 void	closefs(File*);
 u8int	get8(File*);
 u16int	get16(File*);
 u32int	get32(File*);
 u64int	get64(File*);
 double	getdbl(File*);
+int	put8(File*, u8int);
+int	put16(File*, u16int);
+int	put32(File*, u32int);
 int	put64(File*, u64int);
 
 void	sysinit(void);
 int	sysopen(File*, int);
+int	sysfdopen(File*, int, int);
 int	syswrite(File*, void*, int);
 int	sysread(File*, void*, int);
 int	syswstatlen(File*, vlong);
 vlong	sysftell(File*);
 vlong	sysseek(File*, vlong);
+char*	sysmktmp(void);
 void	sysflush(File*);
 void	sysclose(File*);
 void	sysquit(void);
