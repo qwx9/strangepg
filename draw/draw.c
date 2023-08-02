@@ -40,11 +40,14 @@ drawedge(Quad q, double w)
 }
 
 static int
-drawnode(Quad p, Quad q, Quad u, double θ, int c)
+drawnode(Quad p, Quad q, Quad u, double θ, int c, vlong id)
 {
 	dprint(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f\n", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	drawquad2(p, q, u, θ, 1, c);
-	return drawquad2(p, q, u, θ, 0, c);
+	if(drawquad2(p, q, u, θ, 1, c) < 0
+	|| drawquad2(p, q, u, θ, 0, c) < 0
+	|| drawlabel(p, q, u, id) < 0)
+		return -1;
+	return 0;
 }
 
 static int
@@ -63,10 +66,10 @@ drawedges(Graph *g)
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
-		u = e2n(g, e->from);
-		v = e2n(g, e->to);
+		u = e2n(g, e->u);
+		v = e2n(g, e->v);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
-		drawedge(q, MAX(0., e->w * view.zoom/5));
+		drawedge(q, MAX(0., view.zoom/5));
 	}
 	return 0;
 }
@@ -78,11 +81,9 @@ drawnodes(Graph *g)
 
 	dprint(Debugdraw, "drawnodes dim %.1f,%.1f\n", g->dim.v.x, g->dim.v.y);
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
-		if(u->erased)
-			continue;
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes);
+		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes, u->realid);
 	}
 	return 0;
 }
@@ -92,7 +93,7 @@ drawworld(void)
 {
 	Graph *g;
 
-	for(g=graphs; g<graphs+ngraphs; g++){
+	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->layout.ll == nil)
 			continue;
 		dprint(Debugdraw, "drawworld: draw graph %#p\n", g);

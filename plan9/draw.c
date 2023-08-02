@@ -63,6 +63,18 @@ centerscalerect(Quad q)
 	return Rpt(v2p(q.o), v2p(q.v));
 }
 
+// FIXME
+int
+drawlabel(Quad, Quad, Quad q, vlong id)
+{
+	char lab[128];
+
+	q = centerscalequad(q);
+	snprint(lab, sizeof lab, "%lld", id);
+	string(viewfb, v2p(q.o), col[Ctext], ZP, font, lab);
+	return 0;
+}
+
 int
 drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c)
 {
@@ -85,11 +97,9 @@ drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c)
 		r2.max,
 		r1.max,
 	};
-	if(sh){
+	if(sh)
 		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
-//		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
-//		polyop(viewfb, p, nelem(p), 0, 0, 2, col[Cnodesh2], ZP, SatopD);
-	}else
+	else
 		fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
 	return 0;
 }
@@ -185,7 +195,7 @@ cleardraw(void)
 	Rectangle r, q;
 
 	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
-	for(g=graphs; g<graphs+ngraphs; g++){
+	for(g=graphs; g<graphs+dylen(graphs); g++){
 		g->off = ZV;
 		dprint(Debugdraw, "cleardraw: graph %#p dim %.1f,%.1f\n", g, g->dim.v.x, g->dim.v.y);
 		q = Rpt(v2p(g->dim.o), v2p(addpt2(g->dim.o, g->dim.v)));
@@ -280,10 +290,10 @@ ticproc(void *)
 	t0 = nsec();
 	step = drawstep ? Nsec/140 : Nsec/60;
 	for(;;){
-		for(g=graphs; g<graphs+ngraphs; g++)
+		for(g=graphs; g<graphs+dylen(graphs); g++)
 			if(g->layout.tid >= 0)
 				break;
-		if(g == graphs + ngraphs)
+		if(g == graphs + dylen(graphs))
 			break;
 		sendp(ticc, g);
 		t = nsec();
