@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <geometry.h>
+#define const
 #include "lib/khash.h"
 KHASH_MAP_INIT_STR(id, usize)
 #include "dat.h"
