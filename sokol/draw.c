@@ -54,6 +54,12 @@ drawquad(Quad q, double θ, int)
 	return 0;
 }
 
+int
+drawlabel(Quad, Quad, Quad, char*, vlong)
+{
+	return 0;
+}
+
 /* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
 /* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
