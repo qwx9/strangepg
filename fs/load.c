@@ -13,7 +13,7 @@ chlevel(Graph *g, int n)
 	ff = fftab[g->type];
 	if(g == nil || ff->chlev == nil || n < 0 || n >= dylen(g->levels))
 		return -1;
-	if(g->infile == nil || g->nlevels <= 0 || dylen(g->levels) <= 0){
+	if(g->infile == nil || dylen(g->levels) <= 0){
 		werrstr("no loaded levels");
 		return -1;
 	}

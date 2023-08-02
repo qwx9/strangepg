@@ -1,108 +1,81 @@
 #include "strpg.h"
 
 Graph *graphs;
-int ngraphs;
-
-/* not actually editing anything, but this is not transparent, unless
- * it provides an iterator, otherwise we'll always have to check the
- * value of .erased */
-void
-removenode(Graph *g, Node *n)
-{
-	n->erased = 1;
-	g->len--;
-	memset(n, 0, sizeof *n);
-}
-void
-removeedge(Graph *g, usize i)
-{
-	Edge *e;
-
-	// FIXME: this must "remove" the edge from both ends, make sure,
-	// though this should be enough
-	e = g->edges + i;
-	e->erased = 1;
-}
 
 Node *
 id2n(Graph *g, char *k)
 {
-	usize v;
+	usize u;
 
-	if(idget(g->id2n, k, &v) < 0)
+	if(idget(g->id2n, k, &u) < 0)
 		return nil;
-	assert(v < dylen(g->nodes));
-	return g->nodes + v;
+	assert(u < dylen(g->nodes));
+	return g->nodes + u;
 }
 
-/* n is an unshifted packed node with orientation */
+/* u is an unshifted packed node with orientation */
 Node *
-e2n(Graph *g, usize n)
+e2n(Graph *g, usize u)
 {
-	n >>= 1;
-	assert(n < dylen(g->nodes));
-	return g->nodes + n;
+	u >>= 1;
+	assert(u < dylen(g->nodes));
+	return g->nodes + u;
 }
 
-/* don't know about this... */
-Node
+static Node
 newnode(void)
 {
-	Node n = {0};
+	Node u = {0};
 
-	n.id = -1;
-	n.seq = -1;
-	n.vrect = ZQ;
-	n.q1 = ZQ;
-	n.q2 = ZQ;
-	return n;
+	u.metaoff = -1;
+	u.weight = 1.0;
+	u.vrect = ZQ;	/* FIXME: ugh */
+	u.q1 = ZQ;
+	u.q2 = ZQ;
+	return u;
 }
-Edge
+
+static Edge
 newedge(void)
 {
 	Edge e = {0};
 
-	e.overlap = -1;
+	e.metaoff = -1;
 	return e;
 }
 
 int
-addnode(Graph *g, char *id, char *)
+addnode(Graph *g, char *id)
 {
-	Node n;
+	Node u;
 
-	dprint(Debugtheworld, "addnode id=%s (vec sz %zd)\n", id, dylen(g->nodes));
+	dprint(Debugtheworld, "addnode id=%s (index %zd)\n", id, dylen(g->nodes));
 	if(id2n(g, id) != nil){
 		werrstr("duplicate node id");
 		return 0;
 	}
-	n = newnode();
-	n.w = 1.0;
-	n.parent = -1;
-	dypush(g->nodes, n);
-	g->len++;
+	u = newnode();
+	u.realid = dylen(g->nodes);
+	dypush(g->nodes, u);
 	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
 }
 
 /* id's in edges are always packed with direction bit */
 int
-addedge(Graph *g, char *from, char *to, int d1, int d2, char *overlap, double w)
+addedge(Graph *g, char *from, char *to, int d1, int d2)
 {
 	usize i;
 	Edge e;
 	Node *u, *v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint(Debugtheworld, "addedge %s,%s:%.2f len=%zd %#p\n", from, to,
-		w, dylen(g->edges), g->edges + dylen(g->edges)-1);
-	USED(overlap);
+	dprint(Debugtheworld, "addedge %s,%s (index %zd)\n", from, to, dylen(g->edges));
 	e = newedge();
-	e.w = w;
 	if((u = id2n(g, from)) == nil
 	|| (v = id2n(g, to)) == nil)
 		return -1;
-	e.from = u - g->nodes << 1 | d1;
-	e.to =  v - g->nodes << 1 | d2;
+	e.u = u - g->nodes << 1 | d1;
+	e.v = v - g->nodes << 1 | d2;
 	dypush(g->edges, e);
 	i = dylen(g->edges) - 1;
 	dypush(u->out, i);
@@ -132,11 +105,9 @@ nukegraph(Graph *g)
 Graph*
 initgraph(void)
 {
-	Graph *g;
+	Graph g = {0};
 
-	graphs = erealloc(graphs,
-		(ngraphs+1) * sizeof *graphs, ngraphs * sizeof *graphs);
-	g = graphs + ngraphs++;
-	g->layout.tid = -1;
-	return g;
+	g.layout.tid = -1;
+	dypush(graphs, g);
+	return graphs;
 }

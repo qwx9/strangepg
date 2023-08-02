@@ -31,16 +31,12 @@ void	run(void);
 
 int	errstr(char*, uint);
 
-void	removenode(Graph*, Node*);
-void	removeedge(Graph*, usize);
 Node*	id2n(Graph*, char*);
 Node*	e2n(Graph*, usize);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);
-Node	newnode(void);
-Edge	newedge(void);
-int	addnode(Graph*, char*, char*);
-int	addedge(Graph*, char*, char*, int, int, char*, double);
+int	addnode(Graph*, char*);
+int	addedge(Graph*, char*, char*, int, int);
 
 void	initlayout(void);
 int	newlayout(Graph*, int);

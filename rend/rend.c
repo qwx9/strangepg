@@ -26,12 +26,12 @@ faceyourfears(Graph *g, Node *u)
 		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
 			e = g->edges + *ip;
 			// FIXME: helpers
-			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
+			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
 			/* FIXME: see this is why we don't want global edge list */
-			them = e->to >> 1;
-			assert(us == e->from >> 1);
+			them = e->v >> 1;
+			assert(us == e->u >> 1);
 			if(them == us){
-				them = e->from >> 1;
+				them = e->u >> 1;
 				if(them == us){
 					n--;
 					continue;
@@ -53,11 +53,11 @@ faceyourfears(Graph *g, Node *u)
 	if(dylen(u->in) > 0){
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
 			e = g->edges + *ip;
-			sign = (e->from & 1) != (e->to & 1) ? 1 : -1;
-			them = e->from >> 1;
-			assert(us == e->to >> 1);
+			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
+			them = e->u >> 1;
+			assert(us == e->v >> 1);
 			if(them == us){
-				them = e->to >> 1;
+				them = e->v >> 1;
 				if(them == us){
 					n--;
 					continue;
@@ -133,8 +133,6 @@ rendershapes(Graph *g)
 	Vertex p;
 
 	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
-		if(u->erased)
-			continue;
 		dprint(Debugrender, "render node %.1f,%.1f:%.1f,%.1f\n", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
 		rendernode(g, u);
@@ -157,7 +155,7 @@ int
 renderlayout(Graph *g)
 {
 	dprint(Debugrender, "renderlayout %#p\n", g);
-	if(g->len < 1){
+	if(dylen(g->nodes) < 1){
 		werrstr("empty graph");
 		return -1;
 	}
@@ -174,7 +172,7 @@ rerender(int force)
 	Graph *g;
 
 	r = 0;
-	for(g=graphs; g<graphs+ngraphs; g++)
+	for(g=graphs; g<graphs+dylen(graphs); g++)
 		/* FIXME: racy without force */
 		if(force || g->layout.tid >= 0){
 			renderlayout(g);

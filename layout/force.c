@@ -47,53 +47,46 @@ compute(Graph *g)
 	l = Length;
 	/* initial random placement, but in same scale as springs */
 	for(u=g->nodes, ne=u+dylen(g->nodes); u<ne; u++){
-		if(u->erased)
-			continue;
 		x = y = nrand(l);
 		putnode(u, x, y);
 	}
-	K = ceil(sqrt(l * l / g->len));
+	K = ceil(sqrt(l * l / dylen(g->nodes)));
 	/* arbitrary displacement minimum function */
 	ε = ceil(sqrt(l * l / dylen(g->edges)));
 	δ = 1.0;
-	Fu = emalloc(g->len * sizeof *Fu);
+	Fu = emalloc(dylen(g->nodes) * sizeof *Fu);
 	u = g->nodes;
 	ne = u + dylen(g->nodes);
 	for(n=0; n<Nrep; n++){
-		memset(Fu, 0, g->len * sizeof *Fu);
+		memset(Fu, 0, dylen(g->nodes) * sizeof *Fu);
 		for(u=g->nodes, i=0; u<ne; i++, u++){
-			if(u->erased)
-				continue;
 			for(v=g->nodes; v<ne; v++){
 				if(v == u)
 					continue;
 				dv = subpt2(u->q1.o, v->vrect.o);
 				Δ = diff(dv);
-				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->w * repulsion(Δ, K)));
+				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->weight * repulsion(Δ, K)));
 			}
 		}
 		for(u=g->nodes, i=0; u<ne; i++, u++){
-			if(u->erased)
-				continue;
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
 				e = g->edges + *ep;
-				if((from = e2n(g, e->from)) == nil)
+				if((from = e2n(g, e->u)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);
 				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
-				Fu[i] = addpt2(Fu[i], mulpt2(dv, e->w));
+				// e->w now always 1
+				Fu[i] = addpt2(Fu[i], mulpt2(dv, 1));
 				j = from - g->nodes;
-				if(e->w < 1){
-					assert(e->w > 0.0);
+				if(1 < 1){
+					assert(1 > 0.0);
 					Fu[j] = subpt2(Fu[j], dv);
 				}else
-					Fu[j] = subpt2(Fu[j], divpt2(dv, e->w));
+					Fu[j] = subpt2(Fu[j], divpt2(dv, 1));
 			}
 		}
 		for(u=g->nodes, R=0, i=0; u<ne; i++, u++){
-			if(u->erased)
-				continue;
 			dv = Fu[i];
 			Δ = diff(dv);
 			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));

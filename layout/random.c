@@ -11,8 +11,7 @@ compute(Graph *g)
 	Node *u, *ue;
 
 	for(u=g->nodes, ue=u+dylen(g->nodes), x=0; u<ue; u++, x+=Nodesz+10*Ptsz)
-		if(!u->erased)
-			putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
+		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
 }
 
 static Layout ll = {

@@ -22,7 +22,7 @@ gfa1seg(Graph *g, File *f)
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
-	return addnode(g, f->fld[1], f->fld[2]);
+	return addnode(g, f->fld[1]);
 }
 
 static int
@@ -49,12 +49,12 @@ gfa1link(Graph *g, File *f)
 			return -1;
 		}
 		*s = *t = 0;
-		return addedge(g, f->fld[1], f->fld[2], d1, d2, f->fld[3], 1.);
+		return addedge(g, f->fld[1], f->fld[2], d1, d2);
 	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
 		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}
-	return addedge(g, f->fld[1], f->fld[3], d1, d2, f->fld[5], 1.);
+	return addedge(g, f->fld[1], f->fld[3], d1, d2);
 }
 
 static int

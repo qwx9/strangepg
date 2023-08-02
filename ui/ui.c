@@ -54,15 +54,16 @@ keyevent(Rune r)
 	case KBleft: if(panview(Vec2(+16,0)) >= 0) reqdraw(Reqredraw); break;
 	case KBescape: reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
-	case '+': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level+1); break;
-	case '-': for(g=graphs; g<graphs+ngraphs; g++) chlevel(g, g->level-1); break;
-	case 'R': for(g=graphs; g<graphs+ngraphs; g++) resetlayout(g); break;
+	case '+': for(g=graphs; g<graphs+dylen(graphs); g++) chlevel(g, g->level+1); break;
+	case '-': for(g=graphs; g<graphs+dylen(graphs); g++) chlevel(g, g->level-1); break;
+	case 'R': for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
 	default: break;
 	}
 	return 0;
 }
 
+// FIXME: on plan9 maybe! don't handle that here
 /* the very first mouse event will have non-sense deltas */
 int
 mouseevent(Vertex v, Vertex Δ, int b)

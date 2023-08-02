@@ -1,4 +1,3 @@
-typedef struct Vec Vec;
 typedef struct Graph Graph;
 typedef struct Level Level;
 typedef struct Shape Shape;
@@ -16,14 +15,6 @@ typedef struct File File;
 enum{
 	Vforward = 0,
 	Vreverse = 1,
-};
-
-struct Vec{
-	void *buf;
-	void *tail;
-	int elsz;
-	usize len;
-	usize bufsz;
 };
 
 #define Htab khash_t(id)
@@ -63,61 +54,42 @@ struct Layouting{
 };
 
 struct Level{
-	vlong noff;	/* absolute offset */
-	usize nnel;	/* number of nodes/supernodes for level */
-	usize ntot;	/* cumulated total of nodes/supernodes */
-	vlong eoff;
-	usize enel;
-	usize etot;
+	vlong off;
 };
+
 struct Node{
-	vlong id;
-	vlong seq;
-	//char *id;
-	//char *seq;
+	usize realid;
 	usize *in;		/* dynamic array */
 	usize *out;		/* dynamic array */
-	double w;
+	vlong metaoff;
+	double weight;
 	Quad q1;		/* bounding polygon */
 	Quad q2;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	double θ;
-	int erased;
-	int parent;
 };
 struct Edge{
-	usize from;
-	usize to;
-	//char *overlap;
-	vlong overlap;
-	double w;
-	int erased;
-	int parent;
+	usize u;
+	usize v;
+	vlong metaoff;
 };
 struct Graph{
 	/* FIXME: put these into their own Fs struct: source file */
 	int type;
 	File *infile;
 	int level;
-	vlong doff;	/* FIXME: foutoir + layer violation */
-	vlong noff;
-	vlong eoff;
-	vlong moff;
 	usize nnodes;	/* totals for all levels */
 	usize nedges;
-	usize nlevels;
-	usize len;		/* effective length after coarsening */
 	Level *levels;	/* dynamic array */
-	Edge *edges;	/* dynamic array */
-	Node *nodes;	/* dynamic array */
+	Edge *edges;	/* dynamic array, limited to visible edges */
+	Node *nodes;	/* dynamic array, limited to visible nodes */
 	Htab *id2n;
 	Layouting layout;
 	Quad dim;
 	Vertex off;
 };
-extern Graph *graphs;
-extern int ngraphs;
+extern Graph *graphs;	/* dynamic array */
 
 enum{
 	FFgfa,
