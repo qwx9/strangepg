@@ -59,6 +59,8 @@ void	initfs(void);
 void	freefs(File*);
 int	loadfs(char*, int);
 
+void	coffeetime(void);
+void	coffeeover(void);
 void	sysinit(void);
 void	sysquit(void);
 

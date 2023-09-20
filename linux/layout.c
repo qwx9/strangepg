@@ -9,13 +9,15 @@ layproc(void *gp)
 	Graph *g;
 	Layout *ll;
 
-	g = gp;
 	g->layout.tid = 0;
+	g = gp;
 	ll = g->layout.ll;
 	dprint(Debuglayout, "new job job %d layout %s g %#p\n", getpid(), ll->name, g);
+	coffeetime();
 	ll->compute(g);
-	renderlayout(g);
+	coffeeover();
 	g->layout.tid = -1;
+	reqdraw(Reqrefresh);
 	pthread_exit(NULL);
 }
 
@@ -35,7 +37,6 @@ runlayout(Graph *g)
 	int r;
 	pthread_t th;
 
-	stoplayout(g);
 	if(g->layout.aux == nil)
 		g->layout.aux = emalloc(sizeof th);
 	if((r = pthread_create(g->layout.aux, NULL, layproc, g)) != 0)

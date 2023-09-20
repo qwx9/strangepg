@@ -130,6 +130,7 @@ rendershapes(Graph *g)
 	Quad d;
 	Vertex p;
 
+	coffeetime();
 	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
 		dprint(Debugrender, "render node %.1f,%.1f:%.1f,%.1f\n", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
@@ -145,6 +146,7 @@ rendershapes(Graph *g)
 			d.v.y = p.y;
 	}
 	g->dim = d;
+	coffeeover();
 	reqdraw(Reqredraw);
 	return 0;
 }
@@ -160,9 +162,6 @@ renderlayout(Graph *g)
 	return rendershapes(g);
 }
 
-/* FIXME: no locking: changing the node and edge arrays is prohibited,
- * but nothing enforces it ⇒ danger zone (would suffice to hold a lock
- * here and when changing the graph) */
 int
 rerender(int force)
 {
@@ -171,7 +170,6 @@ rerender(int force)
 
 	r = 0;
 	for(g=graphs; g<graphs+dylen(graphs); g++)
-		/* FIXME: racy without force */
 		if(force || g->layout.tid >= 0){
 			renderlayout(g);
 			r = 1;

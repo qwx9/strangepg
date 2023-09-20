@@ -11,7 +11,9 @@ layproc(void *gp)
 	g = gp;
 	ll = g->layout.ll;
 	dprint(Debuglayout, "new layout job %d layout %s g %#p\n", getpid(), ll->name, g);
+	coffeetime();
 	ll->compute(g);
+	coffeeover();
 	g->layout.tid = -1;
 	reqdraw(Reqrefresh);
 	threadexits(nil);
@@ -24,6 +26,7 @@ stoplayout(Graph *g)
 		return;
 	threadkill(g->layout.tid);
 	g->layout.tid = -1;
+	waitpid();
 }
 
 void

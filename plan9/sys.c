@@ -4,6 +4,8 @@
 
 int noui, debug;
 
+static QLock renderlock;
+
 void
 sysquit(void)
 {
@@ -99,6 +101,18 @@ emalloc(usize n)
 	}
 	setmalloctag(p, getcallerpc(&n));
 	return p;
+}
+
+void
+coffeetime(void)
+{
+	qlock(&renderlock);
+}
+
+void
+coffeeover(void)
+{
+	qunlock(&renderlock);
 }
 
 void
