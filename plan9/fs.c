@@ -72,7 +72,7 @@ sysmktmp(void)
 {
 	char s[64];
 
-	snprint(s, sizeof s, "/tmp/strpg.%d.crs.XXXXXXXXXXX", getpid());
+	snprint(s, sizeof s, "strpg.%d.crs.XXXXXXXXXXX", getpid());
 	mktemp(s);
 	if(strncmp(s, "/", sizeof s) == 0)
 		return nil;

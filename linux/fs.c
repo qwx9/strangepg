@@ -95,7 +95,7 @@ sysmktmp(void)
 	int fd;
 	char s[64];
 
-	snprintf(s, sizeof s, "/tmp/strpg.%d.crs.XXXXXX", getpid());
+	snprintf(s, sizeof s, "strpg.%d.crs.XXXXXX", getpid());
 	if((fd = mkstemp(s)) < 0)
 		return nil;
 	close(fd);	/* FIXME: ugh */
