@@ -67,8 +67,10 @@ msec(void)
 char *
 estrdup(char *s)
 {
-	if((s = strdup(s)) == nil)
+	if((s = strdup(s)) == nil){
+		abort();
 		sysfatal("estrdup: %r");
+	}
 	setmalloctag(s, getcallerpc(&s));
 	return s;
 }
@@ -76,8 +78,10 @@ estrdup(char *s)
 void *
 erealloc(void *p, usize n, usize oldn)
 {
-	if((p = realloc(p, n)) == nil)
+	if((p = realloc(p, n)) == nil){
+		abort();
 		sysfatal("realloc: %r");
+	}
 	setrealloctag(p, getcallerpc(&p));
 	if(n > oldn)
 		memset((uchar *)p + oldn, 0, n - oldn);
@@ -89,8 +93,10 @@ emalloc(usize n)
 {
 	void *p;
 
-	if((p = mallocz(n, 1)) == nil)
+	if((p = mallocz(n, 1)) == nil){
+		abort();
 		sysfatal("emalloc: %r");
+	}
 	setmalloctag(p, getcallerpc(&n));
 	return p;
 }
