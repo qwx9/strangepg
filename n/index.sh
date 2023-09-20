@@ -2,48 +2,53 @@
 # as explicit as possible, can certainly be shortened;
 # adding mirrors makes sure that all edges u,v can be processed like this,
 # labeling every node, and making sure indices are consistent between u and v
-tmp="/tmp/`uuidgen`"
+# final format:
+#	index: hdr[] elist[]
+#	hdr: [nn][ne]
+# 	elist: {[u][v]}[ne]
+# umap is literally a map u→s; ordering is set in the ct, here it's useless
+# elist is sorted by degree(u), then u, then v
+
+# FIXME: general usage
+#tmpdir=/tmp
+tmpdir=$HOME/tmp
+tmp="$tmpdir/`uuidgen`"
 
 awk 'BEGIN{OFS="\t"}$1=="L"{print $2, $4 "\n" $4, $2}' "$1" \
-	| sort -k1,2d -u \
+	| sort -k1,2d -u -T $tmpdir -S 11G \
 	| awk 'BEGIN{OFS="\t"}{if(u!=$1) n++; u=$1; print n, $1, $2}' \
 	> $tmp.ulist
 
-	sort -k3d $tmp.ulist \
+	sort -k3d $tmp.ulist -T $tmpdir -S 11G \
 	| paste $tmp.ulist - \
 	| awk '{if(u!=$1){u=$1; printf "%s%s\t", (NR==1?"":"\n"), u}; printf "%s\t", $4}END{printf "\n"}' \
 	| awk 'BEGIN{OFS="\t"}{print NF-1, $0}' \
-	| sort -k1V -k2V -k3V \
+	| sort -k1V -k2V -k3V -T $tmpdir -S 11G \
 	> $tmp.elist
+
+rm -f $tmp.ulist
 
 /bin/time -f "py: %E usr %U sys %S max %Mk avg %Kk fs %O" \
 	<$tmp.elist /usr/bin/env python3 -c '
 import fileinput
+import sys
 from struct import pack
-nodeidx = open("'$tmp.2'", "wb")
-nodedeg = open("'$tmp.3'", "wb")
-edges = open("'$tmp.4'", "wb")
-hdr = open("'$tmp.1'", "wb")
-nn = 0
-ne = 0
+edges = open("'$tmp'", "wb")
+nn = ne = 0
 for l in fileinput.input():
 	s = l.rstrip("\n").split()
 	d = int(s[0])
-	u = int(s[1])
-	nodeidx.write(pack("Q", u))
-	nodedeg.write(pack("I", d))
+	u = int(s[1]) - 1
+	nn += 1	
 	for e in range(2, 2+d):
-		edges.write(pack("Q", int(s[e])))
+		v = int(s[e]) - 1
+		edges.write(pack("Q", u))
+		edges.write(pack("Q", v))
 		ne += 1
-	nn += 1
-hdr.write(pack("Q", nn))
-hdr.write(pack("Q", ne))
-hdr.close()
-nodeidx.close()
-nodedeg.close()
+f = sys.stdout.buffer
+f.write(pack("Q", nn))
+f.write(pack("Q", ne))
 edges.close()
-'
-cp $tmp.elist "$1.idxe"
-cp $tmp.ulist "$1.idxu"
-cat $tmp.[0-9]* > "$1.idx"
-rm $tmp.*
+' > "$1.idx"
+cat $tmp >> "$1.idx" && rm $tmp
+mv $tmp.elist "$1.idxe"
