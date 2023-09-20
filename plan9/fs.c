@@ -70,14 +70,13 @@ sysftell(File *f)
 char *
 sysmktmp(void)
 {
-	char *p;
-	static char s[64];
+	char s[64];
 
-	snprint(s, sizeof s, "/tmp/strpg.%d.crsXXXXXXXXXXX", getpid());
-	p = mktemp(s);
-	if(strcmp(p, "/") == 0)
+	snprint(s, sizeof s, "/tmp/strpg.%d.crs.XXXXXXXXXXX", getpid());
+	mktemp(s);
+	if(strncmp(s, "/", sizeof s) == 0)
 		return nil;
-	return p;
+	return estrdup(s);
 }
 
 int
