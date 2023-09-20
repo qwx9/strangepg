@@ -3,6 +3,28 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+static char*
+modestr(int omode)
+{
+	char *mode;
+
+	mode = "nein";
+	switch(omode){
+	case OREAD: mode = "r"; break;
+	case OWRITE: mode = "w"; break;
+	case ORDWR: mode = "r+"; break;
+	default: sysfatal("sysopen: unknown file mode");
+	}
+	return mode;
+}
+
+void
+sysclose(File *f)
+{
+	fclose(f->aux);
+	f->aux = nil;
+}
+
 int
 sysopen(File *f, int omode)
 {
@@ -11,24 +33,24 @@ sysopen(File *f, int omode)
 	FILE *bf;
 
 	assert(f->path != nil);
-	mode = "nein";
-	switch(omode){
-	case OREAD: mode = "r"; break;
-	case OWRITE: mode = "w"; break;
-	case ORDWR: mode = "rw"; break;
-	default: sysfatal("sysopen: unknown file mode");
-	}
-	if((bf = fopen(f->path, mode)) == nil)
+	mode = modestr(omode);
+	if((bf = fopen(f->path, mode)) == NULL)
 		return -1;
 	f->aux = bf;
 	return 0;
 }
 
-void
-sysclose(File *f)
+int
+sysfdopen(File *f, int fd, int omode)
 {
-	fclose(f->aux);
-	f->aux = nil;
+	FILE *bf;
+	char *mode;
+
+	mode = modestr(omode);
+	if((bf = fdopen(fd, mode)) == NULL)
+		return -1;
+	f->aux = bf;
+	return 0;
 }
 
 void
@@ -65,6 +87,19 @@ vlong
 sysftell(File *f)
 {
 	return ftell(f->aux);
+}
+
+char *
+sysmktmp(void)
+{
+	int fd;
+	char s[64];
+
+	snprintf(s, sizeof s, "/tmp/strpg.%d.crs.XXXXXX", getpid());
+	if((fd = mkstemp(s)) < 0)
+		return nil;
+	close(fd);	/* FIXME: ugh */
+	return estrdup(s);
 }
 
 int

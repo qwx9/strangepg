@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
