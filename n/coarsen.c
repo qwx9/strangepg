@@ -17,7 +17,7 @@ warn(char* fmt, ...)
 	va_list arg;
 
 	va_start(arg, fmt);
-	vfprint(2, fmt, arg);
+	vwarn(fmt, arg);
 	va_end(arg);
 }
 
@@ -171,7 +171,7 @@ readdict(Biobuf *bf)
 static void
 usage(void)
 {
-	fprint(2, "usage: %s [SORTED_EDGES]\n", argv0);
+	warn("usage: %s [SORTED_EDGES]\n", argv0);
 	sysfatal("usage");
 }
 
@@ -204,7 +204,7 @@ threadmain(int argc, char **argv)
 			continue;
 		if(fuse())
 			continue;
-		fprint(2, "premature exit with %zd > %d min node threshold\n",
+		warn("premature exit with %zd > %d min node threshold\n",
 			graph.nnodes, Minnodes);
 	}
 	Bterm(bf);
