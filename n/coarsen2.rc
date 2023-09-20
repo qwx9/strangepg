@@ -1,0 +1,149 @@
+#!/bin/bioawk -f
+# plaintext coarsening tree for debugging and testing
+# input: plaintext index.sh output
+# NOTE:
+# - this is unsuitable for large graphs, if anything because of precision issues
+# - no external memory
+# - implementation is very inefficient with disk usage
+# - input is 1-indexed, output is 0-indexed
+# - not dealing with locale
+BEGIN{
+	OFS = "\t"
+	"cat /env/pid" | getline pid
+	tmp = "/tmp/coarse2." pid
+	print tmp
+}
+{
+	d = $1
+	u = $2
+	nodeid[++NN] = u
+	nodes[u] = u
+	degree[u] = d
+	weight[u] = 1
+	# NOTE: this includes mirrored edges, ie the real NE is half
+	for(i=3; i<=NF; i++){
+		edgeu[++NE] = u
+		edgev[NE] = $i
+		edgeid[NE] = NE
+	}
+}
+# data structures:
+#	nodes[1..V]: node id map: u → u or s
+#	nodeid[1..V]: ordered node nodeid: i → u
+#	edges[1..E]: u,v edge list ordered by degree[u] and u; indices into nodes[]
+#		split into edgeu, edgevf
+#	degree[1..V]: degree of u (note: NOT updated for v, only look up with u index)
+#	weight[1..V]: weight of u
+#	levels[1..L]: supernode entries (merges) for every traversal
+#	entries[]: number of edges for a given supernode entry
+END{
+	lasts = NN + 1
+	nexts = lasts
+	l = 1
+	nent = 0
+	while(NE > 0){
+		#printgraph()
+		i = 1
+		NN = 0
+		NE = 0
+		for(e=1; e<=length(edgeid);){
+			f = sprintf("%s%08x", tmp, l)
+			u = nodeid[i]
+			s = nodes[u]
+			olddeg = degree[u]
+			degree[u] = 0	# recomputed below
+			# if s >= lasts, node has already been merged earlier in this round;
+			# if u,v ∈ E and u<v, then u was seen before v and v is already aliased to u
+			if(s >= lasts){
+				#printf "skip merged node %d ∈ %d\n", u, s >> "/dev/stderr"
+				e += olddeg
+				i++
+				continue
+			}
+			nn = 0
+			nm = 0
+			nv = 0
+			for(d=0; d<olddeg; d++){
+				iv = edgev[e+d]
+				v = nodes[iv]
+				if(nm++ == 0){
+					s = nexts++
+					nodes[u] = s
+					printf "%x %x %s", u-1, s-1, weight[u] >> f
+				}
+				# push external edges up
+				if(v >= lasts){	# already merged with some node
+					if(nn++ == 0)
+						nodeid[++NN] = u
+					edgeid[++NE] = edgeid[e+d]
+					edgeu[NE] = edgeu[e+d]
+					edgev[NE] = edgev[e+d]
+					degree[u]++
+					#printf "add ext edge %d,%d (u=%d)\n", s, v, u >> "/dev/stderr"
+					continue
+				}
+				# internal edges are removed
+				nv++
+				# new value is implicitely s
+				printf "\t%x %x %s", edgeid[e+d]-1, v-1, weight[iv] >> f
+				weight[u] += weight[iv]
+				nodes[iv] = s
+				weight[iv] = weight[u]
+				#printf "remove int edge %d,%d (s=%d)\n", u, v, s >> "/dev/stderr"
+			}
+			close(f)
+			# number of edges per supernode entry
+			entries[l++] = nv
+			e += d
+			i++
+		}
+		# number of supernodes per level
+		levels[length(levels)+1] = length(entries) - nent
+		nent = length(entries)
+		lasts = nexts
+		for(i=NN+1; length(nodeid)>NN; i++)
+			delete nodeid[i]
+		for(i=NE+1; length(edgeid)>NE; i++)
+			delete edgeid[i]
+	}
+	delete levels[0]	# hack
+	# the tree should be stored the other way around: from coarsest to full
+	reverse()
+}
+function reverse(){
+	le = length(entries)
+	off = 0
+	for(i=length(levels); i>=1; i--){
+		# u[8] s[8] w[4]
+		n = levels[i] * (8 + 8 + 4)
+		for(l=le-levels[i]+1; l<=le; l++)
+			# i_e[8] oldv[8] oldw[4]
+			n += entries[l] * (8 + 8 + 4)
+		printf "lvl\t%x\t%x\n", off, n
+		off += n
+		le -= levels[i]
+	}
+	le = length(entries)
+	for(i=length(levels); i>=1; i--){
+		# FIXME: crazy inefficient, only because we can't inline the length beforehand
+		for(l=le-levels[i]+1; l<=le; l++){
+			printf "super\t%d\t", entries[l]
+			f = sprintf("%s%08x", tmp, l)
+			system("cat " f " && rm " f)
+			printf "\n"
+		}
+		le -= levels[i]
+		printf "push\n"
+	}
+}
+function printgraph(){
+	for(i=1; i<=NE; i++){
+		u = edgeu[i]
+		v = edgev[i]
+		printf "e %d u[%d] %d v[%d] %d\n", i, u, nodes[u], v, nodes[v]
+	}
+	for(i=1; i<=NN; i++){
+		u = nodeid[i]
+		printf "i %d u %d d %d w %d\n", i, u, degree[u], weight[u]
+	}
+}
