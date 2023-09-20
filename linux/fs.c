@@ -89,6 +89,13 @@ sysftell(File *f)
 	return ftell(f->aux);
 }
 
+void
+sysremove(char *path)
+{
+	if(remove(path) < 0)
+		warn("remove: %r\n");
+}
+
 char *
 sysmktmp(void)
 {

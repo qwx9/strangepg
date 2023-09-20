@@ -144,6 +144,7 @@ void
 emclose(EM *em)
 {
 	close(em->fd);
+	sysremove(em->path);
 	free(em->buf);
 	free(em->path);
 	free(em);

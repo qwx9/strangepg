@@ -164,6 +164,8 @@ freefs(File *f)
 {
 	if(f == nil)
 		return;
+	if(f->s != nil)
+		closefs(f);
 	free(f->path);
 	free(f);
 }
