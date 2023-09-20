@@ -20,6 +20,7 @@ typedef unsigned long long uintptr;
 typedef	uint		Rune;
 
 typedef size_t usize;
+typedef ssize_t ssize;
 typedef int8_t s8int;
 typedef int16_t s16int;
 typedef int32_t s32int;

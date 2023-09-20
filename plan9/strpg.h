@@ -8,6 +8,8 @@ KHASH_MAP_INIT_STR(id, usize)
 #include "fns.h"
 #include "dynar.h"
 
+typedef intptr ssize;
+
 void	startdrawclock(void);
 
 #pragma	varargck	argpos	warn	1
