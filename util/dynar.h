@@ -20,6 +20,7 @@ struct Dyhdr{
 /* public */
 #define dyfree(a)	(free(dyhdr(a)))
 #define dylen(a)	((a) == nil ? 0 : dyhdr(a)->len)
+#define dyavail(a)	((a) == nil ? 0 : dyhdr(a)->sz - dyhdr(a)->len)
 #define dypush(a,v)	do{Dyhdr*__h = dyhdr(a); (a) = dychecksz((a),__h); (a)[dyhdr(a)->len++] = v;}while(0)
 #define dypop(a)	(assert((a) != nil && dyhdr(a)->len > 0), (a)[--dyhdr(a)->len])
 #define dyclear(a)	do{if(a != nil){ memset((a), 0, dyhdr(a)->len * sizeof(*(a))); dyhdr(a)->len = 0;}while(0)
