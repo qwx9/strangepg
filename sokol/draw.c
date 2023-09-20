@@ -55,7 +55,7 @@ drawquad(Quad q, double θ, int)
 }
 
 int
-drawlabel(Quad, Quad, Quad, char*, vlong)
+drawlabel(Quad, Quad, Quad, vlong)
 {
 	return 0;
 }

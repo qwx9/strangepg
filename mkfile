@@ -15,6 +15,8 @@ OFILES=\
 	fs/load.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
+	index/fs.$O\
+	index/index.$O\
 	layout/conga.$O\
 	layout/force.$O\
 	layout/layout.$O\
@@ -36,21 +38,25 @@ HFILES=\
 	draw/drw.h\
 	fs/em.h\
 	fs/fs.h\
+	index/index.h\
 	layout/layout.h\
 	lib/khash.h\
 	plan9/strpg.h\
 	util/dynar.h\
 
+OCOARSEN=\
+	n/coarsen2.$O\
+
 </sys/src/cmd/mkmany
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
-	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui -Iutil \
+	-I. -Icmd -Idraw -Ifs -Igraph -Iindex -Ilayout -Irend -Iui -Iutil \
 
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
 
-$O.coarsen2: n/coarsen2.$O plan9/sys.$O plan9/fs.$O fs/fs.$O util/print.$O
+$O.coarsen2: $OCOARSEN plan9/sys.$O plan9/fs.$O fs/fs.$O util/print.$O
 	$LD $LDFLAGS -o $target $prereq
 
-CLEANFILES=$OFILES
+CLEANFILES=$OFILES $OCOARSEN

@@ -6,7 +6,7 @@ faceyourfears(Graph *g, Node *u)
 	int n, sign;
 	usize *ip, *ie, us, them;
 	double θ, dθ;
-	Edge *e;
+	Edge ed;
 	Node *v;
 	Vector Δ;
 
@@ -24,20 +24,18 @@ faceyourfears(Graph *g, Node *u)
 	/* face outgoing */
 	if(dylen(u->out) > 0){
 		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
-			e = g->edges + *ip;
-			// FIXME: helpers
-			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			/* FIXME: see this is why we don't want global edge list */
-			them = e->v >> 1;
-			assert(us == e->u >> 1);
-			if(them == us){
-				them = e->u >> 1;
-				if(them == us){
+			ed = getedgedef(g, *ip);
+			sign = (ed.u & 1) != (ed.v & 1) ? 1 : -1;
+			them = ed.v >> 1;
+			assert(u == getithnode(g, ed.u >> 1));
+			if(getithnode(g, them) - g->nodes == us){
+				them = ed.u >> 1;
+				if(getithnode(g, them) - g->nodes == us){
 					n--;
 					continue;
 				}
 			}
-			v = g->nodes + them;
+			v = getithnode(g, them);
 			Δ = subpt2(v->vrect.o, u->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
@@ -52,18 +50,18 @@ faceyourfears(Graph *g, Node *u)
 	/* face away from incoming */
 	if(dylen(u->in) > 0){
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
-			e = g->edges + *ip;
-			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			them = e->u >> 1;
-			assert(us == e->v >> 1);
+			ed = getedgedef(g, *ip);
+			sign = (ed.u & 1) != (ed.v & 1) ? 1 : -1;
+			them = getithnode(g, ed.v >> 1) - g->nodes;
+			assert(u == getithnode(g, ed.v >> 1));
 			if(them == us){
-				them = e->v >> 1;
+				them = ed.v >> 1;
 				if(them == us){
 					n--;
 					continue;
 				}
 			}
-			v = g->nodes + them;
+			v = getithnode(g, them);
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			/* FIXME: see comment above */

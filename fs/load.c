@@ -3,33 +3,14 @@
 
 static Filefmt *fftab[FFnil];
 
-int
-chlevel(Graph *g, int n)
-{
-	Filefmt *ff;
-
-	assert(g->type >= 0 && g->type < nelem(fftab));
-	stoplayout(g);
-	ff = fftab[g->type];
-	if(g == nil || ff->chlev == nil || n < 0 || n >= dylen(g->levels))
-		return -1;
-	if(g->infile == nil || dylen(g->levels) <= 0){
-		werrstr("no loaded levels");
-		return -1;
-	}
-	if(ff->chlev(g, n) < 0)
-		return -1;
-	return 0;
-}
-
 File *
-graphopenfs(char *path, int mode, Graph *g)
+graphopenfs(Graph *g, char *path, int mode)
 {
-	assert(g->infile == nil);
-	g->infile = emalloc(sizeof *g->infile);
-	if(openfs(g->infile, path, mode) < 0)
+	assert(g->f == nil);
+	g->f = emalloc(sizeof *g->f);
+	if(openfs(g->f, path, mode) < 0)
 		return nil;
-	return g->infile;
+	return g->f;
 }
 
 int
@@ -51,10 +32,20 @@ loadfs(char *path, int type)
 	if((g = ff->load(path)) == nil)
 		return -1;
 	g->type = type;
-	if(ff->chlev != nil
-	&& ff->chlev(g, g->level) < 0)
-		return -1;
 	return newlayout(g, -1);
+}
+
+void
+nukefs(Graph *g)
+{
+	Filefmt *ff;
+
+	ff = fftab[g->type];
+	if(g->type < 0 || g->type >= nelem(fftab)){
+		warn("nukefs: invalid graph type %d", g->type);
+		return;
+	}
+	ff->nuke(g);
 }
 
 void

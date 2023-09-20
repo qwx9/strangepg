@@ -27,6 +27,8 @@ OBJS:=\
 	fs/load.o\
 	graph/graph.o\
 	graph/vertex.o\
+	index/fs.o\
+	index/index.o\
 	layout/conga.o\
 	layout/force.o\
 	layout/layout.o\
@@ -65,6 +67,7 @@ IFLAGS?=\
 	-Idraw\
 	-Ifs\
 	-Igraph\
+	-Iindex\
 	-Ilayout\
 	-Ilinux\
 	-Irend\

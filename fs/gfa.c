@@ -22,7 +22,7 @@ gfa1seg(Graph *g, File *f)
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
-	return addnode(g, f->fld[1]);
+	return pushnamednode(g, f->fld[1]);
 }
 
 static int
@@ -49,12 +49,12 @@ gfa1link(Graph *g, File *f)
 			return -1;
 		}
 		*s = *t = 0;
-		return addedge(g, f->fld[1], f->fld[2], d1, d2);
+		return pushnamededge(g, f->fld[1], f->fld[2], d1, d2);
 	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
 		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}
-	return addedge(g, f->fld[1], f->fld[3], d1, d2);
+	return pushnamededge(g, f->fld[1], f->fld[3], d1, d2);
 }
 
 static int
@@ -76,7 +76,7 @@ loadgfa1(char *path)
 		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
 	g->id2n = idmap();
-	if((f = graphopenfs(path, OREAD, g)) == nil)
+	if((f = graphopenfs(g, path, OREAD)) == nil)
 		return nil;
 	while(readrecord(f) != nil && f->err < 10){
 		switch(f->fld[0][0]){
@@ -100,6 +100,8 @@ loadgfa1(char *path)
 		nukegraph(g);
 		return nil;
 	}
+	g->nnodes = dylen(g->nodes);
+	g->nedges = dylen(g->edges);
 	return g;
 }
 
@@ -113,6 +115,7 @@ static Filefmt ff = {
 	.name = "gfa",
 	.load = loadgfa1,
 	.save = save,
+	.nuke = nukegraph,
 };
 
 Filefmt *

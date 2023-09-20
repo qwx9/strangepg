@@ -31,12 +31,22 @@ void	run(void);
 
 int	errstr(char*, uint);
 
+int	zoomgraph(Graph*, int);
+
+Node*	getithnode(Graph*, usize);
+Edge*	getithedge(Graph*, usize);
+Edge	getedgedef(Graph*, usize);
+
+void	printgraph(Graph*);
 Node*	id2n(Graph*, char*);
-Node*	e2n(Graph*, usize);
+usize	nodeid(Graph*, usize);
+usize	packedid(Graph*, usize);
+usize	pushpackededge(Graph*, usize, usize, usize);
+usize	pushnode(Graph*, usize, int);
+int	pushnamednode(Graph*, char*);
+int	pushnamededge(Graph*, char*, char*, int, int);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);
-int	addnode(Graph*, char*);
-int	addedge(Graph*, char*, char*, int, int);
 
 void	initlayout(void);
 int	newlayout(Graph*, int);
@@ -44,42 +54,12 @@ int	resetlayout(Graph*);
 void	stoplayout(Graph*);
 void	runlayout(Graph*);
 int	updatelayout(Graph*);
-void	putnode(Node*, int, int);
 
 void	initfs(void);
 void	freefs(File*);
 int	loadfs(char*, int);
-int	openfs(File*, char*, int);
-int	fdopenfs(File*, int, int);
-File*	graphopenfs(char*, int, Graph*);
-int	chlevel(Graph*, int);
-int	readfs(File*, void*, int);
-int	writefs(File*, void*, int);
-vlong	seekfs(File*, vlong);
-vlong	tellfs(File*);
-int	opentmpfs(File*, int);
-void	closefs(File*);
-u8int	get8(File*);
-u16int	get16(File*);
-u32int	get32(File*);
-u64int	get64(File*);
-double	getdbl(File*);
-int	put8(File*, u8int);
-int	put16(File*, u16int);
-int	put32(File*, u32int);
-int	put64(File*, u64int);
 
 void	sysinit(void);
-int	sysopen(File*, int);
-int	sysfdopen(File*, int, int);
-int	syswrite(File*, void*, int);
-int	sysread(File*, void*, int);
-int	syswstatlen(File*, vlong);
-vlong	sysftell(File*);
-vlong	sysseek(File*, vlong);
-char*	sysmktmp(void);
-void	sysflush(File*);
-void	sysclose(File*);
 void	sysquit(void);
 
 int	initsysdraw(void);

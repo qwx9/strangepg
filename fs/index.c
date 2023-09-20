@@ -1,199 +1,105 @@
 #include "strpg.h"
 #include "fs.h"
-
-/* FIXME: possibility: R trees or something to select which branch to
- * expand, instead of all of them; this would require storing things
- * again amenable for a dfs, but could  */
+#include "em.h"
+#include "index.h"
 
 /* FIXME: there's a problem showing inverted edge, perhaps even sd's */
 
-static File meta;
-static vlong metaoff;	/* FIXME: handle meta */
-
-/* FIXME: counterpart to fulltrotsky: undeath for supernode and related edges
-static void
-reanimate(..)
-{
-
-}
-*/
-
-static void
-fulltrotsky(Node *lev, Graph *g)
-{
-	usize *ip, *ie;
-
-	dprint(Debugcoarse, "fulltrotsky node %#p %zd\n", lev, lev-g->nodes);
-	/* castrate */
-	for(ip=lev->out, ie=ip+dylen(lev->out); ip<ie; ip++){
-		dprint(Debugcoarse, "fulltrotsky edge %zd\n", *ip);
-		removeedge(g, *ip >> 1);	// FIXME: why shifted?
-	}
-	/* excommunicate */
-	for(ip=lev->in, ie=ip+dylen(lev->in); ip<ie; ip++){
-		dprint(Debugcoarse, "fulltrotsky edge %zd\n", *ip);
-		removeedge(g, *ip >> 1);
-	}
-	/* erase */
-	lev->erased = 1;
-}
-
-/* nodes and edges are arranged such that these fields are valid and correct
- * indices with correct orientation; no  idmap is needed */
-static Node *
-readnode(File *f, Graph *g)
-{
-	vlong parent;
-	Node n;
-
-	n = newnode();
-	get64(f);	// invec
-	get64(f);	// outvec
-	n.w = get64(f);
-	parent = get64(f);
-	if(parent >= 0){
-		assert(g->nodes != nil);
-		fulltrotsky(g->nodes+parent, g);
-	}
-	dypush(g->nodes, n);
-	g->len++;
-	return g->nodes + dylen(g->nodes) - 1;
-}
-/* don't try to be clever about reclaiming edges for now,
- * just delete old, add new */
-static Edge *
-readedge(File *f, Graph *g)
-{
-	usize i;
-	Edge e;
-	Node *up, *vp, *ne;
-
-	e = newedge();
-	e.from = get64(f);
-	e.to = get64(f);
-	e.w = get64(f);
-	e.parent = get64(f);
-	dypush(g->edges, e);
-	up = g->nodes + (e.from >> 1);
-	vp = g->nodes + (e.to >> 1);
-	ne = g->nodes + dylen(g->nodes);
-	assert(up < ne && vp < ne);
-	i = dylen(g->edges) - 1;
-	dypush(up->out, i);
-	dypush(vp->in, i);
-	return g->edges + i;
-}
+extern char *indexpath;	/* FIXME */
 
 static int
-loadlevel(Graph *g, int lvl)
+readindex(Graph *g, char *path)
 {
-	int i;
 	File *f;
-	Edge *e;
-	Level *l, *le;
+	Coarse *c;
 
-	dprint(Debugcoarse, "loading level %d from %s\n", lvl, g->infile->path);
-	if(lvl < 0 || lvl >= dylen(g->levels)){
-		werrstr("no such level %d", lvl);
-		return -1;
-	}
-	if(g->level > 0 && g->level == lvl){
-		werrstr("loadlevel: not reloading same zoom level");
-		return -1;
-	}
-	f = g->infile;
-
-	l = g->levels + g->level;
-	le = g->levels + lvl;
-	if(l <= le)
-		le++;
-	else
-		le--;
-
-	/* zoom out: unwind descent */
-	for(; l>le; l--){
-
-		// FIXME
-
-	}
-	/* zoom in: descend tree
-	 * current implementation probably doesn't make it safe to process all
-	 * nodes then all edges in one go */
-	for(; l<le; l++){
-		seekfs(f, l->noff);
-		for(i=0; i<l->nnel; i++)
-			readnode(f, g);
-		seekfs(f, l->eoff);
-		for(i=0; i<l->enel; i++)
-			readedge(f, g);
-	}
-	for(i=0; i<dylen(g->nodes); i++){
-		if(g->nodes[i].erased)
-			continue;
-		Node *n = g->nodes + i;
-		dprint(Debugcoarse, "n %p in %zd out %zd w %.1f par %d erased %d\n", n, dylen(n->in), dylen(n->out), n->w, n->parent, n->erased);
-	}
-	for(i=0; i<dylen(g->edges); i++){
-		if(g->edges[i].erased)
-			continue;
-		e = g->edges + i;
-		dprint(Debugcoarse, "e %p w %.1f t %zd (%zd) h %zd (%zd)\n", e, e->w,
-			e->from >> 1, e->from & 1, e->to >>1, e->to & 1);
-	}
-	g->level = lvl;
-	if(g->layout.ll != nil)
-		return updatelayout(g);
-	return 0;
-}
-/* the actual dictionary alone does not take much memory */
-static Graph *
-loaddicts(char *path)
-{
-	int i;
-	File *f;
-	Graph *g;
-
-	dprint(Debugcoarse, "loadindex %s\n", path);
-	if((g = initgraph()) == nil)
-		sysfatal("loadindex: %r");
-	f = emalloc(sizeof *f);
+	dprint(Debugcoarse, "readindex %s\n", path);
+	if((c = initindex(g)) == nil)
+		sysfatal("load: failed to set index up: %r");
+	f = c->i.f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
 	if(openfs(f, path, OREAD) < 0)
-		return nil;
-	g->infile = f;
+		return -1;
 	g->nnodes = get64(f);
 	g->nedges = get64(f);
-	g->nlevels = get64(f);
-	g->doff = get64(f);	/* FIXME: names, fields */
-	g->noff = get64(f);
-	g->eoff = get64(f);
-	g->moff = get64(f);
-	for(i=0; i<g->nlevels; i++){
-		Level l = {0};
-		l.noff = g->noff + get64(f);
-		l.nnel = get64(f);
-		l.ntot = get64(f);
-		l.eoff = g->eoff + get64(f);
-		l.enel = get64(f);
-		l.etot = get64(f);
-		dypush(g->levels, l);
+	dprint(Debugcoarse, "readindex nn=%zd ne=%zd\n", g->nnodes, g->nedges);
+	c->inodes = emcreate(g->nnodes * 8);
+	c->iedges = emcreate(g->nedges * 8);
+	dprint(Debugcoarse, "readindex done\n");
+	return 0;
+}
+
+/* the actual level index is small and can remain in memory */
+static int
+readtree(Graph *g, char *path)
+{
+	usize nn, ne, nl;
+	File *f;
+	Level *l;
+	Ctree *ct;
+
+	dprint(Debugcoarse, "readtree %s\n", path);
+	f = g->f = emalloc(sizeof *f);
+	if(openfs(f, path, OREAD) < 0)
+		return -1;
+	nn = get64(f);	// nv + ns
+	ne = get64(f);
+	nl = get64(f);
+	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %zd; index: nv %zd ne %zd\n", nn, ne, nl, g->nnodes, g->nedges);
+	ct = &g->c->t;
+	dyprealloc(ct->levels, nl);
+	/* FIXME: refactor later; all we need in-memory are one offset and
+	 * indices into the array; EM would just mirror that once commited to
+	 * disk in whatever format... see also: dfc */
+	for(l=ct->levels; l<ct->levels+dylen(ct->levels); l++){
+		l->noff = get64(f);
+		l->eoff = get64(f);
+		l->nnodes = get64(f);
+		l->nedges = get64(f);
+		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd\n", l-ct->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}
 	/* file remains open */
-	dprint(Debugcoarse, "done loading\n");
+	dprint(Debugcoarse, "readtree done\n");
+	return 0;
+}
+
+static Graph *
+load(char *treepath)
+{
+	Graph *g;
+
+	if((g = initgraph()) == nil)
+		sysfatal("load: %r");
+	if(indexpath == nil){
+		werrstr("index/load: missing index file");
+		return nil;
+	}
+	if(readindex(g, indexpath) < 0)
+		sysfatal("load: failed to read index %s: %r", indexpath);
+	if(readtree(g, treepath) < 0)
+		sysfatal("load: failed to read tree %s: %r", treepath);
+	if(setgraphdepth(g, 0) < 0)
+		sysfatal("load: failed to load first level: %r");
 	return g;
 }
 
 static int
 save(Graph *)
 {
-	/* FIXME: index.py here */
 	return 0;
+}
+
+static void
+nuke(Graph *g)
+{
+	nukeindex(g);
+	nukegraph(g);
 }
 
 static Filefmt ff = {
 	.name = "index",
-	.load = loaddicts,
-	.chlev = loadlevel,
+	.load = load,
 	.save = save,
+	.nuke = nuke,
 };
 
 Filefmt *

@@ -36,10 +36,10 @@ compute(Graph *g)
 	usize *ep, *ee;
 	Vertex *Fu, dv;
 	Node *u, *from, *v, *ne;
-	Edge *e;
+	Edge ed;
 
 	//sleep(1000);
-	if(dylen(g->edges) < 2){
+	if(dylen(g->edges) < 1){
 		warn("no links to hand\n");
 		// FIXME: error exit
 		return;
@@ -70,13 +70,13 @@ compute(Graph *g)
 		}
 		for(u=g->nodes, i=0; u<ne; i++, u++){
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
-				e = g->edges + *ep;
-				if((from = e2n(g, e->u)) == nil)
+				ed = getedgedef(g, *ep);
+				if((from = getithnode(g, ed.u>>1)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);
 				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
-				// e->w now always 1
+				// ed.w now always 1
 				Fu[i] = addpt2(Fu[i], mulpt2(dv, 1));
 				j = from - g->nodes;
 				if(1 < 1){

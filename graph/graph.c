@@ -13,74 +13,142 @@ id2n(Graph *g, char *k)
 	return g->nodes + u;
 }
 
-/* u is an unshifted packed node with orientation */
-Node *
-e2n(Graph *g, usize u)
+usize
+nodeid(Graph *g, usize u)
 {
-	u >>= 1;
-	assert(u < dylen(g->nodes));
-	return g->nodes + u;
+	Node *n;
+
+	n = getithnode(g, u);
+	return n->id;
+}
+
+usize
+packedid(Graph *g, usize u)
+{
+	return nodeid(g, u >> 1);
+}
+
+void
+printgraph(Graph *g)
+{
+	Edge *e, *ee;
+	Node *n, *ne;
+	usize *np, *nq;
+
+	if(debug == 0)
+		return;
+	warn("graph %#p nn %zd ne %zd\n", g, g->nnodes, g->nedges);
+	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++)
+		warn("e%08zux %zux[=%zux] → %zux[=%zux]\n",
+			e - g->edges, packedid(g, e->u), e->u,
+			packedid(g, e->v), e->v);
+	for(n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++){
+		warn("n%08zux → %zux weight %d out [",
+			n - g->nodes, n->id, n->weight);
+		for(np=n->out, nq=np+dylen(n->out); np<nq; np++)
+			warn("%s%zx", np==n->out?"":" ", *np);
+		warn("] in [");
+		for(np=n->in, nq=np+dylen(n->in); np<nq; np++)
+			warn("%s%zx", np==n->in?"":" ", *np);
+		warn("]\n");
+	}
+}
+
+// FIXME: subgraphs: not always the last node/edge, so we need
+// to be able to add/remove at any index
+void
+popnode(Graph *, Node *)
+{
+	// FIXME
+}
+
+void
+popedge(Graph *, Edge *)
+{
+	// FIXME
 }
 
 static Node
 newnode(void)
 {
-	Node u = {0};
+	Node u;
 
-	u.metaoff = -1;
-	u.weight = 1.0;
-	u.vrect = ZQ;	/* FIXME: ugh */
-	u.q1 = ZQ;
-	u.q2 = ZQ;
+	memset(&u, 0, sizeof u);
+	u.weight = 1;
 	return u;
 }
 
 static Edge
 newedge(void)
 {
-	Edge e = {0};
-
-	e.metaoff = -1;
-	return e;
+	return (Edge){0, 0};
 }
 
-int
-addnode(Graph *g, char *id)
+usize
+pushpackededge(Graph *g, usize pu, usize pv, usize ei)
 {
-	Node u;
+	usize i;
+	Edge e;
+	Node *n;
 
-	dprint(Debugtheworld, "addnode id=%s (index %zd)\n", id, dylen(g->nodes));
-	if(id2n(g, id) != nil){
-		werrstr("duplicate node id");
-		return 0;
-	}
-	u = newnode();
-	u.realid = dylen(g->nodes);
-	dypush(g->nodes, u);
-	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
+	e = newedge();
+	e.u = pu;
+	e.v = pv;
+	dypush(g->edges, e);
+	i = dylen(g->edges) - 1;
+	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux:", ei, i, pu, pv);
+	n = getithnode(g, pu >> 1);
+	dprint(Debugcoarse, " in i=%zux id=%zux", n->id, n - g->nodes);
+	dypush(n->out, ei);
+	n = getithnode(g, pv >> 1);
+	dprint(Debugcoarse, " out i=%zux id=%zux\n", n->id, n - g->nodes);
+	dypush(n->in, ei);
+	return i;
 }
 
 /* id's in edges are always packed with direction bit */
 int
-addedge(Graph *g, char *from, char *to, int d1, int d2)
+pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 {
-	usize i;
-	Edge e;
-	Node *u, *v;
+	usize u, v;
+	Node *n;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint(Debugtheworld, "addedge %s,%s (index %zd)\n", from, to, dylen(g->edges));
-	e = newedge();
-	if((u = id2n(g, from)) == nil
-	|| (v = id2n(g, to)) == nil)
+	dprint(Debugtheworld, "pushnamededge %s,%s (index %zd)\n", eu, ev,
+		dylen(g->edges));
+	if((n = id2n(g, eu)) == nil)
 		return -1;
-	e.u = u - g->nodes << 1 | d1;
-	e.v = v - g->nodes << 1 | d2;
-	dypush(g->edges, e);
-	i = dylen(g->edges) - 1;
-	dypush(u->out, i);
-	dypush(v->in, i);
+	u = n - g->nodes << 1 | d1;
+	if((n = id2n(g, ev)) == nil)
+		return -1;
+	v = n - g->nodes << 1 | d2;
+	pushpackededge(g, u, v, dylen(g->edges));
 	return 0;
+}
+
+usize
+pushnode(Graph *g, usize u, int w)
+{
+	Node n;
+
+	dprint(Debugcoarse, "pushnode %zd\n", u);
+	n = newnode();
+	n.id = u;
+	n.weight = w;
+	dypush(g->nodes, n);
+	return dylen(g->nodes) - 1;
+}
+
+int
+pushnamednode(Graph *g, char *id)
+{
+	dprint(Debugtheworld, "pushname id=%s\n", id);
+	if(id2n(g, id) != nil){
+		werrstr("duplicate node id");
+		return 0;
+	}
+	pushnode(g, dylen(g->nodes), 1);
+	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
 }
 
 void
@@ -94,8 +162,7 @@ nukegraph(Graph *g)
 		dyfree(n->out);
 	}
 	dyfree(g->nodes);
-	dyfree(g->levels);
-	freefs(g->infile);
+	freefs(g->f);
 	free(g->layout.aux);
 	if(g->id2n != nil)
 		idnuke(g->id2n);

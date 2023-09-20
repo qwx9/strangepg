@@ -1,5 +1,4 @@
 typedef struct Graph Graph;
-typedef struct Level Level;
 typedef struct Shape Shape;
 typedef struct Quad Quad;
 typedef struct Obj Obj;
@@ -9,8 +8,10 @@ typedef struct Layout Layout;
 typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
+typedef struct Coarse Coarse;
 
 #pragma incomplete File
+#pragma incomplete Coarse
 
 enum{
 	Vforward = 0,
@@ -53,16 +54,12 @@ struct Layouting{
 	Layout *ll;
 };
 
-struct Level{
-	vlong off;
-};
-
 struct Node{
-	usize realid;
-	usize *in;		/* dynamic array */
-	usize *out;		/* dynamic array */
+	usize id;		/* weight=0 and realid=0 if unloaded */
+	usize *in;		/* dynamic array (v indices) */
+	usize *out;		/* dynamic array (v indices) */
 	vlong metaoff;
-	double weight;
+	int weight;		/* weight=0 if uninstanciated */
 	Quad q1;		/* bounding polygon */
 	Quad q2;
 	Quad shape;
@@ -72,18 +69,15 @@ struct Node{
 struct Edge{
 	usize u;
 	usize v;
-	vlong metaoff;
 };
 struct Graph{
-	/* FIXME: put these into their own Fs struct: source file */
 	int type;
-	File *infile;
-	int level;
-	usize nnodes;	/* totals for all levels */
+	File *f;
+	Coarse *c;
+	usize nnodes;	/* gfa-wide totals */
 	usize nedges;
-	Level *levels;	/* dynamic array */
-	Edge *edges;	/* dynamic array, limited to visible edges */
-	Node *nodes;	/* dynamic array, limited to visible nodes */
+	Node *nodes;
+	Edge *edges;
 	Htab *id2n;
 	Layouting layout;
 	Quad dim;

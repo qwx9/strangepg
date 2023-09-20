@@ -350,8 +350,8 @@ initsysdraw(void)
 	}
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	if((drawc = chancreate(sizeof(int), 4)) == nil
-	|| (ticc = chancreate(sizeof(Graph*), 2)) == nil)
+	if((drawc = chancreate(sizeof(int), 1)) == nil
+	|| (ticc = chancreate(sizeof(Graph*), 0)) == nil)
 		sysfatal("chancreate: %r");
 	if(proccreate(drawproc, nil, mainstacksize) < 0)
 		sysfatal("proccreate drawproc: %r");

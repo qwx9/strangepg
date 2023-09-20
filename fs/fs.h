@@ -4,7 +4,7 @@ struct File{
 	char *path;
 	void *aux;
 	char *s;
-	char *fld[64];
+	char *fld[16];	/* FIXME: why */
 	int nf;
 	int nr;
 	int err;
@@ -14,8 +14,8 @@ struct File{
 struct Filefmt{
 	char *name;
 	Graph* (*load)(char *);
-	int (*chlev)(Graph*, int);
 	int (*save)(Graph*);
+	void (*nuke)(Graph*);
 };
 
 Filefmt*	reggfa(void);
@@ -36,3 +36,38 @@ void	regfs(Filefmt*);
 #define	PBIT32(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;}while(0)
 #define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
 			   (p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
+
+void	freefs(File*);
+int	openfs(File*, char*, int);
+int	fdopenfs(File*, int, int);
+File*	graphopenfs(Graph*, char*, int);
+int	chlevel(Graph*, int);
+int	readfs(File*, void*, int);
+int	setsizefs(File*, vlong);
+int	writefs(File*, void*, int);
+void	flushfs(File*);
+vlong	seekfs(File*, vlong);
+vlong	tellfs(File*);
+int	opentmpfs(File*);
+void	closefs(File*);
+u8int	get8(File*);
+u16int	get16(File*);
+u32int	get32(File*);
+u64int	get64(File*);
+double	getdbl(File*);
+int	put8(File*, u8int);
+int	put16(File*, u16int);
+int	put32(File*, u32int);
+int	put64(File*, u64int);
+
+int	sysopen(File*, int);
+int	sysfdopen(File*, int, int);
+int	syswrite(File*, void*, int);
+int	sysread(File*, void*, int);
+int	syswstatlen(File*, vlong);
+vlong	sysftell(File*);
+vlong	sysseek(File*, vlong);
+void	sysremove(char*);
+char*	sysmktmp(void);
+void	sysflush(File*);
+void	sysclose(File*);
