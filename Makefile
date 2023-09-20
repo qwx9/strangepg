@@ -92,7 +92,8 @@ else
 			-Wno-unused-variable -Wno-sign-compare \
 			-Wno-ignored-qualifiers \
 			-Wno-c2x-extensions -Wno-gnu-designator \
-			-Wno-incompatible-pointer-types-discards-qualifiers
+			-Wno-incompatible-pointer-types-discards-qualifiers \
+			-Wno-format-nonliteral
 endif
 ifdef STATIC
 	LDFLAGS+= -static
