@@ -1,6 +1,7 @@
 #include "strpg.h"
 
 int haxx0rz;
+char *indexpath;	/* FIXME */
 
 static int intype;
 static char **filev;
@@ -11,15 +12,29 @@ quit(void)
 	sysquit();
 }
 
-void
-run(void)
+/* while we technically assume that there might be multiple inputs,
+ * it's not useful as is since they are all independent but overlaid
+ * on top of each other */
+static void
+loadinputs(char **files,  int type)
 {
 	char *s;
 
-	init();
-	while((s = *filev++) != nil)
-		if(loadfs(s, intype) < 0)
+	if(files == nil)
+		sysfatal("no input files");
+	while((s = *files++) != nil){
+		if(loadfs(s, type) < 0)
 			sysfatal("loadfs: could not load %s: %r\n", s);
+		USED(files);
+		break;	/* enough is enough */
+	}
+}
+
+void
+run(void)
+{
+	init();
+	loadinputs(filev, intype);
 	if(noui)
 		quit();
 	evloop();
@@ -58,7 +73,10 @@ parseargs(int argc, char **argv)
 		}
 		break;
 	case 'b': haxx0rz = 1; break;
-	case 'i': intype = FFindex; break;
+	case 'i':
+		intype = FFindex;
+		indexpath = EARGF(usage());
+		break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
