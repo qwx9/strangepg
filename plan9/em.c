@@ -6,7 +6,7 @@
 ssize
 emsysopen(char *path)
 {
-	return open(path, ORDWR);
+	return create(path, ORDWR, 0644);
 }
 
 ssize
