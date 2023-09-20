@@ -9,14 +9,16 @@ struct EM{
 	char *path;
 	uchar *buf;
 	usize bufsz;
+	usize totsz;
+	usize readsz;
 	usize nbuf;
 };
 
 EM*	emcreate(usize);
 int	emopen(EM*, char*);
 ssize	emprefetch(EM*);
-uchar*	emreadn(EM*, uchar*, ssize);
-ssize	emwrite(EM*, uchar*, ssize);
+uchar*	emreadn(EM*, vlong, ssize);
+ssize	emwrite(EM*, vlong, uchar*, ssize);
 u64int	emget64(EM*, vlong);
 ssize	emput64(EM*, vlong, u64int);
 int	emseek(EM*, vlong, int);
