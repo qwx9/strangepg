@@ -8,6 +8,7 @@ OFILES=\
 	strpg.$O\
 	draw/color.$O\
 	draw/draw.$O\
+	fs/em.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
 	fs/index.$O\
@@ -20,6 +21,7 @@ OFILES=\
 	layout/random.$O\
 	rend/rend.$O\
 	plan9/draw.$O\
+	plan9/em.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\
 	plan9/sys.$O\
@@ -32,6 +34,7 @@ HFILES=\
 	dat.h\
 	fns.h\
 	draw/drw.h\
+	fs/em.h\
 	fs/fs.h\
 	layout/layout.h\
 	lib/khash.h\

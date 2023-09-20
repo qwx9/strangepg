@@ -12,6 +12,7 @@ OBJS:=\
 	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
 	lib/plan9/nrand.o\
+	linux/em.o\
 	linux/fs.o\
 	linux/layout.o\
 	linux/sys.o\
@@ -19,6 +20,7 @@ OBJS:=\
 	sokol/draw.o\
 	draw/color.o\
 	draw/draw.o\
+	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\
 	fs/index.o\
