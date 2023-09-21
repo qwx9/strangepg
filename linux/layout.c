@@ -9,9 +9,9 @@ layproc(void *gp)
 	Graph *g;
 	Layout *ll;
 
-	g->layout.tid = 0;
 	g = gp;
 	ll = g->layout.ll;
+	g->layout.tid = 0;
 	dprint(Debuglayout, "new job job %d layout %s g %#p\n", getpid(), ll->name, g);
 	coffeetime();
 	ll->compute(g);
