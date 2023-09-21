@@ -1,17 +1,22 @@
 #include "strpg.h"
 #include <stdio.h>
-#include <ctype.h>
-#include <string.h>
-#include <sys/time.h>
 #include <errno.h>
 #include <time.h>
 #include <pthread.h>
+#include <linux/futex.h>
+#include <stdatomic.h>
+#include <stdint.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 int noui, debug;
 
 char *argv0;
 
 static char errbuf[1024];
+static _Atomic(u32int) *fux;
 
 // FIXME: kill it
 char *
@@ -128,7 +133,47 @@ emalloc(usize n)
 	return p;
 }
 
+/* futex(2) */
+static int
+futex(_Atomic(u32int) *addr, int op, uint32_t val)
+{
+	return syscall(SYS_futex, addr, op, val, NULL, NULL, 0);
+}
+
+void
+coffeetime(void)
+{
+	u32int one;
+
+	one = 1;
+	warn("one %#x\n", one);
+	for(;;){
+		if(atomic_compare_exchange_strong(fux, &one, 0))
+			break;
+		if(futex(fux, FUTEX_WAIT, 0) < 0 && errno != EAGAIN)
+			sysfatal("waitcoffeetime: futex wait");
+	}
+}
+
+void
+coffeeover(void)
+{
+	u32int zilch;
+
+	zilch = 0;
+	warn("zilch %#x\n", zilch);
+	if(atomic_compare_exchange_strong(fux, &zilch, 1)){
+		if(futex(fux, FUTEX_WAKE, 1) < 0)
+			sysfatal("coffeeover: futex wake");
+		warn("wakezilch %#x\n", zilch);
+	}
+}
+
 void
 sysinit(void)
 {
+	if((fux = mmap(NULL, sizeof(*fux), PROT_READ|PROT_WRITE,
+		MAP_ANONYMOUS|MAP_SHARED, -1, 0)) == MAP_FAILED)
+			sysfatal("sysinit: mmap wake: %r");
+	*fux = 1;
 }

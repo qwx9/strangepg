@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/wait.h>
 
 static void*
 layproc(void *gp)
@@ -27,6 +28,7 @@ stoplayout(Graph *g)
 	if(g->layout.tid < 0)
 		return;
 	pthread_cancel(*(pthread_t*)g->layout.aux);
+	waitpid(g->layout.tid, NULL, 0);
 	g->layout.tid = -1;
 	memset(g->layout.aux, 0, sizeof(pthread_t));
 }
