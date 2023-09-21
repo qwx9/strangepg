@@ -104,7 +104,7 @@ edgeptcmp(Point2 e0, Point2 e1, Point2 p)
  * (PNPOLY) algorithm by W. Randolph Franklin
  */
 int
-ptinpoly(Point2 p, Point2 *pts, ulong npts)
+ptinpoly(Point2 p, Point2 *pts, uint npts)
 {
 	int i, j, c;
 

@@ -22,7 +22,7 @@ static Channel *drawc, *ticc;
 static int ttid = -1;
 
 static Image *
-eallocimage(Rectangle r, ulong chan, int repl, ulong col)
+eallocimage(Rectangle r, uint chan, int repl, uint col)
 {
 	Image *i;
 

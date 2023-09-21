@@ -11,7 +11,6 @@
 //#define nil		((void*)0)
 typedef	unsigned short	ushort;
 typedef	unsigned char	uchar;
-typedef unsigned int ulong;	/* assumed 32 bit */
 typedef unsigned int	uint;
 typedef signed char	schar;
 typedef	long long	vlong;
@@ -92,7 +91,7 @@ double dotvec2(Point2, Point2);
 double vec2len(Point2);
 Point2 normvec2(Point2);
 int edgeptcmp(Point2, Point2, Point2);
-int ptinpoly(Point2, Point2*, ulong);
+int ptinpoly(Point2, Point2*, uint);
 /* Point3 */
 Point3 Pt3(double, double, double, double);
 Point3 Vec3(double, double, double);
