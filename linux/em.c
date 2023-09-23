@@ -21,7 +21,7 @@ emsysread(EM *em, uchar *buf, ssize n)
 	return read(em->fd, buf,  n);
 }
 
-int
+vlong
 emsysseek(EM *em, vlong off, int mode)
 {
 	return lseek(em->fd, off, mode);
