@@ -26,3 +26,9 @@ emsysseek(EM *em, vlong off, int mode)
 {
 	return lseek(em->fd, off, mode);
 }
+
+int
+emsysclose(EM *em)
+{
+	return close(em->fd);
+}

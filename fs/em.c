@@ -22,6 +22,11 @@ static u64int memfree = Poolsz;
  * this will evolve into dfc later
  */
 /* FIXME: plan9: see also readv(2) */
+/* FIXME: aggressively gobble up memory up until Poolsz, but only
+ * as much as we can/want to read at a time; if we really want to
+ * read in a huge file, let's do it in parallel (later)
+ * better yet, read in mb-sized chunks in an LRU: intervals loaded
+ * in file; see page(1) */
 
 EM *
 emopen(char *path)
@@ -31,7 +36,7 @@ emopen(char *path)
 	em = emalloc(sizeof *em);
 	if((em->fd = emsysopen(path)) < 0)
 		sysfatal("emopen: %r");
-	em->path = path;
+	em->path = estrdup(path);
 	em->artwork = 1;
 	em->realsz = em->totsz = emseek(em, 0, 2);
 	emseek(em, 0, 0);
@@ -51,11 +56,10 @@ emcreate(u64int sz)
 	}
 	if((em->fd = emsyscreate(em->path)) < 0)
 		sysfatal("emcreate: %r");
-	//warn("emcreate %s %zd\n", em->path, sz);
 	return em;
 }
 
-// FIXME
+/* FIXME
 EM *
 emclone(char *path, vlong off, u64int sz)
 {
@@ -73,17 +77,16 @@ emclone(char *path, vlong off, u64int sz)
 	em->buf = emalloc(IOsz);
 	em->bufsz = IOsz;
 	memfree -= IOsz;
-	//warn("emclone %s size %zd\n", em->path, em->bufsz);
 	for(m=sz; m>0; m-=n){
 		n = m < em->bufsz ? m : em->bufsz;
 		n = readfs(f, em->buf, n);
 		if(emsyswrite(em, em->buf, n) < 0)
 			sysfatal("emclone: %r");
 	}
-	warn("emclone %s %zd at %lld\n", em->path, sz, off);
 	freefs(f);
 	return em;
 }
+*/
 
 ssize
 emflush(EM *em)
@@ -107,8 +110,6 @@ emflush(EM *em)
 	return 0;
 }
 
-// FIXME: idea: giant global read buffers to point into?
-//	or list/array of allocated buffers?
 static ssize
 emreap(ssize req)
 {
@@ -135,17 +136,11 @@ emgrowfile(EM *em)
 	return 0;
 }
 
-/* FIXME: aggressively gobble up memory up until Poolsz, but only
- * as much as we can/want to read at a time; if we really want to
- * read in a huge file, let's do it in parallel (later)
- * better yet, read in mb-sized chunks in an LRU: intervals loaded
- * in file */
 static ssize
 emgrowbuf(EM *em)
 {
 	ssize m;
 
-	warn("emgrowbuf %s totsz %zd: ", em->path, em->totsz);
 	if(em->bufsz >= em->totsz){
 		warn("greed is good but here it\'s useless\n");
 		return 0;
@@ -159,7 +154,6 @@ emgrowbuf(EM *em)
 		if(m > memfree)
 			m = memfree;
 	}
-	warn("gobbling up %lld more bytes (free %lld)\n", m, memfree);
 	if(m <= 0)
 		return 0;
 	em->buf = erealloc(em->buf, em->bufsz + m, em->bufsz);
@@ -171,6 +165,8 @@ emgrowbuf(EM *em)
 void
 emshrink(EM *em, usize n)
 {
+	if(em->buf == nil)
+		return;
 	emflush(em);
 	if(em->bufsz < n)
 		return;
@@ -187,17 +183,13 @@ emfetch(EM *em, vlong off, ssize n)
 	uchar *p;
 	ssize m;
 
-	warn("emfetch %s off %lld sz %zd\n", em->path, off, n);
-	if(off >= em->cacheoff && off + n <= em->cacheoff + em->nbuf){
-		warn("→ 1: already in cache\n");
+	if(off >= em->cacheoff && off + n <= em->cacheoff + em->nbuf)
 		return em->buf + off - em->off;
-	}else if(off >= em->off && off + n <= em->off + em->bufsz){
-		warn("→ 2: in buffer space\n");
+	else if(off >= em->off && off + n <= em->off + em->bufsz){
 		if(off < em->cacheoff){
 			emseek(em, off, 0);
 			p = em->buf + off - em->off;
 			m = em->cacheoff - off;
-			warn("reading %lld bytes to the left\n", m);
 			if((n = emsysread(em, p, m)) < 0)
 				return nil;
 			em->cacheoff = off;
@@ -207,14 +199,12 @@ emfetch(EM *em, vlong off, ssize n)
 			emseek(em, em->cacheoff + em->nbuf, 0);
 			p = em->buf + off - em->off;
 			m = off + n - em->cacheoff - em->nbuf;
-			warn("reading %lld bytes to the right\n", m);
 			if((n = emsysread(em, p, m)) < 0)
 				return nil;
 			em->nbuf += n;
 		}
 		return em->buf + off - em->off;
 	}
-	warn("→ 3: must fetch new data\n");
 	emflush(em);	// FIXME: make sure to handle this one too later
 	emgrowbuf(em);
 	emgrowfile(em);
@@ -225,7 +215,6 @@ emfetch(EM *em, vlong off, ssize n)
 		em->off -= em->totsz - em->bufsz;
 		m -= em->totsz - em->bufsz;
 	}
-	warn("read %lld bytes from off=%lld\n", m, em->off);
 	emseek(em, off, 0);
 	p = em->buf + off - em->off;
 	if((n = emsysread(em, p, m)) < 0)
@@ -267,7 +256,7 @@ emget64(EM *em, vlong off)
 	uchar *p;
 	u64int v;
 
-	warn("emget64 %s off %lld: ", em->path, off);
+	assert(off >= 0);
 	if((p = emfetch(em, off, 8)) == nil)
 		sysfatal("emget64: %r");
 	v = GBIT64(p);
@@ -279,6 +268,7 @@ emput64(EM *em, vlong off, u64int v)
 {
 	union { uchar u[sizeof(u64int)]; u64int v; } u;
 
+	assert(off >= 0);
 	u.v = v;
 	if(embarf(em, off, u.u, sizeof u.u) < 0)
 		sysfatal("emput64: %r");
@@ -288,19 +278,13 @@ emput64(EM *em, vlong off, u64int v)
 void
 emnuke(EM *em)
 {
-	em->nbuf = 0;
-	if(em->bufsz > 0){
-		free(em->buf);
-		memfree += em->bufsz;
-		em->buf = nil;
-		em->bufsz = 0;
-	}
+	emflush(em);
+	emshrink(em, 0);
 }
 
 vlong
 emseek(EM *em, vlong off, int mode)
 {
-	warn("emseek %s at %lld\n", em->path, off);
 	return emsysseek(em, off, mode);
 }
 
@@ -309,10 +293,10 @@ emclose(EM *em)
 {
 	if(em == nil)
 		return;
-	close(em->fd);
+	emnuke(em);
+	emsysclose(em);
 	if(em->path != nil && !em->artwork)
 		sysremove(em->path);
 	free(em->path);
-	free(em->buf);
 	free(em);
 }
