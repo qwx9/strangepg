@@ -10,21 +10,21 @@ struct EM{
 	vlong realsz;
 	usize totsz;
 	vlong off;
+	vlong lastoff;
 	vlong cacheoff;
 	usize nbuf;
 	uchar *buf;
 	usize bufsz;
 	int artwork;
-	vlong age;
 };
 
 EM*	emcreate(usize);
 EM*	emopen(char*);
 EM*	emclone(char*, vlong, usize);
-uchar*	emfetch(EM*, vlong, ssize);
-ssize	embarf(EM*, vlong, uchar*, ssize);
-u64int	emget64(EM*, vlong);
-ssize	emput64(EM*, vlong, u64int);
+u64int	empget64(EM*, vlong);
+ssize	empput64(EM*, vlong, u64int);
+u64int	emget64(EM*);
+ssize	emput64(EM*, u64int);
 void	emshrink(EM*, usize);
 ssize	emflush(EM*);
 vlong	emseek(EM*, vlong, int);

@@ -106,7 +106,6 @@ emflush(EM *em)
 		return -1;
 	em->off += em->nbuf;
 	em->nbuf = 0;
-	em->age = time(nil);
 	return 0;
 }
 
@@ -141,10 +140,8 @@ emgrowbuf(EM *em)
 {
 	ssize m;
 
-	if(em->bufsz >= em->totsz){
-		warn("greed is good but here it\'s useless\n");
+	if(em->bufsz >= em->totsz)
 		return 0;
-	}
 	if(em->totsz < Maxsz)
 		m = em->totsz - em->bufsz;
 	else
@@ -177,7 +174,7 @@ emshrink(EM *em, usize n)
 	em->bufsz = n;
 }
 
-uchar *
+static uchar *
 emfetch(EM *em, vlong off, ssize n)
 {
 	uchar *p;
@@ -236,7 +233,7 @@ empreload(EM *em)
 	return em->totsz;
 }
 
-ssize
+static ssize
 embarf(EM *em, vlong off, uchar *q, ssize n)
 {
 	uchar *p;
@@ -249,9 +246,8 @@ embarf(EM *em, vlong off, uchar *q, ssize n)
 	return n;
 }
 
-// FIXME: versions w/o explicit seeks, consecutive reads
 u64int
-emget64(EM *em, vlong off)
+empget64(EM *em, vlong off)
 {
 	uchar *p;
 	u64int v;
@@ -259,12 +255,19 @@ emget64(EM *em, vlong off)
 	assert(off >= 0);
 	if((p = emfetch(em, off, 8)) == nil)
 		sysfatal("emget64: %r");
+	em->lastoff = off + 8;
 	v = GBIT64(p);
 	return v;
 }
 
+u64int
+emget64(EM *em)
+{
+	return empget64(em, em->lastoff);
+}
+
 ssize
-emput64(EM *em, vlong off, u64int v)
+empput64(EM *em, vlong off, u64int v)
 {
 	union { uchar u[sizeof(u64int)]; u64int v; } u;
 
@@ -272,7 +275,14 @@ emput64(EM *em, vlong off, u64int v)
 	u.v = v;
 	if(embarf(em, off, u.u, sizeof u.u) < 0)
 		sysfatal("emput64: %r");
+	em->lastoff = off + 8;
 	return 0;
+}
+
+ssize
+emput64(EM *em, u64int v)
+{
+	return empput64(em, em->lastoff, v);
 }
 
 void
