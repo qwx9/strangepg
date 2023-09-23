@@ -38,6 +38,7 @@ END{
 			e = edge[i]
 			u = edgeu[e]
 			v = edgev[e]
+			printf "getnode %d %d %d %d\n", i, e, u, v >>"/dev/stderr"
 			s = node[u]
 			t = node[v]
 			# unvisited node: make new supernode
@@ -51,6 +52,7 @@ END{
 			}
 			t = node[v]
 			# unvisited adjacency or self: merge internal edges
+			printf "check for redundancy: top %d u %d v %d s %d t %d w %d\n", top, u, v, s, t, w >> "/dev/stderr"
 			if(t <= w && lastm[t] <= w || t == s && u != v){
 				# edges not starting from the top node are mirrors, skip them
 				if(u == top){
@@ -62,6 +64,8 @@ END{
 				}
 			# adjacency previously merged elsewhere: fold external edges
 			}else{
+				printf "check for redundancy 2: a %d b %d NL %d\n",
+					last[t-w], last[s-w], nl >> "/dev/stderr"
 				if(last[t-w] >= last[s-w] && (u != v || nl > 1)){
 					# already retained one edge, discard following redundant ones
 					printf "discarding redundant edge: t:%d >= s:%d\n",
@@ -70,8 +74,8 @@ END{
 				}else{
 					# retain edge for next round
 					edge[++NE] = edge[i]
-					printf "retain edge[%d] %x,%x in slot %d\n",
-						i, s, t, NE >> "/dev/stderr"
+					printf "retain edge[%d] %x,%x in slot %d with weird shit %d %d\n",
+						i, s, t, NE, last[t-w], last[s-w] >> "/dev/stderr"
 					last[t-w] = i
 				}
 			}
@@ -106,7 +110,7 @@ function outputsuper(){
 	printf "new supernode %x: ", s >> "/dev/stderr"
 	outputnode(u)
 }
-function outputnode(n){
+function outputnode(	n){
 	printf "node %x %x %x %d\n", n, node[n], s, weight[n] >> outf
 	printf "merge node %x → %x, weight %d\n", n, s, weight[n] >> "/dev/stderr"
 	NV++

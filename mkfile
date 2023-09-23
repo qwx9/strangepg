@@ -32,6 +32,16 @@ OFILES=\
 	util/htab.$O\
 	util/print.$O\
 
+OCOARSEN=\
+	n/coarsen2.$O\
+	fs/em.$O\
+	fs/fs.$O\
+	plan9/em.$O\
+	plan9/fs.$O\
+	plan9/sys.$O\
+	util/htab.$O\
+	util/print.$O\
+
 HFILES=\
 	dat.h\
 	fns.h\
@@ -44,9 +54,6 @@ HFILES=\
 	plan9/strpg.h\
 	util/dynar.h\
 
-OCOARSEN=\
-	n/coarsen2.$O\
-
 </sys/src/cmd/mkmany
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
@@ -56,7 +63,7 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
 
-$O.coarsen2: $OCOARSEN plan9/sys.$O plan9/fs.$O fs/fs.$O util/print.$O
+$O.coarsen2: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
 CLEANFILES=$OFILES $OCOARSEN

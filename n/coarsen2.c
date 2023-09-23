@@ -1,238 +1,305 @@
 #include "strpg.h"
 #include "fs.h"
+#include "em.h"
 
-/* iterative edge agglomeration: coarsen by coloring neighbors on a first
- * come first serve basis, starting from low degree nodes first, merging
- * edges between nodes of the same color, starting over on each
- * iteration.  avoids any memory overhead by overwriting the edge and
- * node lists for each subsequent iteration: using the u,v edge list
- * sorted by degree and by u, for each u, each u,v is either an external
- * edge and must be preserved (v has already been assigned a color and
- * cannot be merged), or an internal one which must be removed (v is now
- * part of u).  this implicitely performs relabeling of merged nodes into
- * a new supernode and avoids going through every v's adjacencies to
- * update their offset: all old v nodes point to u and the remaining ones
- * can later be rechecked with no extra cost or effort.  more general and
- * much simpler method than first approach.
- */
-
-static int external;
-
-typedef struct Index Index;
-typedef struct Grøph Grøph;
-typedef struct Løvel Løvel;
 enum{
 	Minedges = 0,
+	IOunit = 64*1024,
 };
-struct Løvel{
-	u64int nnodes;
-	u64int nedges;
-	u64int nsuper;
-	vlong off;
-	vlong len;
-};
-struct Grøph{
-	u64int nnodes;
-	u64int nedges;
-	vlong idxoff;
-	vlong degoff;
-	vlong edgeoff;
-	Løvel *level;
-	u64int *nodei;
-	u64int *super;
-	u32int *weight;
-	u32int *degree;
-	u64int *edge;
-};
-static Grøph graph;
-static File inf, outf, emf, tmpf;
+static u64int TOTN, N, M, S, L_M, NL;
+static int tmpuuid;	/* FIXME: cleanup */
+static char prefix[64];
+static File *noutf, *eoutf, *loutf;
+static uchar iobuf[IOunit];
+static EM *fedgeuv, *fedge, *fnode, *fweight, *flast, *flastm;
 
-static void
-printtab(Grøph *g, u64int nn, u64int ne)
+static int
+reverse(Graph *g)
 {
-	u64int i, u, v, e, ee;
+	int i, x;
+	vlong noff, eoff;
+	u64int n, m;
+	File *f, *fi;
 
-	if((debug & Debugcoarse) == 0)
-		return;
-	for(i=0, e=0; i<nn; i++){
-		u = g->nodei[i];
-		for(ee=e+g->degree[u]; e<ee; e++){
-			v = g->edge[e];
-			warn("∗ node u=%llux\tv=%llux\tt=%llux\te=%llux\tdeg %d\n",
-				u, v, g->super[v], e, g->degree[v]);
+	f = emalloc(sizeof *f);	// FIXME: unfuck the fucking api
+	if(fdopenfs(f, 1, OWRITE) < 0)
+		sysfatal("fdopenfs: %r");
+	fi = emalloc(sizeof *f);
+	put64(f, S+1);
+	put64(f, g->nedges);
+	put64(f, NL);
+	noff = tellfs(f);
+	// FIXME: isn't TOTN just S+1?
+	eoff = noff + TOTN * 4 * sizeof(u64int);
+	// FIXME: dict could probably stay in memory, it's just 2*8 bytes per level
+	for(i=NL-1; i>=0; i--){
+		snprint(prefix, sizeof prefix, ".%x_coarse_%08x_0", tmpuuid, i);
+		if(openfs(fi, prefix, OREAD) < 0)
+			sysfatal("openfs %s: %r", prefix);
+		n = get64(fi);
+		m = get64(fi);
+		closefs(fi);	/* FIXME: fix this api */
+		free(fi->path);
+		fi->path = nil;
+		sysremove(prefix);
+		put64(f, noff);
+		put64(f, eoff);
+		put64(f, n);
+		put64(f, m);
+		noff += n * 4 * sizeof(u64int);
+		eoff += m * 1 * sizeof(u64int);
+	}
+	for(x=1; x<3; x++)
+		for(i=NL-1; i>=0; i--){
+			snprint(prefix, sizeof prefix, ".%x_coarse_%08x_%d", tmpuuid, i, x);
+			if(openfs(fi, prefix, OREAD) < 0)
+				sysfatal("openfs %s: %r", prefix);
+			while((n = readfs(fi, iobuf, sizeof iobuf)) > 0)
+				writefs(f, iobuf, n);
+			closefs(fi);
+			free(fi->path);
+			fi->path = nil;
+			sysremove(prefix);
 		}
+	freefs(f);
+	return 0;
+}
+
+static void
+endlevel(void)
+{
+	uchar u[2*sizeof(u64int)], *p;
+
+	// FIXME: wtf why do we do this, we have put64 and emput64
+	p = u;
+	PBIT64(p, N);
+	p += sizeof(u64int);
+	PBIT64(p, L_M);
+	writefs(loutf, u, sizeof u);
+	closefs(loutf);
+	free(loutf->path);
+	closefs(noutf);
+	free(noutf->path);
+	closefs(eoutf);
+	free(eoutf->path);
+	emnuke(flast);
+	emshrink(fedge, M*8);
+	eoutf->path = noutf->path = loutf->path = nil;
+}
+static void
+outputlevel(void)
+{
+	int i;
+	u64int m, u, v, e;
+
+	dprint(Debugcoarse, "ending level with N=%lld M=%lld\n", N, M);
+	endlevel();
+	for(i=0; i<M; i++){
+		e = emget64(fedge, i*8);
+			m = e * 8*2 + 2*8;
+			u = emget64(fedgeuv, m);
+			v = emget64(fedgeuv, m+8);
+		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
 	}
-	for(i=0, e=0; e<ne; i++){
-		u = g->nodei[i];
-		for(ee=e+g->degree[u]; e<ee; e++){
-			v = g->edge[e];
-			warn("∗ edge u=%llux\tv=%llux\tt=%llux\te=%llux\tdeg %d\n",
-				u, v, g->super[v], e, g->degree[v]);
+}
+
+static void
+outputedge(u64int e, u64int u, u64int v, u64int s, u64int t)
+{
+	uchar buf[1*sizeof(u64int)], *p;
+
+	p = buf;
+	PBIT64(p, e);
+	writefs(eoutf, buf, sizeof buf);
+	dprint(Debugcoarse, "discard edge i=%lld mapping to %llx,%llx (u,v %llx,%llx)\n", e, s, t, u, v);
+	L_M++;
+}
+
+static void
+outputnode(u64int u, u64int s, u64int s´, u64int w)
+{
+	uchar buf[4*sizeof(u64int)], *p;
+
+	p = buf;
+	PBIT64(p, u);
+	p += sizeof(u64int);
+	PBIT64(p, s);
+	p += sizeof(u64int);
+	PBIT64(p, s´);
+	p += sizeof(u64int);
+	PBIT64(p, w);
+	writefs(noutf, buf, sizeof buf);
+	dprint(Debugcoarse, "merge node %llx (%llx) → %llx, weight %lld\n", u, s, s´, w);
+	N++;
+	TOTN++;
+}
+static void
+outputsuper(u64int u, u64int s, u64int s´, u64int w)
+{
+	dprint(Debugcoarse, "new supernode %llx: ", s);
+	outputnode(u, s, s´, w);
+}
+
+static void
+newlevel(void)
+{
+	int i;
+	u64int m, u, v, e;
+
+	for(i=0; i<M; i++){
+		e = emget64(fedge, i*8);
+			m = e * 8*2 + 2*8;
+			u = emget64(fedgeuv, m);
+			v = emget64(fedgeuv, m+8);
+		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
+	}
+	N = M = L_M = 0;
+	warn("\t>> NEW LEVEL %lld\n", NL+1);
+	snprint(prefix, sizeof prefix, ".%x_coarse_%08llx_X", tmpuuid, NL++);
+	/* FIXME: yuck */
+	prefix[strlen(prefix)-1] = '0';
+	if(openfs(loutf, prefix, OWRITE) < 0)
+		sysfatal("newlevel %s: %r", prefix);
+	prefix[strlen(prefix)-1] = '1';
+	if(openfs(noutf, prefix, OWRITE) < 0)
+		sysfatal("newlevel %s: %r", prefix);
+	prefix[strlen(prefix)-1] = '2';
+	if(openfs(eoutf, prefix, OWRITE) < 0)
+		sysfatal("newlevel %s: %r", prefix);
+}
+
+static void
+outputtop(u64int u, u64int s, u64int s´, u64int w)
+{
+	newlevel();
+	outputsuper(u, s, s´, w);
+	outputlevel();
+}
+
+int
+coarsen(Graph *g, char *index)
+{
+	int i, wu, wv;
+	u64int w, u, v, s, t, m, e, a, b;
+	ssize top;
+
+	// FIXME: separate functions
+	//fedgeuv = emclone(index, 2*8, 2 * g->nedges * sizeof(u64int));
+	if((fedgeuv = emopen(index)) == nil)
+		sysfatal("coarsen: %r");
+	fweight = emcreate(g->nnodes * sizeof(u64int));
+	fnode = emcreate(g->nnodes * sizeof(u64int));
+	fedge = emcreate(g->nedges * sizeof(u64int));
+	/* FIXME: these might never get big enough to need to be in external memory */
+	flastm = emcreate(g->nnodes * sizeof(u64int));
+	flast = emcreate(g->nnodes * sizeof(u64int));
+	warn("N %lld M %lld\n", N, M);
+	for(i=0; i<g->nnodes; i++){
+		emput64(fweight, i*8, 1);
+		emput64(fnode, i*8, i);
+	}
+	for(i=0; i<g->nedges; i++)
+		emput64(fedge, i*8, i);
+	warn("N %lld M %lld\n", g->nnodes, g->nedges);
+	N = g->nnodes;
+	M = g->nedges;
+	S = N - 1;
+	w = S;
+	top = -1;	/* cannot happen */
+	s = wu = 0;	/* cannot happen */
+	while(M > 0){
+		m = M;
+		newlevel();
+		/* FIXME: optimize (later) for less seeking/jumping around */
+		for(i=0; i<m; i++){
+			e = emget64(fedge, i*8);
+			m = e * 8*2 + 2*8;
+			u = emget64(fedgeuv, m);
+			v = emget64(fedgeuv, m+8);
+			warn("getnode %d %zd %zd %zd\n", i, e, u, v);
+			s = emget64(fnode, u*8);
+			/* unvisited node: make new supernode */
+			if(s <= w){
+				if(top >= 0)
+					emput64(fweight, top*8, wu);
+				top = u;
+				S++;
+				wu = emget64(fweight, u*8);
+				outputsuper(u, s, S, wu);
+				s = S;
+				emput64(flastm, (s-g->nnodes)*8, S);
+				emput64(flast, (s-w)*8, i);
+				emput64(fnode, u*8, s);
+			}
+			t = emget64(fnode, v*8);
+			a = 0;
+			if(t > w)
+				a = emget64(flastm, (t-g->nnodes)*8);
+			/* unvisited adjacency or self: merge internal edges */
+			warn("check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
+			if(t <= w && a <= w || t == s && u != v){
+				/* edges not starting from the top node are mirrors, skip them */
+				if(u == top){
+					wv = emget64(fweight, v*8);
+					outputnode(v, t, s, wv);
+					wv += wu;
+					wu = wv;
+					emput64(fweight, v*8, wv);
+					emput64(fnode, v*8, s);
+					outputedge(e, u, v, s, t);
+				}
+			/* adjacency previously merged elsewhere: fold external edges */
+			}else{
+				a = emget64(flast, (t-w)*8);
+				b = emget64(flast, (s-w)*8);
+				warn("check for redundancy 2: a %lld b %lld NL %lld\n",
+					a, b, NL);
+				if(a >= b && (u != v || NL > 1)){
+					/* already retained one edge, discard following redundant ones */
+					dprint(Debugcoarse, "discarding redundant edge: t:%llx >= s:%llx\n", a, b);
+					outputedge(e, u, v, s, t);
+				}else{
+					/* retain edge for next round */
+					//a = emget64(fedge, i*8);
+					emput64(fedge, M*8, e);
+					M++;
+					dprint(Debugcoarse, "retain edge[%x] %lld,%lld at %llx slot %lld\n", i, s, t, a, M);
+					emput64(flast, (t-w)*8, i);
+				}
+			}
 		}
+		outputlevel();
+		w = S;
 	}
-}
-
-/* final output, reversing level order from coarsest to full graph.
- * output: hdr[] levels[]
- * hdr: nnodes[8] nedges[8] nsuper[8] nlevel[8] leveltab[]
- * leveltab: { offset[8] length[8] }[nlevel]
- * levels: { nlsupers[8] supers[] }
- * supers: { super[8] u[8] weight[4] deg[4] vlist[] }[nsupers]
- * vlist: { v[8] weight[4] }[deg]
- */
-static void
-reverse(char *tmppath, usize nextsuper, Grøph *g)
-{
-	int n, m, k;
-	File f = {0}, tf = {0};
-	uchar buf[64*1024];
-	vlong doff, op, o;
-	Løvel *l;
-
-	// FIXME: we need external edges! ie. v,_
-
-	if(openfs(&tf, tmppath, OREAD) < 0)
-		sysfatal("fdopenfs stdout: %r");
-	if(fdopenfs(&f, 1, OWRITE) < 0)
-		sysfatal("openfs %s: %r", tmppath);
-	put64(&f, g->nnodes);
-	put64(&f, g->nedges);
-	put64(&f, nextsuper - g->nnodes);
-	put64(&f, dylen(g->level));
-	doff = tellfs(&f);
-	/* placeholders */
-	for(l=g->level; l<g->level+dylen(g->level); l++){
-		put64(&f, -1);
-		put32(&f, 0);
+	/* add one node to rule them all if none remain */
+	if(M > 0)
+		dprint(Debugcoarse, "stopping at %lld remaining edges\n", M);
+	if(N > 0){
+		dprint(Debugcoarse, "push artificial node to rule all remaining");
+		outputtop(top, s, ++S, wu);
 	}
-	op = tellfs(&f);
-	vlong ass = 0;
-	for(l=g->level; l<g->level+dylen(g->level); l++){
-		/* level header */
-		put64(&f, l->nsuper);
-		/* level data */
-		for(k=l->nsuper, n=l->len; k>0; k--){		// FIXME: don't have length
-			m = n < sizeof buf ? n : sizeof buf;
-			if(readfs(&tf, buf, m) <= 0)
-				sysfatal("reverse: short read");
-			ass += m;
-			dprint(Debugcoarse, "level %zd: %lld bytes, %d so far\n",
-				l-g->level, l->len, m);
-			if(writefs(&f, buf, m) != m)
-				sysfatal("reverse: short write");
-		}
-		/* update level index */
-		o = tellfs(&f);
-		seekfs(&f, doff);
-		put64(&f, op);		/* offset */
-		put32(&f, o - op);	/* length */
-		doff = tellfs(&f);
-		seekfs(&f, o);
-		op = o;
-	}
-	closefs(&tf);
-	closefs(&f);
+	emclose(fedgeuv);
+	emclose(fnode);
+	emclose(fweight);
+	emclose(fedge);
+	emclose(flast);
+	emclose(flastm);
+	return 0;
 }
 
-static void
-writetop(File *f, u64int u, u64int s, Grøph *g)
+static int
+readindex(Graph *g, char *path)
 {
-	vlong off;
-	u32int w;
-	Løvel l = {0};
+	File *f;
 
-	w = g->weight[u];
-	dprint(Debugcoarse, "#%llux:%llux,%d::", u, s, w);
-	put64(f, s);
-	put64(f, u);
-	put32(f, w);
-	put32(f, 0);	/* placeholder for number of u,_ edges */
-	off = tellfs(f);
-	l.off = off;
-	dypush(g->level, l);
-}
-
-static void
-writechild(File *f, u64int v, Grøph *g)
-{
-	u32int w;
-
-	w = g->weight[v];
-	dprint(Debugcoarse, "%llux,%d:", v, w);
-	put64(f, v);
-	put32(f, w);
-}
-
-/* fill placeholder */
-static void
-writerecsize(File *f, u64int nedge, Grøph *g)
-{
-	vlong o;
-	Løvel *l;
-
-	dprint(Debugcoarse, "|");
-	o = tellfs(f);
-	l = g->level + dylen(g->level) - 1;
-	seekfs(f, l->off - sizeof(u32int));
-	put32(f, nedge);	/* can be 0 */
-	seekfs(f, o);
-}
-
-static void
-writelevel(File *f, int nsuper, int nnode, int nedge, Grøph *g)
-{
-	vlong off;
-	Løvel *l;
-
-	l = g->level + dylen(g->level) - 1;
-	dprint(Debugcoarse, "writelevel %zd %d %d %d\n", l-g->level, nsuper, nnode, nedge);
-	off = tellfs(f);
-	l->len = off - l->off;
-	seekfs(f, l->off - 4);
-	put32(f, l->len / (8 + 4));
-	assert(l->len % (8 + 4) == 0);
-	seekfs(f, off);
-	l->nedges = nedge;
-	l->nnodes = nnode;
-	l->nsuper = nsuper;
-	dprint(Debugcoarse, "\n");
-}
-
-/* everything is 1-indexed because of awk... */
-static void
-loadgraph(Grøph *g, File *f)
-{
-	u64int i, *t, *e, *s;
-	u32int *w, *d;
-
-	dyprealloc(g->nodei, g->nnodes);
-	dyprealloc(g->super, g->nnodes);
-	dyprealloc(g->degree, g->nnodes);
-	dyprealloc(g->weight, g->nnodes);
-	dyprealloc(g->edge, g->nedges);
-	seekfs(f, g->idxoff);
-	for(t=g->nodei, e=t+dylen(g->nodei), w=g->weight, s=g->super, i=0; t<e;){
-		*w++ = 1;
-		*s++ = i++;
-		*t++ = get64(f) - 1;
-	}
-	for(t=g->nodei, e=t+dylen(g->nodei), d=g->degree; t<e;)
-		d[*t++] = get32(f);
-	for(t=g->edge, e=t+dylen(g->edge); t<e;)
-		*t++ = get64(f) - 1;
-}
-
-static void
-readidx(Grøph *g, File *f)
-{
-	dprint(Debugcoarse, "readidx %s\n", f->path);
+	f = emalloc(sizeof *f);
+	if(openfs(f, path, OREAD) < 0)
+		sysfatal("readindex: %r");
 	g->nnodes = get64(f);
 	g->nedges = get64(f);
-	g->idxoff = tellfs(f);
-	g->degoff = g->idxoff + g->nnodes * sizeof(u64int);
-	g->edgeoff = g->degoff + g->nnodes * sizeof(u64int);
-	dprint(Debugcoarse, "read %llud nodes %llud edges\n",
-		g->nnodes, g->nedges);
+	warn("N %lld M %lld\n", g->nnodes, g->nedges);
+	freefs(f);
+	return 0;
 }
 
 static void
@@ -245,115 +312,42 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-	int alreadymerged, hasedges, issuper, d, oldd;
-	u64int i, u, v, t, e, s, newi, ne, nn, newe, news, olds, newd;
-	char *a, *path;
-	File f = {0}, tf = {0};
-	Grøph g = {0};
+	char *s;
+	Graph g;
 
 	ARGBEGIN{
 	case 'D':
-		a = EARGF(usage());
-		if(strcmp(a, "draw") == 0)
+		s = EARGF(usage());
+		if(strcmp(s, "draw") == 0)
 			debug |= Debugdraw;
-		else if(strcmp(a, "render") == 0)
+		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
-		else if(strcmp(a, "layout") == 0)
+		else if(strcmp(s, "layout") == 0)
 			debug |= Debuglayout;
-		else if(strcmp(a, "fs") == 0)
+		else if(strcmp(s, "fs") == 0)
 			debug |= Debugfs;
-		else if(strcmp(a, "coarse") == 0)
+		else if(strcmp(s, "coarse") == 0)
 			debug |= Debugcoarse;
-		else if(strcmp(a, "all") == 0)
+		else if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
 		else{
-			warn("unknown debug component %s\n", a);
+			warn("unknown debug component %s\n", s);
 			usage();
 		}
 		break;
-	case 'e': external = 1; break;
 	}ARGEND
 	if(argc < 1)
 		usage();
-	if(openfs(&f, argv[0], OREAD) < 0)
-		sysfatal("openfs: %r");
-	readidx(&g, &f);
-	if(external)
-		sysfatal("no external memory implementation to hand");
-	else
-		loadgraph(&g, &f);
-	if(opentmpfs(&tf) < 0)
-		sysfatal("fdopenfs: %r");
-	path = tf.path;
-	olds = g.nnodes;
-	news = olds;	// FIXME: use pointers maybe
-	ne = g.nedges;
-	nn = g.nnodes;
-	while(ne > Minedges){
-		printtab(&g, nn, ne);
-		newi = newe = 0;
-		for(e=0, i=0; i<nn; i++){
-			u = g.nodei[i];
-			oldd = g.degree[u];
-			d = g.degree[u] = 0;
-			s = g.super[u];
-			dprint(Debugtheworld, "- check node %llux\tu=%llux\ts=%llux\tdeg %d\n",
-					i, u, g.super[u], g.degree[u]);
-			alreadymerged = issuper = hasedges = 0;
-			if(s >= olds){
-				// FIXME: does this work??
-				dprint(Debugtheworld, "\t→ add missing edges from node %llux already part of super %llux\n",
-					u, s);
-				alreadymerged = hasedges = issuper = 1;
-			}
-			for(newd=0; d<oldd; d++){
-				v = g.edge[e+d];
-				t = g.super[v];
-				dprint(Debugtheworld, "\t→ edge u=%llux\tv=%llux\tt=%llux\te=%llux\tdeg %d\n",
-					u, v, t, e+d, g.degree[v]);
-				if(alreadymerged && v < u){
-					dprint(Debugtheworld, "\t→ skipping redundant edge u=%llux\tv=%llux\tt=%llux\te=%llux\tdeg %d\n",
-						u, v, t, e+d, g.degree[v]);
-					continue;
-				}
-				if(issuper++ == 0){
-					s = news++;
-					writetop(&tf, u, s, &g);
-					g.super[u] = s;
-				}
-				if(t >= olds){
-					if(hasedges++ == 0)
-						g.nodei[newi++] = u;
-					g.edge[newe++] = v;
-					g.degree[u]++;
-					dprint(Debugtheworld, "\t\tadd ext edge %llux,%llux (u=%llux)\n",
-						s, t, u);
-					continue;
-				}
-				g.weight[u] += g.weight[v];
-				g.super[v] = s;
-				dprint(Debugtheworld, "\t\tremove int edge %llux,%llux (u=%llux)\n",
-					s, t, u);
-				writechild(&tf, v, &g);
-				newd++;
-			}
-			/* child can be just u, or u and some adjacencies */
-			if(issuper)
-				writerecsize(&tf, newd, &g);
-			e += d;
-		}
-		writelevel(&tf, news - olds, newi - nn, newe - ne, &g);
-		olds = news;
-		ne = newe;
-		nn = newi;
-	}
-	if(ne > 0)
-		dprint(Debugcoarse, "threshold reached\n");
-	printtab(&g, nn, ne);
-	dprint(Debugtheworld, "wrote %lld bytes\n", tellfs(&tf));
-	closefs(&tf);
-	closefs(&f);
-	reverse(path, news, &g);
-	free(path);
+	if(readindex(&g, argv[0]) < 0)
+		sysfatal("readindex: %r");
+	srand(time(nil));
+	tmpuuid = nrand(1000000);
+	loutf = emalloc(sizeof *loutf);
+	noutf = emalloc(sizeof *noutf);
+	eoutf = emalloc(sizeof *eoutf);
+	if(coarsen(&g, argv[0]) < 0)
+		sysfatal("coarsen: %r");
+	if(reverse(&g) < 0)
+		sysfatal("reverse: %r");
 	return 0;
 }

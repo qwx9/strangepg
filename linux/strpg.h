@@ -125,3 +125,5 @@ void	sysfatal(char*, ...);
 void	lsleep(vlong);
 
 extern int mainstacksize;
+
+#define snprint snprintf
