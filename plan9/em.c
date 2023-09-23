@@ -24,7 +24,7 @@ emsyswrite(EM *em, uchar *buf, ssize n)
 ssize
 emsysread(EM *em, uchar *buf, ssize n)
 {
-	return readn(em->fd, buf, n);
+	return read(em->fd, buf, n);
 }
 
 vlong
