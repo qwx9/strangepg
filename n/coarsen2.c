@@ -6,7 +6,7 @@ enum{
 	Minedges = 0,
 	IOunit = 64*1024,
 };
-static u64int TOTN, N, M, S, L_M, NL;
+static u64int N, M, S, L_M, NL, TN, TM;
 static int tmpuuid;	/* FIXME: cleanup */
 static char prefix[64];
 static File *noutf, *eoutf, *loutf;
@@ -14,7 +14,7 @@ static uchar iobuf[IOunit];
 static EM *fedgeuv, *fedge, *fnode, *fweight, *flast, *flastm;
 
 static int
-reverse(Graph *g)
+reverse(void)
 {
 	int i, x;
 	vlong noff, eoff;
@@ -25,12 +25,11 @@ reverse(Graph *g)
 	if(fdopenfs(f, 1, OWRITE) < 0)
 		sysfatal("fdopenfs: %r");
 	fi = emalloc(sizeof *f);
-	put64(f, S+1);
-	put64(f, g->nedges);
+	put64(f, TN);
+	put64(f, TM);
 	put64(f, NL);
-	noff = tellfs(f);
-	// FIXME: isn't TOTN just S+1?
-	eoff = noff + TOTN * 4 * sizeof(u64int);
+	noff = (3 + 4*NL) * sizeof(u64int);
+	eoff = noff + 4*TN * sizeof(u64int);
 	// FIXME: dict could probably stay in memory, it's just 2*8 bytes per level
 	for(i=NL-1; i>=0; i--){
 		snprint(prefix, sizeof prefix, ".%x_coarse_%08x_0", tmpuuid, i);
@@ -69,13 +68,13 @@ static void
 printtab(void)
 {
 	int i;
-	u64int m, u, v, e;
+	u64int u, v, e;
 
+	emseek(fedge, 0, 0);
 	for(i=0; i<M; i++){
-		e = emget64(fedge, i*8);
-			m = e * 8*2 + 2*8;
-			u = emget64(fedgeuv, m);
-			v = emget64(fedgeuv, m+8);
+		e = emget64(fedge);
+		u = empget64(fedgeuv, e*8*2+2*8);
+		v = emget64(fedgeuv);
 		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
 	}
 }
@@ -83,14 +82,10 @@ printtab(void)
 static void
 endlevel(void)
 {
-	uchar u[2*sizeof(u64int)], *p;
-
-	// FIXME: wtf why do we do this, we have put64 and emput64
-	p = u;
-	PBIT64(p, N);
-	p += sizeof(u64int);
-	PBIT64(p, L_M);
-	writefs(loutf, u, sizeof u);
+	put64(loutf, N);
+	put64(loutf, L_M);
+	TN += N;
+	TM += L_M;
 	closefs(loutf);
 	free(loutf->path);
 	closefs(noutf);
@@ -111,11 +106,7 @@ outputlevel(void)
 static void
 outputedge(u64int e, u64int u, u64int v, u64int s, u64int t)
 {
-	uchar buf[1*sizeof(u64int)], *p;
-
-	p = buf;
-	PBIT64(p, e);
-	writefs(eoutf, buf, sizeof buf);
+	put64(eoutf, e);
 	dprint(Debugcoarse, "discard edge i=%lld mapping to %llx,%llx (u,v %llx,%llx)\n", e, s, t, u, v);
 	L_M++;
 }
@@ -123,20 +114,12 @@ outputedge(u64int e, u64int u, u64int v, u64int s, u64int t)
 static void
 outputnode(u64int u, u64int s, u64int s´, u64int w)
 {
-	uchar buf[4*sizeof(u64int)], *p;
-
-	p = buf;
-	PBIT64(p, u);
-	p += sizeof(u64int);
-	PBIT64(p, s);
-	p += sizeof(u64int);
-	PBIT64(p, s´);
-	p += sizeof(u64int);
-	PBIT64(p, w);
-	writefs(noutf, buf, sizeof buf);
+	put64(noutf, u);
+	put64(noutf, s);
+	put64(noutf, s´);
+	put64(noutf, w);
 	dprint(Debugcoarse, "merge node %llx (%llx) → %llx, weight %lld\n", u, s, s´, w);
 	N++;
-	TOTN++;
 }
 static void
 outputsuper(u64int u, u64int s, u64int s´, u64int w)
@@ -179,7 +162,6 @@ coarsen(Graph *g, char *index)
 	u64int w, u, v, s, t, m, e, a, b;
 	ssize top;
 
-	// FIXME: separate functions
 	if((fedgeuv = emopen(index)) == nil)
 		sysfatal("coarsen: %r");
 	fweight = emcreate(g->nnodes * sizeof(u64int));
@@ -189,12 +171,15 @@ coarsen(Graph *g, char *index)
 	flastm = emcreate(g->nnodes * sizeof(u64int));
 	flast = emcreate(g->nnodes * sizeof(u64int));
 	warn("N %lld M %lld\n", N, M);
+	emseek(fweight, 0, 0);
+	emseek(fnode, 0, 0);
+	emseek(fedge, 0, 0);
 	for(i=0; i<g->nnodes; i++){
-		emput64(fweight, i*8, 1);
-		emput64(fnode, i*8, i);
+		emput64(fweight, 1);
+		emput64(fnode, i);
 	}
 	for(i=0; i<g->nedges; i++)
-		emput64(fedge, i*8, i);
+		emput64(fedge, i);
 	warn("N %lld M %lld\n", g->nnodes, g->nedges);
 	N = g->nnodes;
 	M = g->nedges;
@@ -206,44 +191,46 @@ coarsen(Graph *g, char *index)
 		m = M;
 		newlevel();
 		/* FIXME: optimize (later) for less seeking/jumping around */
+		emseek(fedge, 0, 0);
+		emseek(fedgeuv, 2*8, 0);
 		for(i=0; i<m; i++){
-			e = emget64(fedge, i*8);
-			u = emget64(fedgeuv, e * 8*2 + 2*8);
-			v = emget64(fedgeuv, e * 8*2 + 2*8+8);
-			s = emget64(fnode, u*8);
+			e = empget64(fedge, i*8);
+			u = empget64(fedgeuv, e*8*2+2*8);
+			v = emget64(fedgeuv);
+			s = empget64(fnode, u*8);
 			warn("getnode %d %zd %zd %zd s %zd\n", i, e, u, v, s);
 			/* unvisited node: make new supernode */
 			if(s <= w){
 				if(top >= 0)
-					emput64(fweight, top*8, wu);
+					empput64(fweight, top*8, wu);
 				top = u;
 				S++;
-				wu = emget64(fweight, u*8);
+				wu = empget64(fweight, u*8);
 				outputsuper(u, s, S, wu);
-				emput64(flastm, (s-(s>=g->nnodes?g->nnodes:0))*8, S);
+				empput64(flastm, (s-(s>=g->nnodes?g->nnodes:0))*8, S);
 				s = S;
-				emput64(flast, (s-w)*8, i);
-				emput64(fnode, u*8, s);
+				empput64(flast, (s-w)*8, i);
+				empput64(fnode, u*8, s);
 			}
-			t = emget64(fnode, v*8);
-			a = t >= g->nnodes ? emget64(flastm, (t-g->nnodes)*8) : 0; 
+			t = empget64(fnode, v*8);
+			a = t >= g->nnodes ? empget64(flastm, (t-g->nnodes)*8) : 0; 
 			/* unvisited adjacency or self: merge internal edges */
 			warn("check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
 			if(t <= w && a <= w || t == s && u != v){
 				/* edges not starting from the top node are mirrors, skip them */
 				if(u == top){
-					wv = emget64(fweight, v*8);
+					wv = empget64(fweight, v*8);
 					outputnode(v, t, s, wv);
 					wv += wu;
 					wu = wv;
-					emput64(fweight, v*8, wv);
-					emput64(fnode, v*8, s);
+					empput64(fweight, v*8, wv);
+					empput64(fnode, v*8, s);
 					outputedge(e, u, v, s, t);
 				}
 			/* adjacency previously merged elsewhere: fold external edges */
 			}else{
-				a = t >= w ? emget64(flast, (t-w)*8) : 0;
-				b = s >= w ? emget64(flast, (s-w)*8) : 0;
+				a = t >= w ? empget64(flast, (t-w)*8) : 0;
+				b = s >= w ? empget64(flast, (s-w)*8) : 0;
 				warn("check for redundancy 2: a %lld b %lld NL %lld\n",
 					a, b, NL);
 				if(a >= b && (u != v || NL > 1)){
@@ -252,10 +239,10 @@ coarsen(Graph *g, char *index)
 					outputedge(e, u, v, s, t);
 				}else{
 					/* retain edge for next round */
-					emput64(fedge, M*8, e);
+					empput64(fedge, M*8, e);
 					M++;
 					dprint(Debugcoarse, "retain edge[%x] %lld,%lld at %llx slot %lld\n", i, s, t, a, M);
-					emput64(flast, (t-(t>=w?w:g->nnodes))*8, i);
+					empput64(flast, (t-(t>=w?w:g->nnodes))*8, i);
 				}
 			}
 		}
@@ -339,7 +326,7 @@ main(int argc, char **argv)
 	eoutf = emalloc(sizeof *eoutf);
 	if(coarsen(&g, argv[0]) < 0)
 		sysfatal("coarsen: %r");
-	if(reverse(&g) < 0)
+	if(reverse() < 0)
 		sysfatal("reverse: %r");
 	return 0;
 }
