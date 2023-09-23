@@ -81,7 +81,10 @@ void *
 erealloc(void *p, usize n, usize oldn)
 {
 	if((p = realloc(p, n)) == nil){
-		abort();
+		if(n == 0)
+			return nil;
+		if(debug)
+			abort();
 		sysfatal("realloc: %r");
 	}
 	setrealloctag(p, getcallerpc(&p));
@@ -96,7 +99,10 @@ emalloc(usize n)
 	void *p;
 
 	if((p = mallocz(n, 1)) == nil){
-		abort();
+		if(n == 0)
+			return nil;
+		if(debug)
+			abort();
 		sysfatal("emalloc: %r");
 	}
 	setmalloctag(p, getcallerpc(&n));
