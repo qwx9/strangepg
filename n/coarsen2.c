@@ -66,6 +66,21 @@ reverse(Graph *g)
 }
 
 static void
+printtab(void)
+{
+	int i;
+	u64int m, u, v, e;
+
+	for(i=0; i<M; i++){
+		e = emget64(fedge, i*8);
+			m = e * 8*2 + 2*8;
+			u = emget64(fedgeuv, m);
+			v = emget64(fedgeuv, m+8);
+		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
+	}
+}
+
+static void
 endlevel(void)
 {
 	uchar u[2*sizeof(u64int)], *p;
@@ -89,18 +104,8 @@ endlevel(void)
 static void
 outputlevel(void)
 {
-	int i;
-	u64int m, u, v, e;
-
 	dprint(Debugcoarse, "ending level with N=%lld M=%lld\n", N, M);
 	endlevel();
-	for(i=0; i<M; i++){
-		e = emget64(fedge, i*8);
-			m = e * 8*2 + 2*8;
-			u = emget64(fedgeuv, m);
-			v = emget64(fedgeuv, m+8);
-		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
-	}
 }
 
 static void
@@ -143,16 +148,7 @@ outputsuper(u64int u, u64int s, u64int s´, u64int w)
 static void
 newlevel(void)
 {
-	int i;
-	u64int m, u, v, e;
-
-	for(i=0; i<M; i++){
-		e = emget64(fedge, i*8);
-			m = e * 8*2 + 2*8;
-			u = emget64(fedgeuv, m);
-			v = emget64(fedgeuv, m+8);
-		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
-	}
+	printtab();
 	N = M = L_M = 0;
 	warn("\t>> NEW LEVEL %lld\n", NL+1);
 	snprint(prefix, sizeof prefix, ".%x_coarse_%08llx_X", tmpuuid, NL++);
@@ -184,7 +180,6 @@ coarsen(Graph *g, char *index)
 	ssize top;
 
 	// FIXME: separate functions
-	//fedgeuv = emclone(index, 2*8, 2 * g->nedges * sizeof(u64int));
 	if((fedgeuv = emopen(index)) == nil)
 		sysfatal("coarsen: %r");
 	fweight = emcreate(g->nnodes * sizeof(u64int));
@@ -213,11 +208,10 @@ coarsen(Graph *g, char *index)
 		/* FIXME: optimize (later) for less seeking/jumping around */
 		for(i=0; i<m; i++){
 			e = emget64(fedge, i*8);
-			m = e * 8*2 + 2*8;
-			u = emget64(fedgeuv, m);
-			v = emget64(fedgeuv, m+8);
-			warn("getnode %d %zd %zd %zd\n", i, e, u, v);
+			u = emget64(fedgeuv, e * 8*2 + 2*8);
+			v = emget64(fedgeuv, e * 8*2 + 2*8+8);
 			s = emget64(fnode, u*8);
+			warn("getnode %d %zd %zd %zd s %zd\n", i, e, u, v, s);
 			/* unvisited node: make new supernode */
 			if(s <= w){
 				if(top >= 0)
@@ -226,15 +220,13 @@ coarsen(Graph *g, char *index)
 				S++;
 				wu = emget64(fweight, u*8);
 				outputsuper(u, s, S, wu);
+				emput64(flastm, (s-(s>=g->nnodes?g->nnodes:0))*8, S);
 				s = S;
-				emput64(flastm, (s-g->nnodes)*8, S);
 				emput64(flast, (s-w)*8, i);
 				emput64(fnode, u*8, s);
 			}
 			t = emget64(fnode, v*8);
-			a = 0;
-			if(t > w)
-				a = emget64(flastm, (t-g->nnodes)*8);
+			a = t >= g->nnodes ? emget64(flastm, (t-g->nnodes)*8) : 0; 
 			/* unvisited adjacency or self: merge internal edges */
 			warn("check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
 			if(t <= w && a <= w || t == s && u != v){
@@ -250,8 +242,8 @@ coarsen(Graph *g, char *index)
 				}
 			/* adjacency previously merged elsewhere: fold external edges */
 			}else{
-				a = emget64(flast, (t-w)*8);
-				b = emget64(flast, (s-w)*8);
+				a = t >= w ? emget64(flast, (t-w)*8) : 0;
+				b = s >= w ? emget64(flast, (s-w)*8) : 0;
 				warn("check for redundancy 2: a %lld b %lld NL %lld\n",
 					a, b, NL);
 				if(a >= b && (u != v || NL > 1)){
@@ -260,11 +252,10 @@ coarsen(Graph *g, char *index)
 					outputedge(e, u, v, s, t);
 				}else{
 					/* retain edge for next round */
-					//a = emget64(fedge, i*8);
 					emput64(fedge, M*8, e);
 					M++;
 					dprint(Debugcoarse, "retain edge[%x] %lld,%lld at %llx slot %lld\n", i, s, t, a, M);
-					emput64(flast, (t-w)*8, i);
+					emput64(flast, (t-(t>=w?w:g->nnodes))*8, i);
 				}
 			}
 		}
@@ -274,6 +265,7 @@ coarsen(Graph *g, char *index)
 	/* add one node to rule them all if none remain */
 	if(M > 0)
 		dprint(Debugcoarse, "stopping at %lld remaining edges\n", M);
+	printtab();
 	if(N > 0){
 		dprint(Debugcoarse, "push artificial node to rule all remaining");
 		outputtop(top, s, ++S, wu);
