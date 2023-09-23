@@ -6,6 +6,12 @@
 ssize
 emsysopen(char *path)
 {
+	return open(path, OREAD);
+}
+
+ssize
+emsyscreate(char *path)
+{
 	return create(path, ORDWR, 0644);
 }
 
@@ -21,7 +27,7 @@ emsysread(EM *em, uchar *buf, ssize n)
 	return readn(em->fd, buf, n);
 }
 
-int
+vlong
 emsysseek(EM *em, vlong off, int mode)
 {
 	return seek(em->fd, off, mode);
