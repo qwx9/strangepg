@@ -3,9 +3,12 @@
 #include "em.h"
 #include "index.h"
 
+/* FIXME: will change this up later, see below */
 enum{
 	Poolsz = 4*1024*1024*1024ULL,
+	Maxsz = Poolsz / 10,
 	IOsz = 64*1024,
+	Maxchunk = 1024*1024,
 };
 static u64int memfree = Poolsz;
 
@@ -29,8 +32,9 @@ emopen(char *path)
 	if((em->fd = emsysopen(path)) < 0)
 		sysfatal("emopen: %r");
 	em->path = path;
-	em->norm = 1;
+	em->artwork = 1;
 	em->realsz = em->totsz = emseek(em, 0, 2);
+	emseek(em, 0, 0);
 	return em;
 }
 
@@ -105,7 +109,7 @@ emflush(EM *em)
 
 // FIXME: idea: giant global read buffers to point into?
 //	or list/array of allocated buffers?
-ssize
+static ssize
 emreap(ssize req)
 {
 	// FIXME: free space up
@@ -113,34 +117,55 @@ emreap(ssize req)
 	return 0;
 }
 
-int
-emgrowfile(EM *em, vlong sz)
+static int
+emgrowfile(EM *em)
 {
 	uchar u[1] = {0};
+	ssize m;
 
-	if(em->realsz >= sz)
+	if(em->artwork)
 		return 0;
-	emseek(em, sz, 0);
+	m = em->off + em->bufsz;
+	if(em->realsz >= em->totsz || em->realsz >= m)
+		return 0;
+	emseek(em, m-1, 0);
 	if(emsyswrite(em, u, sizeof u) < 0)
 		return -1;
-	em->realsz = sz;
-	if(em->totsz < em->realsz)
-		em->totsz = em->realsz;
+	em->realsz = m;
 	return 0;
 }
 
-ssize
-emgrowbuf(EM *em, ssize n)
+/* FIXME: aggressively gobble up memory up until Poolsz, but only
+ * as much as we can/want to read at a time; if we really want to
+ * read in a huge file, let's do it in parallel (later)
+ * better yet, read in mb-sized chunks in an LRU: intervals loaded
+ * in file */
+static ssize
+emgrowbuf(EM *em)
 {
-	n += em->off + IOsz;
-	if(n > memfree && (n = emreap(n)) <= 0)
-		return -1;
-	memfree += em->bufsz;
-	em->buf = erealloc(em->buf, n, em->bufsz);
-	em->bufsz = n;
-	n = em->bufsz;
-	memfree -= em->bufsz;
-	return n;
+	ssize m;
+
+	warn("emgrowbuf %s totsz %zd: ", em->path, em->totsz);
+	if(em->bufsz >= em->totsz){
+		warn("greed is good but here it\'s useless\n");
+		return 0;
+	}
+	if(em->totsz < Maxsz)
+		m = em->totsz - em->bufsz;
+	else
+		m = Maxsz;
+	if(m > memfree){
+		emreap(m);
+		if(m > memfree)
+			m = memfree;
+	}
+	warn("gobbling up %lld more bytes (free %lld)\n", m, memfree);
+	if(m <= 0)
+		return 0;
+	em->buf = erealloc(em->buf, em->bufsz + m, em->bufsz);
+	memfree -= m;
+	em->bufsz += m;
+	return m;
 }
 
 void
@@ -162,61 +187,52 @@ emfetch(EM *em, vlong off, ssize n)
 	uchar *p;
 	ssize m;
 
-	if(off >= em->cacheoff && off + n <= em->cacheoff + em->nbuf)
+	warn("emfetch %s off %lld sz %zd\n", em->path, off, n);
+	if(off >= em->cacheoff && off + n <= em->cacheoff + em->nbuf){
+		warn("→ 1: already in cache\n");
 		return em->buf + off - em->off;
-	else if(off >= em->off && off + n <= em->off + em->bufsz){
+	}else if(off >= em->off && off + n <= em->off + em->bufsz){
+		warn("→ 2: in buffer space\n");
 		if(off < em->cacheoff){
 			emseek(em, off, 0);
 			p = em->buf + off - em->off;
 			m = em->cacheoff - off;
+			warn("reading %lld bytes to the left\n", m);
 			if((n = emsysread(em, p, m)) < 0)
 				return nil;
 			em->cacheoff = off;
-			em->nbuf += m;
+			em->nbuf += n;
 		}
 		if(off + n > em->cacheoff + em->nbuf){
 			emseek(em, em->cacheoff + em->nbuf, 0);
 			p = em->buf + off - em->off;
 			m = off + n - em->cacheoff - em->nbuf;
+			warn("reading %lld bytes to the right\n", m);
 			if((n = emsysread(em, p, m)) < 0)
 				return nil;
 			em->nbuf += n;
 		}
 		return em->buf + off - em->off;
 	}
-	emflush(em);
-	m = off + n - em->off - em->bufsz;
-	emgrowbuf(em, em->bufsz + m);
-	emgrowfile(em, em->bufsz);
-	if(off >= em->off){
-		if(off < em->cacheoff){
-			emseek(em, off, 0);
-			p = em->buf + off - em->off;
-			m = em->cacheoff - off;
-			if((n = emsysread(em, p, m)) < 0)
-				return nil;
-			em->cacheoff = off;
-			em->nbuf += m;
-		}
-		if(off + n > em->cacheoff + em->nbuf){
-			emseek(em, em->cacheoff + em->nbuf, 0);
-			p = em->buf + off - em->off;
-			m = off + n - em->cacheoff - em->nbuf;
-			if((n = emsysread(em, p, m)) < 0)
-				return nil;
-			em->nbuf += n;
-		}
-		em->realsz = em->bufsz;
-		return em->buf + off - em->off;
+	warn("→ 3: must fetch new data\n");
+	emflush(em);	// FIXME: make sure to handle this one too later
+	emgrowbuf(em);
+	emgrowfile(em);
+	em->off = off;
+	// FIXME: fuck it, we'll rewrite this anyway
+	m = em->bufsz;
+	if(em->off + em->bufsz > em->totsz){
+		em->off -= em->totsz - em->bufsz;
+		m -= em->totsz - em->bufsz;
 	}
-	emseek(em, 0, 0);
-	em->off = 0;
-	if((n = emsysread(em, em->buf, em->bufsz)) < 0)
+	warn("read %lld bytes from off=%lld\n", m, em->off);
+	emseek(em, off, 0);
+	p = em->buf + off - em->off;
+	if((n = emsysread(em, p, m)) < 0)
 		return nil;
-	em->cacheoff = em->off;
+	em->cacheoff = off;
 	em->nbuf = n;
-	em->realsz = em->bufsz;
-	return em->buf;
+	return p;
 }
 
 ssize
@@ -236,27 +252,22 @@ embarf(EM *em, vlong off, uchar *q, ssize n)
 {
 	uchar *p;
 
-	if(off >= em->off && off + n <= em->off + em->bufsz){
-		p = em->buf + off - em->totsz;
-		memmove(p, q, n);
-		return n;
-	}
-	// FIXME: ignoring any buffering if it hasn't been done already
-	emseek(em, off, 0);
-	if((n = emsyswrite(em, q, n)) < 0)
+	/* whatever we write must be in a cached region
+	 * to remain in sync */
+	if((p = emfetch(em, off, n)) == nil)
 		return -1;
-	if(off + n > em->realsz)
-		em->realsz = off + n;
+	memmove(p, q, n);
 	return n;
 }
 
-/* convenience functions */
+// FIXME: versions w/o explicit seeks, consecutive reads
 u64int
 emget64(EM *em, vlong off)
 {
 	uchar *p;
 	u64int v;
 
+	warn("emget64 %s off %lld: ", em->path, off);
 	if((p = emfetch(em, off, 8)) == nil)
 		sysfatal("emget64: %r");
 	v = GBIT64(p);
@@ -299,7 +310,7 @@ emclose(EM *em)
 	if(em == nil)
 		return;
 	close(em->fd);
-	if(em->path != nil && !em->norm)
+	if(em->path != nil && !em->artwork)
 		sysremove(em->path);
 	free(em->path);
 	free(em->buf);

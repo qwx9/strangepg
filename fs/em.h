@@ -14,7 +14,7 @@ struct EM{
 	usize nbuf;
 	uchar *buf;
 	usize bufsz;
-	int norm;
+	int artwork;
 	vlong age;
 };
 
@@ -35,3 +35,4 @@ ssize	emsyscreate(char*);
 ssize	emsysread(EM*, uchar*, ssize);
 ssize	emsyswrite(EM*, uchar*, ssize);
 vlong	emsysseek(EM*, vlong, int);
+ssize	empreload(EM*);
