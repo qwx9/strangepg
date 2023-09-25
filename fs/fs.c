@@ -27,13 +27,15 @@ setsizefs(File *f, vlong sz)
 int
 writefs(File *f, void *buf, int n)
 {
+	int m;
+
 	assert(f->aux != nil && buf != nil);
-	if(syswrite(f, buf, n) != n){
+	if((m = syswrite(f, buf, n)) != n){
 		if(debug & Debugtheworld){
-			warn("writefs: short write: %r\n");
+			warn("writefs: short write: %s\n", error());
 			abort();
 		}
-		sysfatal("writefs: short write: %r");
+		sysfatal("writefs: short write: %s", error());
 	}
 	return 0;
 }
@@ -47,29 +49,32 @@ flushfs(File *f)
 int
 readfs(File *f, void *buf, int n)
 {
+	int m;
+
 	assert(f->aux != nil && buf != nil);
-	if((n = sysread(f, buf, n)) < 0){
+	if((m = sysread(f, buf, n)) < 0){
 		if(debug & Debugtheworld){
-			warn("readfs: short read: %r\n");
+			warn("readfs: short read: %s\n", error());
 			abort();
 		}
-		sysfatal("readfs: short read: %r");
+		sysfatal("readfs: short read: %s", error());
 	}
-	return n;
+	return m;
 }
 
 u8int
 get8(File *f)
 {
+	int m;
 	uchar v;
 
 	assert(f->aux != nil);
-	if(sysread(f, &v, 1) <= 0){
+	if((m = sysread(f, &v, 1)) <= 0){
 		if(debug & Debugtheworld){
-			warn("get8: short read: %r\n");
+			warn("get8: short read: %s\n", error());
 			abort();
 		}
-		sysfatal("get8: short read: %r");
+		sysfatal("get8: short read: %s", error());
 	}
 	return v;
 }
@@ -139,8 +144,10 @@ opentmpfs(File *f)
 {
 	char *path;
 
-	if((path = sysmktmp()) == nil)
+	if((path = sysmktmp()) == nil){
+		warn("sysmktmp: %s\n", error());
 		return -1;
+	}
 	f->path = path;
 	return sysopen(f, OWRITE);
 }

@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include <stdio.h>
 #include <errno.h>
 #include <time.h>
 #include <pthread.h>
@@ -9,7 +8,6 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
-#include <unistd.h>
 
 int noui, debug;
 
@@ -65,15 +63,16 @@ sysfatal(char *fmt, ...)
 {
 	va_list arg;
 
+	perror("fatal");
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
-	exit(66);
+	exit(EXIT_FAILURE);
 }
 
 char *
 error(void)
 {
-	return errbuf;
+	return strerror(errno);
 }
 
 /* FIXME: check */
@@ -83,7 +82,7 @@ msec(void)
 	struct timeval tv;
 
 	if(gettimeofday(&tv, NULL) < 0){
-		warn("gettimeofday: error %d\n", errno);
+		perror("gettimeofday");
 		return -1;
 	}
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
@@ -109,15 +108,18 @@ estrdup(char *s)
 	char *p;
 
 	if((p = strdup(s)) == NULL)
-		sysfatal("strdup: %r");
+		sysfatal("estrdup");
 	return p;
 }
 
 void *
 erealloc(void *p, usize n, usize oldn)
 {
-	if((p = realloc(p, n)) == NULL)
-		sysfatal("realloc: %r");
+	if((p = realloc(p, n)) == NULL){
+		if(n == 0)
+			return NULL;
+		sysfatal("erealloc");
+	}
 	if(n > oldn)
 		memset((uchar *)p + oldn, 0, n - oldn);
 	return p;
@@ -128,8 +130,11 @@ emalloc(usize n)
 {
 	void *p;
 
-	if((p = calloc(1, n)) == NULL)
-		sysfatal("emalloc: %r");
+	if((p = calloc(1, n)) == NULL){
+		if(n == 0)
+			return NULL;
+		sysfatal("emalloc");
+	}
 	return p;
 }
 
@@ -174,6 +179,6 @@ sysinit(void)
 {
 	if((fux = mmap(NULL, sizeof(*fux), PROT_READ|PROT_WRITE,
 		MAP_ANONYMOUS|MAP_SHARED, -1, 0)) == MAP_FAILED)
-			sysfatal("sysinit: mmap wake: %r");
+			sysfatal("sysinit: mmap wake");
 	*fux = 1;
 }

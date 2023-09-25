@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include "fs.h"
-#include <stdio.h>
 #include <sys/stat.h>
 
 static char*
@@ -34,8 +33,10 @@ sysopen(File *f, int omode)
 
 	assert(f->path != nil);
 	mode = modestr(omode);
-	if((bf = fopen(f->path, mode)) == NULL)
+	if((bf = fopen(f->path, mode)) == NULL){
+		warn("sysopen \"%s\": %s\n", f->path, error());
 		return -1;
+	}
 	f->aux = bf;
 	return 0;
 }
@@ -47,8 +48,10 @@ sysfdopen(File *f, int fd, int omode)
 	char *mode;
 
 	mode = modestr(omode);
-	if((bf = fdopen(fd, mode)) == NULL)
+	if((bf = fdopen(fd, mode)) == NULL){
+		warn("sysfdopen %d: %s\n", fd, error());
 		return -1;
+	}
 	f->aux = bf;
 	return 0;
 }
@@ -93,7 +96,7 @@ void
 sysremove(char *path)
 {
 	if(remove(path) < 0)
-		warn("remove: %r\n");
+		warn("remove %s: %s\n", path, error());
 }
 
 char *
@@ -102,23 +105,20 @@ sysmktmp(void)
 	int fd;
 	char s[64];
 
-	snprintf(s, sizeof s, "strpg.%d.crs.XXXXXX", getpid());
-	if((fd = mkstemp(s)) < 0)
-		return nil;
-	close(fd);	/* FIXME: ugh */
+	snprintf(s, sizeof s, ".strpg.%d.%06x", getpid(), rand());
 	return estrdup(s);
 }
 
 int
 syswrite(File *f, void *buf, int n)
 {
-	return fwrite(buf, n, 1, f->aux);
+	return n * fwrite(buf, n, 1, f->aux);
 }
 
 int
 sysread(File *f, void *buf, int n)
 {
-	return fread(buf, n, 1, f->aux);
+	return n * fread(buf, n, 1, f->aux);
 }
 
 /* FIXME: proper errno + string translation usage for unix */

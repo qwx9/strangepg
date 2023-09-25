@@ -40,8 +40,11 @@ OBJS:=\
 	strpg.o\
 
 COARSEN2OBJS:=\
+	fs/em.o\
 	fs/fs.o\
 	lib/plan9/getfields.o\
+	lib/plan9/nrand.o\
+	linux/em.o\
 	linux/fs.o\
 	linux/sys.o\
 	n/coarsen2.o\
