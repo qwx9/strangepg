@@ -1,7 +1,7 @@
 PROGRAM:= strpg
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:= $(BINTARGET)\
-	coarsen2\
+	coarsen\
 
 INSTALLPREFIX:= /usr
 BINDIR:= $(INSTALLPREFIX)/bin
@@ -39,7 +39,8 @@ OBJS:=\
 	util/print.o\
 	strpg.o\
 
-COARSEN2OBJS:=\
+COARSENOBJS:=\
+	coarsen.o\
 	fs/em.o\
 	fs/fs.o\
 	lib/plan9/getfields.o\
@@ -47,12 +48,11 @@ COARSEN2OBJS:=\
 	linux/em.o\
 	linux/fs.o\
 	linux/sys.o\
-	n/coarsen2.o\
 	util/print.o\
 
 ALLOBJS:=\
 	$(OBJS)\
-	$(COARSEN2OBJS)\
+	$(COARSENOBJS)\
 
 CC= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -123,7 +123,7 @@ all:	$(ALLTARGETS)
 $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
-coarsen2:	$(COARSEN2OBJS)
+coarsen:	$(COARSENOBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 install:
