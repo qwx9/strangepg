@@ -7,11 +7,20 @@ enum{
 	IOunit = 64*1024,
 };
 static u64int N, M, S, L_M, NL, TN, TM;
-static int tmpuuid;	/* FIXME: cleanup */
-static char prefix[64];
 static File *noutf, *eoutf, *loutf;
 static uchar iobuf[IOunit];
 static EM *fedgeuv, *fedge, *fnode, *fweight, *flast, *flastm;
+
+static char *
+tmpname(usize level, int part)
+{
+	static char *pref, s[128];
+
+	if(pref == nil)
+		pref = sysmktmp();
+	snprint(s, sizeof s, "%s_%08zx_%d", pref, level, part);
+	return s;
+}
 
 static int
 reverse(void)
@@ -32,15 +41,14 @@ reverse(void)
 	eoff = noff + 4*TN * sizeof(u64int);
 	// FIXME: dict could probably stay in memory, it's just 2*8 bytes per level
 	for(i=NL-1; i>=0; i--){
-		snprint(prefix, sizeof prefix, ".%x_coarse_%08x_0", tmpuuid, i);
-		if(openfs(fi, prefix, OREAD) < 0)
-			sysfatal("openfs %s: %r", prefix);
+		if(openfs(fi, tmpname(i, 0), OREAD) < 0)
+			sysfatal("openfs %r");
 		n = get64(fi);
 		m = get64(fi);
 		closefs(fi);	/* FIXME: fix this api */
+		sysremove(fi->path);
 		free(fi->path);
 		fi->path = nil;
-		sysremove(prefix);
 		put64(f, noff);
 		put64(f, eoff);
 		put64(f, n);
@@ -50,15 +58,14 @@ reverse(void)
 	}
 	for(x=1; x<3; x++)
 		for(i=NL-1; i>=0; i--){
-			snprint(prefix, sizeof prefix, ".%x_coarse_%08x_%d", tmpuuid, i, x);
-			if(openfs(fi, prefix, OREAD) < 0)
-				sysfatal("openfs %s: %r", prefix);
+			if(openfs(fi, tmpname(i, x), OREAD) < 0)
+				sysfatal("openfs %r");
 			while((n = readfs(fi, iobuf, sizeof iobuf)) > 0)
 				writefs(f, iobuf, n);
 			closefs(fi);
+			sysremove(fi->path);
 			free(fi->path);
 			fi->path = nil;
-			sysremove(prefix);
 		}
 	freefs(f);
 	return 0;
@@ -112,20 +119,20 @@ outputedge(u64int e, u64int u, u64int v, u64int s, u64int t)
 }
 
 static void
-outputnode(u64int u, u64int s, u64int s´, u64int w)
+outputnode(u64int u, u64int s, u64int news, u64int w)
 {
 	put64(noutf, u);
 	put64(noutf, s);
-	put64(noutf, s´);
+	put64(noutf, news);
 	put64(noutf, w);
-	dprint(Debugcoarse, "merge node %llx (%llx) → %llx, weight %lld\n", u, s, s´, w);
+	dprint(Debugcoarse, "merge node %llx (%llx) → %llx, weight %lld\n", u, s, news, w);
 	N++;
 }
 static void
-outputsuper(u64int u, u64int s, u64int s´, u64int w)
+outputsuper(u64int u, u64int s, u64int news, u64int w)
 {
 	dprint(Debugcoarse, "new supernode %llx: ", s);
-	outputnode(u, s, s´, w);
+	outputnode(u, s, news, w);
 }
 
 static void
@@ -133,25 +140,19 @@ newlevel(void)
 {
 	printtab();
 	N = M = L_M = 0;
-	warn("\t>> NEW LEVEL %lld\n", NL+1);
-	snprint(prefix, sizeof prefix, ".%x_coarse_%08llx_X", tmpuuid, NL++);
-	/* FIXME: yuck */
-	prefix[strlen(prefix)-1] = '0';
-	if(openfs(loutf, prefix, OWRITE) < 0)
-		sysfatal("newlevel %s: %r", prefix);
-	prefix[strlen(prefix)-1] = '1';
-	if(openfs(noutf, prefix, OWRITE) < 0)
-		sysfatal("newlevel %s: %r", prefix);
-	prefix[strlen(prefix)-1] = '2';
-	if(openfs(eoutf, prefix, OWRITE) < 0)
-		sysfatal("newlevel %s: %r", prefix);
+	warn("\t>> NEW LEVEL %lld\n", NL);
+	if(openfs(loutf, tmpname(NL, 0), OWRITE) < 0
+	|| openfs(noutf, tmpname(NL, 1), OWRITE) < 0
+	|| openfs(eoutf, tmpname(NL, 2), OWRITE) < 0)
+		sysfatal("newlevel %r");
+	NL++;
 }
 
 static void
-outputtop(u64int u, u64int s, u64int s´, u64int w)
+outputtop(u64int u, u64int s, u64int news, u64int w)
 {
 	newlevel();
-	outputsuper(u, s, s´, w);
+	outputsuper(u, s, news, w);
 	outputlevel();
 }
 
@@ -319,8 +320,6 @@ main(int argc, char **argv)
 		usage();
 	if(readindex(&g, argv[0]) < 0)
 		sysfatal("readindex: %r");
-	srand(time(nil));
-	tmpuuid = nrand(1000000);
 	loutf = emalloc(sizeof *loutf);
 	noutf = emalloc(sizeof *noutf);
 	eoutf = emalloc(sizeof *eoutf);
