@@ -83,7 +83,6 @@ vlong
 sysseek(File *f, vlong off)
 {
 	return fseek(f->aux, off, 0);
-	return 0;
 }
 
 vlong
@@ -112,16 +111,25 @@ sysmktmp(void)
 int
 syswrite(File *f, void *buf, int n)
 {
-	return n * fwrite(buf, n, 1, f->aux);
+	int m;
+
+	if((m = fwrite(buf, 1, n, f->aux)) != n)
+		return -1;
+	return m;
 }
 
 int
 sysread(File *f, void *buf, int n)
 {
-	return n * fread(buf, n, 1, f->aux);
+	int m;
+
+	m = fread(buf, 1, n, f->aux);
+	if(ferror(f->aux))
+		return -1;
+	else
+		return m;
 }
 
-/* FIXME: proper errno + string translation usage for unix */
 char *
 readrecord(File *f)
 {
