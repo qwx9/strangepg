@@ -32,10 +32,10 @@ writefs(File *f, void *buf, int n)
 	assert(f->aux != nil && buf != nil);
 	if((m = syswrite(f, buf, n)) != n){
 		if(debug & Debugtheworld){
-			warn("writefs: short write: %s\n", error());
+			warn("writefs: short write %d not %d: %s\n", m, n, error());
 			abort();
 		}
-		sysfatal("writefs: short write: %s", error());
+		sysfatal("writefs: short write %d not %d: %s", m, n, error());
 	}
 	return 0;
 }
@@ -54,10 +54,10 @@ readfs(File *f, void *buf, int n)
 	assert(f->aux != nil && buf != nil);
 	if((m = sysread(f, buf, n)) < 0){
 		if(debug & Debugtheworld){
-			warn("readfs: short read: %s\n", error());
+			warn("readfs: short read %d not %d: %s\n", m, n, error());
 			abort();
 		}
-		sysfatal("readfs: short read: %s", error());
+		sysfatal("readfs: short read %d not %d: %s\n", m, n, error());
 	}
 	return m;
 }

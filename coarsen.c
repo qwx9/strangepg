@@ -82,7 +82,7 @@ printtab(void)
 		e = emget64(fedge);
 		u = empget64(fedgeuv, e*8*2+2*8);
 		v = emget64(fedgeuv);
-		warn("E[%d] %lld → %lld,%lld\n", i, e, u, v);
+		dprint(Debugcoarse, "E[%d] %lld → %lld,%lld\n", i, e, u, v);
 	}
 }
 
@@ -140,7 +140,7 @@ newlevel(void)
 {
 	printtab();
 	N = M = L_M = 0;
-	warn("\t>> NEW LEVEL %lld\n", NL);
+	dprint(Debugcoarse, "\t>> NEW LEVEL %lld\n", NL);
 	if(openfs(loutf, tmpname(NL, 0), OWRITE) < 0
 	|| openfs(noutf, tmpname(NL, 1), OWRITE) < 0
 	|| openfs(eoutf, tmpname(NL, 2), OWRITE) < 0)
@@ -171,7 +171,7 @@ coarsen(Graph *g, char *index)
 	/* FIXME: these might never get big enough to need to be in external memory */
 	flastm = emcreate(g->nnodes * sizeof(u64int));
 	flast = emcreate(g->nnodes * sizeof(u64int));
-	warn("N %lld M %lld\n", N, M);
+	dprint(Debugcoarse, "N %lld M %lld\n", N, M);
 	emseek(fweight, 0, 0);
 	emseek(fnode, 0, 0);
 	emseek(fedge, 0, 0);
@@ -181,7 +181,7 @@ coarsen(Graph *g, char *index)
 	}
 	for(i=0; i<g->nedges; i++)
 		emput64(fedge, i);
-	warn("N %lld M %lld\n", g->nnodes, g->nedges);
+	dprint(Debugcoarse, "N %lld M %lld\n", g->nnodes, g->nedges);
 	N = g->nnodes;
 	M = g->nedges;
 	S = N - 1;
@@ -199,7 +199,7 @@ coarsen(Graph *g, char *index)
 			u = empget64(fedgeuv, e*8*2+2*8);
 			v = emget64(fedgeuv);
 			s = empget64(fnode, u*8);
-			warn("getnode %d %zd %zd %zd s %zd\n", i, e, u, v, s);
+			dprint(Debugcoarse, "getnode %d %zd %zd %zd s %zd\n", i, e, u, v, s);
 			/* unvisited node: make new supernode */
 			if(s <= w){
 				if(top >= 0)
@@ -216,7 +216,7 @@ coarsen(Graph *g, char *index)
 			t = empget64(fnode, v*8);
 			a = t >= g->nnodes ? empget64(flastm, (t-g->nnodes)*8) : 0; 
 			/* unvisited adjacency or self: merge internal edges */
-			warn("check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
+			dprint(Debugcoarse, "check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
 			if(t <= w && a <= w || t == s && u != v){
 				/* edges not starting from the top node are mirrors, skip them */
 				if(u == top){
@@ -232,7 +232,7 @@ coarsen(Graph *g, char *index)
 			}else{
 				a = t >= w ? empget64(flast, (t-w)*8) : 0;
 				b = s >= w ? empget64(flast, (s-w)*8) : 0;
-				warn("check for redundancy 2: a %lld b %lld NL %lld\n",
+				dprint(Debugcoarse, "check for redundancy 2: a %lld b %lld NL %lld\n",
 					a, b, NL);
 				if(a >= b && (u != v || NL > 1)){
 					/* already retained one edge, discard following redundant ones */
@@ -277,7 +277,7 @@ readindex(Graph *g, char *path)
 		sysfatal("readindex: %r");
 	g->nnodes = get64(f);
 	g->nedges = get64(f);
-	warn("N %lld M %lld\n", g->nnodes, g->nedges);
+	dprint(Debugcoarse, "N %lld M %lld\n", g->nnodes, g->nedges);
 	freefs(f);
 	return 0;
 }
@@ -285,7 +285,7 @@ readindex(Graph *g, char *path)
 static void
 usage(void)
 {
-	warn("usage: %s SORTED_EDGES\n", argv0);
+	dprint(Debugcoarse, "usage: %s SORTED_EDGES\n", argv0);
 	sysfatal("usage");
 }
 
@@ -311,7 +311,7 @@ main(int argc, char **argv)
 		else if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
 		else{
-			warn("unknown debug component %s\n", s);
+			dprint(Debugcoarse, "unknown debug component %s\n", s);
 			usage();
 		}
 		break;
