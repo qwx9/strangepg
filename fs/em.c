@@ -93,7 +93,7 @@ emflush(EM *em)
 {
 	uchar *p;
 
-	if(em->nbuf <= 0)
+	if(em->nbuf <= 0 || em->artwork)
 		return 0;
 	emseek(em, em->cacheoff, 0);
 	p = em->buf + em->cacheoff - em->off;
