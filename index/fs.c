@@ -8,7 +8,7 @@ getithnode(Graph *g, usize u)
 {
 	usize v;
 
-	if((v = emget64(g->c->inodes, 8*u)) == 0)
+	if((v = empget64(g->c->inodes, 8*u)) == 0)
 		return nil;
 	return g->nodes + v-1;
 }
@@ -18,7 +18,7 @@ getithedge(Graph *g, usize e)	/* edges[iedge[e]] */
 {
 	usize v;
 
-	if((v = emget64(g->c->iedges, 8*e)) == 0)
+	if((v = empget64(g->c->iedges, 8*e)) == 0)
 		return nil;
 	return g->edges + v-1;
 }
@@ -52,7 +52,7 @@ remaporpush(Graph *g, usize u, usize new, int w)
 		return;
 	}
 	v = pushnode(g, new, w);
-	emput64(g->c->inodes, 8*u, v+1);
+	empput64(g->c->inodes, 8*u, v+1);
 }
 
 int
@@ -119,7 +119,7 @@ loadlevels(Graph *g, int z, int Δ)
 		dprint(Debugcoarse, "loadedge e %zux u=%zux v=%zux\n",
 			e, ed.u>>1, ed.v>>1);
 		i = pushpackededge(g, ed.u, ed.v, e);
-		emput64(g->c->iedges, 8*e, i+1);
+		empput64(g->c->iedges, 8*e, i+1);
 	}
 	g->c->level = z + Δ;
 	printgraph(g);
