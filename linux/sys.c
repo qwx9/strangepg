@@ -72,7 +72,11 @@ sysfatal(char *fmt, ...)
 char *
 error(void)
 {
-	return strerror(errno);
+	char *s;
+
+	s = strerror(errno);
+	errno = 0;
+	return s;
 }
 
 /* FIXME: check */
