@@ -70,7 +70,8 @@ char *
 estrdup(char *s)
 {
 	if((s = strdup(s)) == nil){
-		abort();
+		if(debug)
+			abort();
 		sysfatal("estrdup: %r");
 	}
 	setmalloctag(s, getcallerpc(&s));
