@@ -5,8 +5,8 @@
 
 /* FIXME: will change this up later, see below */
 enum{
-	Poolsz = 4*1024*1024*1024ULL,
-	Maxsz = Poolsz / 10,
+	Poolsz = 1ULL<<32,
+	Maxsz = Poolsz / 6,
 	IOsz = 64*1024,
 	Maxchunk = 1024*1024,
 };
@@ -35,7 +35,7 @@ emopen(char *path)
 
 	em = emalloc(sizeof *em);
 	if((em->fd = emsysopen(path)) < 0)
-		sysfatal("emopen: %r");
+		sysfatal("emopen: %s", error());
 	em->path = estrdup(path);
 	em->artwork = 1;
 	em->realsz = em->totsz = emseek(em, 0, 2);
@@ -55,7 +55,7 @@ emcreate(u64int sz)
 		return nil;
 	}
 	if((em->fd = emsyscreate(em->path)) < 0)
-		sysfatal("emcreate: %r");
+		sysfatal("emcreate: %s", error());
 	return em;
 }
 
@@ -69,10 +69,10 @@ emclone(char *path, vlong off, u64int sz)
 
 	f = emalloc(sizeof *f);
 	if(openfs(f, path, OREAD) < 0)
-		sysfatal("emclone: %r");
+		sysfatal("emclone: %s", error());
 	seekfs(f, off);
 	if((em = emcreate(sz)) == nil)
-		sysfatal("emclone: %r");
+		sysfatal("emclone: %s", error());
 	em->realsz = sz;
 	em->buf = emalloc(IOsz);
 	em->bufsz = IOsz;
@@ -81,19 +81,20 @@ emclone(char *path, vlong off, u64int sz)
 		n = m < em->bufsz ? m : em->bufsz;
 		n = readfs(f, em->buf, n);
 		if(emsyswrite(em, em->buf, n) < 0)
-			sysfatal("emclone: %r");
+			sysfatal("emclone: %s", error());
 	}
 	freefs(f);
 	return em;
 }
 */
 
+// FIXME: only when evicting cache
 ssize
 emflush(EM *em)
 {
 	uchar *p;
 
-	if(em->nbuf <= 0 || em->artwork)
+	if(em->nbuf <= 0 || em->artwork || em->bufsz >= em->totsz)
 		return 0;
 	emseek(em, em->cacheoff, 0);
 	p = em->buf + em->cacheoff - em->off;
@@ -112,26 +113,33 @@ emflush(EM *em)
 static ssize
 emreap(ssize req)
 {
-	// FIXME: free space up
+	// FIXME: free space up: commit to disk stuff behind everyone's lastoff
+	//	if not enough, slash buffers at the end
+	//	keep list of em stuff
 	USED(req);
 	return 0;
 }
 
 static int
-emgrowfile(EM *em)
+emgrowfile(EM *em, ssize sz)
 {
 	uchar u[1] = {0};
-	ssize m;
 
-	if(em->artwork)
+	dprint(Debugextmem, "emgrowfile %s\n", em->path);
+	if(em->artwork){
+		assert(sz <= em->totsz);
 		return 0;
-	m = em->off + em->bufsz;
-	if(em->realsz >= em->totsz || em->realsz >= m)
+	}
+	if(em->totsz >= sz && em->realsz >= sz)
 		return 0;
-	emseek(em, m-1, 0);
+	emseek(em, sz-1, 0);
+	dprint(Debugextmem, "emgrowfile %s: write at %lld (realsz %lld totsz %lld)\n",
+		em->path, sz-1, em->realsz, em->totsz);
 	if(emsyswrite(em, u, sizeof u) < 0)
 		return -1;
-	em->realsz = m;
+	if(em->totsz < sz)
+		em->totsz = sz;
+	em->realsz = sz;
 	return 0;
 }
 
@@ -140,6 +148,7 @@ emgrowbuf(EM *em)
 {
 	ssize m;
 
+	dprint(Debugextmem, "emgrowbuf %s\n", em->path);
 	if(em->bufsz >= em->totsz)
 		return 0;
 	if(em->totsz < Maxsz)
@@ -153,6 +162,7 @@ emgrowbuf(EM *em)
 	}
 	if(m <= 0)
 		return 0;
+	dprint(Debugextmem, "emgrowbuf %s: add %#llx bytes (tot %#llux)\n", em->path, m, em->bufsz+m);
 	em->buf = erealloc(em->buf, em->bufsz + m, em->bufsz);
 	memfree -= m;
 	em->bufsz += m;
@@ -172,6 +182,7 @@ emshrink(EM *em, usize n)
 	memfree += em->bufsz - n;
 	em->buf = erealloc(em->buf, n, em->bufsz);
 	em->bufsz = n;
+	// FIXME: attempt to load all remaining in memory
 }
 
 static uchar *
@@ -180,6 +191,8 @@ emfetch(EM *em, vlong off, ssize n)
 	uchar *p;
 	ssize m;
 
+	dprint(Debugextmem, "emfetch %s %lld %llud: emoff %lld bufsz %lld coff %lld nbuf %lld totsz %lld\n",
+		em->path, off, n, em->off, em->bufsz, em->cacheoff, em->nbuf, em->totsz);
 	if(off >= em->cacheoff && off + n <= em->cacheoff + em->nbuf)
 		return em->buf + off - em->off;
 	else if(off >= em->off && off + n <= em->off + em->bufsz){
@@ -203,22 +216,24 @@ emfetch(EM *em, vlong off, ssize n)
 		return em->buf + off - em->off;
 	}
 	emflush(em);	// FIXME: make sure to handle this one too later
+	emgrowfile(em, off + n);
 	emgrowbuf(em);
-	emgrowfile(em);
-	em->off = off;
-	// FIXME: fuck it, we'll rewrite this anyway
-	m = em->bufsz;
+	if(em->bufsz >= em->totsz)
+		em->cacheoff = em->off = 0;
+	else
+		em->cacheoff = em->off = off;
+	m = em->bufsz;	/* FIXME: screw it, ignore over-reading */
 	if(em->off + em->bufsz > em->totsz){
 		em->off -= em->totsz - em->bufsz;
 		m -= em->totsz - em->bufsz;
 	}
-	emseek(em, off, 0);
-	p = em->buf + off - em->off;
-	if((n = emsysread(em, p, m)) < 0)
+	emseek(em, em->off, 0);
+	if((n = emsysread(em, em->buf, m)) < 0){
+		warn("emsysread: %s\n", error());
 		return nil;
-	em->cacheoff = off;
+	}
 	em->nbuf = n;
-	return p;
+	return em->buf + off - em->off;
 }
 
 ssize
@@ -227,7 +242,7 @@ empreload(EM *em)
 	if(em->totsz <= 0)
 		return 0;
 	if(emfetch(em, 0, em->totsz) == nil){
-		warn("empreload: %r\n");
+		warn("empreload: %s\n", error());
 		return -1;
 	}
 	return em->totsz;
@@ -240,9 +255,11 @@ embarf(EM *em, vlong off, uchar *q, ssize n)
 
 	/* whatever we write must be in a cached region
 	 * to remain in sync */
+	dprint(Debugextmem, "embarf %s %lld %#p %lld\n", em->path, off, q, n);
 	if((p = emfetch(em, off, n)) == nil)
 		return -1;
 	memmove(p, q, n);
+	em->lastoff = off + n;
 	return n;
 }
 
@@ -254,9 +271,10 @@ empget64(EM *em, vlong off)
 
 	assert(off >= 0);
 	if((p = emfetch(em, off, 8)) == nil)
-		sysfatal("emget64: %r");
+		sysfatal("emget64: %s", error());
 	em->lastoff = off + 8;
 	v = GBIT64(p);
+	dprint(Debugextmem, "empget64 %s[%lld]: read %lld\n", em->path, off, v);
 	return v;
 }
 
@@ -271,11 +289,11 @@ empput64(EM *em, vlong off, u64int v)
 {
 	union { uchar u[sizeof(u64int)]; u64int v; } u;
 
+	dprint(Debugextmem, "empget64 %s[%lld]: put %lld\n", em->path, off, v);
 	assert(off >= 0);
 	u.v = v;
 	if(embarf(em, off, u.u, sizeof u.u) < 0)
-		sysfatal("emput64: %r");
-	em->lastoff = off + 8;
+		sysfatal("emput64: %s", error());
 	return 0;
 }
 
