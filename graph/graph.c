@@ -96,12 +96,14 @@ pushpackededge(Graph *g, usize pu, usize pv, usize ei)
 	e.v = pv;
 	dypush(g->edges, e);
 	i = dylen(g->edges) - 1;
-	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux:", ei, i, pu, pv);
+	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux\n", ei, i, pu, pv);
 	n = getithnode(g, pu >> 1);
-	dprint(Debugcoarse, " in i=%zux id=%zux", n->id, n - g->nodes);
+	assert(n != nil);
+	dprint(Debugcoarse, " → in i=%zux id=%zux\n", n->id, n - g->nodes);
 	dypush(n->out, ei);
 	n = getithnode(g, pv >> 1);
-	dprint(Debugcoarse, " out i=%zux id=%zux\n", n->id, n - g->nodes);
+	assert(n != nil);
+	dprint(Debugcoarse, " ← out i=%zux id=%zux\n", n->id, n - g->nodes);
 	dypush(n->in, ei);
 	return i;
 }

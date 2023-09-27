@@ -71,10 +71,10 @@ get8(File *f)
 	assert(f->aux != nil);
 	if((m = sysread(f, &v, 1)) <= 0){
 		if(debug & Debugtheworld){
-			warn("get8: short read: %s\n", error());
+			warn("get8: short read %d: %s\n", m, error());
 			abort();
 		}
-		sysfatal("get8: short read: %s", error());
+		sysfatal("get8: short read %d: %s\n", m, error());
 	}
 	return v;
 }

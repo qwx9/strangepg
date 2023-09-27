@@ -43,7 +43,7 @@ readtree(Graph *g, char *path)
 		return -1;
 	nn = get64(f);	// nv + ns
 	ne = get64(f);
-	nl = get64(f);
+	nl = g->nlevels = get64(f);
 	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %zd; index: nv %zd ne %zd\n", nn, ne, nl, g->nnodes, g->nedges);
 	ct = &g->c->t;
 	dyprealloc(ct->levels, nl);

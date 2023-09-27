@@ -31,7 +31,6 @@ coarsen(Graph *g, int Δ)
 {
 	dprint(Debugcoarse, "coarsen level %d by %d\n", g->c->level, Δ);
 	unloadlevels(g, g->c->level, Δ);
-	printgraph(g);
 	return 0;
 }
 
@@ -43,32 +42,12 @@ uncoarsen(Graph *g, int Δ)
 	return 0;
 }
 
-/* FIXME: don't think these would work
-void
-advancetonode(Graph *g)
-{
-	INode *n;
-
-	n = g->ctree.t.nodelist + g->ctree.lastnode++;
-	pushnode(g, n->u, n->s, n->w);
-}
-
-void
-rollbacknode(Graph *g)
-{
-	INode *n;
-
-	n = g->ctree.t.nodelist + g->ctree.lastnode--;
-	pushnode(g, n->u, n->s, n->w);
-}
-*/
-
 int
 setgraphdepth(Graph *g, int z)
 {
-	int lvl;
+	int r, lvl;
 
-	dprint(Debugcoarse, "set global graph to depth %d\n", z);
+	dprint(Debugcoarse, "set global graph to depth %d/%llud\n", z, dylen(g->c->t.levels));
 	if(z < 0 || z >= dylen(g->c->t.levels)){
 		werrstr("invalid level %d", z);
 		return -1;
@@ -76,13 +55,16 @@ setgraphdepth(Graph *g, int z)
 	lvl = g->c->level;
 	stoplayout(g);
 	if(z > lvl)
-		uncoarsen(g, z - lvl);
+		r = uncoarsen(g, z - lvl);
 	else if(z < lvl)
-		coarsen(g, lvl - z);
+		r = coarsen(g, lvl - z);
 	else{
 		werrstr("not reloading same zoom level");
 		return -1;
 	}
+	if(r < 0)
+		warn("setgraphdepth: %s\n", error());
+	assert(g->c->level == z);
 	// FIXME: make sure there's no layer violation here
 	if(g->layout.ll != nil)
 		return resetlayout(g);
@@ -92,7 +74,11 @@ setgraphdepth(Graph *g, int z)
 int
 zoomgraph(Graph *g, int Δ)
 {
-	return setgraphdepth(g, g->c->level + Δ);
+	if(setgraphdepth(g, g->c->level + Δ) < 0){
+		warn("setgraphdepth: %s\n", error());
+		return -1;
+	}
+	return 0;
 }
 
 void
