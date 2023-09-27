@@ -82,7 +82,7 @@ printtab(void)
 		e = emget64(fedge);
 		u = empget64(fedgeuv, e*8*2+2*8);
 		v = emget64(fedgeuv);
-		dprint(Debugcoarse, "E[%d] %lld → %lld,%lld\n", i, e, u, v);
+		dprint(Debugcoarse, "E[%d] %llx → %llx,%llx\n", i, e, u, v);
 	}
 }
 
@@ -114,7 +114,7 @@ static void
 outputedge(u64int e, u64int u, u64int v, u64int s, u64int t)
 {
 	put64(eoutf, e);
-	dprint(Debugcoarse, "discard edge i=%lld mapping to %llx,%llx (u,v %llx,%llx)\n", e, s, t, u, v);
+	dprint(Debugcoarse, "discard edge i=%llx mapping to %llx,%llx (u,v %llx,%llx)\n", e, s, t, u, v);
 	L_M++;
 }
 
@@ -216,7 +216,7 @@ coarsen(Graph *g, char *index)
 			t = empget64(fnode, v*8);
 			a = t >= g->nnodes ? empget64(flastm, (t-g->nnodes)*8) : 0; 
 			/* unvisited adjacency or self: merge internal edges */
-			dprint(Debugcoarse, "check for redundancy: top %lld u %lld v %lld s %lld t %lld w %lld\n", top, u, v, s, t, w);
+			dprint(Debugcoarse, "check for redundancy: top %llx u %llx v %llx s %llx t %llx w %lld lastm[t-N] %llx\n", top, u, v, s, t, w, a);
 			if(t <= w && a <= w || t == s && u != v){
 				/* edges not starting from the top node are mirrors, skip them */
 				if(u == top){
@@ -232,7 +232,7 @@ coarsen(Graph *g, char *index)
 			}else{
 				a = t >= w ? empget64(flast, (t-w)*8) : 0;
 				b = s >= w ? empget64(flast, (s-w)*8) : 0;
-				dprint(Debugcoarse, "check for redundancy 2: a %lld b %lld NL %lld\n",
+				dprint(Debugcoarse, "check for redundancy 2: a %llx b %llx NL %lld\n",
 					a, b, NL);
 				if(a >= b && (u != v || NL > 1)){
 					/* already retained one edge, discard following redundant ones */
@@ -242,7 +242,7 @@ coarsen(Graph *g, char *index)
 					/* retain edge for next round */
 					empput64(fedge, M*8, e);
 					M++;
-					dprint(Debugcoarse, "retain edge[%x] %lld,%lld at %llx slot %lld\n", i, s, t, a, M);
+					dprint(Debugcoarse, "retain edge[%x] %llx,%llx at %llx slot %lld\n", i, s, t, a, M);
 					empput64(flast, (t-(t>=w?w:g->nnodes))*8, i);
 				}
 			}
@@ -308,6 +308,8 @@ main(int argc, char **argv)
 			debug |= Debugfs;
 		else if(strcmp(s, "coarse") == 0)
 			debug |= Debugcoarse;
+		else if(strcmp(s, "extmem") == 0)
+			debug |= Debugextmem;
 		else if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
 		else{

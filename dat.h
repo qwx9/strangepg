@@ -76,6 +76,7 @@ struct Graph{
 	Coarse *c;
 	usize nnodes;	/* gfa-wide totals */
 	usize nedges;
+	int nlevels;
 	Node *nodes;
 	Edge *edges;
 	Htab *id2n;
@@ -122,6 +123,7 @@ enum{
 	Debuglayout = 1<<2,
 	Debugfs = 1<<3,
 	Debugcoarse = 1<<4,
+	Debugextmem = 1<<5,
 	Debugtheworld = 0xffffffff,
 
 	/* unicode arrows, children's compilers, mandrake */
