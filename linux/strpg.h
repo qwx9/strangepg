@@ -39,6 +39,7 @@ typedef uint64_t u64int;
 #define	OREAD	O_RDONLY
 #define	OWRITE	O_WRONLY
 #define ORDWR	O_RDWR
+#define OCREAT	(O_CREAT|O_TRUNC)
 
 extern char *argv0;
 #define	ARGBEGIN	for((argv0||(argv0=*argv)),argv++,argc--;\
@@ -124,6 +125,8 @@ void	werrstr(char*, ...);
 void	sysfatal(char*, ...);
 
 void	lsleep(vlong);
+vlong	seek(int, vlong, int);
+int	create(char*, int, int);
 
 extern int mainstacksize;
 

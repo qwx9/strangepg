@@ -101,6 +101,18 @@ lsleep(vlong ns)
 	nanosleep(&t, NULL);
 }
 
+vlong
+seek(int fd, vlong off, int mode)
+{
+	return lseek(fd, off, mode);
+}
+
+int
+create(char *path, int mode, int perm)
+{
+	return open(path, mode|O_CREAT|O_TRUNC, perm);	/* not just O_WRONLY */
+}
+
 void
 yield(void)
 {

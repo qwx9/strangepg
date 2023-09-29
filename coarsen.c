@@ -106,8 +106,8 @@ newlevel(Lbuf *lvl)
 {
 	Lbuf l = {0};
 
-	l.nodes = emnew(0);
-	l.edges = emnew(0);
+	l.nodes = emnew();
+	l.edges = emnew();
 	dypush(lvl, l);
 	dprint(Debugcoarse, "-- newlevel %lld\n", dylen(lvl));
 	return lvl;
@@ -122,10 +122,10 @@ coarsen(Graph *g, char *index)
 
 	if((fedge = emopen(index)) == nil)
 		sysfatal("emclone: %s", error());
-	fweight = emnew(0);
-	fweight2 = emnew(0);
-	fnode = emnew(0);
-	flastpoke = emnew(0);
+	fweight = emnew();
+	fweight2 = emnew();
+	fnode = emnew();
+	flastpoke = emnew();
 	M = g->nedges;
 	S = g->nnodes - 1;
 	g->nnodes = 0;	/* vandalize it, don't care */

@@ -1,39 +1,44 @@
 typedef struct EM EM;
+typedef struct Chunk Chunk;
 
 enum{
 	Maxmem = 256*1024*1024,
 };
 
+struct Chunk{
+	ssize start;
+	ssize end;
+	uchar *buf;
+	ssize bufsz;
+	int fd;
+	Chunk *left;
+	Chunk *right;
+	Chunk *lleft;
+	Chunk *lright;
+};
 struct EM{
 	int fd;
+	int tmpfd;
 	char *path;
-	vlong realsz;
-	usize totsz;
-	vlong off;
-	vlong lastoff;
-	vlong cacheoff;
-	usize nbuf;
-	uchar *buf;
-	usize bufsz;
-	int artwork;
+	ssize sz;
+	ssize off;
+	Chunk *cp;
+	Chunk c;
 };
 
-EM*	emcreate(usize);
-EM*	emopen(char*);
-EM*	emclone(char*, vlong, usize);
-u64int	empget64(EM*, vlong);
-ssize	empput64(EM*, vlong, u64int);
-u64int	emget64(EM*);
-ssize	emput64(EM*, u64int);
-void	emshrink(EM*, usize);
-ssize	emflush(EM*);
+int	emshrink(EM*, ssize);
+int	emappend(EM*, EM*);
+int	emflip(EM*, EM*);
+void	emflush(EM*);
 vlong	emseek(EM*, vlong, int);
-void	emnuke(EM*);
+int	emread(EM*, vlong, uchar*, ssize);
+u64int	empget64(EM*, vlong);
+u64int	emget64(EM*);
+int	emwrite(EM*, vlong, uchar*, ssize);
+int	empput64(EM*, vlong, u64int);
+int	emput64(EM*, u64int);
+EM*	emnew(void);
+EM*	emfdopen(int);
+EM*	emopen(char*);
+EM*	emclone(char*);
 void	emclose(EM*);
-ssize	empreload(EM*);
-ssize	emsysopen(char*);
-ssize	emsyscreate(char*);
-ssize	emsysread(EM*, uchar*, ssize);
-ssize	emsyswrite(EM*, uchar*, ssize);
-vlong	emsysseek(EM*, vlong, int);
-int	emsysclose(EM*);

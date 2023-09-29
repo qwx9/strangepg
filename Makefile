@@ -12,7 +12,6 @@ OBJS:=\
 	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
 	lib/plan9/nrand.o\
-	linux/em.o\
 	linux/fs.o\
 	linux/layout.o\
 	linux/sys.o\
@@ -45,7 +44,6 @@ COARSENOBJS:=\
 	fs/fs.o\
 	lib/plan9/getfields.o\
 	lib/plan9/nrand.o\
-	linux/em.o\
 	linux/fs.o\
 	linux/sys.o\
 	util/print.o\

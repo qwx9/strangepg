@@ -23,7 +23,6 @@ OFILES=\
 	layout/random.$O\
 	rend/rend.$O\
 	plan9/draw.$O\
-	plan9/em.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\
 	plan9/sys.$O\
@@ -36,7 +35,6 @@ OCOARSEN=\
 	coarsen.$O\
 	fs/em.$O\
 	fs/fs.$O\
-	plan9/em.$O\
 	plan9/fs.$O\
 	plan9/sys.$O\
 	util/htab.$O\
