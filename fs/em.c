@@ -19,16 +19,28 @@
  * we iterate the same way but do different things, like 10 times
  * AND depending on which list (lright or right) */
 
-/* FIXME: tune */
 enum{
-	Poolsz = 1ULL<<32,
 	IOsz = 64*1024,
-	Maxchunk = 1*1024*1024,
-	Maxgreed = 1ULL<<26,
 };
-static Chunk norris = {.lleft = &norris, .lright = &norris},
-	handouts = {.lleft = &handouts, .lright = &handouts};
+static Chunk norris = {.lleft = &norris, .lright = &norris, .left = &norris, .right = &norris},
+	handouts = {.lleft = &handouts, .lright = &handouts, .left = &handouts, .right = &handouts};
 static u64int memfree, memreallyfree = Poolsz;
+
+static int
+mktmp(EM *em)
+{
+	int fd;
+	char *path;
+
+	path = sysmktmp();
+	if((fd = create(path, ORDWR, 0644)) < 0)
+		sysfatal("mktmp: %s", error());
+	if(em != nil)
+		em->path = path;
+	else
+		free(path);
+	return fd;
+}
 
 /* oh well */
 static void
@@ -67,15 +79,20 @@ cunlink(Chunk *left, Chunk *right)
 static void
 poke(Chunk *c)
 {
+	dprint(Debugextmem, "poke %#p ll %#p lr %#p", c, c->lleft, c->lright);
 	lunlink(c, c);
 	llink(norris.lleft, c);
 }
 static void
-pokeeach(Chunk *c, Chunk *l)
-{
-	Chunk *r;
+pokeeach(Chunk *l, Chunk *le){
+	Chunk *c, *r;
 
-	for(; c!=l; c=r){
+	if(l == nil)
+		return;
+	dprint(Debugextmem, "pokeeach: l %#p le %#p", l, le);
+	for(c=l->right; c!=le; c=r){
+		dprint(Debugextmem, "→ pokeeach %#p cl %#p cr %#p",
+			c, c->left, c->right);
 		r = c->right;
 		poke(c);
 	}
@@ -84,6 +101,7 @@ pokeeach(Chunk *c, Chunk *l)
 static void
 nukechunk(Chunk *c)
 {
+	dprint(Debugextmem, "nukechunk %#p", c);
 	if(c == nil)
 		return;
 	cunlink(c->left, c);
@@ -98,7 +116,9 @@ flushchunk(Chunk *c)
 {
 	ssize n;
 
-	if(seek(c->fd, c->start, 0) < 0)
+	dprint(Debugextmem, "flushchunk %#p[%llx-%llx]: → %d",
+		c, c->start, c->end, c->fd);
+	if(seek(c->fd, c->start, 0) < 0)	// FIXME: emseek?
 		return -1;
 	n = c->end - c->start;
 	if(write(c->fd, c->buf, n) != n)
@@ -109,15 +129,16 @@ flushchunk(Chunk *c)
 static void
 freechunk(Chunk *c)
 {
-	if(c == nil)
+	dprint(Debugextmem, "freechunk %#p", c);
+	if(c == nil || c->right == c->left)
 		return;
-	c->start = c->end = -1;
 	if(c->fd >= 0 && flushchunk(c) < 0)
 		warn("flush: %s\n", error());
 	c->fd = -1;
-	cunlink(c->left, c);
-	lunlink(c->lleft, c);
+	cunlink(c, c);
+	lunlink(c, c);
 	llink(handouts.lleft, c);
+	c->start = c->end = -1;
 }
 
 static void
@@ -125,13 +146,25 @@ freechain(Chunk *l, Chunk *le)
 {
 	Chunk *c, *r;
 
-	if(l == nil)
+	
+	dprint(Debugextmem, "freechain %#p le %#p: ", l, le);
+	if(l == nil || l->right == l->left)
 		return;
 	for(c=l->right; c!=le; c=r){
 		r = c->right;
 		freechunk(c);
 		memfree += c->bufsz;
 	}
+}
+
+void
+printchain(Chunk *r)
+{
+	Chunk *c, *l;
+
+	dprint(Debugextmem, "chain %#p: ", r);
+	for(c=r, l=nil; l!=r; c=c->right, l=c)
+		dprint(Debugextmem, " %#p[%llx-%llx]", c, c->start, c->end);
 }
 
 static Chunk *
@@ -148,15 +181,20 @@ chunkglob(Chunk *l, ssize n)
 	return c;
 }
 
+/* does not check start to return nearest neighbor */
 static Chunk *
 chunkseek(Chunk *l, ssize n)
 {
 	Chunk *c, *r;
 
+	dprint(Debugextmem, "chunkseek %#p %llx", l, n);
 	for(c=l->right; c!=l; c=r){
 		r = c->right;
-		if(n < c->end)
+		if(n < c->end){
+			dprint(Debugextmem, "chunkseek found %#p %llx..%llx",
+				c, c->start, c->end);
 			break;
+		}
 	}
 	return c;
 }
@@ -178,7 +216,9 @@ newchunk(ssize n)
 	c = emalloc(sizeof *c);
 	c->buf = emalloc(n);
 	c->bufsz = n;
+	dprint(Debugextmem, "newchunk %#p size %llx", c, c->bufsz);
 	c->fd = -1;
+	c->right = c->left = c->lright = c->lleft = c;
 	memreallyfree -= n;
 	return c;
 }
@@ -193,8 +233,11 @@ emshrink(EM *em, ssize sz)
 		return -1;
 	}
 	c = chunkseek(c, sz);
-	assert(c->end <= sz);
+	dprint(Debugcoarse, "emshrink %s from %llx to %llx c %#p[%llx..%llx]",
+		em->path, c->end - c->start, sz, c, c->start, c->end);
+	assert(c->end - c->start <= c->bufsz);
 	freechain(c->right, em->c.left);
+	freechunk(c);
 	return 0;
 }
 
@@ -217,23 +260,31 @@ emappend(EM *em, EM *from)
 	Chunk *c;
 
 	c = from->c.right;
-	cunlink(c->left, from->c.right->left);
+	pokeeach(&from->c, &from->c);
+	cunlink(&from->c, &from->c);
 	clink(em->c.left, c);
-	pokeeach(c, &em->c);
 	from->off = 0;
-	from->cp = nil;
+	from->cp = &em->c;
 	return 0;
 }
 
 int
 emflip(EM *em, EM *victim)
 {
+	Chunk *c;
+
+	printchain(&victim->c);
+	printchain(&em->c);
+	assert(victim->c.lright == &victim->c && victim->c.lleft == &victim->c);
 	freechain(&em->c, &em->c);
-	memcpy(&em->c, &victim->c, sizeof em->c);
-	pokeeach(em->c.right, &em->c);
-	victim->c.right = victim->c.left = &victim->c;
+	c = victim->c.right;
+	cunlink(&victim->c, &victim->c);
+	clink(&em->c, c);
+	pokeeach(&em->c, &em->c);
 	em->off = victim->off = 0;
-	victim->cp = nil;
+	printchain(&victim->c);
+	printchain(&em->c);
+	victim->cp = &victim->c;
 	return 0;
 }
 
@@ -242,6 +293,8 @@ emflush(EM *em)
 {
 	Chunk *c;
 
+	if(em->fd < 0)
+		em->fd = mktmp(em);
 	for(c=em->c.right; c!=&em->c; c=c->right)
 		flushchunk(c);
 }
@@ -251,10 +304,14 @@ emseek(EM *em, vlong off, int mode)
 {
 	Chunk *c;
 
-	if((off = seek(em->fd, off, mode)) < 0)
-		return -1;
+	if(em->fd >= 0){
+		if((off = seek(em->fd, off, mode)) < 0){
+			warn("emseek: %s[%llx/%d]: %s", em->path, off, mode, error());
+			return -1;
+		}
+	}
 	/* just look up from start, chances are we're seeking towards there */
-	if((c = chunkseek(em->c.right, off)) != em->c.right)
+	if((c = chunkseek(&em->c, off)) != &em->c)
 		poke(c);
 	em->cp = c;
 	em->off = off;
@@ -266,6 +323,7 @@ supply(ssize n)
 {
 	Chunk *c;
 
+	dprint(Debugextmem, "supply %llx", n);
 	while(n > 0){
 		if((c = newchunk(n)) == nil)
 			break;
@@ -282,12 +340,16 @@ shave(void)
 	ssize n;
 	Chunk *c;
 
+	dprint(Debugextmem, "shave");
 	for(c=norris.lright; c!=&norris; c=c->lright)
 		if((n = c->end - c->start) < c->bufsz){
+			dprint(Debugextmem, "shave chunk %#p %llx → %llx",
+				c, c->bufsz, c->end - c->start);
 			c->buf = erealloc(c->buf, n, c->bufsz);
 			memreallyfree += c->bufsz - n;
 			c->bufsz = n;
 		}
+	dprint(Debugextmem, "done shaving");
 }
 
 static ssize
@@ -296,23 +358,31 @@ feedmem(ssize n)
 	ssize m;
 	Chunk *c;
 
+	dprint(Debugextmem, "feedmem %llx [1] free %llx reallyfree %llx",
+		n, memfree, memreallyfree);
 	if(n > Maxgreed)
 		n = Maxgreed;
-	if(n < memfree)
+	if(n <= memfree)
 		return n;
 	m = n - memfree;
 	m -= supply(m);
-	if(m < memfree)
+	dprint(Debugextmem, "feedmem %llx [2] free %llx reallyfree %llx",
+		n, memfree, memreallyfree);
+	if(m <= memfree)
 		return n;
 	shave();
 	m -= supply(m);
-	if(m < memfree)
+	dprint(Debugextmem, "feedmem %llx [3] free %llx reallyfree %llx",
+		n, memfree, memreallyfree);
+	if(m <= memfree)
 		return n;
 	if((c = chunkglob(&norris, m)) != &norris){
 		freechain(c, c);
 		freechunk(c);
 	}
-	if(m < memfree)
+	dprint(Debugextmem, "feedmem %llx [4] free %llx reallyfree %llx",
+		n, memfree, memreallyfree);
+	if(m <= memfree)
 		return n;
 	assert(norris.lright == &norris);
 	assert(memfree <= 0);
@@ -320,154 +390,120 @@ feedmem(ssize n)
 	return n - m;	/* dommage, mange ta main */
 }
 
-static Chunk*
-allocchunk(ssize *n)
+static int
+chunkread(EM *em, Chunk *c)
 {
-	ssize m;
-	Chunk *c, *cl;
+	int r;
 
-	m = feedmem(*n);
-	*n = m;
-	for(cl=nil, c=handouts.lright; c!=&handouts; c=c->lright){
-		poke(c);
-		memfree -= c->bufsz;
-		m -= c->bufsz;
-		if(cl == nil)
-			cl = c;
-		else
-			clink(cl->left, c);
-		if(m <= 0)
-			break;
-	}
-	return c;
-}
-
-static ssize
-getspan(EM *em, vlong off, ssize n)
-{
-	ssize m, Δ;
-	Chunk *c, *a;
-
-	if((c = chunkseek(em->c.right, off)) == &em->c){
-		c = allocchunk(&n);
-		c->start = off;
-		c->end = off + n;
-		clink(&em->c, c);
-		em->cp = c;
-		return n;
-	}
-	if((m = n) > Maxchunk)
-		n = Maxchunk;
-	em->cp = c;
-	poke(c);
-	for(; c!=&em->c && n>0; c=c->right){
-		if(off >= c->start){
-			Δ = c->end - off;
-			off += Δ;
-			n -= Δ;
-			poke(c);
-			continue;
-		}
-		Δ = n < c->start - off ? n : c->start - off;
-		a = allocchunk(&Δ);
-		a->start = off;
-		a->end = off + Δ;
-		clink(c, a);
-		off += Δ;
-		n -= Δ;
-	}
-	assert(n == 0);
-	return m;
+	if(em->fd < 0)
+		em->fd = mktmp(em);
+	dprint(Debugextmem, "chunkread %s[%llx..+%llx] (%llx) into %#p",
+		em->path, c->start, c->end, c->bufsz, c);
+	emseek(em, c->start, 0);
+	if((r = read(em->fd, c->buf, c->bufsz)) < 0)
+		sysfatal("chunkread: readn: %s", error());
+	return r;
 }
 
 static Chunk *
-fetch(EM *em, vlong off, ssize *n)
+chunkalloc(ssize *n, ssize off)
 {
 	ssize m, k;
-	uchar *p, *s;
-	Chunk *c;
+	Chunk *cl, *c;
 
-	/* FIXME: prefetch logic here */
 	m = *n;
-	if(m < Maxchunk)
-		m = Maxchunk;
-	if((k = getspan(em, off, m)) < 0)
-		sysfatal("fetch %s[%lld..+%lld]: [%lld] %s", em->path, off, off+m, k, error());
-	m = k;
-	if(seek(em->fd, off, 0) < 0)
-		sysfatal("fetch %s[%lld..+%lld]: [%lld] %s", em->path, off+m, k, m, error());
-	em->off = off;
-	c = em->cp;
-	s = c->buf + off - c->start;
-	for(p=s; c!=&em->c; c=c->right, m-=k, p+=k){
-		k = c->bufsz < m ? c->bufsz : m;
-		if(read(em->fd, p, k) != k)
-			sysfatal("fetch %s[%lld..+%lld]: [%lld] %s", em->path, off+m, k, m, error());
-		em->off += k;
+	dprint(Debugextmem, "chunkalloc %llx", m);
+	if((m = feedmem(m)) == 0){
+		werrstr("chunkalloc: reached memory limit");
+		return nil;
 	}
-	*n = m;
-	return em->cp;
+	for(cl=nil, k=0; m>0; m-=c->bufsz, k+=c->bufsz){
+		if((c = handouts.lright) == &handouts)
+			break;
+		poke(c);
+		memfree -= c->bufsz;
+		if(cl == nil)
+			cl = c;
+		else
+			clink(cl, c);
+		c->start = off;
+		c->end = c->start + m;
+		dprint(Debugextmem, "chunkalloc: chaining %#p[%llx]", c, c->bufsz);
+	}
+	*n = k;
+	return cl;
 }
 
-/* just keep hitting the piñata until as much candy as asked for falls */
 static uchar *
-readchunk(EM *em, vlong off, ssize *want)
+fetch(EM *em, vlong off, ssize *want)
 {
 	ssize n;
 	uchar *p;
-	Chunk *c;
+	Chunk *c, *l;
 
 	n = *want;
-	assert(off >= 0);
-	if((c = em->cp) != nil && off >= c->start && off+n < c->end
-	|| (c = chunkseek(em->c.right, off)) != &em->c && off >= c->start
-	|| (c = fetch(em, off, &n)) != nil && n > 0){
-		c->fd = em->tmpfd;
-		if(c->end - off < n)
-			n = c->end - off;
-		*want = n;
+	c = em->cp;
+	l = c->left;
+	dprint(Debugextmem, "fetch %s[%llx..+%llx]",
+		em->path, off, n);
+	if(off < c->start || off + n >= c->end)
+		c = chunkseek(&em->c, off);
+	if(c == &em->c){
+		if((c = chunkalloc(&n, off)) == nil)
+			return nil;
+		if((n = chunkread(em, c)) < 0){
+			freechunk(c);
+			return nil;
+		}
+		clink(em->c.left, c);
+		p = c->buf;
+	}else if(off < c->start){
+		n = MIN(c->start - off, n);
+		if((c = chunkalloc(&n, off)) == nil)
+			return nil;
+		if((n = chunkread(em, c)) < 0){
+			freechunk(c);
+			return nil;
+		}
+		c->fd = em->tmpfd < 0 ? em->fd : em->tmpfd;		/* hack */
+		clink(l, c);
+		p = c->buf;
+	}else{
+		em->cp = c;// = trymerge(em, c, off, n);		// FIXME
+		n = MIN(c->end - off, n);
 		p = c->buf + off - c->start;
-		em->cp = c->right;
-		em->off = c->start;
-		return p;
-	}else
-		return nil;
+		poke(c);
+	}
+	em->off = off + n;
+	em->cp = em->off >= c->end ? c->right : c;
+	*want = n;
+	return p;
 }
 
-/* the indirection, anakin, look at it all */
+/* just keep hitting the piñata until as much candy as requested falls */
 int
 emread(EM *em, vlong off, uchar *u, ssize n)
 {
-	ssize m;
+	ssize m, k;
 	uchar *p, *d, *e;
 
-	for(d=u, e=d+n; d<e; d+=m, off+=m, n-=m){
+	dprint(Debugextmem, "emread %s[%llx..+%llx] → %#p",
+		em->path, off, n, u);
+	emseek(em, off, 0);
+	for(d=u, e=d+n, k=0; d<e; d+=m, k+=m, n-=m){
 		m = n;
-		if((p = readchunk(em, off, &m)) == nil)
+		if((p = fetch(em, off, &m)) == nil)
 			return -1;
+		off += m;
+		em->off = off;
+		if(m == 0){
+			em->off += n;
+			return 0;
+		}
 		if(u != nil)			/* hack */
 			memcpy(d, p, m);
 	}
-	return 0;
-}
-
-u64int
-empget64(EM *em, vlong i)
-{
-	uchar u[8];
-
-	if(emread(em, i*8, u, sizeof u) < 0)
-		sysfatal("empget64 %s %lld: %s", em->path, i, error());
-	return GBIT64(u);
-}
-
-u64int
-emget64(EM *em)
-{
-	uchar u[8];
-
-	emread(em, em->off, u, sizeof u);
-	return GBIT64(u);
+	return k;
 }
 
 int
@@ -477,29 +513,59 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 	uchar *p;
 	Chunk *c;
 
+	dprint(Debugextmem, "emwrite %s[%llx..+%llx]", em->path, off, n);
 	assert(off >= 0);
-	/* push through any allocation failures */
-	while(n > 0){
+	emseek(em, off, 0);
+	for(m=n; n>0; n-=m, buf+=m, off+=m){
 		m = n;
-		if((c = em->cp) != nil && off >= c->start && off+m < c->end
-		|| (c = chunkseek(em->c.right, off)) != &em->c && off >= c->start
-		|| (m = getspan(em, off, m)) >= 0
-		  && (c = chunkseek(em->c.right, off)) != &em->c
-		  && off >= c->start){
-			c->fd = em->tmpfd;
-			if(c->end - off < m)
-				m = c->end - off;
-			p = c->buf + off - c->start;
-			memcpy(p, buf, m);
-			em->cp = c->right;
-			off += m;
-			em->off = off;
-			n -= m;
-		}else
-			sysfatal("emwrite %s[%lld..+%lld]: [%lld] %s",
-				em->path, off, off+m, m, error());
+		if((p = fetch(em, off, &m)) == nil){
+			sysfatal("fetch: nope");
+			/* FIXME
+			if((c = chunkalloc(&m, off)) == nil)
+				return -1;
+			c->fd = em->tmpfd < 0 ? em->fd : em->tmpfd;
+			clink(em->c.left, c);
+			*/
+		}
+		c = em->cp;
+		if(m == 0){
+			assert(c != &em->c && c->bufsz > 0);
+			m = n < c->bufsz ? n : c->bufsz;
+		}
+		memcpy(p, buf, m);
 	}
 	return 0;
+}
+
+u64int
+empget64(EM *em, vlong i)
+{
+	int m;
+	uchar u[8];
+
+	i *= 8;
+	dprint(Debugextmem, "empget64 %s[%llx]", em->path, i);
+		if((m = emread(em, i, u, sizeof u)) < 0)
+		sysfatal("empget64 %s short read %llx: %s\n", em->path, i, error());
+	dprint(Debugextmem, "empget64 %s: off now %llx res %d", em->path, em->off, m);
+	if(m == 0)
+		return EMeof;
+	return GBIT64(u);
+}
+
+u64int
+emget64(EM *em)
+{
+	int m;
+	uchar u[8];
+
+	dprint(Debugextmem, "emget64 %s[%llx]", em->path, em->off);
+	if((m = emread(em, em->off, u, sizeof u)) < 0)
+		sysfatal("empget64 %s short read %llx: %s", em->path, em->off, error());
+	dprint(Debugextmem, "emget64 %s: off now %llx res %d", em->path, em->off, m);
+	if(m == 0)
+		return EMeof;
+	return GBIT64(u);
 }
 
 int
@@ -507,9 +573,12 @@ empput64(EM *em, vlong i, u64int v)
 {
 	uchar u[8];
 
+	i *= 8;
+	dprint(Debugextmem, "empput64 %s[%llx]", em->path, i);
+	emseek(em, i, 0);
 	PBIT64(u, v);
-	if(emwrite(em, i*8, u, sizeof u) < 0)
-		sysfatal("empput64 %s %lld: %s", em->path, i*8, error());
+	if(emwrite(em, i, u, sizeof u) < 0)
+		sysfatal("empput64 %s %llx: %s", em->path, i, error());
 	return 0;
 }
 
@@ -518,9 +587,10 @@ emput64(EM *em, u64int v)
 {
 	uchar u[8];
 
+	dprint(Debugextmem, "emput64 %s[%llx]", em->path, em->off);
 	PBIT64(u, v);
 	if(emwrite(em, em->off, u, sizeof u) < 0)
-		sysfatal("empput64 %s %lld: %s", em->path, em->off, error());
+		sysfatal("empput64 %s %llx: %s", em->path, em->off, error());
 	return 0;
 }
 
@@ -532,6 +602,8 @@ emnew(void)
 	em = emalloc(sizeof *em);
 	em->tmpfd = em->fd = -1;
 	em->c.left = em->c.right = &em->c;
+	em->c.lleft = em->c.lright = &em->c;
+	em->cp = &em->c;
 	return em; 
 }
 
@@ -540,6 +612,7 @@ emfdopen(int fd)
 {
 	EM *em;
 
+	dprint(Debugextmem, "emfdopen %d", fd);
 	em = emnew();
 	em->tmpfd = em->fd = fd;
 	return em;
@@ -550,8 +623,9 @@ emopen(char *path)
 {
 	EM *em;
 
+	dprint(Debugextmem, "emopen %s", path);
 	em = emnew();
-	if((em->fd = create(path, ORDWR, 0644)) < 0)
+	if((em->fd = open(path, ORDWR)) < 0)
 		return nil;
 	em->tmpfd = em->fd;
 	em->path = estrdup(path);
@@ -562,39 +636,44 @@ EM*
 emclone(char *path)
 {
 	ssize n, m, off;
-	char *tmp;
 	EM *em;
 
+	dprint(Debugextmem, "emclone %s", path);
 	if((em = emopen(path)) == nil)
 		return nil;
-	tmp = sysmktmp();
-	if((em->tmpfd = open(tmp, ORDWR)) < 0)	/* hack */
-		sysfatal("emclone: %s", error());
+	em->tmpfd = mktmp(nil);	/* hack */
 	n = fsize(em->fd);
+	dprint(Debugextmem, "emclone %s: fsize %llx", path, n);
 	for(off=0; n>0; n-=m, off+=m){
 		m = n;
 		emread(em, off, nil, m);
 	}
+	dprint(Debugextmem, "emclone %s: done reading", path);
+	printchain(&em->c);
 	emflush(em);
 	close(em->fd);
 	free(em->path);
 	em->fd = em->tmpfd;
-	em->path = tmp;
+	em->path = nil;
 	em->tmpfd = -1;
+	dprint(Debugextmem, "emclone %s: switched to new file", path);
 	return em;
 }
 
 void
-emclose(EM *em)
+emclose(EM *em, int dontassume)
 {
 	if(em == nil)
 		return;
 	freechain(&em->c, &em->c);
+	if(em->tmpfd >= 0 && em->tmpfd 	!= em->fd)
+		close(em->tmpfd);
 	if(em->fd >= 0)
 		close(em->fd);
-	assert(em->tmpfd < 0);
-	if(em->path != nil)
+	if(em->path != nil && !dontassume){
+		dprint(Debugextmem, "emclose %s: remove", em->path);
 		sysremove(em->path);
+	}
 	free(em->path);
 	free(em);
 }

@@ -1,8 +1,13 @@
 typedef struct EM EM;
 typedef struct Chunk Chunk;
 
+/* FIXME: tunable (def or cmdline) */
 enum{
 	Maxmem = 256*1024*1024,
+	Poolsz = 1ULL<<32,
+	Maxchunk = 1*1024*1024,
+	Maxgreed = 1ULL<<26,
+	EMeof = 0xdeadbeefcafebabeULL,
 };
 
 struct Chunk{
@@ -41,4 +46,4 @@ EM*	emnew(void);
 EM*	emfdopen(int);
 EM*	emopen(char*);
 EM*	emclone(char*);
-void	emclose(EM*);
+void	emclose(EM*, int);
