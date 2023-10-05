@@ -64,4 +64,33 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 $O.coarsen: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
-CLEANFILES=$OFILES $OCOARSEN
+OTEST=\
+	fs/em.$O\
+	plan9/fs.$O\
+	plan9/sys.$O\
+	util/print.$O\
+
+# FIXME: test/mkfile, test/Makefile
+$O.testct01: $OTEST test/testct01.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.testct02: $OTEST test/testct02.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.testct03: $OTEST test/testct03.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.testct04: $OTEST test/testct04.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.testct05: $OTEST test/testct05.$O
+	$LD $LDFLAGS -o $target $prereq
+
+CLEANFILES=$OFILES\
+	$OCOARSEN\
+	$OTEST\
+	test/testct01.$O\
+	test/testct02.$O\
+	test/testct03.$O\
+	test/testct04.$O\
+	test/testct05.$O\
