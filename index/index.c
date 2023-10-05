@@ -29,7 +29,7 @@ expandnode(Graph *, usize)
 static int
 coarsen(Graph *g, int Δ)
 {
-	dprint(Debugcoarse, "coarsen level %d by %d\n", g->c->level, Δ);
+	dprint(Debugcoarse, "coarsen level %d by %d", g->c->level, Δ);
 	unloadlevels(g, g->c->level, Δ);
 	return 0;
 }
@@ -37,7 +37,7 @@ coarsen(Graph *g, int Δ)
 static int
 uncoarsen(Graph *g, int Δ)
 {
-	dprint(Debugcoarse, "uncoarsen level %d by %d\n", g->c->level, Δ);
+	dprint(Debugcoarse, "uncoarsen level %d by %d", g->c->level, Δ);
 	loadlevels(g, g->c->level+1, Δ);
 	return 0;
 }
@@ -47,7 +47,7 @@ setgraphdepth(Graph *g, int z)
 {
 	int r, lvl;
 
-	dprint(Debugcoarse, "set global graph to depth %d/%llud\n", z, dylen(g->c->t.levels));
+	dprint(Debugcoarse, "set global graph to depth %d/%llud", z, dylen(g->c->t.levels));
 	if(z < 0 || z >= dylen(g->c->t.levels)){
 		werrstr("invalid level %d", z);
 		return -1;

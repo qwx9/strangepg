@@ -5,7 +5,7 @@ static Vertex panmax;
 int
 panview(Vector v)
 {
-	dprint(Debugdraw, "panview to %.2f,%.2f\n", v.x, v.y);
+	dprint(Debugdraw, "panview to %.2f,%.2f", v.x, v.y);
 	//v = floorpt2(addpt2(divpt2(v, view.zoom), view.pan));
 	v = floorpt2(addpt2(v, view.pan));
 	/* FIXME
@@ -33,11 +33,11 @@ zoomview(Vector v)
 	Δ = 0.01 * -(v.x + v.y) / 2;
 	dprint(Debugdraw, "view.zoomview %.1f,%.1f → Δ %.2f: ", v.x, v.y, Δ);
 	if(view.zoom + Δ < 0.1 || view.zoom + Δ > 10){
-		dprint(Debugdraw, "nope\n");
+		dprint(Debugdraw, "nope");
 		return -1;
 	}
 	view.zoom += Δ;
-	dprint(Debugdraw, "%.1f\n", view.zoom);
+	dprint(Debugdraw, "%.1f", view.zoom);
 	return 0;
 }
 
@@ -46,7 +46,7 @@ keyevent(Rune r)
 {
 	Graph *g;
 
-	dprint(Debugdraw, "keyevent %d\n", r);
+	dprint(Debugdraw, "keyevent %d", r);
 	switch(r){
 	case KBup: if(panview(Vec2(0,+16)) >= 0) reqdraw(Reqredraw); break;
 	case KBdown: if(panview(Vec2(0,-16)) >= 0) reqdraw(Reqredraw); break;
@@ -92,7 +92,7 @@ void
 resetui(int all)
 {
 	view.center = divpt2(view.dim.v, 2);
-	dprint(Debugdraw, "resetui center %.1f,%.1f\n", view.center.x, view.center.y);
+	dprint(Debugdraw, "resetui center %.1f,%.1f", view.center.x, view.center.y);
 	panmax = view.dim.v;
 	if(all){
 		view.pan = ZV;

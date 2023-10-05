@@ -10,7 +10,7 @@ layproc(void *gp)
 	threadsetname("layproc");
 	g = gp;
 	ll = g->layout.ll;
-	dprint(Debuglayout, "new layout job %d layout %s g %#p\n", getpid(), ll->name, g);
+	dprint(Debuglayout, "new layout job %d layout %s g %#p", getpid(), ll->name, g);
 	coffeetime();
 	ll->compute(g);
 	coffeeover();

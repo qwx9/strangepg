@@ -13,7 +13,7 @@ layproc(void *gp)
 	g = gp;
 	ll = g->layout.ll;
 	g->layout.tid = 0;
-	dprint(Debuglayout, "new job job %d layout %s g %#p\n", getpid(), ll->name, g);
+	dprint(Debuglayout, "new job job %d layout %s g %#p", getpid(), ll->name, g);
 	coffeetime();
 	ll->compute(g);
 	coffeeover();

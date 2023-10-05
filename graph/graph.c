@@ -96,14 +96,14 @@ pushpackededge(Graph *g, usize pu, usize pv, usize ei)
 	e.v = pv;
 	dypush(g->edges, e);
 	i = dylen(g->edges) - 1;
-	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux\n", ei, i, pu, pv);
+	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux", ei, i, pu, pv);
 	n = getithnode(g, pu >> 1);
 	assert(n != nil);
-	dprint(Debugcoarse, " → in i=%zux id=%zux\n", n->id, n - g->nodes);
+	dprint(Debugcoarse, " → in i=%zux id=%zux", n->id, n - g->nodes);
 	dypush(n->out, ei);
 	n = getithnode(g, pv >> 1);
 	assert(n != nil);
-	dprint(Debugcoarse, " ← out i=%zux id=%zux\n", n->id, n - g->nodes);
+	dprint(Debugcoarse, " ← out i=%zux id=%zux", n->id, n - g->nodes);
 	dypush(n->in, ei);
 	return i;
 }
@@ -116,7 +116,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	Node *n;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint(Debugtheworld, "pushnamededge %s,%s (index %zd)\n", eu, ev,
+	dprint(Debugtheworld, "pushnamededge %s,%s (index %zd)", eu, ev,
 		dylen(g->edges));
 	if((n = id2n(g, eu)) == nil)
 		return -1;
@@ -133,7 +133,7 @@ pushnode(Graph *g, usize u, int w)
 {
 	Node n;
 
-	dprint(Debugcoarse, "pushnode %zd\n", u);
+	dprint(Debugcoarse, "pushnode %zd", u);
 	n = newnode();
 	n.id = u;
 	n.weight = w;
@@ -144,7 +144,7 @@ pushnode(Graph *g, usize u, int w)
 int
 pushnamednode(Graph *g, char *id)
 {
-	dprint(Debugtheworld, "pushname id=%s\n", id);
+	dprint(Debugtheworld, "pushname id=%s", id);
 	if(id2n(g, id) != nil){
 		werrstr("duplicate node id");
 		return 0;

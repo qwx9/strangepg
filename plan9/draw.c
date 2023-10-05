@@ -182,7 +182,7 @@ resetdraw(void)
 {
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	viewr = rectsubpt(screen->r, screen->r.min);
-	dprint(Debugdraw, "resetdraw %R\n", viewr);
+	dprint(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
 	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
 	return 0;
@@ -197,7 +197,7 @@ cleardraw(void)
 	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		g->off = ZV;
-		dprint(Debugdraw, "cleardraw: graph %#p dim %.1f,%.1f\n", g, g->dim.v.x, g->dim.v.y);
+		dprint(Debugdraw, "cleardraw: graph %#p dim %.1f,%.1f", g, g->dim.v.x, g->dim.v.y);
 		q = Rpt(v2p(g->dim.o), v2p(addpt2(g->dim.o, g->dim.v)));
 		if(qΔx(g->dim) + Nodesz > Dx(r))
 			r.max.x = qΔx(g->dim) + Nodesz + 1;

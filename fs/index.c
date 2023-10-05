@@ -13,7 +13,7 @@ readindex(Graph *g, char *path)
 	File *f;
 	Coarse *c;
 
-	dprint(Debugcoarse, "readindex %s\n", path);
+	dprint(Debugcoarse, "readindex %s", path);
 	if((c = initindex(g)) == nil)
 		sysfatal("load: failed to set index up: %r");
 	f = c->i.f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
@@ -21,10 +21,10 @@ readindex(Graph *g, char *path)
 		return -1;
 	g->nnodes = get64(f);
 	g->nedges = get64(f);
-	dprint(Debugcoarse, "readindex nn=%zd ne=%zd\n", g->nnodes, g->nedges);
-	c->inodes = emcreate(g->nnodes * 8);
-	c->iedges = emcreate(g->nedges * 8);
-	dprint(Debugcoarse, "readindex done\n");
+	dprint(Debugcoarse, "readindex nn=%zd ne=%zd", g->nnodes, g->nedges);
+	c->inodes = emcreate(g->nnodes);
+	c->iedges = emcreate(g->nedges);
+	dprint(Debugcoarse, "readindex done");
 	return 0;
 }
 
@@ -37,14 +37,14 @@ readtree(Graph *g, char *path)
 	Level *l;
 	Ctree *ct;
 
-	dprint(Debugcoarse, "readtree %s\n", path);
+	dprint(Debugcoarse, "readtree %s", path);
 	f = g->f = emalloc(sizeof *f);
 	if(openfs(f, path, OREAD) < 0)
 		return -1;
 	nn = get64(f);	// nv + ns
 	ne = get64(f);
 	nl = g->nlevels = get64(f);
-	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %zd; index: nv %zd ne %zd\n", nn, ne, nl, g->nnodes, g->nedges);
+	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %zd; index: nv %zd ne %zd", nn, ne, nl, g->nnodes, g->nedges);
 	ct = &g->c->t;
 	dyprealloc(ct->levels, nl);
 	/* FIXME: refactor later; all we need in-memory are one offset and
@@ -55,10 +55,10 @@ readtree(Graph *g, char *path)
 		l->eoff = get64(f);
 		l->nnodes = get64(f);
 		l->nedges = get64(f);
-		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd\n", l-ct->levels, l->noff, l->eoff, l->nnodes, l->nedges);
+		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd", l-ct->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}
 	/* file remains open */
-	dprint(Debugcoarse, "readtree done\n");
+	dprint(Debugcoarse, "readtree done");
 	return 0;
 }
 
