@@ -12,10 +12,10 @@ threadmain(int, char**)
 	EM *em;
 
 	debug = Debugextmem;
-	em = emnew();
+	em = emnew(0);
 	for(i=0; i<nelem(u); i++){
 		warn("<-- [%d] %d\n", i, u[i]);
-		if(empget64(em, u[i]) != EMeof)
+		if(empget64(em, u[i]) != EMbupkis)
 			sysfatal("empget64: not eof: %s", error());
 		printchain(&em->c);
 	}
@@ -31,6 +31,6 @@ threadmain(int, char**)
 			sysfatal("empget64: not tgt %d: %s", u[i], error());
 		printchain(&em->c);
 	}
-	emclose(em, 0);
+	emclose(em);
 	sysquit();
 }

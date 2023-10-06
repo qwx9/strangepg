@@ -40,6 +40,7 @@ typedef uint64_t u64int;
 #define	OWRITE	O_WRONLY
 #define ORDWR	O_RDWR
 #define OCREAT	(O_CREAT|O_TRUNC)
+#define IOUNIT	32768U	/* default buffer size for 9p io */
 
 extern char *argv0;
 #define	ARGBEGIN	for((argv0||(argv0=*argv)),argv++,argc--;\

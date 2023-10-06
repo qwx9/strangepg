@@ -27,13 +27,13 @@ threadmain(int, char**)
 	EM *em;
 
 	debug = -1ULL;
-	path = touch(Maxchunk);	// next test: maxgreed then beyond
+	path = touch(Chunksz);	// next test: maxgreed then beyond
 	em = emclone(path);
-	if(empput64(em, Maxchunk/8, 0xdeadbeefcafebabeULL) < 0)
+	if(empput64(em, Chunksz/8, 0xdeadbeefcafebabeULL) < 0)
 		sysfatal("emput64: %s", error());
-	if(empget64(em, Maxchunk/8) != 0xdeadbeefcafebabeULL)
+	if(empget64(em, Chunksz/8) != 0xdeadbeefcafebabeULL)
 		sysfatal("empget64: %s", error());
-	emclose(em, 0);
+	emclose(em);
 	assert(access(path, AEXIST) == 0);
 	remove(path);
 	sysquit();
