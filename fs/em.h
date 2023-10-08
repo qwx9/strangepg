@@ -19,6 +19,8 @@ struct Chunk{
 struct EM{
 	int fd;
 	int tmp;
+	int stream;
+	int farthest;
 	char *path;
 	vlong off;
 	Chunk c;

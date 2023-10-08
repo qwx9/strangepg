@@ -24,12 +24,12 @@ reverse(Graph *g, Lbuf *lvl)
 	EM *em;
 
 	/* FIXME: for a user, failing at this point is... disappointing. */
-	if((em = emfdopen(1)) == nil)
+	if((em = emfdopen(1, 1)) == nil)
 		sysfatal("emfdopen: %s\n", error());
-	emput64(em, g->nnodes);
+	empput64(em, 0, g->nnodes);
 	emput64(em, g->nedges);
 	emput64(em, dylen(lvl));
-	noff = em->off;
+	noff = 3*8;
 	noff += dylen(lvl) * Lrecsz;
 	eoff = noff + Nrecsz;
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
@@ -42,14 +42,14 @@ reverse(Graph *g, Lbuf *lvl)
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		emappend(em, lp->nodes);
-		emclose(lp->nodes, 0);
+		emclose(lp->nodes);
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		emappend(em, lp->edges);
-		emclose(lp->edges, 0);
+		emclose(lp->edges);
 	}
 	printchain(&em->c);
-	emclose(em, 1);
+	emclose(em);
 	return 0;
 }
 
@@ -61,11 +61,10 @@ printtab(EM *em, ssize ne)
 
 	if((debug & Debugcoarse) == 0)
 		return;
-	emseek(em, 2*8, 0);
 	for(i=0; i<ne; i++){
-		u = emget64(em);
+		u = empget64(em, 2+i*2);
 		v = emget64(em);
-		dprint(Debugcoarse, "E[%d] %llx,%llx", i, u, v);
+		dprint(Debugcoarse, "E[%d] %llux,%llux", i, u, v);
 	}
 }
 
@@ -106,8 +105,8 @@ newlevel(Lbuf *lvl)
 {
 	Lbuf l = {0};
 
-	l.nodes = emnew();
-	l.edges = emnew();
+	l.nodes = emnew(0);
+	l.edges = emnew(0);
 	dypush(lvl, l);
 	dprint(Debugcoarse, "-- newlevel %lld", dylen(lvl));
 	return lvl;
@@ -122,9 +121,9 @@ coarsen(Graph *g, char *index)
 
 	if((fedge = emclone(index)) == nil)
 		sysfatal("coarsen: %s", error());
-	fweight = emnew();
-	fweight2 = emnew();
-	fnode = emnew();
+	fweight = emnew(0);
+	fweight2 = emnew(0);
+	fnode = emnew(0);
 	M = g->nedges;
 	S = g->nnodes - 1;
 	g->nnodes = 0;	/* vandalize it, don't care */
@@ -145,9 +144,9 @@ coarsen(Graph *g, char *index)
 		for(e=0; e<m; e++){
 			/* new left node */
 			if((o = empget64(fedge, 2+e*2)) != u){
-				assert(o != EMeof);
+				assert(o != EMbupkis);
 				u = o;
-				if((s = empget64(fnode, u)) == EMeof)
+				if((s = empget64(fnode, u)) == EMbupkis)
 					s = u;	/* default value */
 				dprint(Debugcoarse, "[%04llx] new left node %llx → %llx", e, u, s);
 				i = s - 1 - w;
@@ -157,7 +156,7 @@ coarsen(Graph *g, char *index)
 						e, u, S+1);
 					s = ++S;
 					i = s - 1 - w;
-					if((uw = empget64(fweight, u)) == EMeof)
+					if((uw = empget64(fweight, u)) == EMbupkis)
 						uw = 1;	/* default value */
 					outputnode(lp, u, s, uw);
 					empput64(fnode, u, s);
@@ -169,8 +168,8 @@ coarsen(Graph *g, char *index)
 			for(int z=w; z<S+1; z++)
 				dprint(Debugcoarse, "\tu[%llx] = %llux ", z-w, empget64(fnode, z-w));
 			v = empget64(fedge, 2+e*2+1);
-			assert(v != EMeof);
-			if((t = empget64(fnode, v)) == EMeof)
+			assert(v != EMbupkis);
+			if((t = empget64(fnode, v)) == EMbupkis)
 				t = v;	/* default value */
 			dprint(Debugcoarse, "[%04llx] edge %llx→%llx,%llx→%llx", e, u, s, v, t);
 			if(t <= w){
@@ -180,7 +179,7 @@ coarsen(Graph *g, char *index)
 					dprint(Debugcoarse, "not connecting unmerged right node for now");
 					continue;
 				}
-				if((vw = empget64(fweight, v)) == EMeof)
+				if((vw = empget64(fweight, v)) == EMbupkis)
 					vw = 1;	/* default value */
 				outputnode(lp, v, u, vw);
 				uw += vw;
@@ -196,6 +195,9 @@ coarsen(Graph *g, char *index)
 				/* to avoid multiple edges between the same two supernodes, only
 				 * admit one iff super-u was marked mapped before super-v;
 				 * multiple u,super-v edges and super-v,super-u are prohibited */
+				// FIXME: this allows consecutive redundant edges to be
+				// seen as external:
+				// v,a... v,b... u,a... u,b..: u,a and u,b both added
 				if(s >= S && t < s){
 					dprint(Debugcoarse, "[%04llx] new external edge", e);
 					empput64(fedge, 2+2*M++, s);
@@ -208,9 +210,10 @@ coarsen(Graph *g, char *index)
 		}
 		emshrink(fnode, 8*(S-w));
 		emshrink(fedge, 2*8 + 8*2*M);
-		emflip(fweight, fweight2);
+		emembraceextendextinguish(fweight, fweight2);
 		endlevel(lp, g);
 		w = S;
+		break;	// FIXME
 	}
 	dprint(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
 	if(M > 0){
@@ -223,24 +226,23 @@ coarsen(Graph *g, char *index)
 		dprint(Debugcoarse, "push artificial root node %llx", s);
 		lvl = newlevel(lvl);
 		lp = lvl + dylen(lvl) - 1;
-		emseek(fedge, 0, 0);
 		/* every node is an adjacency, every edge is internal */
 		for(e=0, u=-1; e<M; e++){
-			if((o = emget64(fedge)) != u){
+			if((o = empget64(fedge, 2 + e*2)) != u){
 				u = o;
 				w = empget64(fweight, u);
-				assert(o != EMeof && w != EMeof);
+				assert(o != EMbupkis && w != EMbupkis);
 				outputnode(lp, u, s, w);
 			}
 			v = emget64(fedge);
-			assert(v != EMeof);
+			assert(v != EMbupkis);
 			outputedge(lp, u, v);
 		}
 	}
-	emclose(fedge, 0);
-	emclose(fnode, 0);
-	emclose(fweight, 0);
-	emclose(fweight2, 0);
+	emclose(fedge);
+	emclose(fnode);
+	emclose(fweight);
+	emclose(fweight2);
 	return lvl;
 }
 

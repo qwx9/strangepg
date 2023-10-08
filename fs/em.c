@@ -94,10 +94,15 @@ nukechunk(Chunk *c)
 static int
 flushchunk(EM *em, Chunk *c)
 {
+	ssize n;
+
 	dprint(Debugextmem, "flushchunk %#p[%llx]", c, c->off);
 	if(seek(em->fd, c->off, 0) < 0)
 		return -1;
-	if(write(em->fd, c->buf, Chunksz) != Chunksz)
+	n = Chunksz;
+	if(em->farthest > c->off)
+		n = MIN(Chunksz, em->farthest - c->off);
+	if(write(em->fd, c->buf, n) != n)
 		return -1;
 	return 0;
 }
@@ -211,7 +216,7 @@ readchunk(EM *em, Chunk *c, vlong off)
 {
 	ssize n;
 
-	if(em->fd < 0)
+	if(em->fd < 0 || em->stream)
 		return 0;
 	if(seek(em->fd, off, 0) < 0)
 		return -1;
@@ -221,8 +226,9 @@ readchunk(EM *em, Chunk *c, vlong off)
 }
 
 static Chunk *
-getchunk(EM *em, vlong off)
+getchunk(EM *em, vlong off, ssize *sz)
 {
+	ssize n;
 	vlong coff;
 	Chunk *c;
 
@@ -233,8 +239,10 @@ getchunk(EM *em, vlong off)
 	if((c = chunkseek(&em->c, coff)) == &em->c || c->off > coff){
 		c = newchunk();
 		clink(em->c.left, c);
-		if(readchunk(em, c, off) < 0)
+		if((n = readchunk(em, c, off)) < 0)
 			sysfatal("getchunk: %s", error());
+		if(sz != nil)
+			*sz = n;
 	}else
 		poke(c);
 	c->off = coff;
@@ -300,29 +308,34 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 		return -1;
 	}
 	for(s=buf; n>0; n-=m, off+=m, s+=m){
-		dprint(Debugextmem, "emwrite: write [%llx..%llx]",
-			off, off+n);
-		c = getchunk(em, off);
+		c = getchunk(em, off, nil);
 		m = off - c->off;
+		dprint(Debugextmem, "emwrite: write [%llx..%llx] → %#p Δ %llx",
+			off, off+n, c, m);
 		p = c->buf + m;
 		m = n < Chunksz - m ? n : Chunksz - m;
 		memcpy(p, s, m);
-		u64int v = GBIT64(buf);
-		dprint(Debugextmem, "emwrite: write [%llx..%llx] ← %llx c %#p %zd",
-			off-c->off, s-buf, v, c, c->off);
 	}
-	return s - buf;
+	m = s - buf;
+	em->off = off + m;
+	if(em->off > em->farthest)
+		em->farthest = em->off;
+	return m;
 }
 
 uchar *
 emread(EM *em, vlong off, ssize *want)
 {
-	ssize n;
+	ssize n, m;
 	uchar *p;
 	Chunk *c;
 
 	n = *want;
-	c = getchunk(em, off);
+	c = getchunk(em, off, &m);
+	if(m == 0){
+		*want = 0;
+		return nil;
+	}
 	p = c->buf + off - c->off;
 	*want = MIN(n, c->off + Chunksz - off);
 	return p;
@@ -335,13 +348,10 @@ empput64(EM *em, vlong off, u64int v)
 
 	assert(off >= 0 && off != EMbupkis);
 	off *= 8;
-	dprint(Debugextmem, "empput64 %s[%llx]", em->path, off);
-	v++;
-	dprint(Debugextmem, "empget64: [%llx] put %llux", off, v);
+	dprint(Debugextmem, "empput64 %s[%llx] ← %llux", em->path, off, v);
 	PBIT64(u, v);
 	if(emwrite(em, off, u, sizeof u) < 0)
 		sysfatal("empput64 %s %llx: %s", em->path, off, error());
-	em->off += 8;
 	return 0;
 }
 
@@ -356,14 +366,15 @@ empget64(EM *em, vlong off)
 	off *= 8;
 	dprint(Debugextmem, "empget64 %s[%llx]", em->path, off);
 	m = 8;
-	if((p = emread(em, off, &m)) == nil || m != 8)
+	p = emread(em, off, &m);
+	if(p == nil || m == 0)
+		return EMbupkis;
+	if(m < 0 || m > 0 && m != 8)
 		sysfatal("empget64 %s short read [%llx] %llx: %s", em->path, off, m, error());
-	em->off += 8;
+	em->off = off + 8;
 	v = GBIT64(p);
 	dprint(Debugextmem, "empget64: [%llx] got %llux", off, v);
-	if(v == 0)
-		return EMbupkis;
-	return v-1;
+	return v;
 }
 
 /* these are dangerous, use with care; not maintaining a pointer
@@ -405,6 +416,8 @@ emfdopen(int fd, int notmp)
 
 	dprint(Debugextmem, "emfdopen %d", fd);
 	em = emnew(notmp);
+	em->fd = fd;
+	em->stream = 1;
 	return em;
 }
 
