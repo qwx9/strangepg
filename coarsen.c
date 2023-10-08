@@ -15,6 +15,7 @@ struct Lbuf{
 	EM *nodes;
 	EM *edges;
 };
+static int nsuper;
 
 static int
 reverse(Graph *g, Lbuf *lvl)
@@ -28,8 +29,9 @@ reverse(Graph *g, Lbuf *lvl)
 		sysfatal("emfdopen: %s\n", error());
 	empput64(em, 0, g->nnodes);
 	emput64(em, g->nedges);
+	emput64(em, nsuper);
 	emput64(em, dylen(lvl));
-	noff = 3*8;
+	noff = 4*8;
 	noff += dylen(lvl) * Lrecsz;
 	eoff = noff + Nrecsz;
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
@@ -98,6 +100,7 @@ outputnode(Lbuf *lp, ssize old, ssize new, ssize weight)
 	emput64(em, new);
 	emput64(em, weight);
 	lp->nnodes++;
+	nsuper++;
 }
 
 static Lbuf *
@@ -121,13 +124,15 @@ coarsen(Graph *g, char *index)
 
 	if((fedge = emclone(index)) == nil)
 		sysfatal("coarsen: %s", error());
+	g->nnodes = empget64(fedge, 0);
+	g->nedges = emget64(fedge);
+	dprint(Debugcoarse, "graph %s nnodes %lld nedges %lld",
+		index, g->nnodes, g->nedges);
 	fweight = emnew(0);
 	fweight2 = emnew(0);
 	fnode = emnew(0);
 	M = g->nedges;
 	S = g->nnodes - 1;
-	g->nnodes = 0;	/* vandalize it, don't care */
-	g->nedges = 0;
 	lvl = nil;
 	w = S;
 	i = 0;
@@ -246,22 +251,6 @@ coarsen(Graph *g, char *index)
 	return lvl;
 }
 
-static int
-readindex(Graph *g, char *path)
-{
-	File *f;
-
-	f = emalloc(sizeof *f);
-	if(openfs(f, path, OREAD) < 0)
-		sysfatal("readindex: %s", error());
-	g->nnodes = get64(f);
-	g->nedges = get64(f);
-	dprint(Debugcoarse, "graph %s nnodes %lld nedges %lld",
-		f->path, g->nnodes, g->nedges);
-	freefs(f);
-	return 0;
-}
-
 static void
 usage(void)
 {
@@ -301,8 +290,6 @@ main(int argc, char **argv)
 	}ARGEND
 	if(argc < 1)
 		usage();
-	if(readindex(&g, argv[0]) < 0)
-		sysfatal("readindex: %s", error());
 	if((lvl = coarsen(&g, argv[0])) == nil)
 		sysfatal("coarsen: %s", error());
 	if(reverse(&g, lvl) < 0)
