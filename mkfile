@@ -86,6 +86,9 @@ $O.testct04: $OTEST test/testct04.$O
 $O.testct05: $OTEST test/testct05.$O
 	$LD $LDFLAGS -o $target $prereq
 
+$O.testct06: $OTEST test/testct06.$O
+	$LD $LDFLAGS -o $target $prereq
+
 CLEANFILES=$OFILES\
 	$OCOARSEN\
 	$OTEST\
@@ -94,3 +97,4 @@ CLEANFILES=$OFILES\
 	test/testct03.$O\
 	test/testct04.$O\
 	test/testct05.$O\
+	test/testct06.$O\
