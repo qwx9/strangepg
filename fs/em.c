@@ -163,6 +163,8 @@ printchain(Chunk *r)
 {
 	Chunk *c, *l;
 
+	if((debug & Debugextmem) == 0)
+		return;
 	dprint(Debugextmem, "chain %#p: ", r);
 	for(c=r, l=nil; l!=r; c=c->right, l=c)
 		dprint(Debugextmem, " %#p[%llx]", c, c->off);
@@ -246,6 +248,10 @@ getchunk(EM *em, vlong off, ssize *sz)
 	}else
 		poke(c);
 	c->off = coff;
+	if(sz != nil)
+		*sz = em->farthest > c->off ? em->farthest - c->off : 0;
+	dprint(Debugextmem, "getchunk: got %#p off %llx sz %llx farthest %x",
+		c, c->off, sz!=nil?*sz:-1, em->farthest);
 	return c;
 }
 
@@ -303,6 +309,7 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 	uchar *p, *s;
 	Chunk *c;
 
+	dprint(Debugextmem, "emwrite %s[%llx] %llx to %#p", em->path, off, n, buf);
 	if(em->fd < 0){
 		werrstr("emwrite: no file");
 		return -1;
@@ -315,9 +322,10 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 		p = c->buf + m;
 		m = n < Chunksz - m ? n : Chunksz - m;
 		memcpy(p, s, m);
+		dprint(Debugextmem, "emwrite %s[%llx] wrote %llx in %#p", em->path, off, m, c);
 	}
 	m = s - buf;
-	em->off = off + m;
+	em->off = off;
 	if(em->off > em->farthest)
 		em->farthest = em->off;
 	return m;
@@ -331,13 +339,16 @@ emread(EM *em, vlong off, ssize *want)
 	Chunk *c;
 
 	n = *want;
+	dprint(Debugextmem, "emread %s[%llx] want %llx", em->path, off, n);
 	c = getchunk(em, off, &m);
 	if(m == 0){
+		dprint(Debugextmem, "emread %s[%llx] got nothing", em->path, off);
 		*want = 0;
 		return nil;
 	}
 	p = c->buf + off - c->off;
 	*want = MIN(n, c->off + Chunksz - off);
+	dprint(Debugextmem, "emread %s[%llx] got %llx", em->path, off, *want);
 	return p;
 }
 
@@ -373,7 +384,7 @@ empget64(EM *em, vlong off)
 		sysfatal("empget64 %s short read [%llx] %llx: %s", em->path, off, m, error());
 	em->off = off + 8;
 	v = GBIT64(p);
-	dprint(Debugextmem, "empget64: [%llx] got %llux", off, v);
+	dprint(Debugextmem, "empget64: %s[%llx] got %llux", em->path, em->off/8, v);
 	return v;
 }
 
