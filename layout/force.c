@@ -36,7 +36,7 @@ compute(Graph *g)
 	usize *ep, *ee;
 	Vertex *Fu, dv;
 	Node *u, *from, *v, *ne;
-	Edge ed;
+	Edge *e;
 
 	//sleep(1000);
 	if(dylen(g->edges) < 1){
@@ -70,8 +70,8 @@ compute(Graph *g)
 		}
 		for(u=g->nodes, i=0; u<ne; i++, u++){
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
-				ed = getedgedef(g, *ep);
-				if((from = getithnode(g, ed.u>>1)) == nil)
+				e = getedge(g, *ep);
+				if((from = getnode(g, e->u>>1)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);

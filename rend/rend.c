@@ -6,7 +6,7 @@ faceyourfears(Graph *g, Node *u)
 	int n, sign;
 	usize *ip, *ie, us, them;
 	double θ, dθ;
-	Edge ed;
+	Edge *e;
 	Node *v;
 	Vector Δ;
 
@@ -24,18 +24,18 @@ faceyourfears(Graph *g, Node *u)
 	/* face outgoing */
 	if(dylen(u->out) > 0){
 		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
-			ed = getedgedef(g, *ip);
-			sign = (ed.u & 1) != (ed.v & 1) ? 1 : -1;
-			them = ed.v >> 1;
-			assert(u == getithnode(g, ed.u >> 1));
-			if(getithnode(g, them) - g->nodes == us){
-				them = ed.u >> 1;
-				if(getithnode(g, them) - g->nodes == us){
+			e = getedge(g, *ip);
+			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
+			them = e->v >> 1;
+			assert(u == getnode(g, e->u >> 1));
+			if(getnode(g, them) - g->nodes == us){
+				them = e->u >> 1;
+				if(getnode(g, them) - g->nodes == us){
 					n--;
 					continue;
 				}
 			}
-			v = getithnode(g, them);
+			v = getnode(g, them);
 			Δ = subpt2(v->vrect.o, u->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
@@ -50,18 +50,18 @@ faceyourfears(Graph *g, Node *u)
 	/* face away from incoming */
 	if(dylen(u->in) > 0){
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
-			ed = getedgedef(g, *ip);
-			sign = (ed.u & 1) != (ed.v & 1) ? 1 : -1;
-			them = getithnode(g, ed.v >> 1) - g->nodes;
-			assert(u == getithnode(g, ed.v >> 1));
+			e = getedge(g, *ip);
+			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
+			them = getnode(g, e->v >> 1) - g->nodes;
+			assert(u == getnode(g, e->v >> 1));
 			if(them == us){
-				them = ed.v >> 1;
+				them = e->v >> 1;
 				if(them == us){
 					n--;
 					continue;
 				}
 			}
-			v = getithnode(g, them);
+			v = getnode(g, them);
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			/* FIXME: see comment above */

@@ -5,57 +5,38 @@
 
 /* FIXME: there's a problem showing inverted edge, perhaps even sd's */
 
-extern char *indexpath;	/* FIXME */
-
-static int
-readindex(Graph *g, char *path)
-{
-	File *f;
-	Coarse *c;
-
-	dprint(Debugcoarse, "readindex %s", path);
-	if((c = initindex(g)) == nil)
-		sysfatal("load: failed to set index up: %r");
-	f = c->i.f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
-	if(openfs(f, path, OREAD) < 0)
-		return -1;
-	g->nnodes = get64(f);
-	g->nedges = get64(f);
-	dprint(Debugcoarse, "readindex nn=%zd ne=%zd", g->nnodes, g->nedges);
-	c->inodes = emcreate(g->nnodes);
-	c->iedges = emcreate(g->nedges);
-	dprint(Debugcoarse, "readindex done");
-	return 0;
-}
-
 /* the actual level index is small and can remain in memory */
 static int
 readtree(Graph *g, char *path)
 {
-	usize nn, ne, nl;
+	usize nl;
 	File *f;
 	Level *l;
-	Ctree *ct;
+	Coarse *c;
 
+	if(path == nil){
+		werrstr("no input file");
+		return -1;
+	}
 	dprint(Debugcoarse, "readtree %s", path);
-	f = g->f = emalloc(sizeof *f);
+	f = g->f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
 	if(openfs(f, path, OREAD) < 0)
 		return -1;
-	nn = get64(f);	// nv + ns
-	ne = get64(f);
+	g->nnodes = get64(f);
+	g->nedges = get64(f);
+	g->nsuper = get64(f);
 	nl = g->nlevels = get64(f);
-	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %zd; index: nv %zd ne %zd", nn, ne, nl, g->nnodes, g->nedges);
-	ct = &g->c->t;
-	dyprealloc(ct->levels, nl);
-	/* FIXME: refactor later; all we need in-memory are one offset and
-	 * indices into the array; EM would just mirror that once commited to
-	 * disk in whatever format... see also: dfc */
-	for(l=ct->levels; l<ct->levels+dylen(ct->levels); l++){
+	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %d",
+		g->nnodes, g->nedges, g->nlevels);
+	c = g->c;
+	dyprealloc(c->levels, nl);
+	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
 		l->noff = get64(f);
 		l->eoff = get64(f);
 		l->nnodes = get64(f);
 		l->nedges = get64(f);
-		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd", l-ct->levels, l->noff, l->eoff, l->nnodes, l->nedges);
+		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
+			l-c->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}
 	/* file remains open */
 	dprint(Debugcoarse, "readtree done");
@@ -63,22 +44,18 @@ readtree(Graph *g, char *path)
 }
 
 static Graph *
-load(char *treepath)
+load(char *path)
 {
 	Graph *g;
 
 	if((g = initgraph()) == nil)
-		sysfatal("load: %r");
-	if(indexpath == nil){
-		werrstr("index/load: missing index file");
-		return nil;
-	}
-	if(readindex(g, indexpath) < 0)
-		sysfatal("load: failed to read index %s: %r", indexpath);
-	if(readtree(g, treepath) < 0)
-		sysfatal("load: failed to read tree %s: %r", treepath);
+		sysfatal("load: %s", error());
+	if(initindex(g) == nil)
+		sysfatal("load: initindex: %s", error());
+	if(readtree(g, path) < 0)
+		sysfatal("load: failed to read tree %s: %s", path, error());
 	if(setgraphdepth(g, 0) < 0)
-		sysfatal("load: failed to load first level: %r");
+		sysfatal("load: failed to load first level: %s", error());
 	return g;
 }
 
@@ -91,8 +68,8 @@ save(Graph *)
 static void
 nuke(Graph *g)
 {
-	nukeindex(g);
 	nukegraph(g);
+	free(g->c);
 }
 
 static Filefmt ff = {

@@ -1,7 +1,6 @@
 #include "strpg.h"
 
 int haxx0rz;
-char *indexpath;	/* FIXME */
 
 static int intype;
 static char **filev;
@@ -43,7 +42,7 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Dbins] [-l layout] [FILE]\n", argv0);
+	sysfatal("usage: %s [-bins] [-l layout] [FILE]\n", argv0);
 }
 
 int
@@ -77,7 +76,6 @@ parseargs(int argc, char **argv)
 	case 'b': haxx0rz = 1; break;
 	case 'i':
 		intype = FFindex;
-		indexpath = EARGF(usage());
 		break;
 	case 'l':
 		s = EARGF(usage());

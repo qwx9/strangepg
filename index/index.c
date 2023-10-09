@@ -47,8 +47,8 @@ setgraphdepth(Graph *g, int z)
 {
 	int r, lvl;
 
-	dprint(Debugcoarse, "set global graph to depth %d/%llud", z, dylen(g->c->t.levels));
-	if(z < 0 || z >= dylen(g->c->t.levels)){
+	dprint(Debugcoarse, "set global graph to depth %d/%llud", z, dylen(g->c->levels));
+	if(z < 0 || z >= dylen(g->c->levels)){
 		werrstr("invalid level %d", z);
 		return -1;
 	}
@@ -79,18 +79,6 @@ zoomgraph(Graph *g, int Δ)
 		return -1;
 	}
 	return 0;
-}
-
-void
-nukeindex(Graph *g)
-{
-	Coarse *c;
-
-	c = g->c;
-	freefs(c->i.f);
-	emclose(c->inodes);
-	emclose(c->iedges);
-	free(c);
 }
 
 Coarse *

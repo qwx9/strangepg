@@ -4,55 +4,17 @@
 #include "index.h"
 
 Node *
-getithnode(Graph *g, usize u)
+getnode(Graph *g, usize i)
 {
-	usize v;
-
-	if((v = empget64(g->c->inodes, 8*u)) == 0)
-		return nil;
-	return g->nodes + v-1;
+	assert(i < dylen(g->nodes));
+	return g->nodes + i;
 }
 
 Edge *
-getithedge(Graph *g, usize e)	/* edges[iedge[e]] */
+getedge(Graph *g, usize i)
 {
-	usize v;
-
-	if((v = empget64(g->c->iedges, 8*e)) == 0)
-		return nil;
-	return g->edges + v-1;
-}
-
-Edge
-getedgedef(Graph *g, usize e)	/* edgelist[i] */
-{
-	File *f;
-	Edge ed;
-
-	f = g->c->i.f;
-	seekfs(f, 2*8 + e*2*8);
-	// FIXME: no orientation + layer violation?
-	ed.u = get64(f) << 1 | 0;
-	ed.v = get64(f) << 1 | 0;
-	dprint(Debugcoarse, "getedgedef %zx: read %zx,%zx\n", e, ed.u>>1, ed.v>>1);
-	return ed;
-}
-
-static void
-remaporpush(Graph *g, usize u, usize new, int w)
-{
-	usize v;
-	Node *n;
-
-	n = getithnode(g, u);
-	if(n != nil){
-		dprint(Debugcoarse, "remap u=%zux: %zux → %zux\n", u, n-g->nodes, new);
-		n->id = new;
-		n->weight = w;
-		return;
-	}
-	v = pushnode(g, new, w);
-	empput64(g->c->inodes, 8*u, v+1);
+	assert(i < dylen(g->edges));
+	return g->edges + i;
 }
 
 int
@@ -70,57 +32,85 @@ loadbranch(Graph *, Level *, usize)
 }
 
 void
-unloadlevels(Graph *, int , int)
+unloadlevels(Graph *g, int z, int Δ)
 {
-	// FIXME
+	int i;
+	usize par, w, s0;
+	Node *n, *n0;
+	Coarse *c;
+	Level *l;
+	File *ft;
 
-	/*
-	...
-	remaporpush(g, u, s, w);
-	if(s´ == s)
-		popnode(g, g->nodes[inode[u]]);
-	// FIXME: for now, just keep a inode[]→Node array, fuck it
-	*/
+	ft = g->f;
+	c = g->c;
+	l = c->levels + z;
+	n0 = z > 1 ? g->nodes + l[-1].firstnode : g->nodes;
+	s0 = n0->id;
+	seekfs(ft, l->noff);
+	for(i=0; i<l->nnodes; i++){
+		get64(ft);			/* u */
+		par = get64(ft);
+		w = get64(ft);
+		n = n0 + par - s0;
+		if(n->id >= s0)
+			n->weight += w;
+		else
+			n->id = par;
+		/* no need to update inodes */
+	}
+	for(i=0; i<l->nnodes; i++)
+		dypop(g->nodes);
+	/* no need to update iedges */
+	g->c->level -= Δ;
+	printgraph(g);
 }
 
 void
 loadlevels(Graph *g, int z, int Δ)
 {
-	int nn, ne, w;
-	usize u, u0, s, e, i;
-	Ctree *ct;
+	int w;
+	usize u, v, par, i, j, x;
+	Coarse *c;
 	Level *l;
 	File *ft;
-	Edge ed;
 
 	ft = g->f;
-	ct = &g->c->t;
-	nn = ne = 0;
-	for(l=ct->levels+z; Δ>0; Δ--, l++){
-		nn += l->nnodes;
-		ne += l->nedges;
-		dprint(Debugcoarse, "loadlevels: add level %zd: nn %d ne %d\n",
-			l - ct->levels, nn, ne);
+	c = g->c;
+	l = c->levels + z;	/* note that z is current + 1 */
+	g->c->level = z - 1;
+	seekfs(ft, l->noff);
+	for(j=0; j<Δ; j++, l++){
+		g->c->level++;
+		dprint(Debugcoarse, "loadlevels: level %zd: add %zd nodes",
+			l - c->levels, l->nnodes);
+		l->firstnode = dylen(g->nodes);
+		for(i=0; i<l->nnodes; i++){
+			u = get64(ft);
+			par = get64(ft);
+			w = get64(ft);
+			dprint(Debugcoarse, "loadnode old=%zux new=%zux w=%d",
+				u, par, w);
+			x = u - l->firstnode;
+			pushnodeat(g, u, w, x);
+			dprint(Debugcoarse, "%s node[%zx] ← %zx\n",
+				x<dylen(g->nodes) ? "remap" : "push", x, u);
+		}
 	}
-	seekfs(ft, ct->levels[z].noff);
-	while(nn-- > 0){
-		u = get64(ft);
-		u0 = get64(ft);
-		s = get64(ft);
-		w = get64(ft);
-		dprint(Debugcoarse, "loadnode u=%zux old=%zux new=%zux w=%d\n",
-			u, u0, s, w);
-		remaporpush(g, u, u0, w);
+	l = c->levels + z;
+	g->c->level = z - 1;
+	seekfs(ft, l->eoff);
+	for(j=0; j<Δ; j++, l++){
+		g->c->level++;
+		dprint(Debugcoarse, "loadlevels: level %zd: add %zd edges",
+			l - c->levels, l->nedges);
+		l->firstedge = dylen(g->edges);
+		for(i=0; i<l->nedges; i++){
+			u = get64(ft);
+			v = get64(ft);
+			dprint(Debugcoarse, "loadedge %zux,%zux", u>>1, v>>1);
+			i = pushpackededge(g, u, v);
+		}
 	}
-	seekfs(ft, ct->levels[z].eoff);
-	while(ne-- > 0){
-		e = get64(ft);
-		ed = getedgedef(g, e);
-		dprint(Debugcoarse, "loadedge e %zux u=%zux v=%zux\n",
-			e, ed.u>>1, ed.v>>1);
-		i = pushpackededge(g, ed.u, ed.v, e);
-		empput64(g->c->iedges, 8*e, i+1);
-	}
-	g->c->level = z + Δ;
+	g->c->level = z - 1 + Δ;
 	printgraph(g);
 }

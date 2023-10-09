@@ -220,7 +220,7 @@ readchunk(EM *em, Chunk *c, vlong off)
 		return 0;
 	if(seek(em->fd, off, 0) < 0)
 		return -1;
-	if((n = readn(em->fd, c->buf, Chunksz)) < 0)
+	if((n = read(em->fd, c->buf, Chunksz)) < 0)
 		sysfatal("readchunk %s: %s", em->path, error());
 	return n;
 }

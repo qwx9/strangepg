@@ -66,8 +66,8 @@ drawedges(Graph *g)
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
-		u = getithnode(g, e->u >> 1);
-		v = getithnode(g, e->v >> 1);
+		u = getnode(g, e->u >> 1);
+		v = getnode(g, e->v >> 1);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
 		drawedge(q, MAX(0., view.zoom/5));
 	}

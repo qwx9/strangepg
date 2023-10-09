@@ -76,6 +76,7 @@ struct Graph{
 	Coarse *c;
 	usize nnodes;	/* gfa-wide totals */
 	usize nedges;
+	usize nsuper;
 	int nlevels;
 	Node *nodes;
 	Edge *edges;

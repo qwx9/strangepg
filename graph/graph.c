@@ -18,7 +18,7 @@ nodeid(Graph *g, usize u)
 {
 	Node *n;
 
-	n = getithnode(g, u);
+	n = getnode(g, u);
 	return n->id;
 }
 
@@ -39,17 +39,17 @@ printgraph(Graph *g)
 		return;
 	warn("graph %#p nn %zd ne %zd\n", g, g->nnodes, g->nedges);
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++)
-		warn("e%08zux %zux[=%zux] → %zux[=%zux]\n",
+		warn("e[%04zux] %zux[=%zux] → %zux[=%zux]\n",
 			e - g->edges, packedid(g, e->u), e->u,
 			packedid(g, e->v), e->v);
 	for(n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++){
-		warn("n%08zux → %zux weight %d out [",
+		warn("n[%04zux] %zux weight %d → [ ",
 			n - g->nodes, n->id, n->weight);
 		for(np=n->out, nq=np+dylen(n->out); np<nq; np++)
-			warn("%s%zx", np==n->out?"":" ", *np);
-		warn("] in [");
+			warn("%zx ", *np);
+		warn("] ← [ ");
 		for(np=n->in, nq=np+dylen(n->in); np<nq; np++)
-			warn("%s%zx", np==n->in?"":" ", *np);
+			warn("%zx", *np);
 		warn("]\n");
 	}
 }
@@ -85,7 +85,7 @@ newedge(void)
 }
 
 usize
-pushpackededge(Graph *g, usize pu, usize pv, usize ei)
+pushpackededge(Graph *g, usize pu, usize pv)
 {
 	usize i;
 	Edge e;
@@ -94,17 +94,15 @@ pushpackededge(Graph *g, usize pu, usize pv, usize ei)
 	e = newedge();
 	e.u = pu;
 	e.v = pv;
+	i = dylen(g->edges);
 	dypush(g->edges, e);
-	i = dylen(g->edges) - 1;
-	dprint(Debugcoarse, "pushpackededge %zux at %zux: %zux,%zux", ei, i, pu, pv);
-	n = getithnode(g, pu >> 1);
-	assert(n != nil);
-	dprint(Debugcoarse, " → in i=%zux id=%zux", n->id, n - g->nodes);
-	dypush(n->out, ei);
-	n = getithnode(g, pv >> 1);
-	assert(n != nil);
-	dprint(Debugcoarse, " ← out i=%zux id=%zux", n->id, n - g->nodes);
-	dypush(n->in, ei);
+	dprint(Debugcoarse, "pushpackededge [%zux] %zux,%zux", i, pu, pv);
+	n = getnode(g, pu >> 1);
+	dprint(Debugcoarse, "\t[%zx]%zux → in", n-g->nodes, n->id);
+	dypush(n->out, i);
+	n = getnode(g, pv >> 1);
+	dprint(Debugcoarse, "\t[%zx]%zux ← out", n-g->nodes, n->id);
+	dypush(n->in, i);
 	return i;
 }
 
@@ -124,7 +122,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	if((n = id2n(g, ev)) == nil)
 		return -1;
 	v = n - g->nodes << 1 | d2;
-	pushpackededge(g, u, v, dylen(g->edges));
+	pushpackededge(g, u, v);
 	return 0;
 }
 
@@ -139,6 +137,20 @@ pushnode(Graph *g, usize u, int w)
 	n.weight = w;
 	dypush(g->nodes, n);
 	return dylen(g->nodes) - 1;
+}
+
+/* dangerous, allows overwriting for remap */
+usize
+pushnodeat(Graph *g, usize u, int w, ssize i)
+{
+	Node *n;
+
+	dprint(Debugcoarse, "pushnodeat [%zd]%zd", i, u);
+	dygrow(g->nodes, i);
+	n = g->nodes + i;
+	n->id = u;
+	n->weight = w;
+	return i;
 }
 
 int
