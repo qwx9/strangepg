@@ -27,3 +27,4 @@ struct Dyhdr{
 
 #define dyclear(a)	do{if((a) != nil){ memset((a), 0, dyhdr(a)->len * sizeof(*(a))); dyhdr(a)->len = 0;}while(0)
 #define dyprealloc(a,n)	do{Dyhdr*__h; (a) = dynew((a),__h,(n)); dyhdr(a)->len = (n); }while(0)
+#define dygrow(a,n)	do{if((a) != nil){ Dyhdr*__h = dyhdr(a); while(__h->len < (n)){ (a) = dyextend((a), __h, sizeof(*(a)) * __h->sz); __h = dyhdr(a);}}}while(0)
