@@ -35,9 +35,12 @@ threadmain(int, char**)
 		sysfatal("emclone: %s", error());
 	if((w = empget64(em, 0)) != 0)
 		sysfatal("got %llux instead of %llux", w, 0ULL);
-	for(v=1; v<nelem(buf)/8; v++)
+	for(v=1; v<nelem(buf)/8; v++){
 		if((w = emget64(em)) != v)
 			sysfatal("got %llux instead of %llux", w, v);
+		if(v % 1000 == 0)
+			warn("%llud/%d\n", v, nelem(buf)/8);
+	}
 	emclose(em);
 	remove(path);
 	free(path);
