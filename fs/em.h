@@ -3,16 +3,19 @@ typedef struct Chunk Chunk;
 
 /* FIXME: tunable (def or cmdline) */
 enum{
+	/* must be powers of two */
 	Poolsz = 1ULL<<32,
-	Chunksz = 1ULL<<20,
+	Chunkshl = 20,
+	Chunksz = 1ULL<<Chunkshl,
 	EMbupkis = 0xdeadbeefcafebabeULL,
+
+	EMclown = 1<<0,	/* inflate pants always */
 };
 
 struct Chunk{
-	ssize off;
+	vlong off;
+	vlong len;
 	uchar *buf;
-	Chunk *left;
-	Chunk *right;
 	Chunk *lleft;
 	Chunk *lright;
 };
@@ -20,18 +23,18 @@ struct EM{
 	int fd;
 	int tmp;
 	int stream;
-	int farthest;
+	int mode;
 	char *path;
+	Chunk **cp;
 	vlong off;
-	Chunk c;
+	Chunk l;
 };
 
-void	printchain(Chunk*);	// FIXME: debug
+void	printchain(Chunk**);
 ssize	emshrink(EM*, ssize);
-int	emappend(EM*, EM*);
-int	emembraceextendextinguish(EM*, EM*);
+int	embraceextendextinguish(EM*, EM*);
+int	emsteal(EM*, EM*);
 void	emflush(EM*);
-uchar*	emread(EM*, vlong, ssize*);
 u64int	empget64(EM*, vlong);
 u64int	emget64(EM*);
 ssize	emwrite(EM*, vlong, uchar*, ssize);
@@ -42,3 +45,7 @@ EM*	emfdopen(int, int);
 EM*	emopen(char*);
 EM*	emclone(char*);
 void	emclose(EM*);
+
+/* no refunds if ub */
+#define COFF(x)	((x) & ~(Chunksz-1))
+#define CADDR(x)	((x) >> Chunkshl)

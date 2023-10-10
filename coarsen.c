@@ -15,7 +15,7 @@ struct Lbuf{
 	EM *nodes;
 	EM *edges;
 };
-static int nsuper;
+static usize nsuper;
 
 static int
 reverse(Graph *g, Lbuf *lvl)
@@ -27,13 +27,15 @@ reverse(Graph *g, Lbuf *lvl)
 	/* FIXME: for a user, failing at this point is... disappointing. */
 	if((em = emfdopen(1, 1)) == nil)
 		sysfatal("emfdopen: %s\n", error());
+	dprint(Debugcoarse, "reverse: %zd %zd %zd %zd",
+		g->nnodes, g->nedges, nsuper, dylen(lvl));
 	empput64(em, 0, g->nnodes);
 	emput64(em, g->nedges);
 	emput64(em, nsuper);
 	emput64(em, dylen(lvl));
 	noff = 4*8;
 	noff += dylen(lvl) * Lrecsz;
-	eoff = noff + Nrecsz;
+	eoff = noff + nsuper * Nrecsz;
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		emput64(em, lp->nnodes);
 		emput64(em, lp->nedges);
@@ -42,15 +44,19 @@ reverse(Graph *g, Lbuf *lvl)
 		noff += lp->nnodes * Nrecsz;
 		eoff += lp->nedges * Erecsz;
 	}
+	printchain(em->cp);
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
-		emappend(em, lp->nodes);
+		dprint(Debugcoarse, "[%zd] %d nodes", lp-lvl, lp->nnodes);
+		embraceextendextinguish(em, lp->nodes);
 		emclose(lp->nodes);
 	}
+	printchain(em->cp);
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
-		emappend(em, lp->edges);
+		dprint(Debugcoarse, "[%zd] %d edges", lp-lvl, lp->nedges);
+		embraceextendextinguish(em, lp->edges);
 		emclose(lp->edges);
 	}
-	printchain(&em->c);
+	printchain(em->cp);
 	emclose(em);
 	return 0;
 }
@@ -71,10 +77,9 @@ printtab(EM *em, ssize ne)
 }
 
 static void
-endlevel(Lbuf *lp, Graph *g)
+endlevel(Lbuf *lp)
 {
-	g->nnodes += lp->nnodes;
-	g->nedges += lp->nedges;
+	nsuper += lp->nnodes;
 }
 
 static void
@@ -100,7 +105,6 @@ outputnode(Lbuf *lp, ssize old, ssize new, ssize weight)
 	emput64(em, new);
 	emput64(em, weight);
 	lp->nnodes++;
-	nsuper++;
 }
 
 static Lbuf *
@@ -123,7 +127,7 @@ coarsen(Graph *g, char *index)
 	Lbuf *lvl, *lp;
 
 	if((fedge = emclone(index)) == nil)
-		sysfatal("coarsen: %s", error());
+		sysfatal("emclone: %s", error());
 	g->nnodes = empget64(fedge, 0);
 	g->nedges = emget64(fedge);
 	dprint(Debugcoarse, "graph %s nnodes %lld nedges %lld",
@@ -138,6 +142,7 @@ coarsen(Graph *g, char *index)
 	i = 0;
 	uw = -1;	/* cannot happen */
 	s = -1;	/* cannot happen */
+	// FIXME: immediate fatal exit with no error if below threshold at start
 	while(M > Minedges){
 		printtab(fedge, M);
 		lvl = newlevel(lvl);
@@ -147,6 +152,8 @@ coarsen(Graph *g, char *index)
 		M = 0;
 		int nein = 0;
 		for(e=0; e<m; e++){
+			if(e > 0 && e % 1000 == 0)
+				dprint(Debugcoarse, "L%02zd edge %lld/%lld\n", dylen(lvl), e, g->nedges);
 			/* new left node */
 			if((o = empget64(fedge, 2+e*2)) != u){
 				assert(o != EMbupkis);
@@ -215,8 +222,8 @@ coarsen(Graph *g, char *index)
 		}
 		emshrink(fnode, 8*(S-w));
 		emshrink(fedge, 2*8 + 8*2*M);
-		emembraceextendextinguish(fweight, fweight2);
-		endlevel(lp, g);
+		emsteal(fweight, fweight2);
+		endlevel(lp);
 		w = S;
 		break;	// FIXME
 	}

@@ -49,7 +49,7 @@ printgraph(Graph *g)
 			warn("%zx ", *np);
 		warn("] ← [ ");
 		for(np=n->in, nq=np+dylen(n->in); np<nq; np++)
-			warn("%zx", *np);
+			warn("%zx ", *np);
 		warn("]\n");
 	}
 }
@@ -143,13 +143,12 @@ pushnode(Graph *g, usize u, int w)
 usize
 pushnodeat(Graph *g, usize u, int w, ssize i)
 {
-	Node *n;
+	Node n = {0};
 
 	dprint(Debugcoarse, "pushnodeat [%zd]%zd", i, u);
-	dygrow(g->nodes, i);
-	n = g->nodes + i;
-	n->id = u;
-	n->weight = w;
+	n.id = u;
+	n.weight = w;
+	dyinsert(g->nodes, i, n);
 	return i;
 }
 

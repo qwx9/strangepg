@@ -31,10 +31,10 @@ readtree(Graph *g, char *path)
 	c = g->c;
 	dyprealloc(c->levels, nl);
 	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
-		l->noff = get64(f);
-		l->eoff = get64(f);
 		l->nnodes = get64(f);
 		l->nedges = get64(f);
+		l->noff = get64(f);
+		l->eoff = get64(f);
 		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
 			l-c->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}

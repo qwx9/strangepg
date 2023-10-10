@@ -88,7 +88,7 @@ loadlevels(Graph *g, int z, int Δ)
 			u = get64(ft);
 			par = get64(ft);
 			w = get64(ft);
-			dprint(Debugcoarse, "loadnode old=%zux new=%zux w=%d",
+			dprint(Debugcoarse, "loadlevels old=%zux new=%zux w=%d",
 				u, par, w);
 			x = u - l->firstnode;
 			pushnodeat(g, u, w, x);
@@ -107,7 +107,7 @@ loadlevels(Graph *g, int z, int Δ)
 		for(i=0; i<l->nedges; i++){
 			u = get64(ft);
 			v = get64(ft);
-			dprint(Debugcoarse, "loadedge %zux,%zux", u>>1, v>>1);
+			dprint(Debugcoarse, "loadlevels edge %zux,%zux", u>>1, v>>1);
 			i = pushpackededge(g, u, v);
 		}
 	}
