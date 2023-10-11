@@ -30,6 +30,7 @@ reverse(Graph *g, Lbuf *lvl)
 	dprint(Debugcoarse, "reverse: %zd %zd %zd %zd",
 		g->nnodes, g->nedges, nsuper, dylen(lvl));
 	empput64(em, 0, g->nnodes);
+	// FIXME: output number of superedges as well? useful? ← yes.
 	emput64(em, g->nedges);
 	emput64(em, nsuper);
 	emput64(em, dylen(lvl));
@@ -44,19 +45,16 @@ reverse(Graph *g, Lbuf *lvl)
 		noff += lp->nnodes * Nrecsz;
 		eoff += lp->nedges * Erecsz;
 	}
-	printchain(em->cp);
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		dprint(Debugcoarse, "[%zd] %d nodes", lp-lvl, lp->nnodes);
 		embraceextendextinguish(em, lp->nodes);
 		emclose(lp->nodes);
 	}
-	printchain(em->cp);
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		dprint(Debugcoarse, "[%zd] %d edges", lp-lvl, lp->nedges);
 		embraceextendextinguish(em, lp->edges);
 		emclose(lp->edges);
 	}
-	printchain(em->cp);
 	emclose(em);
 	return 0;
 }
@@ -72,7 +70,7 @@ printtab(EM *em, ssize ne)
 	for(i=0; i<ne; i++){
 		u = empget64(em, 2+i*2);
 		v = emget64(em);
-		dprint(Debugcoarse, "E[%d] %llux,%llux", i, u, v);
+		dprint(Debugcoarse, "E[%d] %zx,%zx", i, u, v);
 	}
 }
 
@@ -122,7 +120,7 @@ newlevel(Lbuf *lvl)
 static Lbuf *
 coarsen(Graph *g, char *index)
 {
-	ssize i, o, w, u, v, s, t, m, e, uw, vw, M, S;
+	ssize i, o, w, u, v, s, t, y, m, e, uw, vw, M, S;
 	EM *fedge, *fnode, *fweight, *fweight2;
 	Lbuf *lvl, *lp;
 
@@ -139,6 +137,7 @@ coarsen(Graph *g, char *index)
 	S = g->nnodes - 1;
 	lvl = nil;
 	w = S;
+	y = 0;
 	i = 0;
 	uw = -1;	/* cannot happen */
 	s = -1;	/* cannot happen */
@@ -158,7 +157,7 @@ coarsen(Graph *g, char *index)
 			if((o = empget64(fedge, 2+e*2)) != u){
 				assert(o != EMbupkis);
 				u = o;
-				if((s = empget64(fnode, u)) == EMbupkis)
+				if((s = empget64(fnode, u-y)) == EMbupkis || s == 0 && u != 0)
 					s = u;	/* default value */
 				dprint(Debugcoarse, "[%04llx] new left node %llx → %llx", e, u, s);
 				i = s - 1 - w;
@@ -168,20 +167,18 @@ coarsen(Graph *g, char *index)
 						e, u, S+1);
 					s = ++S;
 					i = s - 1 - w;
-					if((uw = empget64(fweight, u)) == EMbupkis)
+					if((uw = empget64(fweight, i)) == EMbupkis)
 						uw = 1;	/* default value */
 					outputnode(lp, u, s, uw);
-					empput64(fnode, u, s);
+					empput64(fnode, u-y, s);
 					empput64(fweight2, i, uw);
 					nein = 0;
 				}else
 					nein = 1;
 			}
-			for(int z=w; z<S+1; z++)
-				dprint(Debugcoarse, "\tu[%llx] = %llux ", z-w, empget64(fnode, z-w));
 			v = empget64(fedge, 2+e*2+1);
 			assert(v != EMbupkis);
-			if((t = empget64(fnode, v)) == EMbupkis)
+			if((t = empget64(fnode, v-y)) == EMbupkis || t == 0 && v != 0)
 				t = v;	/* default value */
 			dprint(Debugcoarse, "[%04llx] edge %llx→%llx,%llx→%llx", e, u, s, v, t);
 			if(t <= w){
@@ -191,11 +188,11 @@ coarsen(Graph *g, char *index)
 					dprint(Debugcoarse, "not connecting unmerged right node for now");
 					continue;
 				}
-				if((vw = empget64(fweight, v)) == EMbupkis)
+				if((vw = empget64(fweight, i)) == EMbupkis)
 					vw = 1;	/* default value */
 				outputnode(lp, v, u, vw);
 				uw += vw;
-				empput64(fnode, v, s);
+				empput64(fnode, v-y, s);
 				empput64(fweight2, i, uw);
 				outputedge(lp, u, v);
 			}else if(v == u){
@@ -220,12 +217,12 @@ coarsen(Graph *g, char *index)
 				}
 			}
 		}
-		emshrink(fnode, 8*(S-w));
+		emshrink(fnode, 0);
 		emshrink(fedge, 2*8 + 8*2*M);
 		emsteal(fweight, fweight2);
 		endlevel(lp);
+		y = w;
 		w = S;
-		break;	// FIXME
 	}
 	dprint(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
 	if(M > 0){

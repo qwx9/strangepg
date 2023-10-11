@@ -59,7 +59,7 @@ evictchunk(void)
 static int
 flushchunk(EM *em, Chunk *c)
 {
-	dprint(Debugextmem, "flushchunk %#p[%llx:%llx]", c, c->off, c->len);
+	dprint(Debugextmem, "flushchunk %#p[%llx:%llx] fd %d stream %d off %zd", c, c->off, c->len, em->fd, em->stream, c->off);
 	if(!em->stream && seek(em->fd, c->off, 0) < 0)
 		return -1;
 	dprint(Debugextmem, "flushchunk %llx %d", c->len, em->fd);
@@ -81,7 +81,6 @@ emflush(EM *em)
 static void
 freechunk(EM *em, Chunk **cp)
 {
-	ssize i;
 	Chunk *c;
 
 	if(cp == nil || (c = *cp) == nil)
@@ -92,7 +91,6 @@ freechunk(EM *em, Chunk **cp)
 	lunlink(c, c);
 	llink(handouts.lleft, c);
 	memfree++;
-	printchain(em->cp);
 	c->len = 0;
 	c->off = -1;
 }
@@ -173,7 +171,7 @@ emshrink(EM *em, ssize sz)
 		return 0;
 	}
 	freechain(em, em->cp + ci + 1, em->cp + dylen(em->cp));
-	dyhdr(em->cp)->len = ci;
+	dyhdr(em->cp)->len = ci + 1;
 	/* not touching .off or .len */
 	return ci;
 }
@@ -188,13 +186,10 @@ embraceextendextinguish(EM *em, EM *from)
 	dprint(Debugextmem, "embraceextendextinguish %s[%llx/%llx] ← %s[%llx/%llx]",
 		em->path, dylen(em->cp), dyhdr(em->cp)->sz, from->path,
 		dylen(from->cp), dyhdr(from->cp)->sz);
-	printchain(from->cp);
 	assert(em->stream);	/* only makes sense for a pipe, all is scrambled */
 	ci = dylen(em->cp);
 	ni = dylen(from->cp);
 	dygrow(em->cp, ni+ci+1);
-	printchain(em->cp);
-	printchain(from->cp);
 	memcpy(em->cp + ci, from->cp, ni * sizeof *cp);
 	dyhdr(em->cp)->len += ni;	/* ouch */
 	dprint(Debugextmem, "embraceextendextinguish %s[%llx/%llx] ← %s[%llx/%llx]",
@@ -211,11 +206,10 @@ embraceextendextinguish(EM *em, EM *from)
 		warn("%llx]", c->off);
 		poke(c);
 	}
-	memset(dyhdr(&from->cp), 0, sizeof(Dyhdr) + ni * sizeof *em->cp);	/* oof */
+	memset(&from->cp, 0, ni * sizeof *em->cp);	/* oof */
 	return 0;
 }
 
-// FIXME: better name for embraceextendextinguish, rename other to emsteal
 int
 emsteal(EM *em, EM *victim)
 {
@@ -223,18 +217,22 @@ emsteal(EM *em, EM *victim)
 	intptr v;
 	Chunk **cp, **ce;
 
+	dprint(Debugextmem, "emsteal %s[%llx/%llx] ← %s[%llx/%llx]",
+		em->path, dylen(em->cp), dyhdr(em->cp)->sz, victim->path,
+		dylen(victim->cp), dyhdr(victim->cp)->sz);
 	/* ouch */
 	if(dylen(victim->cp) == 0)
 		return 0;
 	freechain(em, em->cp, em->cp + dylen(em->cp));
 	dyfree(em->cp);
-	v = sizeof(Dyhdr) + sizeof(*em->cp) * dyhdr(victim->cp)->sz;
-	memcpy(dyhdr(&em->cp), dyhdr(&victim->cp), v);	/* oh man */
+	v = sizeof(*victim->cp) * dyhdr(victim->cp)->sz;
+	memcpy((uchar *)&em->cp,
+		(uchar *)&victim->cp, v);	/* oh man */
+	memset((uchar *)&victim->cp, 0, v);	/* oof */
 	ci = dylen(em->cp);
 	for(cp=em->cp, ce=cp+ci; cp<ce; cp++)
 		if(*cp != nil)
 			poke(*cp);
-	memset(dyhdr(&victim->cp), 0, sizeof(Dyhdr));	/* oof */
 	victim->cp = nil;
 	return 0;
 }
