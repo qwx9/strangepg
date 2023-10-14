@@ -122,7 +122,7 @@ $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 coarsen:	$(COARSENOBJS)
-	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
+	$(CC) $^ -o $@ $(LDFLAGS)
 
 install:
 	install -d -m755 $(BINDIR)
