@@ -58,43 +58,20 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
 	-I. -Icmd -Idraw -Ifs -Igraph -Iindex -Ilayout -Irend -Iui -Iutil \
 
+#LDFLAGS=$LDFLAGS -p
+
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
 
 $O.coarsen: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
-OTEST=\
-	fs/em.$O\
-	plan9/fs.$O\
-	plan9/sys.$O\
-	util/print.$O\
+DIRS=\
+	test\
 
-# FIXME: test/mkfile, test/Makefile
-$O.testct01: $OTEST test/testct01.$O
-	$LD $LDFLAGS -o $target $prereq
-
-$O.testct02: $OTEST test/testct02.$O
-	$LD $LDFLAGS -o $target $prereq
-
-$O.testct03: $OTEST test/testct03.$O
-	$LD $LDFLAGS -o $target $prereq
-
-$O.testct04: $OTEST test/testct04.$O
-	$LD $LDFLAGS -o $target $prereq
-
-$O.testct05: $OTEST test/testct05.$O
-	$LD $LDFLAGS -o $target $prereq
-
-$O.testct06: $OTEST test/testct06.$O
-	$LD $LDFLAGS -o $target $prereq
-
-CLEANFILES=$OFILES\
-	$OCOARSEN\
-	$OTEST\
-	test/testct01.$O\
-	test/testct02.$O\
-	test/testct03.$O\
-	test/testct04.$O\
-	test/testct05.$O\
-	test/testct06.$O\
+clean:V:
+	for(i in $DIRS) @{
+		cd $i
+		mk clean
+	}
+	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* $TARG $CLEANFILES
