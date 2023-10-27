@@ -15,8 +15,6 @@ dprint(int flags, char *fmt, ...)
 	char *type;
 	va_list arg;
 
-	if((debug & flags) == 0)
-		return;
 	switch(debug & flags){
 	case 0: return;
 	case Debugdraw: type = "draw"; break;
