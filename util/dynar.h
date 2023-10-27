@@ -33,16 +33,6 @@ struct Dyhdr{
 	while(__h->sz < (i))	\
 		(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
 	}while(0)
-#define dydelete(a,i)	do{ \
-	Dyhdr*__h = dyhdr(a); \
-	assert((a) != nil); \
-	assert((i) < __h->sz); \
-	if((i) == __h->len) \
-		dypop(a); \
-	else{ \
-		memmove((a+i), (a+i+1), (__h->sz - (i) - 1) * sizeof(*(a))); \
-		__h->len--; \
-	}}while(0)
 /* one may not simply use dygrow here with the do..while */
 #define dyinsert(a,i,v)	do{ \
 	Dyhdr*__h = dyhdr(a); \
