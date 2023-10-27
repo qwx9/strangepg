@@ -9,7 +9,7 @@ warn(char *fmt, ...)
 	vawarn(fmt, arg);
 }
 
-void
+inline void
 dprint(int flags, char *fmt, ...)
 {
 	char *type;
