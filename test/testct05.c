@@ -2,8 +2,6 @@
 #include "fs.h"
 #include "em.h"
 
-void	printchain(Chunk *);
-
 void
 threadmain(int, char**)
 {

@@ -11,7 +11,7 @@ threadmain(int, char**)
 		sysfatal("emput64: %s", error());
 	if(empget64(em, 0) != 0xdeadbeefcafebabeULL)
 		sysfatal("empget64: %s", error());
-	//assert(em->c.left == em->c.right && em->c.lleft == em->c.lright && em->c.left == &em->c);
+	assert(em->c.left == em->c.right && em->c.lleft == em->c.lright && em->c.left == &em->c);
 	emclose(em);
 	sysquit();
 }
