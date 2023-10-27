@@ -22,40 +22,39 @@ reverse(Graph *g, Lbuf *lvl)
 {
 	ssize noff, eoff;
 	Lbuf *lp, *le;
-	EM *em;
+	File *f;
 
 	/* FIXME: for a user, failing at this point is... disappointing. */
-	if((em = emfdopen(1, 1)) == nil)
-		sysfatal("emfdopen: %s\n", error());
+	f = emalloc(sizeof *f);
+	if(fdopenfs(f, 1, OWRITE) < 0)
+		sysfatal("fdopenfs: %s", error());
 	dprint(Debugcoarse, "reverse: %zd %zd %zd %zd",
 		g->nnodes, g->nedges, nsuper, dylen(lvl));
-	empput64(em, 0, g->nnodes);
-	// FIXME: output number of superedges as well? useful? ← yes.
-	emput64(em, g->nedges);
-	emput64(em, nsuper);
-	emput64(em, dylen(lvl));
-	noff = 4*8;
-	noff += dylen(lvl) * Lrecsz;
+	put64(f, g->nnodes);
+	put64(f, g->nedges);
+	put64(f, nsuper);
+	put64(f, dylen(lvl));
+	noff = tellfs(f) + dylen(lvl) * Lrecsz;
 	eoff = noff + nsuper * Nrecsz;
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
-		emput64(em, lp->nnodes);
-		emput64(em, lp->nedges);
-		emput64(em, noff);
-		emput64(em, eoff);
+		put64(f, lp->nnodes);
+		put64(f, lp->nedges);
+		put64(f, noff);
+		put64(f, eoff);
 		noff += lp->nnodes * Nrecsz;
 		eoff += lp->nedges * Erecsz;
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		dprint(Debugcoarse, "[%zd] %d nodes", lp-lvl, lp->nnodes);
-		embraceextendextinguish(em, lp->nodes);
+		emflushtofs(lp->nodes, f);
 		emclose(lp->nodes);
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		dprint(Debugcoarse, "[%zd] %d edges", lp-lvl, lp->nedges);
-		embraceextendextinguish(em, lp->edges);
+		emflushtofs(lp->edges, f);
 		emclose(lp->edges);
 	}
-	emclose(em);
+	closefs(f);
 	return 0;
 }
 
@@ -68,8 +67,8 @@ printtab(EM *em, ssize ne)
 	if((debug & Debugcoarse) == 0)
 		return;
 	for(i=0; i<ne; i++){
-		u = empget64(em, 2+i*2);
-		v = emget64(em);
+		u = emr64(em, 2+i*2);
+		v = emr64(em, 2+i*2+1);
 		dprint(Debugcoarse, "E[%d] %zx,%zx", i, u, v);
 	}
 }
@@ -78,30 +77,38 @@ static void
 endlevel(Lbuf *lp)
 {
 	nsuper += lp->nnodes;
+	close(lp->nodes->fd);
+	lp->nodes->fd = -1;
+	close(lp->edges->fd);
+	lp->edges->fd = -1;
 }
 
 static void
 outputedge(Lbuf *lp, ssize u, ssize v)
 {
+	ssize off;
 	EM *em;
 
 	dprint(Debugcoarse, "drop edge %llx,%llx", u, v);
 	em = lp->edges;
-	emput64(em, u);
-	emput64(em, v);
+	off = lp->nedges++;
+	emw64(em, 2*off, u);
+	emw64(em, 2*off+1, v);
 	lp->nedges++;
 }
 
 static void
 outputnode(Lbuf *lp, ssize old, ssize new, ssize weight)
 {
+	ssize off;
 	EM *em;
 
 	dprint(Debugcoarse, "merge %llx → %llx, weight %lld", old, new, weight);
 	em = lp->nodes;
-	emput64(em, old);
-	emput64(em, new);
-	emput64(em, weight);
+	off = lp->nnodes++;
+	emw64(em, 3*off, old);
+	emw64(em, 3*off+1, new);
+	emw64(em, 3*off+2, weight);
 	lp->nnodes++;
 }
 
@@ -110,29 +117,88 @@ newlevel(Lbuf *lvl)
 {
 	Lbuf l = {0};
 
-	l.nodes = emnew(0);
-	l.edges = emnew(0);
+	if((l.nodes = emnew(0)) == nil)
+		sysfatal("emnew: %s", error());
+	if((l.edges = emnew(0)) == nil)
+		sysfatal("emnew: %s", error());
 	dypush(lvl, l);
 	dprint(Debugcoarse, "-- newlevel %lld", dylen(lvl));
 	return lvl;
 }
 
+static int
+exists(usize s, usize t, EM *fs2j, EM *fjump, EM *fedge, usize nedges, usize w)
+{
+	usize p;
+
+	if((p = emr64(fs2j, s-1-w)) == EMbupkis){
+		dprint(Debugcoarse, "s2j[%zx] not found", s-1-w);
+		return 0;
+	}
+	while(p < nedges){
+		dprint(Debugcoarse, "check s2j[%zx] → jump[%zx], looking for %zx,%zx",
+			s-1-w, p, s, t);
+		if(emr64(fedge, 2+2*p) != s)
+			break;
+		if(emr64(fedge, 2+2*p+1) == t)
+			return 1;
+		p = emr64(fjump, p);
+	}
+	return 0;
+}
+/* edgelist is not reordered; the jump table serves as
+ * a linked list instead
+ * s2j[u] → i, first occurrence of u in jump table
+ * edge[i] → u,_ corresponding edge
+ * jump[i] → j, next edge in order
+ */
+static void
+insert(usize s, EM *fs2j, EM *fjump, EM *fedge, EM *fdeg, usize cur)
+{
+	int i;
+	usize x, p;
+
+	// FIXME: looping through everything; smarter, cleaner way
+	if((p = emr64(fs2j, s)) != EMbupkis){
+		p += emr64(fdeg, s) - 1;
+		if((x = emr64(fjump, p)) != cur)
+			emw64(fjump, p, cur);
+		else
+			x = cur + 1;
+	}else{
+		x = cur + 1;
+		emw64(fs2j, s, cur);
+	}
+	emw64(fjump, cur, x);
+	if((debug & Debugcoarse) == 0)
+		return;
+	warn(">> index\t");
+	for(i=0; i<cur; i++)
+		warn("%02x ", i);
+	warn("\n>> edgeu\t");
+	for(i=0; i<cur; i++)
+		warn("%02zx ", emr64(fedge, 2+2*i));
+	warn("\n>> jump \t");
+	for(i=0; i<cur; i++)
+		warn("%02zx ", emr64(fjump, i));
+	warn("\n");
+}
+
 static Lbuf *
 coarsen(Graph *g, char *index)
 {
-	ssize i, o, w, u, v, s, t, y, m, e, uw, vw, M, S;
-	EM *fedge, *fnode, *fweight, *fweight2;
+	int topdog;
+	ssize i, o, w, u, v, s, t, y, m, e, uw, vw, d, M, S;
+	EM *fedge, *fedge2, *fnode, *fweight, *fweight2, *fs2j, *fjump, *fdeg;
 	Lbuf *lvl, *lp;
 
 	if((fedge = emclone(index)) == nil)
 		sysfatal("emclone: %s", error());
-	g->nnodes = empget64(fedge, 0);
-	g->nedges = emget64(fedge);
+	g->nnodes = emr64(fedge, 0);
+	g->nedges = emr64(fedge, 1);
 	dprint(Debugcoarse, "graph %s nnodes %lld nedges %lld",
 		index, g->nnodes, g->nedges);
 	fweight = emnew(0);
-	fweight2 = emnew(0);
-	fnode = emnew(0);
 	M = g->nedges;
 	S = g->nnodes - 1;
 	lvl = nil;
@@ -140,88 +206,85 @@ coarsen(Graph *g, char *index)
 	y = 0;
 	i = 0;
 	uw = -1;	/* cannot happen */
-	s = -1;	/* cannot happen */
 	// FIXME: immediate fatal exit with no error if below threshold at start
 	while(M > Minedges){
+		fs2j = emnew(0);
+		fjump = emnew(0);
+		fnode = emnew(0);
+		fweight2 = emnew(0);
+		fedge2 = emnew(0);
+		fdeg = emnew(0);
 		printtab(fedge, M);
 		lvl = newlevel(lvl);
 		lp = lvl + dylen(lvl) - 1;
-		u = -1;
 		m = M;
 		M = 0;
-		int nein = 0;
+		topdog = 0;
 		for(e=0; e<m; e++){
 			if(e > 0 && e % 1000 == 0)
 				dprint(Debugcoarse, "L%02zd edge %lld/%lld\n", dylen(lvl), e, g->nedges);
-			/* new left node */
-			if((o = empget64(fedge, 2+e*2)) != u){
-				assert(o != EMbupkis);
-				u = o;
-				if((s = empget64(fnode, u-y)) == EMbupkis || s == 0 && u != 0)
-					s = u;	/* default value */
-				dprint(Debugcoarse, "[%04llx] new left node %llx → %llx", e, u, s);
+			// FIXME: layer violation
+			u = emr64(fedge, 2+e*2);
+			v = emr64(fedge, 2+e*2+1);
+			dprint(Debugcoarse, "processing %zx,%zx (%zx,%zx) [%zx,%zx]", u, v, u-y, v-y, emr64(fnode,u-y), emr64(fnode,v-y));
+			if((s = emr64(fnode, u-y)) == EMbupkis || s <= w){
+				s = ++S;
+				dprint(Debugcoarse, "[%04llx] unvisited left node %llx ← %llx", e, u, s);
 				i = s - 1 - w;
-				/* buffer contents are > w or undefined */
-				if(s <= w){
-					dprint(Debugcoarse, "[%04llx] unvisited left node: %llx ← %llx",
-						e, u, S+1);
-					s = ++S;
-					i = s - 1 - w;
-					if((uw = empget64(fweight, i)) == EMbupkis)
-						uw = 1;	/* default value */
-					outputnode(lp, u, s, uw);
-					empput64(fnode, u-y, s);
-					empput64(fweight2, i, uw);
-					nein = 0;
-				}else
-					nein = 1;
+				if((uw = emr64(fweight, i)) == EMbupkis)
+					uw = 1;	/* default value */
+				emw64(fnode, u-y, s);
+				emw64(fweight2, i, uw);
+				outputnode(lp, u, s, uw);
+				topdog = u;
 			}
-			v = empget64(fedge, 2+e*2+1);
-			assert(v != EMbupkis);
-			if((t = empget64(fnode, v-y)) == EMbupkis || t == 0 && v != 0)
-				t = v;	/* default value */
-			dprint(Debugcoarse, "[%04llx] edge %llx→%llx,%llx→%llx", e, u, s, v, t);
-			if(t <= w){
-				dprint(Debugcoarse, "[%04llx] unvisited right node: %llx ← %llx",
-					e, v, s);
-				if(nein){
-					dprint(Debugcoarse, "not connecting unmerged right node for now");
+			/* new right node */
+			if((t = emr64(fnode, v-y)) == EMbupkis || t <= w){
+				dprint(Debugcoarse, "[%04llx] unvisited right node: %llx", e, v);
+				if(u != topdog){
+					dprint(Debugcoarse, "vassal may not annex nodes on its own");
 					continue;
 				}
-				if((vw = empget64(fweight, i)) == EMbupkis)
+				if((vw = emr64(fweight, i)) == EMbupkis)
 					vw = 1;	/* default value */
-				outputnode(lp, v, u, vw);
+				outputnode(lp, v, s, vw);
 				uw += vw;
-				empput64(fnode, v-y, s);
-				empput64(fweight2, i, uw);
+				emw64(fnode, v-y, s);
+				emw64(fweight2, i, uw);
 				outputedge(lp, u, v);
 			}else if(v == u){
 				dprint(Debugcoarse, "[%04llx] self edge: %llx,%llx", e, u, s);
 				outputedge(lp, u, u);
 			}else if(t == s)
 				dprint(Debugcoarse, "[%04llx] mirror of previous edge, ignored", e);
-			else{
-				/* to avoid multiple edges between the same two supernodes, only
-				 * admit one iff super-u was marked mapped before super-v;
-				 * multiple u,super-v edges and super-v,super-u are prohibited */
-				// FIXME: this allows consecutive redundant edges to be
-				// seen as external:
-				// v,a... v,b... u,a... u,b..: u,a and u,b both added
-				if(s >= S && t < s){
-					dprint(Debugcoarse, "[%04llx] new external edge", e);
-					empput64(fedge, 2+2*M++, s);
-					emput64(fedge, t);
-				}else{
-					dprint(Debugcoarse, "[%04llx] redundant external edge", e);
-					outputedge(lp, u, v);
-				}
+			else if(exists(s, t, fs2j, fjump, fedge2, M, w)
+			|| exists(t, s, fs2j, fjump, fedge2, M, w)){
+				dprint(Debugcoarse, "[%04llx] redundant external edge", e);
+				outputedge(lp, u, v);
+			}else{
+				dprint(Debugcoarse, "[%04llx] new external edge %zx,%zx", e, s, t);
+				emw64(fedge2, 2+2*M, s);
+				emw64(fedge2, 2+2*M+1, t);
+				if((d = emr64(fdeg, s-1-w)) == EMbupkis)
+					d = 0;
+				emw64(fdeg, s-1-w, ++d);
+				if((d = emr64(fdeg, t-1-w)) == EMbupkis)
+					d = 0;
+				emw64(fdeg, t-1-w, ++d);
+				insert(s-1-w, fs2j, fjump, fedge2, fdeg, M);
+				M++;
 			}
 		}
-		emshrink(fnode, 0);
-		emshrink(fedge, 2*8 + 8*2*M);
-		emsteal(fweight, fweight2);
+		emclose(fs2j);
+		emclose(fjump);
+		emclose(fweight);
+		emclose(fnode);
+		emclose(fdeg);
+		fweight = fweight2;
+		emclose(fedge);
+		fedge = fedge2;
 		endlevel(lp);
-		y = w;
+		y = w + 1;
 		w = S;
 	}
 	dprint(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
@@ -237,21 +300,19 @@ coarsen(Graph *g, char *index)
 		lp = lvl + dylen(lvl) - 1;
 		/* every node is an adjacency, every edge is internal */
 		for(e=0, u=-1; e<M; e++){
-			if((o = empget64(fedge, 2 + e*2)) != u){
+			if((o = emr64(fedge, 2 + e*2)) != u){
 				u = o;
-				w = empget64(fweight, u);
+				w = emr64(fweight, u);
 				assert(o != EMbupkis && w != EMbupkis);
 				outputnode(lp, u, s, w);
 			}
-			v = emget64(fedge);
+			v = emr64(fedge, 2+e*2+1);
 			assert(v != EMbupkis);
 			outputedge(lp, u, v);
 		}
 	}
 	emclose(fedge);
-	emclose(fnode);
 	emclose(fweight);
-	emclose(fweight2);
 	return lvl;
 }
 
