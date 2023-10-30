@@ -196,6 +196,10 @@ coarsen(Graph *g, char *index)
 		sysfatal("emclone: %s", error());
 	g->nnodes = emr64(fedge, 0);
 	g->nedges = emr64(fedge, 1);
+	if(g->nedges <= Minedges){
+		werrstr("number of edges below set threshold, nothing to do");
+		return nil;
+	}
 	DPRINT(Debugcoarse, "graph %s nnodes %lld nedges %lld",
 		index, g->nnodes, g->nedges);
 	fweight = emnew(0);
@@ -206,7 +210,6 @@ coarsen(Graph *g, char *index)
 	y = 0;
 	i = 0;
 	uw = -1;	/* cannot happen */
-	// FIXME: immediate fatal exit with no error if below threshold at start
 	while(M > Minedges){
 		fs2j = emnew(0);
 		fjump = emnew(0);
