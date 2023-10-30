@@ -34,7 +34,7 @@ drawguides(void)
 static int
 drawedge(Quad q, double w)
 {
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);}
+	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
 	q.v = subpt2(q.v, q.o);	// FIXME
 	return drawbezier(q, w);
 }
@@ -42,7 +42,7 @@ drawedge(Quad q, double w)
 static int
 drawnode(Quad p, Quad q, Quad u, double θ, int c, vlong id)
 {
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);}
+	DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
 	if(drawquad2(p, q, u, θ, 1, c) < 0
 	|| drawquad2(p, q, u, θ, 0, c) < 0
 	|| drawlabel(p, q, u, id) < 0)
@@ -53,7 +53,7 @@ drawnode(Quad p, Quad q, Quad u, double θ, int c, vlong id)
 static int
 drawnodevec(Quad q)
 {
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);}
+	DPRINT(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
 	return drawline(q, MAX(0., view.zoom/5), 1);
 }
 
@@ -79,7 +79,7 @@ drawnodes(Graph *g)
 {
 	Node *u, *ue;
 
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);}
+	DPRINT(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
 		if(showarrows)
 			drawnodevec(u->vrect);
@@ -96,7 +96,7 @@ drawworld(void)
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->layout.ll == nil)
 			continue;
-		if((debug & Debugdraw) != 0){dprint(Debugdraw, "drawworld: draw graph %#p", g);}
+		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
 		drawnodes(g);
 		if(debug)
@@ -121,14 +121,14 @@ updatedraw(void)
 int
 shallowdraw(void)
 {
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "shallowdraw");}
+	DPRINT(Debugdraw, "shallowdraw");
 	return updatedraw();
 }
 
 int
 redraw(void)
 {
-	if((debug & Debugdraw) != 0){dprint(Debugdraw, "redraw");}
+	DPRINT(Debugdraw, "redraw");
 	cleardraw();
 	drawworld();
 	return updatedraw();

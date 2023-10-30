@@ -71,7 +71,7 @@ loadgfa1(char *path)
 	Graph *g;
 	File *f;
 
-	if((debug & Debugfs) != 0){dprint(Debugfs, "loadgfa1 %s", path);}
+	DPRINT(Debugfs, "loadgfa1 %s", path);
 	if((g = initgraph()) == nil)
 		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
@@ -91,7 +91,7 @@ loadgfa1(char *path)
 			f->err++;
 		}
 	}
-	if((debug & Debugfs) != 0){dprint(Debugfs, "done loading gfa");}
+	DPRINT(Debugfs, "done loading gfa");
 	closefs(f);
 	idnuke(g->id2n);
 	g->id2n = nil;

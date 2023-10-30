@@ -94,7 +94,7 @@ compute(Graph *g)
 			if(R < Δ)
 				R = Δ;
 		}
-		if((debug & Debuglayout) != 0){dprint(Debuglayout, "R %.2f ε %.2f K %.2f δ %.2f n %d", R, ε, K, δ, n);}
+		DPRINT(Debuglayout, "R %.2f ε %.2f K %.2f δ %.2f n %d", R, ε, K, δ, n);
 		if(R < ε)
 			break;
 		if(δ > 0.0001)

@@ -18,13 +18,13 @@ exists(usize s, usize t, EM *fs2j, EM *fjump, EM *fedge, usize nedges)
 {
 	usize i, p;
 
-	if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "exists %zx,%zx", s, t);}
+	DPRINT(Debugcoarse, "exists %zx,%zx", s, t);
 	if((i = emr64(fs2j, s)) == EMbupkis)
 		return 0;
 	do{
 		if((p = emr64(fjump, i)) == EMbupkis)
 			return 0;
-		if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "exists %zx,%zx: check %zx: %zx,%zx", s, t, p, emr64(fedge, 2+2*p), emr64(fedge, 2+2*p+1));}
+		DPRINT(Debugcoarse, "exists %zx,%zx: check %zx: %zx,%zx", s, t, p, emr64(fedge, 2+2*p), emr64(fedge, 2+2*p+1));
 		if(emr64(fedge, 2+2*p) != s)
 			break;
 		if(emr64(fedge, 2+2*p+1) == t)
@@ -49,16 +49,16 @@ insert(usize s, EM *fs2j, EM *fjump, EM *fedge, usize nedges)
 		if(p != nedges){
 			emw64(fjump, i, nedges);
 			emw64(fjump, nedges, p);
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "insert %zx ← %zx", nedges, p);}
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "insert %zx ← %zx", i, nedges);}
+			DPRINT(Debugcoarse, "insert %zx ← %zx", nedges, p);
+			DPRINT(Debugcoarse, "insert %zx ← %zx", i, nedges);
 		}else{
 			emw64(fjump, nedges, nedges);
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "insert %zx ← %zx", nedges, nedges);}
+			DPRINT(Debugcoarse, "insert %zx ← %zx", nedges, nedges);
 		}
 	}else{
 		emw64(fs2j, s, nedges);
 		emw64(fjump, nedges, nedges);
-		if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "insert %zx ← %zx", nedges, nedges);}
+		DPRINT(Debugcoarse, "insert %zx ← %zx", nedges, nedges);
 	}
 }
 
@@ -95,7 +95,7 @@ threadmain(int argc, char **argv)
 		else if(strcmp(fs, "all") == 0)
 			debug |= Debugtheworld;
 		else{
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "unknown debug component %s", fs);}
+			DPRINT(Debugcoarse, "unknown debug component %s", fs);
 			usage();
 		}
 		break;
@@ -118,28 +118,28 @@ threadmain(int argc, char **argv)
 		v = strtoull(fld[1], nil, 10) - 1;
 		if((s = emr64(fseen, u)) == EMbupkis){
 			emw64(fseen, u, S);
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "S %zx ← %zx", u, S);}
+			DPRINT(Debugcoarse, "S %zx ← %zx", u, S);
 			s = S++;
 			topdog = u;
 		}
 		if((t = emr64(fseen, v)) == EMbupkis){
 			if(u == topdog){
-				if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "M %zx ← %zx", v, s);}
+				DPRINT(Debugcoarse, "M %zx ← %zx", v, s);
 				emw64(fseen, v, s);
 			}else
-				if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "_ %zx : %zx not %zx", v, u, s);}
+				DPRINT(Debugcoarse, "_ %zx : %zx not %zx", v, u, s);
 		}else if(u == v)
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "≡ %zx %zx", u, v);}
+			DPRINT(Debugcoarse, "≡ %zx %zx", u, v);
 		else if(t == s)
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "↔ %zx %zx", u, v);}
+			DPRINT(Debugcoarse, "↔ %zx %zx", u, v);
 		else if(exists(s, t, fs2j, fjump, fedge, M)
 		|| exists(t, s, fs2j, fjump, fedge, M))
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "R %zx %zx", s, t);}
+			DPRINT(Debugcoarse, "R %zx %zx", s, t);
 		else{
 			emw64(fedge, 2+2*M, s);
 			emw64(fedge, 2+2*M+1, t);
 			insert(s, fs2j, fjump, fedge, M);
-			if((debug & Debugcoarse) != 0){dprint(Debugcoarse, "%zx,%zx", s, t);}
+			DPRINT(Debugcoarse, "%zx,%zx", s, t);
 			M++;
 		}
 		free(fs);

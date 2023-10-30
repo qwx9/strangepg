@@ -85,3 +85,9 @@ int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
 char*	shitprint(int, void*);
 void	quit(void);
+
+/* you gotta wonder what will come next */
+#define DPRINT(x,...)	do{ \
+	if((debug&(x)) != 0) \
+		dprint((x), __VA_ARGS__); \
+	}while(0)

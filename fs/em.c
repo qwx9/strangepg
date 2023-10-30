@@ -48,7 +48,7 @@ evictchunk(void)
 
 	c = norris.lright;
 	assert(c != &norris);
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "evict %#p", c);}
+	DPRINT(Debugextmem, "evict %#p", c);
 	return c;
 }
 
@@ -57,7 +57,7 @@ flushchunk(EM *em, Chunk *c)
 {
 	if(em->flags & EMshutit)
 		return 0;
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "flushchunk %#p[%llx:%llx] fd %d", c, c->off, c->len, em->fd);}
+	DPRINT(Debugextmem, "flushchunk %#p[%llx:%llx] fd %d", c, c->off, c->len, em->fd);
 	if(em->fd < 0){
 		if(em->flags & EMondisk){
 			if((em->fd = open(em->path, ORDWR)) < 0)
@@ -69,7 +69,7 @@ flushchunk(EM *em, Chunk *c)
 				sysfatal("emfdopen: %s", error());
 			em->flags |= EMondisk;
 		}
-		if((debug & Debugextmem) != 0){dprint(Debugextmem, "flushchunk fd=%d", em->fd);}
+		DPRINT(Debugextmem, "flushchunk fd=%d", em->fd);
 	}
 	if((em->flags & EMpipe) == 0)
 		if(seek(em->fd, c->off, 0) < 0)
@@ -84,7 +84,7 @@ freechunk(EM *em, Chunk *c)
 {
 	if(c == nil)
 		return;
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "freechunk %#p[%llx:%llx]", c, c->off, c->len);}
+	DPRINT(Debugextmem, "freechunk %#p[%llx:%llx]", c, c->off, c->len);
 	if(em->fd >= 0 && flushchunk(em, c) < 0)
 		warn("freechunk: %s\n", error());
 	lunlink(c, c);
@@ -103,7 +103,7 @@ freechain(EM *em, Chunk **l, Chunk **le)
 
 	if(l == nil)
 		return;
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "freechain %#p … %#p %lld", l, le, dylen(em->cp));}
+	DPRINT(Debugextmem, "freechain %#p … %#p %lld", l, le, dylen(em->cp));
 	assert(le >= em->cp && le <= em->cp + dylen(em->cp));
 	for(c=0, p=l; p<le; p++, c++){
 		freechunk(em, *p);
@@ -117,11 +117,11 @@ emflushtofs(EM *em, File *f)
 {
 	Chunk *c, **cp;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emflushtofs %#p cp %#p %zd chunks", em, em->cp, dylen(em->cp));}
+	DPRINT(Debugextmem, "emflushtofs %#p cp %#p %zd chunks", em, em->cp, dylen(em->cp));
 	em->flags |= EMshutit;	// FIXME: dangerous
 	for(cp=em->cp; cp<em->cp+dylen(em->cp); cp++)
 		if((c = *cp) != nil){
-			if((debug & Debugextmem) != 0){dprint(Debugextmem, "emflushtofs %#p", c);}
+			DPRINT(Debugextmem, "emflushtofs %#p", c);
 			assert(c->len >= 0 && c->len <= Chunksz);
 			assert(c->off >= 0);
 			writefs(f, c->buf, c->len);
@@ -138,7 +138,7 @@ printchain(Chunk **cp)
 
 	if((debug & Debugextmem) == 0)
 		return;
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "chain %#p: ", cp);}
+	DPRINT(Debugextmem, "chain %#p: ", cp);
 	for(ep=cp+dylen(cp),c=*cp; cp<ep; c=*++cp)
 		if(c == nil)
 			warn("[]");
@@ -157,7 +157,7 @@ allocchunk(void)
 	c->lright = c->lleft = c;
 	c->off = c->len = -1;
 	memreallyfree--;
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "allocchunk %#p", c);}
+	DPRINT(Debugextmem, "allocchunk %#p", c);
 	return c;
 }
 
@@ -166,8 +166,8 @@ newchunk(void)
 {
 	Chunk *c;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "newchunk: free %llx reallyfree %llx",
-		memfree, memreallyfree);}
+	DPRINT(Debugextmem, "newchunk: free %llx reallyfree %llx",
+		memfree, memreallyfree);
 	if(memfree > 0){
 		c = handouts.lright;
 		assert(c != &handouts);
@@ -186,7 +186,7 @@ readchunk(EM *em, Chunk *c)
 	ssize n, m;
 	uchar *p;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "readchunk: %s[off] %llx", em->path, c->off);}
+	DPRINT(Debugextmem, "readchunk: %s[off] %llx", em->path, c->off);
 	assert(c->off >= 0 && c->len >= 0 && CMOD(c->off) == 0);
 	if(em->fd < 0){
 		if((em->flags & (EMpipe|EMshutit)) != 0)
@@ -198,7 +198,7 @@ readchunk(EM *em, Chunk *c)
 		em->flags |= EMondisk;
 	}
 	if(c->len < Chunksz){
-		if((debug & Debugextmem) != 0){dprint(Debugextmem, "readchunk: read after");}
+		DPRINT(Debugextmem, "readchunk: read after");
 		if(seek(em->fd, c->off + c->len, 0) < 0)
 			return -1;
 		for(n=Chunksz-c->len, p=c->buf+c->len, m=0; n>0; p+=m, n-=m)
@@ -219,7 +219,7 @@ getchunk(EM *em, vlong off, ssize want)
 	ssize ci;
 	Chunk *c, **cp;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "getchunk: %s[%llx]", em->path, off);}
+	DPRINT(Debugextmem, "getchunk: %s[%llx]", em->path, off);
 	assert(off >= 0 && off != EMbupkis);
 	ci = CADDR(off);
 	if(em->cp == nil || ci >= dylen(em->cp))
@@ -234,8 +234,8 @@ getchunk(EM *em, vlong off, ssize want)
 		poke(c);
 	assert(c->len >= 0);
 	assert(c->off >= 0);
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "getchunk: read? %llx:%llx want %llx:%llx",
-		c->off, c->len, off, want);}
+	DPRINT(Debugextmem, "getchunk: read? %llx:%llx want %llx:%llx",
+		c->off, c->len, off, want);
 	if((want > 0 || em->flags & EMclown) && c->off + c->len < off + want)
 		if(readchunk(em, c) < 0)
 			return nil;
@@ -249,7 +249,7 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 	uchar *p, *s;
 	Chunk *c;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emwrite %s[%llx] %llx to %#p", em->path, off, n, buf);}
+	DPRINT(Debugextmem, "emwrite %s[%llx] %llx to %#p", em->path, off, n, buf);
 	if(em->fd < 0 && (em->flags & EMshutit) != 0){
 		werrstr("emwrite: no file");
 		return -1;
@@ -267,7 +267,7 @@ emwrite(EM *em, vlong off, uchar *buf, ssize n)
 		if(c->off + c->len < off + m)
 			c->len = off + m - c->off;
 		assert(c->len <= Chunksz);
-		if((debug & Debugextmem) != 0){dprint(Debugextmem, "emwrite %s[%llx] wrote %llx in %#p", em->path, off, m, c);}
+		DPRINT(Debugextmem, "emwrite %s[%llx] wrote %llx in %#p", em->path, off, m, c);
 	}
 	return s - buf;
 }
@@ -339,7 +339,7 @@ emfdopen(int fd, int flags)
 {
 	EM *em;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emfdopen %d", fd);}
+	DPRINT(Debugextmem, "emfdopen %d", fd);
 	em = emnew(flags | EMpipe);
 	em->fd = fd;
 	return em;
@@ -351,7 +351,7 @@ emopen(char *path)
 {
 	EM *em;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emopen %s", path);}
+	DPRINT(Debugextmem, "emopen %s", path);
 	em = emnew(EMshutit|EMclown);
 	em->path = estrdup(path);
 	em->flags |= EMondisk;
@@ -369,7 +369,7 @@ emclone(char *path)
 	ssize n, off;
 	EM *em;
 
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emclone %s", path);}
+	DPRINT(Debugextmem, "emclone %s", path);
 	if((em = emnew(0)) == nil)
 		return nil;
 	if((fd = open(path, OREAD)) < 0)
@@ -382,7 +382,7 @@ emclone(char *path)
 	close(fd);
 	if(n < 0)
 		sysfatal("emclone %s: %s", path, error());
-	if((debug & Debugextmem) != 0){dprint(Debugextmem, "emclone %s: read %llx bytes", path, off);}
+	DPRINT(Debugextmem, "emclone %s: read %llx bytes", path, off);
 	em->flags |= EMclone;
 	return em;
 }
@@ -398,7 +398,7 @@ emclose(EM *em)
 	if(em->fd >= 0)
 		close(em->fd);
 	if(em->path != nil && (em->flags & (EMshutit|EMondisk)) == EMondisk){
-		if((debug & Debugextmem) != 0){dprint(Debugextmem, "emclose %s: remove", em->path);}
+		DPRINT(Debugextmem, "emclose %s: remove", em->path);
 		sysremove(em->path);
 	}
 	free(em->path);
