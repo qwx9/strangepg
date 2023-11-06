@@ -20,3 +20,9 @@ nrand(int n)
 	while(v <= slop);
 	return v % n;
 }
+
+long
+lrand(void)
+{
+	return random();
+}
