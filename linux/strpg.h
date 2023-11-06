@@ -40,7 +40,8 @@ typedef uint64_t u64int;
 #define	OWRITE	O_WRONLY
 #define ORDWR	O_RDWR
 #define OCREAT	(O_CREAT|O_TRUNC)
-#define IOUNIT	32768U	/* default buffer size for 9p io */
+#define AEXIST	R_OK
+#define IOUNIT	(1<<16)
 
 extern char *argv0;
 #define	ARGBEGIN	for((argv0||(argv0=*argv)),argv++,argc--;\
@@ -64,6 +65,7 @@ extern char *argv0;
 #define	ARGC()		_argc
 
 int nrand(int);
+long	lrand(void);
 int	getfields(char*, char**, int, int, char*);
 
 /* /sys/include/geometry.h */
@@ -131,4 +133,4 @@ int	create(char*, int, int);
 
 extern int mainstacksize;
 
-#define snprint snprintf
+#define snprint	snprintf
