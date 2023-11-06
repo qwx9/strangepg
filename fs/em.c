@@ -12,395 +12,301 @@
 /* FIXME: let the abstraction follow dfc-like specs and semantics...?
  *	eg. fetch record n of type x from EM image y → calculate offset,
  *	cache, etc. ← would be external to em, this is generic enough */
-/* FIXME: maybe on linux stuff like mmap makes more sense */
-/* FIXME: plan9: see also readv(2) */
+/* FIXME: linux: mmap? plan9: see also readv(2) */
+/* FIXME: don't do while loop in dygrow, compute size directly */
+/* FIXME: do away with chains, useless (if it's less code) */
 
-static Chunk norris = {.lleft = &norris, .lright = &norris},
-	handouts = {.lleft = &handouts, .lright = &handouts};
+enum{
+	/* must be powers of two */
+	Poolsz = 1ULL<<30,
+	Bshift = 24,
+	Banksz = 1<<8,
+	Bmask = Banksz - 1,
+	Pshift = 16,
+	Pagesz = 1<<16,
+	Pmask = Pagesz - 1,
 
-static ssize memfree, memreallyfree = Poolsz / Chunksz;
+	EMrdonly = 1<<0,
+};
+typedef struct Page Page;
+typedef Page**	Bank;
+struct Page{
+	int e;
+	usize addr;
+	uchar buf[Pagesz];
+	Page *lleft;
+	Page *lright;
+};
+struct EM{
+	int id;
+	int flags;
+	int fd;
+	int infd;
+	char *path;
+	Bank *banks;
+};
+static EM **etab;
+static Page pused = {.lleft = &pused, .lright = &pused},
+	pfree = {.lleft = &pfree, .lright = &pfree};
+static ssize memfree, memreallyfree = Poolsz / Pagesz;
 static uchar iobuf[IOUNIT];
 
-/* significantly impact on performance due to frequency of calls */
-#define llink(u,v)	do{ \
-	Chunk *a = (u), *b = (v); \
+#define PLINK(u,v)	do{ \
+	Page *a = (u), *b = (v); \
 	b->lleft->lright = a->lright; \
 	a->lright->lleft = b->lleft; \
 	b->lleft = a; \
 	a->lright = b; \
 	}while(0)
-#define lunlink(u,v)	do{ \
-	Chunk *a = (u), *b = (v); \
+#define PUNLINK(u,v)	do{ \
+	Page *a = (u), *b = (v); \
 	a->lleft->lright = b->lright; \
 	b->lright->lleft = a->lleft; \
 	a->lleft = b; \
 	b->lright = a; \
 	}while(0)
-#define poke(c)	do{	\
-	lunlink((c), (c)); \
-	llink(norris.lleft, (c)); \
+#define POKE(p)	do{	\
+	PUNLINK((p), (p)); \
+	PLINK(pused.lleft, (p)); \
 	}while(0)
+#define BADDR(p)	((p) >> Bshift)
+#define PADDR(p)	((p) >> Pshift & Bmask)
+#define POFF(p)		((p) & Pmask)
+#define PLEA(p, a)	((p)->buf + POFF((a)))
 
-static Chunk *
-evictchunk(void)
-{
-	Chunk *c;
-
-	c = norris.lright;
-	assert(c != &norris);
-	DPRINT(Debugextmem, "evict %#p", c);
-	return c;
-}
-
+/* FIXME: make these unto macros as well? */
 static int
-flushchunk(EM *em, Chunk *c)
+flush(Page *p)
 {
-	if(em->flags & EMshutit)
-		return 0;
-	DPRINT(Debugextmem, "flushchunk %#p[%llx:%llx] fd %d", c, c->off, c->len, em->fd);
-	if(em->fd < 0){
-		if(em->flags & EMondisk){
-			if((em->fd = open(em->path, ORDWR)) < 0)
-				sysfatal("flushchunk: %s", error());
-		}else{
-			if(em->path == nil)
-				em->path = sysmktmp();
-			if((em->fd = create(em->path, ORDWR, 0644)) < 0)
-				sysfatal("emfdopen: %s", error());
-			em->flags |= EMondisk;
-		}
-		DPRINT(Debugextmem, "flushchunk fd=%d", em->fd);
-	}
-	if((em->flags & EMpipe) == 0)
-		if(seek(em->fd, c->off, 0) < 0)
-			return -1;
-	if(write(em->fd, c->buf, c->len) != c->len)
+	EM *em;
+
+	em = etab[p->e];
+	if(em->flags & EMrdonly)
 		return -1;
+	if(em->fd < 0){
+		if(em->path == nil)
+			em->path = sysmktmp();	/* can be stupidly expensive */
+		if((em->fd = create(em->path, ORDWR, 0640)) < 0)
+			return -1;
+		warn("fd %d\n", em->fd);
+	}
+	seek(em->fd, p->addr, 0);
+	write(em->fd, p->buf, sizeof *p->buf);
 	return 0;
 }
-
 static void
-freechunk(EM *em, Chunk *c)
+freepage(Page *p)
 {
-	if(c == nil)
+	if(p == nil)
 		return;
-	DPRINT(Debugextmem, "freechunk %#p[%llx:%llx]", c, c->off, c->len);
-	if(em->fd >= 0 && flushchunk(em, c) < 0)
-		warn("freechunk: %s\n", error());
-	lunlink(c, c);
-	llink(&handouts, c);
-	if(c->len > 0)
-		memset(c->buf, 0, c->len);
+	warn("pe %d\n", p->e);
+	if(p->e >= 0)
+		flush(p);
+	PUNLINK(p, p);
+	PLINK(pfree.lleft, p);
 	memfree++;
-	c->len = -1;
-	c->off = -1;
-}
-static void
-freechain(EM *em, Chunk **l, Chunk **le)
-{
-	int c;
-	Chunk **p;
-
-	if(l == nil)
-		return;
-	DPRINT(Debugextmem, "freechain %#p … %#p %lld", l, le, dylen(em->cp));
-	assert(le >= em->cp && le <= em->cp + dylen(em->cp));
-	for(c=0, p=l; p<le; p++, c++){
-		freechunk(em, *p);
-		*p = nil;
-	}
 }
 
-/* FIXME: doesn't *quite* fit the api */
-void
-emflushtofs(EM *em, File *f)
+static Page *
+preclaim(void)
 {
-	Chunk *c, **cp;
+	Page *p;
+	EM *em;
 
-	DPRINT(Debugextmem, "emflushtofs %#p cp %#p %zd chunks", em, em->cp, dylen(em->cp));
-	em->flags |= EMshutit;	// FIXME: dangerous
-	for(cp=em->cp; cp<em->cp+dylen(em->cp); cp++)
-		if((c = *cp) != nil){
-			DPRINT(Debugextmem, "emflushtofs %#p", c);
-			assert(c->len >= 0 && c->len <= Chunksz);
-			assert(c->off >= 0);
-			writefs(f, c->buf, c->len);
-			assert(CADDR(c->off) == cp-em->cp);
-			freechunk(em, c);
-			*cp = nil;
-		}
+	p = pused.lright;
+	em = etab[p->e];
+	if((em->flags & EMrdonly) == 0)
+		flush(p);
+	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
+	memset(p->buf, 0, Pagesz);
+	return p;
 }
-
-void
-printchain(Chunk **cp)
+static Page *
+preuse(void)
 {
-	Chunk *c, **ep;
+	Page *p;
 
-	if((debug & Debugextmem) == 0)
-		return;
-	DPRINT(Debugextmem, "chain %#p: ", cp);
-	for(ep=cp+dylen(cp),c=*cp; cp<ep; c=*++cp)
-		if(c == nil)
-			warn("[]");
-		else
-			warn("[%#p^%llx:%llx]", c, c->off, c->len);
-	warn("\n");
+	p = pfree.lleft;
+	memset(p->buf, 0, Pagesz);
+	memfree--;
+	return p;
 }
-
-static Chunk *
-allocchunk(void)
+static Page *
+new(void)
 {
-	Chunk *c;
+	Page *p;
 
-	c = emalloc(sizeof *c);
-	c->buf = emalloc(Chunksz);
-	c->lright = c->lleft = c;
-	c->off = c->len = -1;
+	p = emalloc(sizeof *p);
+	p->lright = p->lleft = p;
+	memfree++;
 	memreallyfree--;
-	DPRINT(Debugextmem, "allocchunk %#p", c);
-	return c;
+	return p;
 }
 
-static Chunk *
-newchunk(void)
-{
-	Chunk *c;
+#define PREAD(fd, page, off)	do{ \
+	if(seek((fd), (off), 0) < 0) \
+		warn("seek: %s\n", error()); \
+	else if(read((fd), (page)->buf, sizeof((page)->buf)) < 0) \
+		warn("read: %s\n", error()); \
+	}while(0)
+#define BALLOC()	(emalloc(Banksz * sizeof(Bank)))
+#define PALLOC(em, page, off)	do{ \
+	if(memfree > 0) \
+		(page) = preuse(); \
+	else if(memreallyfree > 0) \
+		(page) = new(); \
+	else \
+		(page) = preclaim(); \
+	(page)->e = (em)->id; \
+	(page)->addr = (off) & ~Pmask; \
+	POKE((page)); \
+	}while(0)
+#define PAGE(em, page, off)	do{ \
+	int __n, __readme = 0; \
+	Bank __bank, *__bp; \
+	Page **__pp; \
+	__n = BADDR((off)); \
+	dygrow((em)->banks, __n+1); \
+	__bp = (em)->banks + __n; \
+	if((__bank = *__bp) == nil){ \
+		__bank = *__bp = BALLOC(); \
+		if((em)->infd >= 0) \
+			__readme = 1; \
+	} \
+	__pp = __bank + PADDR((off)); \
+	if(((page) = *__pp) == nil){ \
+		PALLOC((em), (page), (off)); \
+		*__pp = (page); \
+		if(__readme) \
+			PREAD((em)->infd, (page), (off)); \
+		else if((em)->fd >= 0) \
+			PREAD((em)->fd, (page), (off)); \
+	} \
+	POKE((page)); \
+	}while(0)
 
-	DPRINT(Debugextmem, "newchunk: free %llx reallyfree %llx",
-		memfree, memreallyfree);
-	if(memfree > 0){
-		c = handouts.lright;
-		assert(c != &handouts);
-		memfree--;
-	}else if(memreallyfree > 0)
-		c = allocchunk();
-	else
-		c = evictchunk();
-	poke(c);
-	return c;
+uchar *
+emptr(EM *em, vlong off)
+{
+	Page *p;
+
+	PAGE(em, p, off);
+	return PLEA(p, off);
 }
 
-static ssize
-readchunk(EM *em, Chunk *c)
+u64int
+emr64(EM *em, vlong off)
 {
-	ssize n, m;
-	uchar *p;
+	uchar *u;
+	Page *p;
 
-	DPRINT(Debugextmem, "readchunk: %s[off] %llx", em->path, c->off);
-	assert(c->off >= 0 && c->len >= 0 && CMOD(c->off) == 0);
-	if(em->fd < 0){
-		if((em->flags & (EMpipe|EMshutit)) != 0)
-			return 0;
-		if(em->path == nil)
-			em->path = sysmktmp();
-		if((em->fd = open(em->path, ORDWR)) < 0)
-			return -1;
-		em->flags |= EMondisk;
-	}
-	if(c->len < Chunksz){
-		DPRINT(Debugextmem, "readchunk: read after");
-		if(seek(em->fd, c->off + c->len, 0) < 0)
-			return -1;
-		for(n=Chunksz-c->len, p=c->buf+c->len, m=0; n>0; p+=m, n-=m)
-			if((m = read(em->fd, p, n)) <= 0)
-				break;
-		if(m < 0)
-			sysfatal("read: %s", error());
-		if(m == 0)
-			return -1;
-		c->len = p - c->buf;
-	}
-	return c->len;
-}
-
-static Chunk *
-getchunk(EM *em, vlong off, ssize want)
-{
-	ssize ci;
-	Chunk *c, **cp;
-
-	DPRINT(Debugextmem, "getchunk: %s[%llx]", em->path, off);
-	assert(off >= 0 && off != EMbupkis);
-	ci = CADDR(off);
-	if(em->cp == nil || ci >= dylen(em->cp))
-		dygrow(em->cp, ci+1);
-	cp = em->cp + ci;
-	if((c = *cp) == nil){
-		c = newchunk();
-		c->off = COFF(off);
-		c->len = 0;
-		dyinsert(em->cp, ci, c);
-	}else
-		poke(c);
-	assert(c->len >= 0);
-	assert(c->off >= 0);
-	DPRINT(Debugextmem, "getchunk: read? %llx:%llx want %llx:%llx",
-		c->off, c->len, off, want);
-	if((want > 0 || em->flags & EMclown) && c->off + c->len < off + want)
-		if(readchunk(em, c) < 0)
-			return nil;
-	return c;
-}
-
-ssize
-emwrite(EM *em, vlong off, uchar *buf, ssize n)
-{
-	ssize m, Δ, ci;
-	uchar *p, *s;
-	Chunk *c;
-
-	DPRINT(Debugextmem, "emwrite %s[%llx] %llx to %#p", em->path, off, n, buf);
-	if(em->fd < 0 && (em->flags & EMshutit) != 0){
-		werrstr("emwrite: no file");
-		return -1;
-	}
-	for(s=buf, ci=CADDR(off); n>0; n-=m, off+=m, s+=m, ci++){
-		if(ci >= dylen(em->cp) || (c = em->cp[ci]) == nil)
-			if((c = getchunk(em, off, 0)) == nil)
-				sysfatal("getchunk: %s", error());
-		Δ = off - c->off;
-		p = c->buf + Δ;
-		m = Chunksz - Δ;
-		if(n < m)
-			m = n;
-		memcpy(p, s, m);
-		if(c->off + c->len < off + m)
-			c->len = off + m - c->off;
-		assert(c->len <= Chunksz);
-		DPRINT(Debugextmem, "emwrite %s[%llx] wrote %llx in %#p", em->path, off, m, c);
-	}
-	return s - buf;
+	off *= 8;
+	PAGE(em, p, off);
+	u = PLEA(p, off);
+	DPRINT(Debugextmem, "read %llx %llx [%#p]", off/8, GBIT64(u), u);
+	return GBIT64(u);
 }
 
 void
-emw64(EM *em, ssize off, usize v)
+emw64(EM *em, vlong off, u64int v)
 {
-	ssize ci;
-	uchar *p;
-	Chunk *c;
+	uchar *u;
+	Page *p;
 
-	assert(em != nil);
 	off *= 8;
-	ci = CADDR(off);
-	if(dylen(em->cp) <= ci || (c = em->cp[ci]) == nil
-	|| off + 8 > c->off + c->len)
-		if((c = getchunk(em, off, 0)) == nil)
-			return;
-	// FIXME: replace asserts with tests (with asserts)
-	assert(off >= c->off);
-	assert((off-c->off & 7) == 0);
-	p = c->buf + off - c->off;
-	if(c->off + c->len < off + 8)
-		c->len = off + 8 - c->off;
-	assert(c->len <= Chunksz);
-	PBIT64(p, (em->flags & EMclone) == 0 ? v | EMexist : v);
-}
-usize
-emr64(EM *em, ssize off)
-{
-	usize v;
-	ssize ci;
-	uchar *p;
-	Chunk *c;
-
-	assert(em != nil);
-	off *= 8;
-	ci = CADDR(off);
-	if(dylen(em->cp) <= ci || (c = em->cp[ci]) == nil
-	|| off + 8 > c->off + c->len)
-		if((c = getchunk(em, off, 0)) == nil)
-			return EMbupkis;
-	assert(off >= c->off);
-	assert((off-c->off & 7) == 0);
-	if(off + 8 > c->off + c->len)
-		return EMbupkis;
-	p = c->buf + off - c->off;
-	v = GBIT64(p);
-	if((em->flags & EMclone) != 0)
-		return v;
-	return v == 0 ? EMbupkis : v & ~EMexist;
+	PAGE(em, p, off);
+	u = PLEA(p, off);
+	DPRINT(Debugextmem, "emw64 %llx %llx [%#p]", off, v, u);
+	PBIT64(u, v);
 }
 
-/* default: rw temp file from scratch: write without prior read */
-EM*
-emnew(int flags)
+int
+em2fs(EM *em, File *f)
 {
-	EM *em;
+	vlong n;
+	Bank *b;
+	Page **p, **pe;
+	File *ef;
 
-	em = emalloc(sizeof *em);
-	em->flags = flags;
-	em->fd = -1;
-	em->l.lleft = em->l.lright = &em->l;
-	return em; 
-}
-
-EM*
-emfdopen(int fd, int flags)
-{
-	EM *em;
-
-	DPRINT(Debugextmem, "emfdopen %d", fd);
-	em = emnew(flags | EMpipe);
-	em->fd = fd;
-	return em;
-}
-
-/* buffer backed by preexisting file: read before write */
-EM*
-emopen(char *path)
-{
-	EM *em;
-
-	DPRINT(Debugextmem, "emopen %s", path);
-	em = emnew(EMshutit|EMclown);
-	em->path = estrdup(path);
-	em->flags |= EMondisk;
-	if((em->fd = open(path, ORDWR)) < 0){
-		emclose(em);
-		return nil;
+	for(b=em->banks; b<em->banks+dylen(em->banks); b++){
+		warn("em2fs: bank %zd\n", b-em->banks);
+		if(*b != nil)
+			for(p=*b, pe=p+Banksz; p<pe; p++)
+				freepage(*p);
 	}
-	return em;
-}
-
-EM*
-emclone(char *path)
-{
-	int fd;
-	ssize n, off;
-	EM *em;
-
-	DPRINT(Debugextmem, "emclone %s", path);
-	if((em = emnew(0)) == nil)
-		return nil;
-	if((fd = open(path, OREAD)) < 0)
-		sysfatal("emclone: %s", error());
-	for(off=0;; off+=n){
-		if((n = read(fd, iobuf, sizeof iobuf)) <= 0)
+	if(em->fd < 0){
+		warn("em2fs: nothing to write\n");
+		return 0;
+	}
+	ef = emalloc(sizeof *ef);
+	if(fdopenfs(ef, em->fd, OREAD) < 0)
+		goto err;
+	for(;;){
+		if((n = readfs(ef, iobuf, sizeof iobuf)) <= 0)
 			break;
-		emwrite(em, off, iobuf, n);
+		if(writefs(f, iobuf, n) < 0)
+			goto err;
 	}
-	close(fd);
-	if(n < 0)
-		sysfatal("emclone %s: %s", path, error());
-	DPRINT(Debugextmem, "emclone %s: read %llx bytes", path, off);
-	em->flags |= EMclone;
-	return em;
+	closefs(ef);
+	free(ef);
+	if(n == 0)
+		return 0;
+err:
+	free(ef);
+	return -1;
 }
 
 void
 emclose(EM *em)
 {
-	if(em == nil)
-		return;
-	freechain(em, em->cp, em->cp + dylen(em->cp));
-	if(em->cp != nil)
-		dyfree(em->cp);
+	Bank *b;
+	Page **p, **pe;
+
+	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
+		if(*b != nil)
+			for(p=*b, pe=p+Banksz; p<pe; p++)
+				freepage(*p);
+	if(em->infd >= 0)
+		close(em->infd);
 	if(em->fd >= 0)
 		close(em->fd);
-	if(em->path != nil && (em->flags & (EMshutit|EMondisk)) == EMondisk){
-		DPRINT(Debugextmem, "emclose %s: remove", em->path);
+	if(em->path != nil){
 		sysremove(em->path);
+		free(em->path);
 	}
-	free(em->path);
+	if(em->banks != nil)
+		dyfree(em->banks);
+	etab[em->id] = nil;
 	free(em);
+}
+
+EM *
+emopen(char *path, int flags)
+{
+	int i;
+	EM *em;
+
+	em = emalloc(sizeof *em);
+	if(etab != nil){
+		for(i=0; i<dylen(etab); i++)
+			if(etab[i] == nil){
+				etab[i] = em;
+				em->id = i;
+				break;
+			}
+		if(i == nelem(etab))
+			dypush(etab, em);
+	}else{
+		dypush(etab, em);
+		em->id = 0;
+	}
+	em->flags = flags;
+	em->infd = em->fd = -1;
+	if(path != nil){
+		if((em->infd = open(path, OREAD)) < 0){
+			free(em);
+			return nil;
+		}
+	}
+	return em;
 }
