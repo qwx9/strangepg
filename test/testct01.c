@@ -1,17 +1,16 @@
 #include "strpg.h"
 #include "em.h"
 
-void
-threadmain(int, char**)
+int
+main(int argc, char **argv)
 {
 	EM *em;
 
-	em = emnew(0);
-	if(empput64(em, 0, 0xdeadbeefcafebabeULL) < 0)
-		sysfatal("emput64: %s", error());
-	if(empget64(em, 0) != 0xdeadbeefcafebabeULL)
-		sysfatal("empget64: %s", error());
-	assert(em->c.left == em->c.right && em->c.lleft == em->c.lright && em->c.left == &em->c);
+	if((em = emopen(nil, 0)) == nil)
+		sysfatal("emopen: %s", error());
+	emw64(em, 0, 0xdeadbeefcafebabeULL);
+	if(emr64(em, 0) != 0xdeadbeefcafebabeULL)
+		sysfatal("emr64: %s", error());
 	emclose(em);
 	sysquit();
 }

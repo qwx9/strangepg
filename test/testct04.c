@@ -2,42 +2,50 @@
 #include "fs.h"
 #include "em.h"
 
-void
-threadmain(int, char**)
+enum{
+	/* must be powers of two */
+	Poolsz = 1ULL<<30,
+	Bshift = 24,
+	Banksz = 1<<8,
+	Bmask = Banksz - 1,
+	Pshift = 16,
+	Pagesz = 1<<16,
+	Pmask = Pagesz - 1,
+
+	Addr = 0x21ff86,
+};
+char *
+touch(usize n)
 {
+	int fd;
+	uchar u[1];
+	static char *path;
+
+	path = sysmktmp();
+	if((fd = create(path, OWRITE, 0644)) < 0)
+		sysfatal("create: %s", error());
+	if(seek(fd, n-1, 0) < 0)
+		sysfatal("seek: %s", error());
+	if(write(fd, u, 1) != 1)
+		sysfatal("write: %s", error());
+	close(fd);
+	return path;
+}
+
+int
+main(int argc, char **argv)
+{
+	char *path;
 	EM *em;
 
-	debug = Debugextmem;
-	em = emnew(0);
-	if(empget64(em, 1) != EMbupkis)
-		sysfatal("empget64: [0] not eof: %s", error());
-	// FIXME: off hasn't changed from 1*8
-	if(empget64(em, 0) != EMbupkis)
-		sysfatal("emget64: [1] not eof: %s", error());
-	if(emget64(em) != EMbupkis)
-		sysfatal("emget64: [2] not eof: %s", error());
-	if(empget64(em, 4) != EMbupkis)
-		sysfatal("empget64: [3] not eof: %s", error());
-	if(empget64(em, 5) != EMbupkis)
-		sysfatal("empget64: [4] not eof: %s", error());
-	if(empput64(em, 1, 1) < 0)
-		sysfatal("emput64: [5] %s", error());
-	if(empput64(em, 10, 10) < 0)
-		sysfatal("empput64: [6] %s", error());
-	if(empget64(em, 1) != 1)
-		sysfatal("empget64: [7] %s", error());
-	if(emget64(em) != EMbupkis)
-		sysfatal("emget64: [8] not eof: %s", error());
-	if(emget64(em) != EMbupkis)
-		sysfatal("emget64: [9] not eof: %s", error());
-	if(empget64(em, 4) != EMbupkis)
-		sysfatal("empget64: [10] not eof: %s", error());
-	if(empget64(em, 5) != EMbupkis)
-		sysfatal("empget64: [11]not eof: %s", error());
-	if(empget64(em, 1) != 1)
-		sysfatal("empget64: [12] %s", error());
-	if(empget64(em, 10) != 10)
-		sysfatal("empget64: [13] %s", error());
+	path = touch(Addr);
+	if((em = emopen(path, 0)) == nil)
+		sysfatal("emopen: %s", error());
+	emw64(em, Addr, 0xdeadbeefcafebabeULL);
+	if(emr64(em, Addr) != 0xdeadbeefcafebabeULL)
+		sysfatal("emr64: %s", error());
 	emclose(em);
+	assert(access(path, AEXIST) == 0);
+	remove(path);
 	sysquit();
 }

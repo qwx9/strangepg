@@ -2,6 +2,18 @@
 #include "fs.h"
 #include "em.h"
 
+enum{
+	/* must be powers of two */
+	Poolsz = 1ULL<<30,
+	Bshift = 24,
+	Banksz = 1<<8,
+	Bmask = Banksz - 1,
+	Pshift = 16,
+	Pagesz = 1<<16,
+	Pmask = Pagesz - 1,
+
+	EMrdonly = 1<<0,
+};
 char *
 touch(uint n)
 {
@@ -20,19 +32,18 @@ touch(uint n)
 	return path;
 }
 
-void
-threadmain(int, char**)
+int
+main(int argc, char **argv)
 {
 	char *path;
 	EM *em;
 
-	debug = -1ULL;
-	path = touch(Chunksz);	// next test: maxgreed then beyond
-	em = emclone(path);
-	if(empput64(em, Chunksz/8, 0xdeadbeefcafebabeULL) < 0)
-		sysfatal("emput64: %s", error());
-	if(empget64(em, Chunksz/8) != 0xdeadbeefcafebabeULL)
-		sysfatal("empget64: %s", error());
+	path = touch(Pagesz);	// next test: maxgreed then beyond
+	if((em = emopen(path, 0)) == nil)
+		sysfatal("emopen: %s", error());
+	emw64(em, Pagesz/8, 0xdeadbeefcafebabeULL);
+	if(emr64(em, Pagesz/8) != 0xdeadbeefcafebabeULL)
+		sysfatal("emr64: %s", error());
 	emclose(em);
 	assert(access(path, AEXIST) == 0);
 	remove(path);

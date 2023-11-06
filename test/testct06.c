@@ -2,7 +2,17 @@
 #include "fs.h"
 #include "em.h"
 
-static uchar buf[Chunksz];
+enum{
+	/* must be powers of two */
+	Poolsz = 1ULL<<30,
+	Bshift = 24,
+	Banksz = 1<<8,
+	Bmask = Banksz - 1,
+	Pshift = 16,
+	Pagesz = 1<<16,
+	Pmask = Pagesz - 1,
+};
+static uchar buf[Pagesz];
 
 char *
 touch(void)
@@ -23,23 +33,21 @@ touch(void)
 	return path;
 }
 
-void
-threadmain(int, char**)
+int
+main(int argc, char **argv)
 {
 	char *path;
 	u64int v, w;
 	EM *em;
 
 	path = touch();
-	if((em = emclone(path)) == nil)
-		sysfatal("emclone: %s", error());
-	if((w = empget64(em, 0)) != 0)
+	if((em = emopen(path, 0)) == nil)
+		sysfatal("emopen: %s", error());
+	if((w = emr64(em, 0)) != 0)
 		sysfatal("got %llux instead of %llux", w, 0ULL);
 	for(v=1; v<nelem(buf)/8; v++){
-		if((w = emget64(em)) != v)
+		if((w = emr64(em, v)) != v)
 			sysfatal("got %llux instead of %llux", w, v);
-		if(v % 1000 == 0)
-			warn("%llud/%d\n", v, nelem(buf)/8);
 	}
 	emclose(em);
 	remove(path);

@@ -2,18 +2,18 @@
 #include "fs.h"
 #include "em.h"
 
-void
-threadmain(int, char**)
+int
+main(int argc, char **argv)
 {
 	EM *em;
 
-	em = emnew(0);
-	if(empget64(em, 1) != EMbupkis)
-		sysfatal("empget64: not eof: %s", error());
-	if(empput64(em, 1, 0xdeadbeefcafebabeULL) < 0)
-		sysfatal("emput64: %s", error());
-	if(empget64(em, 1) != 0xdeadbeefcafebabeULL)
-		sysfatal("empget64: %s", error());
+	if((em = emopen(nil, 0)) == nil)
+		sysfatal("emopen: %s", error());
+	if(emr64(em, 1) != 0)
+		sysfatal("emr64: not eof: %s", error());
+	emw64(em, 1, 0xdeadbeefcafebabeULL);
+	if(emr64(em, 1) != 0xdeadbeefcafebabeULL)
+		sysfatal("emr64: %s", error());
 	emclose(em);
 	sysquit();
 }
