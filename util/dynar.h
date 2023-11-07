@@ -36,13 +36,13 @@ struct Dyhdr{
 /* one may not simply use dygrow here with the do..while */
 #define dyinsert(a,i,v)	do{ \
 	Dyhdr*__h = dyhdr(a); \
-	(a) = dychecksz((a),__h,(i)); \
-	while(__h->sz < (i))	\
+	(a) = dychecksz((a),__h,(i)+1); \
+	while(__h->sz < (i)+1)	\
 		(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
-	if((i) == dyhdr(a)->len) \
+	if((i)+1 == dyhdr(a)->len) \
 		dypush((a),(v)); \
 	else \
 		(a)[(i)] = (v); \
-	if((i) > __h->len) \
-		__h->len = (i); \
+	if((i)+1 > __h->len) \
+		__h->len = (i)+1; \
 	}while(0)
