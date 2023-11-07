@@ -74,6 +74,32 @@ static uchar iobuf[IOUNIT];
 #define POFF(p)		((p) & Pmask)
 #define PLEA(p, a)	((p)->buf + POFF((a)))
 
+static void
+poolcheck(void)
+{
+	Page **pp, **pe, *p;
+	Bank *b;
+	EM **ep, *em;
+
+	for(ep=etab; ep<etab+dylen(etab); ep++){
+		if((em = *ep) == nil)
+			continue;
+		for(b=em->banks; b<em->banks+dylen(em->banks); b++){
+			if(*b == nil)
+				continue;
+			for(pp=*b, pe=pp+Banksz; pp<pe; pp++){
+				if((p = *pp) == nil)
+					continue;
+				assert(p->e == em->id);
+				assert(p->e == ep - etab);
+				assert(BADDR(p->addr) < dylen(em->banks));
+				assert(em->banks[BADDR(p->addr)] != nil);
+				assert(em->banks[BADDR(p->addr)][PADDR(p->addr)] == p);
+			}
+		}
+	}
+}
+
 /* FIXME: make these unto macros as well? */
 static int
 flush(Page *p)
@@ -88,20 +114,21 @@ flush(Page *p)
 			em->path = sysmktmp();	/* can be stupidly expensive */
 		if((em->fd = create(em->path, ORDWR, 0640)) < 0)
 			return -1;
-		warn("fd %d\n", em->fd);
 	}
-	seek(em->fd, p->addr, 0);
-	write(em->fd, p->buf, sizeof *p->buf);
+	if(seek(em->fd, p->addr, 0) < 0)
+		warn("seek: %s\n", error());
+	if(write(em->fd, p->buf, sizeof p->buf) != sizeof p->buf)
+		warn("write: %s\n", error());
 	return 0;
 }
 static void
 freepage(Page *p)
 {
-	if(p == nil)
-		return;
-	warn("pe %d\n", p->e);
-	if(p->e >= 0)
-		flush(p);
+	EM *em;
+
+	flush(p);
+	em = etab[p->e];
+	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
 	PUNLINK(p, p);
 	PLINK(pfree.lleft, p);
 	memfree++;
@@ -127,6 +154,7 @@ preuse(void)
 	Page *p;
 
 	p = pfree.lleft;
+	DPRINT(Debugextmem, "preuse %#p memfree %zx", p, memfree);
 	memset(p->buf, 0, Pagesz);
 	memfree--;
 	return p;
@@ -138,18 +166,20 @@ new(void)
 
 	p = emalloc(sizeof *p);
 	p->lright = p->lleft = p;
-	memfree++;
 	memreallyfree--;
 	return p;
 }
 
 #define PREAD(fd, page, off)	do{ \
+	if(seek((fd), 0, 2) <= (off)) \
+		break; \
 	if(seek((fd), (off), 0) < 0) \
 		warn("seek: %s\n", error()); \
 	else if(read((fd), (page)->buf, sizeof((page)->buf)) < 0) \
 		warn("read: %s\n", error()); \
 	}while(0)
 #define BALLOC()	(emalloc(Banksz * sizeof(Bank)))
+/* POKEd at the end */
 #define PALLOC(em, page, off)	do{ \
 	if(memfree > 0) \
 		(page) = preuse(); \
@@ -159,17 +189,15 @@ new(void)
 		(page) = preclaim(); \
 	(page)->e = (em)->id; \
 	(page)->addr = (off) & ~Pmask; \
-	POKE((page)); \
 	}while(0)
 #define PAGE(em, page, off)	do{ \
 	int __n, __readme = 0; \
-	Bank __bank, *__bp; \
+	Bank __bank; \
 	Page **__pp; \
 	__n = BADDR((off)); \
-	dygrow((em)->banks, __n+1); \
-	__bp = (em)->banks + __n; \
-	if((__bank = *__bp) == nil){ \
-		__bank = *__bp = BALLOC(); \
+	if(dylen((em)->banks) <= __n || (__bank = (em)->banks[__n]) == nil){ \
+		__bank = BALLOC(); \
+		dyinsert((em)->banks, __n, __bank); \
 		if((em)->infd >= 0) \
 			__readme = 1; \
 	} \
@@ -178,9 +206,9 @@ new(void)
 		PALLOC((em), (page), (off)); \
 		*__pp = (page); \
 		if(__readme) \
-			PREAD((em)->infd, (page), (off)); \
+			PREAD((em)->infd, (page), (off) & ~Pmask); \
 		else if((em)->fd >= 0) \
-			PREAD((em)->fd, (page), (off)); \
+			PREAD((em)->fd, (page), (off) & ~Pmask); \
 	} \
 	POKE((page)); \
 	}while(0)
@@ -203,7 +231,7 @@ emr64(EM *em, vlong off)
 	off *= 8;
 	PAGE(em, p, off);
 	u = PLEA(p, off);
-	DPRINT(Debugextmem, "read %llx %llx [%#p]", off/8, GBIT64(u), u);
+	DPRINT(Debugextmem, "r64 %#p:%s %llx %llx [%#p]", em, em->path, off/8, GBIT64(u), u);
 	return GBIT64(u);
 }
 
@@ -216,7 +244,7 @@ emw64(EM *em, vlong off, u64int v)
 	off *= 8;
 	PAGE(em, p, off);
 	u = PLEA(p, off);
-	DPRINT(Debugextmem, "emw64 %llx %llx [%#p]", off, v, u);
+	DPRINT(Debugextmem, "w64 %#p:%#p [%zx] %llx %llx [%#p]", em, em->banks[BADDR(off)], off/8, off, v, u);
 	PBIT64(u, v);
 }
 
@@ -228,12 +256,11 @@ em2fs(EM *em, File *f)
 	Page **p, **pe;
 	File *ef;
 
-	for(b=em->banks; b<em->banks+dylen(em->banks); b++){
-		warn("em2fs: bank %zd\n", b-em->banks);
+	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
-				freepage(*p);
-	}
+				if(*p != nil)
+					freepage(*p);
 	if(em->fd < 0){
 		warn("em2fs: nothing to write\n");
 		return 0;
@@ -265,7 +292,8 @@ emclose(EM *em)
 	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
-				freepage(*p);
+				if(*p != nil)
+					freepage(*p);
 	if(em->infd >= 0)
 		close(em->infd);
 	if(em->fd >= 0)
@@ -283,23 +311,11 @@ emclose(EM *em)
 EM *
 emopen(char *path, int flags)
 {
-	int i;
 	EM *em;
 
 	em = emalloc(sizeof *em);
-	if(etab != nil){
-		for(i=0; i<dylen(etab); i++)
-			if(etab[i] == nil){
-				etab[i] = em;
-				em->id = i;
-				break;
-			}
-		if(i == nelem(etab))
-			dypush(etab, em);
-	}else{
-		dypush(etab, em);
-		em->id = 0;
-	}
+	dypush(etab, em);
+	em->id = dylen(etab) - 1;
 	em->flags = flags;
 	em->infd = em->fd = -1;
 	if(path != nil){
