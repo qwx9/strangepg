@@ -2,7 +2,7 @@
 #include "em.h"
 
 int
-main(int argc, char **argv)
+main(int, char **)
 {
 	EM *em;
 
@@ -13,4 +13,5 @@ main(int argc, char **argv)
 		sysfatal("emr64: %s", error());
 	emclose(em);
 	sysquit();
+	return 0;
 }

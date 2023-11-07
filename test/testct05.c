@@ -3,7 +3,7 @@
 #include "em.h"
 
 int
-main(int argc, char **argv)
+main(int, char **)
 {
 	int i;
 	u64int m;
@@ -22,4 +22,5 @@ main(int argc, char **argv)
 			sysfatal("emr64: %llx not tgt %x: %s", m, u[i], error());
 	emclose(em);
 	sysquit();
+	return 0;
 }

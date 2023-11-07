@@ -34,7 +34,7 @@ touch(void)
 }
 
 int
-main(int argc, char **argv)
+main(int, char **)
 {
 	char *path;
 	u64int v, w;
@@ -53,4 +53,5 @@ main(int argc, char **argv)
 	remove(path);
 	free(path);
 	sysquit();
+	return 0;
 }

@@ -33,7 +33,7 @@ touch(usize n)
 }
 
 int
-main(int argc, char **argv)
+main(int, char **)
 {
 	char *path;
 	EM *em;
@@ -48,4 +48,5 @@ main(int argc, char **argv)
 	assert(access(path, AEXIST) == 0);
 	remove(path);
 	sysquit();
+	return 0;
 }

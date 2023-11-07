@@ -2,7 +2,7 @@
 #include "em.h"
 
 int
-main(int argc, char **argv)
+main(int, char **)
 {
 	ssize r, i, v, w;
 	EM *em;
@@ -18,4 +18,5 @@ main(int argc, char **argv)
 	}
 	emclose(em);
 	sysquit();
+	return 0;
 }
