@@ -249,7 +249,7 @@ emw64(EM *em, vlong off, u64int v)
 }
 
 int
-em2fs(EM *em, File *f)
+em2fs(EM *em, File *f, ssize nbytes)
 {
 	vlong n;
 	Bank *b;
@@ -266,10 +266,12 @@ em2fs(EM *em, File *f)
 		return 0;
 	}
 	ef = emalloc(sizeof *ef);
+	seek(em->fd, 0, 0);
 	if(fdopenfs(ef, em->fd, OREAD) < 0)
 		goto err;
-	for(;;){
-		if((n = readfs(ef, iobuf, sizeof iobuf)) <= 0)
+	for(;; nbytes-=n){
+		n = nbytes < sizeof iobuf ? nbytes : sizeof iobuf;
+		if((n = readfs(ef, iobuf, n)) <= 0)
 			break;
 		if(writefs(f, iobuf, n) < 0)
 			goto err;

@@ -47,13 +47,13 @@ reverse(Graph *g, Lbuf *lvl)
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		DPRINT(Debugcoarse, "[%zx] %d nodes", lp-lvl, lp->nnodes);
-		if(em2fs(lp->nodes, f) < 0)
+		if(em2fs(lp->nodes, f, lp->nnodes * Nrecsz) < 0)
 			sysfatal("reverse: %s", error());
 		emclose(lp->nodes);
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		DPRINT(Debugcoarse, "[%zx] %d edges", lp-lvl, lp->nedges);
-		if(em2fs(lp->edges, f) < 0)
+		if(em2fs(lp->edges, f, lp->nedges * Erecsz) < 0)
 			sysfatal("reverse: %s", error());
 		emclose(lp->edges);
 	}
