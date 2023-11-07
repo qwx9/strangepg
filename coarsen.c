@@ -5,7 +5,7 @@
 enum{
 	Minedges = 0,
 	Lrecsz = 4 * sizeof(u64int),
-	Nrecsz = 3 * sizeof(u64int),
+	Nrecsz = 4 * sizeof(u64int),
 	Erecsz = 2 * sizeof(u64int),
 };
 typedef struct Lbuf Lbuf;
@@ -17,6 +17,7 @@ struct Lbuf{
 };
 static usize nsuper;
 
+// FIXME: fix fucking openfs semantics
 static int
 reverse(Graph *g, Lbuf *lvl)
 {
@@ -28,7 +29,7 @@ reverse(Graph *g, Lbuf *lvl)
 	f = emalloc(sizeof *f);
 	if(fdopenfs(f, 1, OWRITE) < 0)
 		sysfatal("fdopenfs: %s", error());
-	DPRINT(Debugcoarse, "reverse: %zd %zd %zd %zd",
+	DPRINT(Debugcoarse, "reverse: %zx %zx %zx %zx",
 		g->nnodes, g->nedges, nsuper, dylen(lvl));
 	put64(f, g->nnodes);
 	put64(f, g->nedges);
@@ -45,16 +46,19 @@ reverse(Graph *g, Lbuf *lvl)
 		eoff += lp->nedges * Erecsz;
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
-		DPRINT(Debugcoarse, "[%zd] %d nodes", lp-lvl, lp->nnodes);
-		emflushtofs(lp->nodes, f);
+		DPRINT(Debugcoarse, "[%zx] %d nodes", lp-lvl, lp->nnodes);
+		if(em2fs(lp->nodes, f) < 0)
+			sysfatal("reverse: %s", error());
 		emclose(lp->nodes);
 	}
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
-		DPRINT(Debugcoarse, "[%zd] %d edges", lp-lvl, lp->nedges);
-		emflushtofs(lp->edges, f);
+		DPRINT(Debugcoarse, "[%zx] %d edges", lp-lvl, lp->nedges);
+		if(em2fs(lp->edges, f) < 0)
+			sysfatal("reverse: %s", error());
 		emclose(lp->edges);
 	}
 	closefs(f);
+	free(f);
 	return 0;
 }
 
@@ -77,10 +81,6 @@ static void
 endlevel(Lbuf *lp)
 {
 	nsuper += lp->nnodes;
-	close(lp->nodes->fd);
-	lp->nodes->fd = -1;
-	close(lp->edges->fd);
-	lp->edges->fd = -1;
 }
 
 static void
@@ -89,27 +89,26 @@ outputedge(Lbuf *lp, ssize u, ssize v)
 	ssize off;
 	EM *em;
 
-	DPRINT(Debugcoarse, "drop edge %llx,%llx", u, v);
 	em = lp->edges;
 	off = lp->nedges++;
 	emw64(em, 2*off, u);
 	emw64(em, 2*off+1, v);
-	lp->nedges++;
+	DPRINT(Debugcoarse, "drop edge %zx,%zx %d %zx,%zx", u, v, lp->nedges, 2*off, 2*off+1);
 }
 
 static void
-outputnode(Lbuf *lp, ssize old, ssize new, ssize weight)
+outputnode(Lbuf *lp, ssize idx, ssize old, ssize new, ssize weight)
 {
 	ssize off;
 	EM *em;
 
-	DPRINT(Debugcoarse, "merge %llx → %llx, weight %lld", old, new, weight);
+	DPRINT(Debugcoarse, "merge %zx → %zx, weight %lld", old, new, weight);
 	em = lp->nodes;
 	off = lp->nnodes++;
-	emw64(em, 3*off, old);
-	emw64(em, 3*off+1, new);
-	emw64(em, 3*off+2, weight);
-	lp->nnodes++;
+	emw64(em, 4*off, idx);
+	emw64(em, 4*off+1, old);
+	emw64(em, 4*off+2, new);
+	emw64(em, 4*off+3, weight);
 }
 
 static Lbuf *
@@ -117,82 +116,43 @@ newlevel(Lbuf *lvl)
 {
 	Lbuf l = {0};
 
-	if((l.nodes = emnew(0)) == nil)
-		sysfatal("emnew: %s", error());
-	if((l.edges = emnew(0)) == nil)
-		sysfatal("emnew: %s", error());
+	if((l.nodes = emopen(nil, 0)) == nil)
+		sysfatal("newlevel: %s", error());
+	if((l.edges = emopen(nil, 0)) == nil)
+		sysfatal("newlevel: %s", error());
 	dypush(lvl, l);
 	DPRINT(Debugcoarse, "-- newlevel %lld", dylen(lvl));
 	return lvl;
 }
 
 static int
-exists(usize s, usize t, EM *fs2j, EM *fjump, EM *fedge, usize nedges, usize w)
+exists(usize s, usize t, EM *fadj, usize nnodes)
 {
-	usize p;
+	uchar *p;
 
-	if((p = emr64(fs2j, s-1-w)) == EMbupkis){
-		DPRINT(Debugcoarse, "s2j[%zx] not found", s-1-w);
-		return 0;
-	}
-	while(p < nedges){
-		DPRINT(Debugcoarse, "check s2j[%zx] → jump[%zx], looking for %zx,%zx",
-			s-1-w, p, s, t);
-		if(emr64(fedge, 2+2*p) != s)
-			break;
-		if(emr64(fedge, 2+2*p+1) == t)
-			return 1;
-		p = emr64(fjump, p);
-	}
-	return 0;
+	s = s * nnodes + t;
+	p = emptr(fadj, (vlong)(s >> 3));
+	return (*p & 1 << (s & 7)) != 0;
 }
-/* edgelist is not reordered; the jump table serves as
- * a linked list instead
- * s2j[u] → i, first occurrence of u in jump table
- * edge[i] → u,_ corresponding edge
- * jump[i] → j, next edge in order
- */
 static void
-insert(usize s, EM *fs2j, EM *fjump, EM *fedge, EM *fdeg, usize cur)
+insert(usize s, usize t, EM *fadj, usize nnodes)
 {
-	int i;
-	usize x, p;
+	uchar *p;
 
-	// FIXME: looping through everything; smarter, cleaner way
-	if((p = emr64(fs2j, s)) != EMbupkis){
-		p += emr64(fdeg, s) - 1;
-		if((x = emr64(fjump, p)) != cur)
-			emw64(fjump, p, cur);
-		else
-			x = cur + 1;
-	}else{
-		x = cur + 1;
-		emw64(fs2j, s, cur);
-	}
-	emw64(fjump, cur, x);
-	if((debug & Debugcoarse) == 0)
-		return;
-	warn(">> index\t");
-	for(i=0; i<cur; i++)
-		warn("%02x ", i);
-	warn("\n>> edgeu\t");
-	for(i=0; i<cur; i++)
-		warn("%02zx ", emr64(fedge, 2+2*i));
-	warn("\n>> jump \t");
-	for(i=0; i<cur; i++)
-		warn("%02zx ", emr64(fjump, i));
-	warn("\n");
+	s = s * nnodes + t;
+	p = emptr(fadj, (vlong)(s >> 3));
+	*p = *p | 1 << (s & 7);
 }
 
 static Lbuf *
 coarsen(Graph *g, char *index)
 {
 	int topdog;
-	ssize i, o, w, u, v, s, t, y, m, e, uw, vw, d, M, S;
-	EM *fedge, *fedge2, *fnode, *fweight, *fweight2, *fs2j, *fjump, *fdeg;
+	ssize o, k, w, u, v, z, s, t, m, e, uw, vw, M, S;
+	EM *fedge, *fnode, *fweight, *fadj;
 	Lbuf *lvl, *lp;
 
-	if((fedge = emclone(index)) == nil)
+	if((fedge = emopen(index, 0)) == nil)
 		sysfatal("emclone: %s", error());
 	g->nnodes = emr64(fedge, 0);
 	g->nedges = emr64(fedge, 1);
@@ -202,93 +162,77 @@ coarsen(Graph *g, char *index)
 	}
 	DPRINT(Debugcoarse, "graph %s nnodes %lld nedges %lld",
 		index, g->nnodes, g->nedges);
-	fweight = emnew(0);
+	fnode = emopen(nil, 0);
+	fweight = emopen(nil, 0);
 	M = g->nedges;
 	S = g->nnodes - 1;
 	lvl = nil;
 	w = S;
-	y = 0;
-	i = 0;
-	uw = -1;	/* cannot happen */
+	k = w;
+	uw = 0;	/* cannot happen */
 	while(M > Minedges){
-		fs2j = emnew(0);
-		fjump = emnew(0);
-		fnode = emnew(0);
-		fweight2 = emnew(0);
-		fedge2 = emnew(0);
-		fdeg = emnew(0);
 		printtab(fedge, M);
 		lvl = newlevel(lvl);
 		lp = lvl + dylen(lvl) - 1;
+		fadj = emopen(nil, 0);
 		m = M;
 		M = 0;
 		topdog = 0;
 		for(e=0; e<m; e++){
 			if(e > 0 && e % 1000 == 0)
-				DPRINT(Debugcoarse, "L%02zd edge %lld/%lld\n", dylen(lvl), e, g->nedges);
-			// FIXME: layer violation
+				DPRINT(Debugcoarse, "L%02zx edge %zx/%zx\n", dylen(lvl), e, g->nedges);
 			u = emr64(fedge, 2+e*2);
 			v = emr64(fedge, 2+e*2+1);
-			DPRINT(Debugcoarse, "processing %zx,%zx (%zx,%zx) [%zx,%zx]", u, v, u-y, v-y, emr64(fnode,u-y), emr64(fnode,v-y));
-			if((s = emr64(fnode, u-y)) == EMbupkis || s <= w){
+			s = emr64(fnode, u) - 1;
+			t = emr64(fnode, v) - 1;
+			DPRINT(Debugcoarse, "processing %#p %zx,%zx, %zx,%zx (%zx,%zx)",
+				fedge, 2+e*2, 2+e*2+1, u, v, s, t);
+			/* instead of initializing everything, assume 0's are NA's */
+			if(s < 0 || s <= w){
+				z = s;
 				s = ++S;
-				DPRINT(Debugcoarse, "[%04llx] unvisited left node %llx ← %llx", e, u, s);
-				i = s - 1 - w;
-				if((uw = emr64(fweight, i)) == EMbupkis)
+				DPRINT(Debugcoarse, "[%04zx] unvisited left node[%zx] %zx ← %zx", e, u, z, s);
+				if((uw = emr64(fweight, u) - 1) < 0)
 					uw = 1;	/* default value */
-				emw64(fnode, u-y, s);
-				emw64(fweight2, i, uw);
-				outputnode(lp, u, s, uw);
+				// FIXME: could even combine fnode and fweight, etc.
+				emw64(fnode, u, s+1);
+				outputnode(lp, u, z, s, uw);
 				topdog = u;
 			}
 			/* new right node */
-			if((t = emr64(fnode, v-y)) == EMbupkis || t <= w){
-				DPRINT(Debugcoarse, "[%04llx] unvisited right node: %llx", e, v);
+			if(t < 0 || t <= w){
+				DPRINT(Debugcoarse, "[%04zx] unvisited right node: %zx", e, v);
 				if(u != topdog){
 					DPRINT(Debugcoarse, "vassal may not annex nodes on its own");
 					continue;
 				}
-				if((vw = emr64(fweight, i)) == EMbupkis)
+				if((vw = emr64(fweight, v) - 1) < 0)
 					vw = 1;	/* default value */
-				outputnode(lp, v, s, vw);
+				outputnode(lp, v, t, s, vw);
 				uw += vw;
-				emw64(fnode, v-y, s);
-				emw64(fweight2, i, uw);
+				emw64(fnode, v, s+1);
+				emw64(fweight, u, uw+1);
 				outputedge(lp, u, v);
 			}else if(v == u){
-				DPRINT(Debugcoarse, "[%04llx] self edge: %llx,%llx", e, u, s);
+				DPRINT(Debugcoarse, "[%04zx] self edge: %zx,%zx", e, u, s);
 				outputedge(lp, u, u);
-			}else if(t == s)
-				DPRINT(Debugcoarse, "[%04llx] mirror of previous edge, ignored", e);
-			else if(exists(s, t, fs2j, fjump, fedge2, M, w)
-			|| exists(t, s, fs2j, fjump, fedge2, M, w)){
-				DPRINT(Debugcoarse, "[%04llx] redundant external edge", e);
+			}else if(t == s){
+				DPRINT(Debugcoarse, "[%04zx] mirror of previous edge, ignored", e);
+			}else if(exists(s, t, fadj, k) || exists(t, s, fadj, k)){
+				DPRINT(Debugcoarse, "[%04zx] redundant external edge", e);
 				outputedge(lp, u, v);
 			}else{
-				DPRINT(Debugcoarse, "[%04llx] new external edge %zx,%zx", e, s, t);
-				emw64(fedge2, 2+2*M, s);
-				emw64(fedge2, 2+2*M+1, t);
-				if((d = emr64(fdeg, s-1-w)) == EMbupkis)
-					d = 0;
-				emw64(fdeg, s-1-w, ++d);
-				if((d = emr64(fdeg, t-1-w)) == EMbupkis)
-					d = 0;
-				emw64(fdeg, t-1-w, ++d);
-				insert(s-1-w, fs2j, fjump, fedge2, fdeg, M);
+				DPRINT(Debugcoarse, "[%04zx] new external edge %zx,%zx", e, s, t);
+				emw64(fedge, 2+M*2, u);
+				emw64(fedge, 2+M*2+1, v);
+				insert(u, v, fadj, g->nnodes);
 				M++;
 			}
 		}
-		emclose(fs2j);
-		emclose(fjump);
-		emclose(fweight);
-		emclose(fnode);
-		emclose(fdeg);
-		fweight = fweight2;
-		emclose(fedge);
-		fedge = fedge2;
 		endlevel(lp);
-		y = w + 1;
+		k = S - w;
 		w = S;
+		emclose(fadj);
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
 	if(M > 0){
@@ -298,31 +242,30 @@ coarsen(Graph *g, char *index)
 	/* add articial root node for all remaining */
 	if(S > w + 1){
 		s = ++S;
-		DPRINT(Debugcoarse, "push artificial root node %llx", s);
+		DPRINT(Debugcoarse, "push artificial root node %zx", s);
 		lvl = newlevel(lvl);
 		lp = lvl + dylen(lvl) - 1;
 		/* every node is an adjacency, every edge is internal */
 		for(e=0, u=-1; e<M; e++){
-			if((o = emr64(fedge, 2 + e*2)) != u){
+			if((o = emr64(fedge, 2+e*2)) != u){
 				u = o;
 				w = emr64(fweight, u);
-				assert(o != EMbupkis && w != EMbupkis);
-				outputnode(lp, u, s, w);
+				z = emr64(fnode, u) - 1;
+				outputnode(lp, u, z, s, w);
 			}
 			v = emr64(fedge, 2+e*2+1);
-			assert(v != EMbupkis);
 			outputedge(lp, u, v);
 		}
 	}
+	emclose(fnode);
 	emclose(fedge);
-	emclose(fweight);
 	return lvl;
 }
 
 static void
 usage(void)
 {
-	DPRINT(Debugcoarse, "usage: %s [-D which] SORTED_EDGES", argv0);
+	DPRINT(Debugcoarse, "usage: %s WIDELIST", argv0);
 	sysfatal("usage");
 }
 
