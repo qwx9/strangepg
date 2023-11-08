@@ -50,6 +50,7 @@ static Page pused = {.lleft = &pused, .lright = &pused},
 	pfree = {.lleft = &pfree, .lright = &pfree};
 static ssize memfree, memreallyfree = Poolsz / Pagesz;
 static uchar iobuf[IOUNIT];
+#define Sucks	((Page*)0x1)	/* yes it does */
 
 #define PLINK(u,v)	do{ \
 	Page *a = (u), *b = (v); \
@@ -88,7 +89,7 @@ poolcheck(void)
 			if(*b == nil)
 				continue;
 			for(pp=*b, pe=pp+Banksz; pp<pe; pp++){
-				if((p = *pp) == nil)
+				if((p = *pp) <= Sucks)
 					continue;
 				assert(p->e == em->id);
 				assert(p->e == ep - etab);
@@ -107,8 +108,6 @@ flush(Page *p)
 	EM *em;
 
 	em = etab[p->e];
-	if(em->flags & EMrdonly)
-		return -1;
 	if(em->fd < 0){
 		if(em->path == nil)
 			em->path = sysmktmp();	/* can be stupidly expensive */
@@ -126,7 +125,6 @@ freepage(Page *p)
 {
 	EM *em;
 
-	flush(p);
 	em = etab[p->e];
 	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
 	PUNLINK(p, p);
@@ -142,8 +140,7 @@ preclaim(void)
 
 	p = pused.lright;
 	em = etab[p->e];
-	if((em->flags & EMrdonly) == 0)
-		flush(p);
+	flush(p);
 	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
 	memset(p->buf, 0, Pagesz);
 	return p;
@@ -173,7 +170,7 @@ new(void)
 #define PREAD(fd, page, off)	do{ \
 	if(seek((fd), 0, 2) <= (off)) \
 		break; \
-	if(seek((fd), (off), 0) < 0) \
+	if(seek((fd), (off) & ~Pmask, 0) < 0) \
 		warn("seek: %s\n", error()); \
 	else if(read((fd), (page)->buf, sizeof((page)->buf)) < 0) \
 		warn("read: %s\n", error()); \
@@ -191,24 +188,26 @@ new(void)
 	(page)->addr = (off) & ~Pmask; \
 	}while(0)
 #define PAGE(em, page, off)	do{ \
-	int __n, __readme = 0; \
+	int __n; \
 	Bank __bank; \
 	Page **__pp; \
 	__n = BADDR((off)); \
 	if(dylen((em)->banks) <= __n || (__bank = (em)->banks[__n]) == nil){ \
 		__bank = BALLOC(); \
 		dyinsert((em)->banks, __n, __bank); \
+		/* this SUCKS */ \
 		if((em)->infd >= 0) \
-			__readme = 1; \
+			for(__pp=__bank; __pp<__bank+Banksz; __pp++) \
+				*__pp = Sucks; \
 	} \
 	__pp = __bank + PADDR((off)); \
-	if(((page) = *__pp) == nil){ \
+	if(((page) = *__pp) <= Sucks){ \
 		PALLOC((em), (page), (off)); \
-		*__pp = (page); \
-		if(__readme) \
-			PREAD((em)->infd, (page), (off) & ~Pmask); \
+		if(*__pp == Sucks) \
+			PREAD((em)->infd, (page), (off)); \
 		else if((em)->fd >= 0) \
-			PREAD((em)->fd, (page), (off) & ~Pmask); \
+			PREAD((em)->fd, (page), (off)); \
+		*__pp = (page); \
 	} \
 	POKE((page)); \
 	}while(0)
@@ -259,8 +258,10 @@ em2fs(EM *em, File *f, ssize nbytes)
 	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
-				if(*p != nil)
+				if(*p > Sucks){
+					flush(*p);
 					freepage(*p);
+				}
 	if(em->fd < 0){
 		warn("em2fs: nothing to write\n");
 		return 0;
@@ -294,7 +295,7 @@ emclose(EM *em)
 	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
-				if(*p != nil)
+				if(*p > Sucks)
 					freepage(*p);
 	if(em->infd >= 0)
 		close(em->infd);
