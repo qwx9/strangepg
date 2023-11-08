@@ -125,32 +125,32 @@ newlevel(Lbuf *lvl)
 	return lvl;
 }
 
-static int
-exists(usize s, usize t, EM *fadj, usize nnodes)
-{
-	uchar *p;
+KHASH_SET_INIT_INT64(meh)
 
-	s = s * nnodes + t;
-	p = emptr(fadj, (vlong)(s >> 3));
-	return (*p & 1 << (s & 7)) != 0;
+static int
+exists(usize s, usize t, khash_t(meh) *h, usize width)
+{
+	khiter_t k;
+
+	k = kh_get(meh, h, s * width + t);
+	return k != kh_end(h);
 }
 static void
-insert(usize s, usize t, EM *fadj, usize nnodes)
+insert(usize s, usize t, khash_t(meh) *h, usize width)
 {
-	uchar *p;
+	int ret;
 
-	s = s * nnodes + t;
-	p = emptr(fadj, (vlong)(s >> 3));
-	*p = *p | 1 << (s & 7);
+	kh_put(meh, h, s * width + t, &ret);
 }
 
 static Lbuf *
 coarsen(Graph *g, char *index)
 {
 	int topdog;
-	ssize o, k, w, u, v, z, s, t, m, e, uw, vw, M, S;
-	EM *fedge, *fnode, *fweight, *fadj;
+	ssize o, w, u, v, z, s, t, m, e, uw, vw, M, S;
+	EM *fedge, *fnode, *fweight;
 	Lbuf *lvl, *lp;
+	khash_t(meh) *h;
 
 	if((fedge = emopen(index, 0)) == nil)
 		sysfatal("emclone: %s", error());
@@ -168,13 +168,12 @@ coarsen(Graph *g, char *index)
 	S = g->nnodes - 1;
 	lvl = nil;
 	w = S;
-	k = w;
 	uw = 0;	/* cannot happen */
 	while(M > Minedges){
+		h = kh_init(meh);
 		printtab(fedge, M);
 		lvl = newlevel(lvl);
 		lp = lvl + dylen(lvl) - 1;
-		fadj = emopen(nil, 0);
 		m = M;
 		M = 0;
 		topdog = 0;
@@ -218,21 +217,20 @@ coarsen(Graph *g, char *index)
 				outputedge(lp, u, u);
 			}else if(t == s){
 				DPRINT(Debugcoarse, "[%04zx] mirror of previous edge, ignored", e);
-			}else if(exists(s, t, fadj, k) || exists(t, s, fadj, k)){
+			}else if(exists(s, t, h, g->nnodes) || exists(t, s, h, g->nnodes)){
 				DPRINT(Debugcoarse, "[%04zx] redundant external edge", e);
 				outputedge(lp, u, v);
 			}else{
 				DPRINT(Debugcoarse, "[%04zx] new external edge %zx,%zx", e, s, t);
 				emw64(fedge, 2+M*2, u);
 				emw64(fedge, 2+M*2+1, v);
-				insert(u, v, fadj, g->nnodes);
+				insert(u, v, h, g->nnodes);
 				M++;
 			}
 		}
 		endlevel(lp);
-		k = S - w;
 		w = S;
-		emclose(fadj);
+		kh_destroy(meh, h);
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
 	if(M > 0){
