@@ -25,6 +25,7 @@ enum{
 	Pagesz = 1<<16,
 	Pmask = Pagesz - 1,
 };
+static uvlong poolsz = Poolsz;
 typedef struct Page Page;
 typedef Page**	Bank;
 struct Page{
@@ -325,4 +326,16 @@ emopen(char *path, int flags)
 		}
 	}
 	return em;
+}
+
+int
+eminit(int m)
+{
+	if(m < 16 || m > 63){	/* untested at the extremes */
+		werrstr("invalid memory size");
+		return -1;
+	}
+	poolsz = 1ULL << m;
+	memreallyfree = poolsz / Pagesz;
+	return 0;
 }

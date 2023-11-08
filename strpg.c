@@ -42,12 +42,13 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-bins] [-l layout] [FILE]\n", argv0);
+	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [FILE]\n", argv0);
 }
 
 int
 parseargs(int argc, char **argv)
 {
+	int multiplier;
 	char *s;
 
 	intype = FFgfa;
@@ -87,6 +88,11 @@ parseargs(int argc, char **argv)
 			deflayout = LLforce;
 		else
 			sysfatal("unknown layout type");
+		break;
+	case 'm':
+		multiplier = atoi(EARGF(usage());
+		if(eminit(multiplier) < 0)
+			sysfatal("invalid multiplier");
 		break;
 	case 'n': noui = 1; break;
 	case 's': drawstep = 1; break;
