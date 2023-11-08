@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "em.h"
 
 int haxx0rz;
 
@@ -90,7 +91,7 @@ parseargs(int argc, char **argv)
 			sysfatal("unknown layout type");
 		break;
 	case 'm':
-		multiplier = atoi(EARGF(usage());
+		multiplier = atoi(EARGF(usage()));
 		if(eminit(multiplier) < 0)
 			sysfatal("invalid multiplier");
 		break;
