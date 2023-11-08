@@ -14,19 +14,16 @@
  *	cache, etc. ← would be external to em, this is generic enough */
 /* FIXME: linux: mmap? plan9: see also readv(2) */
 /* FIXME: don't do while loop in dygrow, compute size directly */
-/* FIXME: do away with chains, useless (if it's less code) */
 
 enum{
 	/* must be powers of two */
-	Poolsz = 1ULL<<30,
+	Poolsz = 1ULL<<32,
 	Bshift = 24,
 	Banksz = 1<<8,
 	Bmask = Banksz - 1,
 	Pshift = 16,
 	Pagesz = 1<<16,
 	Pmask = Pagesz - 1,
-
-	EMrdonly = 1<<0,
 };
 typedef struct Page Page;
 typedef Page**	Bank;
