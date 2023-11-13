@@ -29,7 +29,7 @@ struct Dyhdr{
 /* FIXME: starting to suck big time */
 #define dygrow(a,i)	do{ \
 	Dyhdr*__h = dyhdr(a); \
-	(a) = dychecksz((a),__h,__h->len); \
+	(a) = dychecksz((a),__h,(i)); \
 	while(__h->sz < (i))	\
 		(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
 	}while(0)
@@ -45,4 +45,11 @@ struct Dyhdr{
 		(a)[(i)] = (v); \
 	if((i)+1 > __h->len) \
 		__h->len = (i)+1; \
+	}while(0)
+#define dydelete(a,i)	do{ \
+	ssize __Δ = dyhdr(a)->len - 1 - (i); \
+	assert(__Δ >= 0); \
+	if(__Δ > 0) \
+		memmove((a)+(i)*sizeof(*(a)), (a)+((i)+1)*sizeof(*(a)), __Δ*sizeof(*(a))); \
+	dypop((a)); \
 	}while(0)
