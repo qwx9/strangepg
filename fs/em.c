@@ -27,7 +27,6 @@ enum{
 };
 static uvlong poolsz = Poolsz;
 typedef struct Page Page;
-typedef Page**	Bank;
 struct Page{
 	int e;
 	usize addr;
@@ -41,7 +40,7 @@ struct EM{
 	int fd;
 	int infd;
 	char *path;
-	Bank *banks;
+	Page ***banks;	/* banks → pages → page */
 };
 static EM **etab;
 static Page pused = {.lleft = &pused, .lright = &pused},
@@ -76,14 +75,13 @@ static uchar iobuf[IOUNIT];
 static void
 poolcheck(void)
 {
-	Page **pp, **pe, *p;
-	Bank *b;
+	Page ***b, **pp, **pe, *p;
 	EM **ep, *em;
 
 	for(ep=etab; ep<etab+dylen(etab); ep++){
 		if((em = *ep) == nil)
 			continue;
-		for(b=em->banks; b<em->banks+dylen(em->banks); b++){
+		for(b=em->banks; b<em->banks+nelem(em->banks); b++){
 			if(*b == nil)
 				continue;
 			for(pp=*b, pe=pp+Banksz; pp<pe; pp++){
@@ -91,7 +89,7 @@ poolcheck(void)
 					continue;
 				assert(p->e == em->id);
 				assert(p->e == ep - etab);
-				assert(BADDR(p->addr) < dylen(em->banks));
+				assert(BADDR(p->addr) < nelem(em->banks));
 				assert(em->banks[BADDR(p->addr)] != nil);
 				assert(em->banks[BADDR(p->addr)][PADDR(p->addr)] == p);
 			}
@@ -105,7 +103,8 @@ flush(Page *p)
 {
 	EM *em;
 
-	em = etab[p->e];
+	if((em = etab[p->e]) == nil)
+		return -1;
 	if(em->fd < 0){
 		if(em->path == nil)
 			em->path = sysmktmp();	/* can be stupidly expensive */
@@ -123,8 +122,8 @@ freepage(Page *p)
 {
 	EM *em;
 
-	em = etab[p->e];
-	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
+	if((em = etab[p->e]) != nil)
+		em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
 	PUNLINK(p, p);
 	PLINK(pfree.lleft, p);
 	memfree++;
@@ -137,9 +136,10 @@ preclaim(void)
 	EM *em;
 
 	p = pused.lright;
-	em = etab[p->e];
-	flush(p);
-	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
+	if((em = etab[p->e]) != nil){
+		flush(p);
+		em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
+	}
 	memset(p->buf, 0, Pagesz);
 	return p;
 }
@@ -173,7 +173,7 @@ new(void)
 	else if(read((fd), (page)->buf, sizeof((page)->buf)) < 0) \
 		warn("read: %s\n", error()); \
 	}while(0)
-#define BALLOC()	(emalloc(Banksz * sizeof(Bank)))
+#define BALLOC()	(emalloc(Banksz * sizeof(Page**)))
 /* POKEd at the end */
 #define PALLOC(em, page, off)	do{ \
 	if(memfree > 0) \
@@ -187,12 +187,12 @@ new(void)
 	}while(0)
 #define PAGE(em, page, off)	do{ \
 	int __n; \
-	Bank __bank; \
-	Page **__pp; \
+	Page **__bank, **__pp; \
 	__n = BADDR((off)); \
-	if(dylen((em)->banks) <= __n || (__bank = (em)->banks[__n]) == nil){ \
-		__bank = BALLOC(); \
-		dyinsert((em)->banks, __n, __bank); \
+	if(dylen((em)->banks) <= __n) \
+		dygrow((em)->banks, __n); \
+	if(((__bank) = (em)->banks[__n]) == nil){ \
+		(em)->banks[__n] = __bank = BALLOC(); \
 		/* this SUCKS */ \
 		if((em)->infd >= 0) \
 			for(__pp=__bank; __pp<__bank+Banksz; __pp++) \
@@ -249,11 +249,10 @@ int
 em2fs(EM *em, File *f, ssize nbytes)
 {
 	vlong n;
-	Bank *b;
-	Page **p, **pe;
+	Page ***b, **p, **pe;
 	File *ef;
 
-	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
+	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
 				if(*p > Sucks){
@@ -287,10 +286,9 @@ err:
 void
 emclose(EM *em)
 {
-	Bank *b;
-	Page **p, **pe;
+	Page ***b, **p, **pe;
 
-	for(b=em->banks; b<em->banks+dylen(em->banks); b++)
+	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
 				if(*p > Sucks)
