@@ -53,7 +53,7 @@ ALLOBJS:=\
 	$(COARSENOBJS)\
 
 CC= clang
-OFLAGS?= -O2 -pipe -march=native
+OFLAGS?= -O3 -pipe -march=native -fomit-frame-pointer
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
 CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
@@ -81,6 +81,7 @@ LDFLAGS?=
 LDLIBS?= -lGL -lglfw -lm
 
 ifdef DEBUG
+	export LLVM_PROFILE_FILE :=./llvm_%p.prof
 	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual                \
 			 -Wdisabled-optimization -Wfloat-equal -Winit-self -Winline \
 			 -Winvalid-pch -Wunsafe-loop-optimizations                  \
@@ -88,7 +89,7 @@ ifdef DEBUG
 			 -Wredundant-decls -Wshadow -Wstack-protector               \
 			 -Wsuggest-attribute=const -Wswitch-default -Wunused        \
 			 -Wvariadic-macros
-	CFLAGS+= -g -glldb -O0
+	CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
 else
 	# c2x for omitting parameter names in a function definition
 	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
