@@ -6,36 +6,31 @@
 	v = $2
 	if(!(u in visited)){
 		visited[u] = ++S
-		print "S", u-1, "←", S-1 >> "/fd/2"
 		top = u
+		printf "NEWSUPER %x → %x [%d]\n", u, s, weight[u+1] >>"/fd/2"
 	}
 	s = visited[u]
 	if(!(v in visited)){
-		# only the sovereign node may annex; if not it
-		# just wait and see
 		if(u == top){
 			visited[v] = s
-			print "M", v-1, "←", s-1 >> "/fd/2"
+			printf "MERGERIGHT %x,%x (%x,%x)\n", s, t, u, x >>"/fd/2"
 		}else
-			print "_", v-1, ":", u-1, "not", s-1 >> "/fd/2"
-	}else if(u == v){
-		# self edge
-		print "↔", u-1, v-1 >> "/fd/2"
-	}else if((t = visited[v]) == s){
-		# ignore mirror internal edge
-		print "↔", u-1, v-1 >> "/fd/2"
-	# external edge
-	}else if((s,t) in edges || (t,s) in edges){
-		# ignore redundant edges
-		print "R", s-1, t-1 >> "/fd/2"
-	}else{
+			printf "SKIPOUTER %x,%x (%x,%x)\n", s, t, u, v >>"/fd/2"
+	}else if(u == v)
+		printf "SELF %x,%x (%x,%x)\n", s, t, u, v >>"/fd/2"
+	else if((t = visited[v]) == s)
+		printf "MIRROR %x,%x (%x,%x)\n", s, t, u, v >>"/fd/2"
+	else if((s,t) in edges || (t,s) in edges)
+		printf "REDUNDANT %x,%x (%x,%x)\n", s, t, u, v >>"/fd/2"
+	else{
 		edges[s,t] = 1
-		edgei[length(edges)] = s "\t" t
-		print "E", s-1, t-1 >> "/fd/2"
+		edgei[++M] = s"\x1c"t
+		printf "EXT %x,%x (%x,%x)\n", s, t, u, v >>"/fd/2"
 	}
 }
 END{
-	# unordered
-	for(i=1; i<=length(edgei); i++)
-		print edgei[i]
+	for(i=1; i<=M; i++){
+		split(edgei[i], a, "\x1c")
+		print a[1] "\t" a[2]
+	}
 }
