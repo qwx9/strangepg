@@ -15,6 +15,7 @@ struct Lbuf{
 	EM *nodes;
 	EM *edges;
 };
+static int plaintext;
 static usize nsuper;
 
 // FIXME: fix fucking openfs semantics
@@ -63,17 +64,30 @@ reverse(Graph *g, Lbuf *lvl)
 }
 
 static void
-printtab(EM *em, ssize ne)
+printtab(EM *em, EM *map, ssize ne, ssize k, int nlvl)
 {
 	int i;
-	ssize u, v;
+	ssize u, v, s, t;
 
-	if((debug & Debugcoarse) == 0)
+	if(!plaintext && (debug & Debugcoarse) == 0)
 		return;
+	print("level\t%d\t%zd\n", nlvl, ne);
 	for(i=0; i<ne; i++){
 		u = emr64(em, 2+i*2);
 		v = emr64(em, 2+i*2+1);
-		DPRINT(Debugcoarse, "E[%d] %zx,%zx", i, u, v);
+		if((s = emr64(map, u) - 1) <= k){
+			if(s >= 0)
+				s = emr64(map, s) - 1;
+			else
+				s = u;
+		}
+		if((t = emr64(map, v) - 1) <= k){
+			if(t >= 0)
+				t = emr64(map, t) - 1;
+			else
+				t = v;
+		}
+		warn("%zx\t%zx\n", s, t);
 	}
 }
 
@@ -126,34 +140,24 @@ newlevel(Lbuf *lvl)
 }
 
 KHASH_SET_INIT_INT64(meh)
-
-static int
-exists(usize s, usize t, khash_t(meh) *h, usize width)
-{
-	khiter_t k;
-
-	k = kh_get(meh, h, s * width + t);
-	return k != kh_end(h);
-}
-static void
-insert(usize s, usize t, khash_t(meh) *h, usize width)
-{
-	int ret;
-
-	kh_put(meh, h, s * width + t, &ret);
-}
+#define EXISTS(h, s, t, width)	(kh_get(meh, (h), (s) * width + (t)) != kh_end(h))
+#define SPAWN(h, s, t, width)	do{ \
+	int ret; \
+	kh_put(meh, (h), (s) * (width) + (t), &ret); \
+	kh_put(meh, (h), (t) * (width) + (s), &ret); \
+	}while(0)
 
 static Lbuf *
 coarsen(Graph *g, char *index)
 {
-	int topdog;
-	ssize o, w, u, v, z, s, t, m, e, uw, vw, M, S;
-	EM *fedge, *fnode, *fweight;
+	int topdog, nlvl;
+	ssize o, w, u, v, z, k, s, t, m, e, uw, vw, x, M, S;
+	EM *fedge, *fnode, *fweight, *fshit;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
 
 	if((fedge = emopen(index, 0)) == nil)
-		sysfatal("emclone: %s", error());
+		sysfatal("coarsen: %s", error());
 	g->nnodes = emr64(fedge, 0);
 	g->nedges = emr64(fedge, 1);
 	if(g->nedges <= Minedges){
@@ -166,83 +170,103 @@ coarsen(Graph *g, char *index)
 	fweight = emopen(nil, 0);
 	M = g->nedges;
 	S = g->nnodes - 1;
-	lvl = nil;
+	lp = lvl = nil;
+	nlvl = 0;
 	w = S;
+	k = 0;
 	uw = 0;	/* cannot happen */
+	// FIXME: optimize this and em
 	while(M > Minedges){
 		h = kh_init(meh);
-		printtab(fedge, M);
-		lvl = newlevel(lvl);
-		lp = lvl + dylen(lvl) - 1;
+		fshit = emopen(nil, 0);
+		if(!plaintext){
+			lvl = newlevel(lvl);
+			lp = lvl + dylen(lvl) - 1;
+		}
 		m = M;
 		M = 0;
 		topdog = 0;
 		for(e=0; e<m; e++){
 			if(e > 0 && e % 1000 == 0)
-				DPRINT(Debugcoarse, "L%02zx edge %zx/%zx\n", dylen(lvl), e, g->nedges);
-			u = emr64(fedge, 2+e*2);
+				DPRINT(Debugcoarse, "L%02d edge %zx/%zx\n", nlvl, e, g->nedges);
+			u = emr64(fedge, 2+e*2+0);
 			v = emr64(fedge, 2+e*2+1);
-			s = emr64(fnode, u) - 1;
-			t = emr64(fnode, v) - 1;
-			DPRINT(Debugcoarse, "processing %#p %zx,%zx, %zx,%zx (%zx,%zx)",
-				fedge, 2+e*2, 2+e*2+1, u, v, s, t);
-			/* instead of initializing everything, assume 0's are NA's */
-			if(s < 0 || s <= w){
-				z = s;
+			if((s = emr64(fnode, u) - 1) < 0)
+				s = u;
+			DPRINT(Debugcoarse, "processing %#p %zx,%zx, %zx,%zx [w %zx S %zx]",
+				fedge, 2+e*2, 2+e*2+1, u, v, w, S);
+			if(s <= w){
 				s = ++S;
-				DPRINT(Debugcoarse, "[%04zx] unvisited left node[%zx] %zx ← %zx", e, u, z, s);
+				DPRINT(Debugcoarse, "[%04zx] unvisited left node[%zx] ← %zx", e, u, s);
 				if((uw = emr64(fweight, u) - 1) < 0)
 					uw = 1;	/* default value */
-				// FIXME: could even combine fnode and fweight, etc.
 				emw64(fnode, u, s+1);
-				outputnode(lp, u, z, s, uw);
-				topdog = u;
+				x = emr64(fshit, e*2+0);
+				if(!plaintext)
+					outputnode(lp, x, u, s, uw);
+				topdog = u;		// FIXME: only works if in order (is it always more or less preserved on the left hand side at least?)
+				// FIXME: ↑ add assert/test to see if this happens; fuzz with awk,
+				// check that IT is correct; write what is supposed to be a correct
+				// and complete version in awk, test against that
 			}
-			/* new right node */
-			if(t < 0 || t <= w){
-				DPRINT(Debugcoarse, "[%04zx] unvisited right node: %zx", e, v);
+			if((t = emr64(fnode, v) - 1) < 0)
+				t = v;
+			DPRINT(Debugcoarse, "\t>> %zx,%zx → %zx,%zx", u, v, s, t);
+			if(t <= w){
+				DPRINT(Debugcoarse, "[%04zx] unvisited right node: %zx w %zd", e, v, w);
 				if(u != topdog){
 					DPRINT(Debugcoarse, "vassal may not annex nodes on its own");
 					continue;
 				}
 				if((vw = emr64(fweight, v) - 1) < 0)
 					vw = 1;	/* default value */
-				outputnode(lp, v, t, s, vw);
-				uw += vw;
 				emw64(fnode, v, s+1);
-				emw64(fweight, u, uw+1);
-				outputedge(lp, u, v);
+				emw64(fweight, u, uw+vw+1);
+				x = emr64(fshit, e*2+1);
+				if(!plaintext){
+					outputnode(lp, x, v, s, vw);
+					outputedge(lp, u, v);
+				}
 			}else if(v == u){
 				DPRINT(Debugcoarse, "[%04zx] self edge: %zx,%zx", e, u, s);
-				outputedge(lp, u, u);
+				if(!plaintext)
+					outputedge(lp, u, u);
 			}else if(t == s){
 				DPRINT(Debugcoarse, "[%04zx] mirror of previous edge, ignored", e);
-			}else if(exists(s, t, h, g->nnodes) || exists(t, s, h, g->nnodes)){
+			}else if(EXISTS(h, s, t, g->nnodes)){
 				DPRINT(Debugcoarse, "[%04zx] redundant external edge", e);
-				outputedge(lp, u, v);
+				if(!plaintext)
+					outputedge(lp, u, v);
 			}else{
 				DPRINT(Debugcoarse, "[%04zx] new external edge %zx,%zx", e, s, t);
-				emw64(fedge, 2+M*2, u);
-				emw64(fedge, 2+M*2+1, v);
-				insert(u, v, h, g->nnodes);
+				emw64(fedge, 2+M*2+0, s);
+				emw64(fedge, 2+M*2+1, t);
+				emw64(fshit, M*2+0, u);
+				emw64(fshit, M*2+1, v);
+				SPAWN(h, s, t, g->nnodes);
 				M++;
 			}
 		}
-		endlevel(lp);
+		if(!plaintext)
+			endlevel(lp);
+		printtab(fedge, fnode, M, k, nlvl++);
+		if(k == 0)
+			k = w;
 		w = S;
 		kh_destroy(meh, h);
+		emclose(fshit);
 	}
-	DPRINT(Debugcoarse, "coarsen: ended at level %lld", dylen(lvl));
-	if(M > 0){
+	DPRINT(Debugcoarse, "coarsen: ended at level %d", nlvl);
+	if(M > 0)
 		DPRINT(Debugcoarse, "stopping with %lld remaining edges", M);
-		printtab(fedge, M);
-	}
 	/* add articial root node for all remaining */
 	if(S > w + 1){
 		s = ++S;
 		DPRINT(Debugcoarse, "push artificial root node %zx", s);
-		lvl = newlevel(lvl);
-		lp = lvl + dylen(lvl) - 1;
+		if(!plaintext){
+			lvl = newlevel(lvl);
+			lp = lvl + dylen(lvl) - 1;
+		}
 		/* every node is an adjacency, every edge is internal */
 		for(e=0, u=-1; e<M; e++){
 			if((o = emr64(fedge, 2+e*2)) != u){
@@ -254,6 +278,7 @@ coarsen(Graph *g, char *index)
 			v = emr64(fedge, 2+e*2+1);
 			outputedge(lp, u, v);
 		}
+		printtab(fedge, fnode, M, k, nlvl);
 	}
 	emclose(fnode);
 	emclose(fedge);
@@ -263,13 +288,14 @@ coarsen(Graph *g, char *index)
 static void
 usage(void)
 {
-	DPRINT(Debugcoarse, "usage: %s WIDELIST", argv0);
+	warn("usage: %s [-n] [-m 16-63] WIDELIST\n", argv0);
 	sysfatal("usage");
 }
 
 int
 main(int argc, char **argv)
 {
+	int m;
 	char *s;
 	Graph g;
 	Lbuf *lvl;
@@ -296,10 +322,21 @@ main(int argc, char **argv)
 			usage();
 		}
 		break;
+	case 'm':
+		m = atoi(EARGF(usage()));
+		if(eminit(m) < 0)
+			sysfatal("invalid multiplier");
+		break;
+	case 'n':
+		plaintext = 1;
+		break;
 	}ARGEND
 	if(argc < 1)
 		usage();
-	if((lvl = coarsen(&g, argv[0])) == nil)
+	lvl = coarsen(&g, argv[0]);
+	if(plaintext)
+		return 0;
+	else if(lvl == nil)
 		sysfatal("coarsen: %s", error());
 	if(reverse(&g, lvl) < 0)
 		sysfatal("reverse: %s", error());
