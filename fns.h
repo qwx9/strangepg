@@ -34,18 +34,20 @@ int	errstr(char*, uint);
 
 int	zoomgraph(Graph*, int);
 
-Node*	getnode(Graph*, usize);
-Edge*	getedge(Graph*, usize);
-
+Node*	getnode(Graph*, ssize);
+Edge*	getedge(Graph*, ssize);
 void	printgraph(Graph*);
-Node*	id2n(Graph*, char*);
-usize	nodeid(Graph*, usize);
+void	popinode(Graph*, Node*);
+ssize	pushinode(Graph*, ssize, Node*);
+void	popnode(Graph*, ssize);
+void	popedge(Graph*, ssize);
+ssize	id2n(Graph*, char*);
+ssize	nodeid(Graph*, usize);
 usize	packedid(Graph*, usize);
-usize	pushpackededge(Graph*, usize, usize);
-usize	pushnode(Graph*, usize, int);
-usize	pushnodeat(Graph*, usize, int, ssize);
+ssize	pushedge(Graph*, usize, usize, int, int);
+ssize	pushnode(Graph*, usize);
 int	pushnamednode(Graph*, char*);
-int	pushnamededge(Graph*, char*, char*, int, int);
+ssize	pushnamededge(Graph*, char*, char*, int, int);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);
 
