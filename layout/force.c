@@ -70,7 +70,8 @@ compute(Graph *g)
 		}
 		for(u=g->nodes, i=0; u<ne; i++, u++){
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
-				e = getedge(g, *ep);
+				if((e = getedge(g, *ep)) == nil)
+					continue;
 				if((from = getnode(g, e->u>>1)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);

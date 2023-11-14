@@ -68,6 +68,7 @@ drawedges(Graph *g)
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
 		u = getnode(g, e->u >> 1);
 		v = getnode(g, e->v >> 1);
+		assert(u != nil && v != nil);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
 		drawedge(q, MAX(0., view.zoom/5));
 	}
@@ -83,7 +84,7 @@ drawnodes(Graph *g)
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes, u->id);
+		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes, u->eid);
 	}
 	return 0;
 }

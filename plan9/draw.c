@@ -70,7 +70,7 @@ drawlabel(Quad, Quad, Quad q, vlong id)
 	char lab[128];
 
 	q = centerscalequad(q);
-	snprint(lab, sizeof lab, "%lld", id);
+	snprint(lab, sizeof lab, "%zx", id);
 	string(viewfb, v2p(q.o), col[Ctext], ZP, font, lab);
 	return 0;
 }

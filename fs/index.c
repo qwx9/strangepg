@@ -18,7 +18,7 @@ readtree(Graph *g, char *path)
 		werrstr("no input file");
 		return -1;
 	}
-	dprint(Debugcoarse, "readtree %s", path);
+	DPRINT(Debugcoarse, "readtree %s", path);
 	f = g->f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
 	if(openfs(f, path, OREAD) < 0)
 		return -1;
@@ -26,7 +26,7 @@ readtree(Graph *g, char *path)
 	g->nedges = get64(f);
 	g->nsuper = get64(f);
 	nl = g->nlevels = get64(f);
-	dprint(Debugcoarse, "ct: nv+ns %zd ne %zd nl %d",
+	DPRINT(Debugcoarse, "ct: nv+ns %zd ne %zd nl %d",
 		g->nnodes, g->nedges, g->nlevels);
 	c = g->c;
 	dyprealloc(c->levels, nl);
@@ -35,11 +35,11 @@ readtree(Graph *g, char *path)
 		l->nedges = get64(f);
 		l->noff = get64(f);
 		l->eoff = get64(f);
-		dprint(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
+		DPRINT(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
 			l-c->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}
 	/* file remains open */
-	dprint(Debugcoarse, "readtree done");
+	DPRINT(Debugcoarse, "readtree done");
 	return 0;
 }
 
@@ -69,7 +69,6 @@ static void
 nuke(Graph *g)
 {
 	nukegraph(g);
-	free(g->c);
 }
 
 static Filefmt ff = {

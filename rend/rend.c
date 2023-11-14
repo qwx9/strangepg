@@ -4,7 +4,7 @@ static double
 faceyourfears(Graph *g, Node *u)
 {
 	int n, sign;
-	usize *ip, *ie, us, them;
+	usize *ip, *ie;
 	double θ, dθ;
 	Edge *e;
 	Node *v;
@@ -20,22 +20,19 @@ faceyourfears(Graph *g, Node *u)
 
 	θ = 0.;
 	n = 0;
-	us = u - g->nodes;
 	/* face outgoing */
 	if(dylen(u->out) > 0){
 		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
-			e = getedge(g, *ip);
+			// FIXME: review this code with the diff; there's some
+			//	redundancy and it might be unintentional
+			//	it's buggy anyway
+			if((e = getedge(g, *ip)) == nil)
+				continue;
+			v = getnode(g, e->v >> 1);
+			assert(v != nil);
+			if(u == v)
+				continue;
 			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			them = e->v >> 1;
-			assert(u == getnode(g, e->u >> 1));
-			if(getnode(g, them) - g->nodes == us){
-				them = e->u >> 1;
-				if(getnode(g, them) - g->nodes == us){
-					n--;
-					continue;
-				}
-			}
-			v = getnode(g, them);
 			Δ = subpt2(v->vrect.o, u->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			// FIXME: needs to be scaled down
@@ -50,18 +47,13 @@ faceyourfears(Graph *g, Node *u)
 	/* face away from incoming */
 	if(dylen(u->in) > 0){
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
-			e = getedge(g, *ip);
+			if((e = getedge(g, *ip)) == nil)
+				continue;
+			v = getnode(g, e->v >> 1);
+			assert(v != nil);
+			if(u == v)
+				continue;
 			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			them = getnode(g, e->v >> 1) - g->nodes;
-			assert(u == getnode(g, e->v >> 1));
-			if(them == us){
-				them = e->v >> 1;
-				if(them == us){
-					n--;
-					continue;
-				}
-			}
-			v = getnode(g, them);
 			Δ = subpt2(u->vrect.o, v->vrect.o);
 			dθ = sign * atan2(Δ.y, Δ.x);
 			/* FIXME: see comment above */

@@ -3,20 +3,7 @@
 #include "em.h"
 #include "index.h"
 
-Node *
-getnode(Graph *g, usize i)
-{
-	assert(i < dylen(g->nodes));
-	return g->nodes + i;
-}
-
-Edge *
-getedge(Graph *g, usize i)
-{
-	assert(i < dylen(g->edges));
-	return g->edges + i;
-}
-
+// FIXME: pack into/unpack from specific supernode
 int
 unloadbranch(Graph *, Level *, usize)
 {
@@ -34,83 +21,71 @@ loadbranch(Graph *, Level *, usize)
 void
 unloadlevels(Graph *g, int z, int Δ)
 {
-	int i;
-	usize par, w, s0;
-	Node *n, *n0;
+	int i, j, weight;
+	usize u, old, new;
 	Coarse *c;
 	Level *l;
-	File *ft;
+	File *f;
 
-	ft = g->f;
+	f = g->f;
 	c = g->c;
 	l = c->levels + z;
-	n0 = z > 1 ? g->nodes + l[-1].firstnode : g->nodes;
-	s0 = n0->id;
-	seekfs(ft, l->noff);
-	for(i=0; i<l->nnodes; i++){
-		get64(ft);			/* u */
-		par = get64(ft);
-		w = get64(ft);
-		n = n0 + par - s0;
-		if(n->id >= s0)
-			n->weight += w;
-		else
-			n->id = par;
-		/* no need to update inodes */
+	for(j=0; j<Δ; j++, l--, c->level--){
+		seekfs(f, l->noff);
+		for(i=0; i<l->nnodes; i++){
+			u = get64(f);
+			old = get64(f);
+			new = get64(f);
+			weight = get64(f);
+			remapnode(g, u, old, new, weight);
+		}
+		c->level--;
+		// FIXME: smarter given reuse
+		for(i=0, j=dylen(g->nodes)-l->nnodes; i<j; i++)
+			popnode(g, dylen(g->nodes) - 1);
 	}
-	for(i=0; i<l->nnodes; i++)
-		dypop(g->nodes);
-	/* no need to update iedges */
-	g->c->level -= Δ;
+	c->level = z;	/* FIXME: external functions may assume depth */
+	for(j=0; j<Δ; j++, l--, c->level--)
+		for(i=0, j=dylen(g->edges)-l->nedges; i<j; i++)
+			popedge(g, dylen(g->edges) - 1);
 	printgraph(g);
 }
 
+// FIXME: don't do dynamic arrays for level data, it's constant
 void
 loadlevels(Graph *g, int z, int Δ)
 {
-	int w;
-	usize u, v, par, i, j, x;
+	usize old, new, weight, u, v, i, j;
 	Coarse *c;
 	Level *l;
-	File *ft;
+	File *f;
 
-	ft = g->f;
+	f = g->f;
 	c = g->c;
-	l = c->levels + z;	/* note that z is current + 1 */
-	g->c->level = z - 1;
-	seekfs(ft, l->noff);
-	for(j=0; j<Δ; j++, l++){
-		g->c->level++;
-		dprint(Debugcoarse, "loadlevels: level %zd: add %zd nodes",
-			l - c->levels, l->nnodes);
-		l->firstnode = dylen(g->nodes);
+	DPRINT(Debugcoarse, "loadlevels %#p cur %d z %d Δ %d\n",
+		g, c->level, z, Δ);
+	l = c->levels + z;	/* z is current + 1 */
+	c->level = z - 1;
+	for(j=0; j<Δ; j++, l++, c->level++){
+		seekfs(f, l->noff);
 		for(i=0; i<l->nnodes; i++){
-			u = get64(ft);
-			par = get64(ft);
-			w = get64(ft);
-			dprint(Debugcoarse, "loadlevels old=%zux new=%zux w=%d",
-				u, par, w);
-			x = u - l->firstnode;
-			pushnodeat(g, u, w, x);
-			dprint(Debugcoarse, "%s node[%zx] ← %zx\n",
-				x<dylen(g->nodes) ? "remap" : "push", x, u);
+			u = get64(f);
+			old = get64(f);
+			new = get64(f);
+			weight = get64(f);
+			remapnode(g, u, new, old, weight);
 		}
 	}
 	l = c->levels + z;
-	g->c->level = z - 1;
-	seekfs(ft, l->eoff);
-	for(j=0; j<Δ; j++, l++){
-		g->c->level++;
-		dprint(Debugcoarse, "loadlevels: level %zd: add %zd edges",
-			l - c->levels, l->nedges);
-		l->firstedge = dylen(g->edges);
+	c->level = z - 1;	/* external functions may assume depth */
+	seekfs(f, l->eoff);
+	for(j=0; j<Δ; j++, l++, c->level++){
+		seekfs(f, l->eoff);
 		for(i=0; i<l->nedges; i++){
-			u = get64(ft);
-			v = get64(ft);
-			dprint(Debugcoarse, "loadlevels edge %zux,%zux", u>>1, v>>1);
-			i = pushpackededge(g, u, v);
+			u = get64(f);
+			v = get64(f);
+			pushedge(g, u, v, Edgesense, Edgesense);
 		}
 	}
-	g->c->level = z - 1 + Δ;
 	printgraph(g);
 }

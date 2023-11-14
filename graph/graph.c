@@ -1,25 +1,28 @@
 #include "strpg.h"
+#include "em.h"
+#include "index.h"
 
 Graph *graphs;
 
-Node *
+ssize
 id2n(Graph *g, char *k)
 {
 	usize u;
 
 	if(idget(g->id2n, k, &u) < 0)
-		return nil;
+		return -1;
 	assert(u < dylen(g->nodes));
-	return g->nodes + u;
+	return u;
 }
 
-usize
+ssize
 nodeid(Graph *g, usize u)
 {
 	Node *n;
 
-	n = getnode(g, u);
-	return n->id;
+	if((n = getnode(g, u)) == nil)
+		return -1;
+	return n->eid;
 }
 
 usize
@@ -39,12 +42,12 @@ printgraph(Graph *g)
 		return;
 	warn("graph %#p nn %zd ne %zd\n", g, g->nnodes, g->nedges);
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++)
-		warn("e[%04zux] %zux[=%zux] → %zux[=%zux]\n",
+		warn("e[%04zux] %zx[=%zx] → %zx[=%zx]\n",
 			e - g->edges, packedid(g, e->u), e->u,
 			packedid(g, e->v), e->v);
 	for(n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++){
-		warn("n[%04zux] %zux weight %d → [ ",
-			n - g->nodes, n->id, n->weight);
+		warn("n[%04zux] %zx weight %d → [ ",
+			n - g->nodes, n->eid, n->weight);
 		for(np=n->out, nq=np+dylen(n->out); np<nq; np++)
 			warn("%zx ", *np);
 		warn("] ← [ ");
@@ -54,24 +57,32 @@ printgraph(Graph *g)
 	}
 }
 
-// FIXME: subgraphs: not always the last node/edge, so we need
-// to be able to add/remove at any index
+/* preserve extant indices */
+// FIXME: api: pass pointer?
 void
-popnode(Graph *, Node *)
+popnode(Graph *g, ssize i)
 {
-	// FIXME
-}
+	Node *n;
 
+	if(i < 0 || i >= dylen(g->nodes))
+		return;
+	n = g->nodes + i;
+	popinode(g, n);
+}
 void
-popedge(Graph *, Edge *)
+popedge(Graph *g, ssize i)
 {
-	// FIXME
+	Edge *e;
+
+	if((e = getedge(g, i)) == nil)
+		return;
+	e->u = Bupkis;
 }
 
 static Node
 newnode(void)
 {
-	Node u;
+	Node u = {0};
 
 	memset(&u, 0, sizeof u);
 	u.weight = 1;
@@ -84,84 +95,63 @@ newedge(void)
 	return (Edge){0, 0};
 }
 
-usize
-pushpackededge(Graph *g, usize pu, usize pv)
+ssize
+pushedge(Graph *g, usize pu, usize pv, int udir, int vdir)
 {
-	usize i;
+	ssize i;
 	Edge e;
 	Node *n;
 
+	DPRINT(Debugcoarse, "pushedge %zx,%zx", pu, pv);
 	e = newedge();
-	e.u = pu;
-	e.v = pv;
+	e.u = pu << 1 | udir;
+	e.v = pv << 1 | vdir;
 	i = dylen(g->edges);
 	dypush(g->edges, e);
-	dprint(Debugcoarse, "pushpackededge [%zux] %zux,%zux", i, pu, pv);
-	n = getnode(g, pu >> 1);
-	dprint(Debugcoarse, "\t[%zx]%zux → in", n-g->nodes, n->id);
+	n = getnode(g, pu);
+	assert(n != nil);
 	dypush(n->out, i);
-	n = getnode(g, pv >> 1);
-	dprint(Debugcoarse, "\t[%zx]%zux ← out", n-g->nodes, n->id);
+	n = getnode(g, pv);
+	assert(n != nil);
 	dypush(n->in, i);
 	return i;
 }
 
 /* id's in edges are always packed with direction bit */
-int
+ssize
 pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 {
-	usize u, v;
-	Node *n;
+	ssize u, v;
 
 	// FIXME: check for duplicate/redundancy? (vec → set)
-	dprint(Debugtheworld, "pushnamededge %s,%s (index %zd)", eu, ev,
-		dylen(g->edges));
-	if((n = id2n(g, eu)) == nil)
+	if((u = id2n(g, eu)) < 0)
 		return -1;
-	u = n - g->nodes << 1 | d1;
-	if((n = id2n(g, ev)) == nil)
+	if((v = id2n(g, ev)) < 0)
 		return -1;
-	v = n - g->nodes << 1 | d2;
-	pushpackededge(g, u, v);
-	return 0;
+	return pushedge(g, u, v, d1, d2);
 }
 
-usize
-pushnode(Graph *g, usize u, int w)
+ssize
+pushnode(Graph *g, usize idx)
 {
 	Node n;
 
-	dprint(Debugcoarse, "pushnode %zd", u);
+	DPRINT(Debugcoarse, "pushnode %zx", idx);
 	n = newnode();
-	n.id = u;
-	n.weight = w;
-	dypush(g->nodes, n);
-	return dylen(g->nodes) - 1;
-}
-
-/* dangerous, allows overwriting for remap */
-usize
-pushnodeat(Graph *g, usize u, int w, ssize i)
-{
-	Node n = {0};
-
-	dprint(Debugcoarse, "pushnodeat [%zd]%zd", i, u);
-	n.id = u;
-	n.weight = w;
-	dyinsert(g->nodes, i, n);
-	return i;
+	return pushinode(g, idx, &n);
 }
 
 int
 pushnamednode(Graph *g, char *id)
 {
-	dprint(Debugtheworld, "pushname id=%s", id);
-	if(id2n(g, id) != nil){
+	ssize i;
+
+	if(id2n(g, id) >= 0){
 		werrstr("duplicate node id");
 		return 0;
 	}
-	pushnode(g, dylen(g->nodes), 1);
-	return idput(g->id2n, estrdup(id), dylen(g->nodes)-1);
+	i = pushnode(g, dylen(g->nodes));
+	return idput(g->id2n, estrdup(id), i);
 }
 
 void
@@ -179,6 +169,7 @@ nukegraph(Graph *g)
 	free(g->layout.aux);
 	if(g->id2n != nil)
 		idnuke(g->id2n);
+	dydelete(graphs, g-graphs);
 	memset(g, 0, sizeof *g);
 }
 

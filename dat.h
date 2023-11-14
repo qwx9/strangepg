@@ -55,16 +55,21 @@ struct Layouting{
 };
 
 struct Node{
-	usize id;		/* weight=0 and realid=0 if unloaded */
+	usize idx;
+	usize eid;
 	usize *in;		/* dynamic array (v indices) */
 	usize *out;		/* dynamic array (v indices) */
 	vlong metaoff;
-	int weight;		/* weight=0 if uninstanciated */
+	int weight;
 	Quad q1;		/* bounding polygon */
 	Quad q2;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	double θ;
+};
+enum{
+	Edgesense = 0<<0,
+	Edgeantisense = 1<<0,
 };
 struct Edge{
 	usize u;
@@ -78,14 +83,16 @@ struct Graph{
 	usize nedges;
 	usize nsuper;
 	int nlevels;
-	Node *nodes;
-	Edge *edges;
+	Node *nodes;	/* dynamic array */
+	Edge *edges;	/* dynamic array */
 	Htab *id2n;
 	Layouting layout;
 	Quad dim;
 	Vertex off;
 };
 extern Graph *graphs;	/* dynamic array */
+
+#define Bupkis 0xdeadbeefcafebabeULL	/* NA */
 
 enum{
 	FFgfa,
@@ -135,6 +142,6 @@ enum{
 	KBescape,
 };
 
-extern int indexed;
 extern int debug;
 extern int noui;
+extern int multiplier;
