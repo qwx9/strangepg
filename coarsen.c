@@ -71,7 +71,7 @@ printtab(EM *em, EM *map, ssize ne, ssize k, int nlvl)
 
 	if(!plaintext && (debug & Debugcoarse) == 0)
 		return;
-	print("level\t%d\t%zd\n", nlvl, ne);
+	warn("level\t%d\t%zd\n", nlvl, ne);
 	for(i=0; i<ne; i++){
 		u = emr64(em, 2+i*2);
 		v = emr64(em, 2+i*2+1);
@@ -116,7 +116,7 @@ outputnode(Lbuf *lp, ssize idx, ssize old, ssize new, ssize weight)
 	ssize off;
 	EM *em;
 
-	DPRINT(Debugcoarse, "merge %zx → %zx, weight %lld", old, new, weight);
+	DPRINT(Debugcoarse, "merge [%zx] %zx → %zx, weight %lld", idx, old, new, weight);
 	em = lp->nodes;
 	off = lp->nnodes++;
 	emw64(em, 4*off, idx);
@@ -152,7 +152,7 @@ coarsen(Graph *g, char *index)
 {
 	int topdog, nlvl;
 	ssize o, w, u, v, z, k, s, t, m, e, uw, vw, x, M, S;
-	EM *fedge, *fnode, *fweight, *fshit;
+	EM *fedge, *fnode, *fweight;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
 
@@ -175,10 +175,8 @@ coarsen(Graph *g, char *index)
 	w = S;
 	k = 0;
 	uw = 0;	/* cannot happen */
-	// FIXME: optimize this and em
 	while(M > Minedges){
 		h = kh_init(meh);
-		fshit = emopen(nil, 0);
 		if(!plaintext){
 			lvl = newlevel(lvl);
 			lp = lvl + dylen(lvl) - 1;
@@ -193,26 +191,30 @@ coarsen(Graph *g, char *index)
 			v = emr64(fedge, 2+e*2+1);
 			if((s = emr64(fnode, u) - 1) < 0)
 				s = u;
+			else if((x = emr64(fnode, s) - 1) >= 0)
+				s = x;
+			if((t = emr64(fnode, v) - 1) < 0)
+				t = v;
+			else if((x = emr64(fnode, t) - 1) >= 0)
+				t = x;
 			DPRINT(Debugcoarse, "processing %#p %zx,%zx, %zx,%zx [w %zx S %zx]",
 				fedge, 2+e*2, 2+e*2+1, u, v, w, S);
+			/* FIXME: fuzz against awk */
 			if(s <= w){
+				z = s;
 				s = ++S;
 				DPRINT(Debugcoarse, "[%04zx] unvisited left node[%zx] ← %zx", e, u, s);
 				if((uw = emr64(fweight, u) - 1) < 0)
 					uw = 1;	/* default value */
+				emw64(fnode, z, s+1);
 				emw64(fnode, u, s+1);
-				x = emr64(fshit, e*2+0);
 				if(!plaintext)
-					outputnode(lp, x, u, s, uw);
+					outputnode(lp, u, z, s, uw);
 				topdog = u;		// FIXME: only works if in order (is it always more or less preserved on the left hand side at least?)
-				// FIXME: ↑ add assert/test to see if this happens; fuzz with awk,
-				// check that IT is correct; write what is supposed to be a correct
-				// and complete version in awk, test against that
 			}
-			if((t = emr64(fnode, v) - 1) < 0)
-				t = v;
 			DPRINT(Debugcoarse, "\t>> %zx,%zx → %zx,%zx", u, v, s, t);
 			if(t <= w){
+				z = t;
 				DPRINT(Debugcoarse, "[%04zx] unvisited right node: %zx w %zd", e, v, w);
 				if(u != topdog){
 					DPRINT(Debugcoarse, "vassal may not annex nodes on its own");
@@ -220,11 +222,11 @@ coarsen(Graph *g, char *index)
 				}
 				if((vw = emr64(fweight, v) - 1) < 0)
 					vw = 1;	/* default value */
+				emw64(fnode, t, s+1);
 				emw64(fnode, v, s+1);
 				emw64(fweight, u, uw+vw+1);
-				x = emr64(fshit, e*2+1);
 				if(!plaintext){
-					outputnode(lp, x, v, s, vw);
+					outputnode(lp, v, z, s, vw);
 					outputedge(lp, u, v);
 				}
 			}else if(v == u){
@@ -239,10 +241,8 @@ coarsen(Graph *g, char *index)
 					outputedge(lp, u, v);
 			}else{
 				DPRINT(Debugcoarse, "[%04zx] new external edge %zx,%zx", e, s, t);
-				emw64(fedge, 2+M*2+0, s);
-				emw64(fedge, 2+M*2+1, t);
-				emw64(fshit, M*2+0, u);
-				emw64(fshit, M*2+1, v);
+				emw64(fedge, 2+M*2+0, u);
+				emw64(fedge, 2+M*2+1, v);
 				SPAWN(h, s, t, g->nnodes);
 				M++;
 			}
@@ -254,7 +254,6 @@ coarsen(Graph *g, char *index)
 			k = w;
 		w = S;
 		kh_destroy(meh, h);
-		emclose(fshit);
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d", nlvl);
 	if(M > 0)
