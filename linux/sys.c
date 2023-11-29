@@ -16,13 +16,6 @@ char *argv0;
 static char errbuf[1024];
 static _Atomic(u32int) *fux;
 
-// FIXME: kill it
-char *
-shitprint(int, void *)
-{
-	return "";
-}
-
 void
 sysquit(void)
 {

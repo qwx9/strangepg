@@ -2,13 +2,6 @@
 
 char *argv0;
 
-// FIXME: kill it
-char *
-shitprint(int, void *)
-{
-	return "";
-}
-
 int
 errstr(char *, uint)
 {
