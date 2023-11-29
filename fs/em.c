@@ -157,12 +157,19 @@ preuse(void)
 static Page *
 new(void)
 {
-	Page *p;
+	int n;
+	Page *p, *pl, *pe;
 
-	p = emalloc(sizeof *p);
-	p->lright = p->lleft = p;
-	memreallyfree--;
-	return p;
+	n = memreallyfree < 1024 ? memreallyfree : 1024;
+	pl = emalloc(n * sizeof *pl);
+	memreallyfree -= n;
+	pl->lright = pl->lleft = pl;
+	for(p=pl+1, pe=pl+n; p<pe; p++){
+		p->lright = p->lleft = p;
+		PLINK(pfree.lleft, p);
+		memfree++;
+	}
+	return pl;
 }
 
 #define PREAD(fd, page, off)	do{ \
@@ -189,8 +196,7 @@ new(void)
 	int __n; \
 	Page **__bank, **__pp; \
 	__n = BADDR((off)); \
-	if(dylen((em)->banks) <= __n) \
-		dygrow((em)->banks, __n); \
+	dygrow((em)->banks, __n); \
 	if(((__bank) = (em)->banks[__n]) == nil){ \
 		(em)->banks[__n] = __bank = BALLOC(); \
 		/* this SUCKS */ \
@@ -252,6 +258,8 @@ em2fs(EM *em, File *f, ssize nbytes)
 	Page ***b, **p, **pe;
 	File *ef;
 
+	if(em->banks == nil)
+		return 0;
 	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
@@ -288,11 +296,13 @@ emclose(EM *em)
 {
 	Page ***b, **p, **pe;
 
-	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
-		if(*b != nil)
-			for(p=*b, pe=p+Banksz; p<pe; p++)
-				if(*p > Sucks)
-					freepage(*p);
+	if(em->banks != nil){
+		for(b=em->banks; b<em->banks+nelem(em->banks); b++)
+			if(*b != nil)
+				for(p=*b, pe=p+Banksz; p<pe; p++)
+					if(*p > Sucks)
+						freepage(*p);
+	}
 	if(em->infd >= 0)
 		close(em->infd);
 	if(em->fd >= 0)
@@ -329,7 +339,7 @@ emopen(char *path, int flags)
 int
 eminit(int m)
 {
-	if(m < 16 || m > 63){	/* untested at the extremes */
+	if(m < 16 || m > 63){
 		werrstr("invalid memory size");
 		return -1;
 	}
