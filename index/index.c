@@ -47,7 +47,16 @@ getinode(Graph *g, ssize s)
 	Coarse *c;
 	khiter_t k;
 
+	if(s < 0){
+		werrstr("getinode: invalid id %zd", s);
+		return nil;
+	}
 	c = g->c;
+	if(c == nil){
+		if(s >= dylen(g->nodes))
+			return nil;
+		return g->nodes + s;
+	}
 	k = kh_get(toinode, c->inodes, s);
 	if(k == kh_end(c->inodes))
 		return nil;
@@ -167,7 +176,12 @@ setgraphdepth(Graph *g, int z)
 int
 zoomgraph(Graph *g, int Δ)
 {
-	if(setgraphdepth(g, g->c->level + Δ) < 0){
+	Coarse *c;
+
+	c = g->c;
+	if(c == nil)
+		return 0;
+	if(setgraphdepth(g, c->level + Δ) < 0){
 		warn("setgraphdepth: %s\n", error());
 		return -1;
 	}

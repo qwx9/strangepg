@@ -122,6 +122,7 @@ pushnamednode(Graph *g, char *id)
 		return 0;
 	}
 	i = pushnode(g, dylen(g->nodes));
+	g->nodes[i].sid = i;
 	return idput(g->id2n, estrdup(id), i);
 }
 
