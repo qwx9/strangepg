@@ -6,7 +6,6 @@ char*	error(void);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
-int	parseargs(int, char **);
 #define panic(x) {warn((x)); abort();}
 
 Quad	Qd(Vertex, Vector);
@@ -25,8 +24,6 @@ int	idput(Htab*, char*, usize);
 int	idget(Htab*, char*, usize*);
 void	iddump(Htab*);
 
-void	init(void);
-void	run(void);
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 

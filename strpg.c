@@ -12,9 +12,6 @@ quit(void)
 	sysquit();
 }
 
-/* while we technically assume that there might be multiple inputs,
- * it's not useful as is since they are all independent but overlaid
- * on top of each other */
 static void
 loadinputs(char **files,  int type)
 {
@@ -25,15 +22,12 @@ loadinputs(char **files,  int type)
 	while((s = *files++) != nil){
 		if(loadfs(s, type) < 0)
 			sysfatal("loadfs: could not load %s: %r\n", s);
-		USED(files);
-		break;	/* enough is enough */
 	}
 }
 
-void
+static void
 run(void)
 {
-	init();
 	loadinputs(filev, intype);
 	if(noui)
 		quit();
@@ -46,7 +40,7 @@ usage(void)
 	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [FILE]\n", argv0);
 }
 
-int
+static int
 parseargs(int argc, char **argv)
 {
 	int multiplier;
@@ -103,7 +97,7 @@ parseargs(int argc, char **argv)
 	return 0;
 }
 
-void
+static void
 init(void)
 {
 	initfs();
@@ -124,6 +118,7 @@ main(int argc, char **argv)
 	srand(time(nil));
 	if(parseargs(argc, argv) < 0)
 		sysfatal("usage");
+	init();
 	run();
 	sysquit();
 	return 0;
