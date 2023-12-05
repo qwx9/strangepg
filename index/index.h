@@ -1,7 +1,7 @@
 typedef struct Level Level;
 
-// FIXME: figure out how to slim all of this
-KHASH_MAP_INIT_INT64(s2n, ssize)
+KHASH_MAP_INIT_INT64(tosuper, ssize)	/* leafi → superi */
+KHASH_MAP_INIT_INT64(toinode, ssize)	/* superi → nodei */
 
 struct Level{
 	vlong noff;
@@ -12,13 +12,13 @@ struct Level{
 struct Coarse{
 	Level *levels;
 	int level;	/* deepest level of any one expansion */
-	khash_t(s2n) *s2n;
-	EM *fimap;
+	khash_t(tosuper)	*supers;
+	khash_t(toinode)	*inodes;
 };
 
-void	remapnode(Graph*, usize, usize, usize, usize);
-void	unloadlevels(Graph*, int, int);
-void	loadlevels(Graph*, int, int);
+int	remapnode(Graph*, usize, ssize, ssize, usize);
+void	loadlevel(Graph*, int, int);
 int	setgraphdepth(Graph*, int);
+void	clearindex(Graph*);
 void	nukeindex(Graph*);
 Coarse*	initindex(Graph*);

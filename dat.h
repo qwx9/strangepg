@@ -56,7 +56,7 @@ struct Layouting{
 
 struct Node{
 	usize idx;
-	usize eid;
+	usize sid;
 	usize *in;		/* dynamic array (v indices) */
 	usize *out;		/* dynamic array (v indices) */
 	vlong metaoff;

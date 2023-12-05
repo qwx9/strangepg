@@ -34,20 +34,22 @@ int	errstr(char*, uint);
 
 int	zoomgraph(Graph*, int);
 
-Node*	getnode(Graph*, ssize);
+// FIXME: use ssize for handles everywhere, make it a type
+int	pushsupernode(Graph*, ssize, ssize, ssize, int);
+int	pushsuperedge(Graph*, ssize, ssize, int, int);
+Node*	getinode(Graph*, ssize);
+ssize	getsupernode(Graph*, ssize);
+Node*	gethypernode(Graph*, ssize);
 Edge*	getedge(Graph*, ssize);
 void	printgraph(Graph*);
-void	popinode(Graph*, Node*);
-ssize	pushinode(Graph*, ssize, Node*);
 void	popnode(Graph*, ssize);
 void	popedge(Graph*, ssize);
 ssize	id2n(Graph*, char*);
-ssize	nodeid(Graph*, usize);
-usize	packedid(Graph*, usize);
 ssize	pushedge(Graph*, usize, usize, int, int);
 ssize	pushnode(Graph*, usize);
 int	pushnamednode(Graph*, char*);
 ssize	pushnamededge(Graph*, char*, char*, int, int);
+void	cleargraph(Graph*);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);
 
@@ -85,7 +87,6 @@ void	errmsg(char*, ...);
 void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
-char*	shitprint(int, void*);
 void	quit(void);
 
 /* you gotta wonder what will come next */

@@ -2,6 +2,8 @@
 #include "em.h"
 #include "index.h"
 
+// FIXME: all the graph stuff here and elsewhere needs to be reimplemented
+
 Graph *graphs;
 
 ssize
@@ -15,22 +17,6 @@ id2n(Graph *g, char *k)
 	return u;
 }
 
-ssize
-nodeid(Graph *g, usize u)
-{
-	Node *n;
-
-	if((n = getnode(g, u)) == nil)
-		return -1;
-	return n->eid;
-}
-
-usize
-packedid(Graph *g, usize u)
-{
-	return nodeid(g, u >> 1);
-}
-
 void
 printgraph(Graph *g)
 {
@@ -42,12 +28,12 @@ printgraph(Graph *g)
 		return;
 	warn("graph %#p nn %zd ne %zd\n", g, g->nnodes, g->nedges);
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++)
-		warn("e[%04zux] %zx[=%zx] → %zx[=%zx]\n",
-			e - g->edges, packedid(g, e->u), e->u,
-			packedid(g, e->v), e->v);
+		warn("e[%04zux] [%zx,%zx] %zx,%zx\n",
+			e - g->edges, e->u >> 1, e->v >> 1,
+			getinode(g, e->u >> 1)->sid, getinode(g, e->v >> 1)->sid);
 	for(n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++){
 		warn("n[%04zux] %zx weight %d → [ ",
-			n - g->nodes, n->eid, n->weight);
+			n - g->nodes, n->sid, n->weight);
 		for(np=n->out, nq=np+dylen(n->out); np<nq; np++)
 			warn("%zx ", *np);
 		warn("] ← [ ");
@@ -58,7 +44,7 @@ printgraph(Graph *g)
 }
 
 /* preserve extant indices */
-// FIXME: api: pass pointer?
+/*
 void
 popnode(Graph *g, ssize i)
 {
@@ -66,8 +52,8 @@ popnode(Graph *g, ssize i)
 
 	if(i < 0 || i >= dylen(g->nodes))
 		return;
-	n = g->nodes + i;
-	popinode(g, n);
+	popinode(g, g->nodes + i);
+	// FIXME: in/out edges?? references??
 }
 void
 popedge(Graph *g, ssize i)
@@ -78,40 +64,24 @@ popedge(Graph *g, ssize i)
 		return;
 	e->u = Bupkis;
 }
-
-static Node
-newnode(void)
-{
-	Node u = {0};
-
-	memset(&u, 0, sizeof u);
-	u.weight = 1;
-	return u;
-}
-
-static Edge
-newedge(void)
-{
-	return (Edge){0, 0};
-}
+*/
 
 ssize
 pushedge(Graph *g, usize pu, usize pv, int udir, int vdir)
 {
 	ssize i;
-	Edge e;
+	Edge e = {0};
 	Node *n;
 
 	DPRINT(Debugcoarse, "pushedge %zx,%zx", pu, pv);
-	e = newedge();
 	e.u = pu << 1 | udir;
 	e.v = pv << 1 | vdir;
 	i = dylen(g->edges);
 	dypush(g->edges, e);
-	n = getnode(g, pu);
+	n = getinode(g, pu);
 	assert(n != nil);
 	dypush(n->out, i);
-	n = getnode(g, pv);
+	n = getinode(g, pv);
 	assert(n != nil);
 	dypush(n->in, i);
 	return i;
@@ -131,14 +101,15 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	return pushedge(g, u, v, d1, d2);
 }
 
+// FIXME: this whole file and interfaces, it's all wrong
 ssize
 pushnode(Graph *g, usize idx)
 {
-	Node n;
+	Node n = {.idx = idx, .weight = 1};
 
 	DPRINT(Debugcoarse, "pushnode %zx", idx);
-	n = newnode();
-	return pushinode(g, idx, &n);
+	dypush(g->nodes, n);
+	return dylen(g->nodes) - 1;
 }
 
 int
@@ -152,6 +123,21 @@ pushnamednode(Graph *g, char *id)
 	}
 	i = pushnode(g, dylen(g->nodes));
 	return idput(g->id2n, estrdup(id), i);
+}
+
+void
+cleargraph(Graph *g)
+{
+	Node *n;
+
+	clearindex(g);
+	//dyclear(g->edges);
+	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
+		dyfree(n->in);
+		dyfree(n->out);
+	}
+	dyclear(g->nodes);
+	stoplayout(g);
 }
 
 void

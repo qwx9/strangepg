@@ -18,73 +18,55 @@ loadbranch(Graph *, Level *, usize)
 	return -1;
 }
 
+/* FIXME: yuck, can we avoid (in a simple way) to destroy the graph and
+ * then recreate it despite obvious redundancies? wrt partial updates,
+ * we need to be able to only clear the relevant parts of the graph */
+
 void
-unloadlevels(Graph *g, int z, int Δ)
+loadlevel(Graph *g, int z, int Δ)
 {
-	int i, j, weight;
-	usize u, old, new;
+	int s, j;
+	usize idx, new, weight, u, v, i;
 	Coarse *c;
 	Level *l;
 	File *f;
 
-	f = g->f;
-	c = g->c;
-	l = c->levels + z;
-	for(j=0; j<Δ; j++, l--, c->level--){
-		seekfs(f, l->noff);
-		for(i=0; i<l->nnodes; i++){
-			u = get64(f);
-			old = get64(f);
-			new = get64(f);
-			weight = get64(f);
-			remapnode(g, u, old, new, weight);
-		}
-		c->level--;
-		// FIXME: smarter given reuse
-		for(i=0, j=dylen(g->nodes)-l->nnodes; i<j; i++)
-			popnode(g, dylen(g->nodes) - 1);
-	}
-	c->level = z;	/* FIXME: external functions may assume depth */
-	for(j=0; j<Δ; j++, l--, c->level--)
-		for(i=0, j=dylen(g->edges)-l->nedges; i<j; i++)
-			popedge(g, dylen(g->edges) - 1);
-	printgraph(g);
-}
-
-// FIXME: don't do dynamic arrays for level data, it's constant
-void
-loadlevels(Graph *g, int z, int Δ)
-{
-	usize old, new, weight, u, v, i, j;
-	Coarse *c;
-	Level *l;
-	File *f;
+	// FIXME: reversed direction
 
 	f = g->f;
 	c = g->c;
-	DPRINT(Debugcoarse, "loadlevels %#p cur %d z %d Δ %d\n",
+	DPRINT(Debugcoarse, "loadlevel %#p cur %d z %d Δ %d\n",
 		g, c->level, z, Δ);
-	l = c->levels + z;	/* z is current + 1 */
-	c->level = z - 1;
-	for(j=0; j<Δ; j++, l++, c->level++){
-		seekfs(f, l->noff);
-		for(i=0; i<l->nnodes; i++){
-			u = get64(f);
-			old = get64(f);
-			new = get64(f);
-			weight = get64(f);
-			remapnode(g, u, new, old, weight);
+	cleargraph(g);
+	dyclear(g->edges);
+	c->level = z + Δ - 1;
+	l = c->levels + c->level;
+	seekfs(f, l->noff);
+	for(i=0; i<l->nnodes; i++){
+		u = get64(f);
+		idx = get64(f);
+		new = get64(f);
+		weight = get64(f);
+		if(pushsupernode(g, idx, new, u, weight) < 0){
+			warn("loadlevel %d → %d failed: %s\n", c->level-z, c->level, error());
+			return;
 		}
 	}
-	l = c->levels + z;
-	c->level = z - 1;	/* external functions may assume depth */
-	seekfs(f, l->eoff);
-	for(j=0; j<Δ; j++, l++, c->level++){
+	s = Δ < 0 ? -1 : 1;
+	//l -= s * (Δ - 1);
+	Δ *= s;
+	for(j=0; j<Δ; j++, l+=s){
+		assert(l >= c->levels);
 		seekfs(f, l->eoff);
 		for(i=0; i<l->nedges; i++){
+			// FIXME
+			if(s < 0){
+				dypop(g->edges);
+				continue;
+			}
 			u = get64(f);
 			v = get64(f);
-			pushedge(g, u, v, Edgesense, Edgesense);
+			pushsuperedge(g, u, v, Edgesense, Edgesense);
 		}
 	}
 	printgraph(g);

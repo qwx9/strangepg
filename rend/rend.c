@@ -28,7 +28,7 @@ faceyourfears(Graph *g, Node *u)
 			//	it's buggy anyway
 			if((e = getedge(g, *ip)) == nil)
 				continue;
-			v = getnode(g, e->v >> 1);
+			v = getinode(g, e->v >> 1);	// FIXME: genericity: idx2n or sth
 			assert(v != nil);
 			if(u == v)
 				continue;
@@ -49,7 +49,7 @@ faceyourfears(Graph *g, Node *u)
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
 			if((e = getedge(g, *ip)) == nil)
 				continue;
-			v = getnode(g, e->v >> 1);
+			v = getinode(g, e->v >> 1);
 			assert(v != nil);
 			if(u == v)
 				continue;
