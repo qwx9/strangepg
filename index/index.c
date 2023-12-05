@@ -177,9 +177,11 @@ zoomgraph(Graph *g, int Δ)
 void
 clearindex(Graph *g)
 {
-	USED(g);
-	//kh_clear(tosuper, c->supers);
-	//kh_clear(toinode, c->inodes);
+	Coarse *c;
+
+	c = g->c;
+	kh_clear(tosuper, c->supers);
+	kh_clear(toinode, c->inodes);
 }
 
 void

@@ -131,7 +131,7 @@ cleargraph(Graph *g)
 	Node *n;
 
 	clearindex(g);
-	//dyclear(g->edges);
+	dyclear(g->edges);
 	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
 		dyfree(n->in);
 		dyfree(n->out);
