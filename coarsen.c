@@ -64,34 +64,6 @@ reverse(Graph *g, Lbuf *lvl)
 }
 
 static void
-printtab(EM *em, EM *map, ssize ne, ssize k, int nlvl)
-{
-	int i;
-	ssize u, v, s, t;
-
-	if(!plaintext && (debug & Debugcoarse) == 0)
-		return;
-	warn("level\t%d\t%zd\n", nlvl, ne);
-	for(i=0; i<ne; i++){
-		u = emr64(em, 2+i*2);
-		v = emr64(em, 2+i*2+1);
-		if((s = emr64(map, u) - 1) <= k){
-			if(s >= 0)
-				s = emr64(map, s) - 1;
-			else
-				s = u;
-		}
-		if((t = emr64(map, v) - 1) <= k){
-			if(t >= 0)
-				t = emr64(map, t) - 1;
-			else
-				t = v;
-		}
-		warn("%zx\t%zx\n", s, t);
-	}
-}
-
-static void
 endlevel(Lbuf *lp)
 {
 	nsuper += lp->nnodes;
@@ -107,7 +79,6 @@ outputedge(Lbuf *lp, ssize u, ssize v)
 	off = lp->nedges++;
 	emw64(em, 2*off, u);
 	emw64(em, 2*off+1, v);
-	DPRINT(Debugcoarse, "drop edge %zx,%zx %d %zx,%zx", u, v, lp->nedges, 2*off, 2*off+1);
 }
 
 static void
@@ -116,7 +87,6 @@ outputnode(Lbuf *lp, ssize idx, ssize old, ssize new, ssize weight)
 	ssize off;
 	EM *em;
 
-	DPRINT(Debugcoarse, "merge [%zx] %zx → %zx, weight %lld", idx, old, new, weight);
 	em = lp->nodes;
 	off = lp->nnodes++;
 	emw64(em, 4*off, idx);
@@ -135,130 +105,155 @@ newlevel(Lbuf *lvl)
 	if((l.edges = emopen(nil, 0)) == nil)
 		sysfatal("newlevel: %s", error());
 	dypush(lvl, l);
-	DPRINT(Debugcoarse, "-- newlevel %lld", dylen(lvl));
 	return lvl;
 }
 
 KHASH_SET_INIT_INT64(meh)
-#define EXISTS(h, s, t, width)	(kh_get(meh, (h), (s) * width + (t)) != kh_end(h))
+#define EXISTS(h, s, t, width)	\
+	(kh_get(meh, (h), (s) * width + (t)) != kh_end(h) \
+	|| kh_get(meh, (h), (t) * width + (s)) != kh_end(h))
 #define SPAWN(h, s, t, width)	do{ \
 	int ret; \
-	kh_put(meh, (h), (s) * (width) + (t), &ret); \
 	kh_put(meh, (h), (t) * (width) + (s), &ret); \
 	}while(0)
+KHASH_MAP_INIT_INT64(ugh, ssize)
+#define NOTAMILKMAN(h, u, s)	do{ \
+	int ret; \
+	khiter_t __k; \
+	__k = kh_put(ugh, (h), (u), &ret); \
+	kh_value((h), __k) = (s); \
+	}while(0)
+#define HESDEADJIM(h, u)	(kh_get(ugh, (h), (u)))	/* put an torpe-do-oh-oh */
+#define SULUGOTOWARP(h, k)	(kh_value((h), (k)))	/* warp 3, sir? */
 
-static Lbuf *
+int
+exists(ssize s, ssize t, EM *edges, int width)
+{
+	ssize x, v;
+
+	x = s * width + t;
+	v = emr64(edges, x >> 6);
+	return (v & 1ULL << (x & 63)) != 0;
+}
+
+void
+mark(ssize s, ssize t, EM *edges, int width)
+{
+	ssize x, v;
+
+	x = t * width + s;
+	v = emr64(edges, x >> 6);
+	emw64(edges, x >> 6, v | 1ULL << (x & 63));
+	x = s * width + t;
+	v = emr64(edges, x >> 6);
+	emw64(edges, x >> 6, v | 1ULL << (x & 63));
+}
+
+Lbuf *
 coarsen(Graph *g, char *index)
 {
-	int topdog, nlvl;
-	ssize o, w, u, v, z, k, s, t, m, e, uw, vw, x, M, S;
-	EM *fedge, *fnode, *fweight;
+	int nlvl;
+	ssize top, w, u, v, u0, v0, k, s, t, m, e, x, M, S;
+	EM /**visited,*/ *edges, *edgeuv, *edgeset;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
+	khash_t(ugh) *visited;
 
-	if((fedge = emopen(index, 0)) == nil)
+	if((edges = emopen(index, 0)) == nil)
 		sysfatal("coarsen: %s", error());
-	g->nnodes = emr64(fedge, 0);
-	g->nedges = emr64(fedge, 1);
+	g->nnodes = emr64(edges, 0);
+	g->nedges = emr64(edges, 1);
 	if(g->nedges <= Minedges){
 		werrstr("number of edges below set threshold, nothing to do");
 		return nil;
 	}
-	DPRINT(Debugcoarse, "graph %s nnodes %lld nedges %lld",
-		index, g->nnodes, g->nedges);
-	fnode = emopen(nil, 0);
-	fweight = emopen(nil, 0);
+	DPRINT(Debugcoarse, "graph %s nnodes %lld nedges %lld", index, g->nnodes, g->nedges);
+	edgeuv = emopen(nil, 0);
 	M = g->nedges;
 	S = g->nnodes - 1;
 	lp = lvl = nil;
 	nlvl = 0;
 	w = S;
 	k = 0;
-	uw = 0;	/* cannot happen */
 	while(M > Minedges){
 		h = kh_init(meh);
+		//visited = emopen(nil, 0);
+		visited = kh_init(ugh);
+		edgeset = emopen(nil, 0);
 		if(!plaintext){
 			lvl = newlevel(lvl);
 			lp = lvl + dylen(lvl) - 1;
 		}
+		DPRINT(Debugcoarse, "===== level %zx", lp-lvl+1);
 		m = M;
 		M = 0;
-		topdog = 0;
+		top = -1;
 		for(e=0; e<m; e++){
-			if(e > 0 && e % 1000 == 0)
-				DPRINT(Debugcoarse, "L%02d edge %zx/%zx\n", nlvl, e, g->nedges);
-			u = emr64(fedge, 2+e*2+0);
-			v = emr64(fedge, 2+e*2+1);
-			if((s = emr64(fnode, u) - 1) < 0)
-				s = u;
-			else if((x = emr64(fnode, s) - 1) >= 0)
-				s = x;
-			if((t = emr64(fnode, v) - 1) < 0)
-				t = v;
-			else if((x = emr64(fnode, t) - 1) >= 0)
-				t = x;
-			DPRINT(Debugcoarse, "processing %#p %zx,%zx, %zx,%zx [w %zx S %zx]",
-				fedge, 2+e*2, 2+e*2+1, u, v, w, S);
-			/* FIXME: fuzz against awk */
-			if(s <= w){
-				z = s;
-				s = ++S;
-				DPRINT(Debugcoarse, "[%04zx] unvisited left node[%zx] ← %zx", e, u, s);
-				if((uw = emr64(fweight, u) - 1) < 0)
-					uw = 1;	/* default value */
-				emw64(fnode, z, s+1);
-				emw64(fnode, u, s+1);
-				if(!plaintext)
-					outputnode(lp, u, z, s, uw);
-				topdog = u;		// FIXME: only works if in order (is it always more or less preserved on the left hand side at least?)
-			}
-			DPRINT(Debugcoarse, "\t>> %zx,%zx → %zx,%zx", u, v, s, t);
-			if(t <= w){
-				z = t;
-				DPRINT(Debugcoarse, "[%04zx] unvisited right node: %zx w %zd", e, v, w);
-				if(u != topdog){
-					DPRINT(Debugcoarse, "vassal may not annex nodes on its own");
-					continue;
-				}
-				if((vw = emr64(fweight, v) - 1) < 0)
-					vw = 1;	/* default value */
-				emw64(fnode, t, s+1);
-				emw64(fnode, v, s+1);
-				emw64(fweight, u, uw+vw+1);
-				if(!plaintext){
-					outputnode(lp, v, z, s, vw);
-					outputedge(lp, u, v);
-				}
-			}else if(v == u){
-				DPRINT(Debugcoarse, "[%04zx] self edge: %zx,%zx", e, u, s);
-				if(!plaintext)
-					outputedge(lp, u, u);
-			}else if(t == s){
-				DPRINT(Debugcoarse, "[%04zx] mirror of previous edge, ignored", e);
-			}else if(EXISTS(h, s, t, g->nnodes)){
-				DPRINT(Debugcoarse, "[%04zx] redundant external edge", e);
-				if(!plaintext)
-					outputedge(lp, u, v);
+			if(nlvl > 0){
+				x = emr64(edges, e);
+				u = x % g->nnodes + k;
+				v = x / g->nnodes + k;
+				x = emr64(edgeuv, e);
+				u0 = x % g->nnodes;
+				v0 = x / g->nnodes;
 			}else{
-				DPRINT(Debugcoarse, "[%04zx] new external edge %zx,%zx", e, s, t);
-				emw64(fedge, 2+M*2+0, u);
-				emw64(fedge, 2+M*2+1, v);
+				u0 = u = emr64(edges, 2+2*e);
+				v0 = v = emr64(edges, 2+2*e+1);
+			}
+			DPRINT(Debugcoarse, "edge [%03zd] [%zx,%zx] %zx,%zx: ", e, u0, v0, u, v);
+			outputedge(lp, u, v);
+//			if((s = emr64(visited, u) - 1) < 0 || s <= w){
+			/* below memory limit, this over EM *visited has barely any effect */
+			if((s = HESDEADJIM(visited, u)) == kh_end(visited) || (s = SULUGOTOWARP(visited, s)) <= w){
+				s = ++S;
+				NOTAMILKMAN(visited, u, s);
+				//emw64(visited, u, s+1);
+				top = u;
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\bnew super [%zx]%zx→%zx", u0, u, s);
+				outputnode(lp, u, u0, s, 1);
+			}
+			if((t = HESDEADJIM(visited, v)) == kh_end(visited) || (t = SULUGOTOWARP(visited, t)) <= w){
+				if(u == top){
+					//emw64(visited, v, s+1);
+					NOTAMILKMAN(visited, v, s);
+					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; merge [%zx]%zx", v0, v);
+					outputnode(lp, v, v0, s, 1);
+				}else
+					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
+			}else if(u == v)
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; self edge");
+			else if(t == s)
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; mirror %zx,%zx", s, t);
+			else if(EXISTS(h, s-w, t-w, g->nnodes)) 
+//			else if(exists(s-w, t-w, edgeset, g->nnodes)) 
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; redundant %zx,%zx", s, t);
+			else{
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external %zx,%zx", s, t);
+				s -= w;
+				t -= w;
 				SPAWN(h, s, t, g->nnodes);
+				//mark(s, t, edgeset, g->nnodes);
+				emw64(edges, M, t * g->nnodes + s);
+				emw64(edgeuv, M, v0 * g->nnodes + u0);
+				//outputedge(lp, s+w, t+w);
 				M++;
 			}
 		}
+		kh_destroy(meh, h);
+		kh_destroy(ugh, visited);
+		emclose(edgeset);
+		//emclose(visited);
 		if(!plaintext)
 			endlevel(lp);
-		printtab(fedge, fnode, M, k, nlvl++);
-		if(k == 0)
-			k = w;
+		nlvl++;
+		k = w;
 		w = S;
-		kh_destroy(meh, h);
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d", nlvl);
-	if(M > 0)
 		DPRINT(Debugcoarse, "stopping with %lld remaining edges", M);
 	/* add articial root node for all remaining */
+	// FIXME: out of date, untested
+#ifdef fuck
 	if(S > w + 1){
 		s = ++S;
 		DPRINT(Debugcoarse, "push artificial root node %zx", s);
@@ -268,19 +263,16 @@ coarsen(Graph *g, char *index)
 		}
 		/* every node is an adjacency, every edge is internal */
 		for(e=0, u=-1; e<M; e++){
-			if((o = emr64(fedge, 2+e*2)) != u){
+			if((o = emr64(edges, e*2)) != u){
 				u = o;
-				w = emr64(fweight, u);
-				z = emr64(fnode, u) - 1;
+				z = emr64(visited, u) - 1;
 				outputnode(lp, u, z, s, w);
 			}
-			v = emr64(fedge, 2+e*2+1);
-			outputedge(lp, u, v);
 		}
-		printtab(fedge, fnode, M, k, nlvl);
 	}
-	emclose(fnode);
-	emclose(fedge);
+#endif
+	emclose(edgeuv);
+	emclose(edges);
 	return lvl;
 }
 
