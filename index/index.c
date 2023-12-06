@@ -167,7 +167,6 @@ setgraphdepth(Graph *g, int z)
 	if(r < 0)
 		warn("setgraphdepth: %s\n", error());
 	assert(g->c->level == z);
-	// FIXME: make sure there's no layer violation here
 	if(g->layout.ll != nil)
 		return resetlayout(g);
 	return 0;

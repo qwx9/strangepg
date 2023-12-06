@@ -14,9 +14,7 @@ layproc(void *gp)
 	ll = g->layout.ll;
 	g->layout.tid = 0;
 	DPRINT(Debuglayout, "new job job %d layout %s g %#p", getpid(), ll->name, g);
-	coffeetime();
 	ll->compute(g);
-	coffeeover();
 	g->layout.tid = -1;
 	reqdraw(Reqrefresh);
 	pthread_exit(NULL);

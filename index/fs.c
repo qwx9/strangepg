@@ -65,7 +65,8 @@ loadlevel(Graph *g, int z, int Δ)
 		for(i=0; i<l->nedges; i++){
 			u = get64(f);
 			v = get64(f);
-			pushsuperedge(g, u, v, Edgesense, Edgesense);
+			if(pushsuperedge(g, u, v, Edgesense, Edgesense) < 0)
+				warn("loadlevel: %s\n", error());
 		}
 	}
 	printgraph(g);
