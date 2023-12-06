@@ -66,24 +66,26 @@ popedge(Graph *g, ssize i)
 }
 */
 
-ssize
+int
 pushedge(Graph *g, usize pu, usize pv, int udir, int vdir)
 {
-	ssize i;
+	int i;
 	Edge e = {0};
-	Node *n;
+	Node *n, *m;
 
 	DPRINT(Debugcoarse, "pushedge %zx,%zx", pu, pv);
 	e.u = pu << 1 | udir;
 	e.v = pv << 1 | vdir;
-	i = dylen(g->edges);
-	dypush(g->edges, e);
+	i = dylen(g->edges);	// FIXME: make these indices/arrays 32bit
 	n = getinode(g, pu);
-	assert(n != nil);
+	m = getinode(g, pv);
+	if(n == nil || m == nil){
+		werrstr("pushedge: missing node %zd,%zd → %#p,%#p", pu, pv, n, m);
+		return -1;
+	}
 	dypush(n->out, i);
-	n = getinode(g, pv);
-	assert(n != nil);
-	dypush(n->in, i);
+	dypush(m->in, i);
+	dypush(g->edges, e);
 	return i;
 }
 

@@ -100,7 +100,6 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
-		yield();
 	}
 	free(Fu);
 }

@@ -42,7 +42,7 @@ void	printgraph(Graph*);
 void	popnode(Graph*, ssize);
 void	popedge(Graph*, ssize);
 ssize	id2n(Graph*, char*);
-ssize	pushedge(Graph*, usize, usize, int, int);
+int	pushedge(Graph*, usize, usize, int, int);
 ssize	pushnode(Graph*, usize);
 int	pushnamednode(Graph*, char*);
 ssize	pushnamededge(Graph*, char*, char*, int, int);

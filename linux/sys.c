@@ -115,11 +115,6 @@ create(char *path, int mode, int perm)
 	return open(path, mode|O_CREAT|O_TRUNC, perm);	/* not just O_WRONLY */
 }
 
-void
-yield(void)
-{
-}
-
 char *
 estrdup(char *s)
 {
