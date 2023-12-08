@@ -11,14 +11,14 @@ layproc(void *gp)
 	g = gp;
 	ll = g->layout.ll;
 	DPRINT(Debuglayout, "new layout job %d layout %s g %#p", getpid(), ll->name, g);
-	coffeetime();
 	ll->compute(g);
-	coffeeover();
-	g->layout.tid = -1;
 	reqdraw(Reqrefresh);
+	g->layout.tid = -1;
 	threadexits(nil);
 }
 
+/* we interrupt layouting to reset it, otherwise it just runs its course,
+ * thus only kill layout proc and let the rest die naturally */
 void
 stoplayout(Graph *g)
 {
@@ -26,12 +26,12 @@ stoplayout(Graph *g)
 		return;
 	threadkill(g->layout.tid);
 	g->layout.tid = -1;
-	waitpid();
 }
 
 void
 runlayout(Graph *g)
 {
+	assert(g->layout.tid < 0);
 	if((g->layout.tid = proccreate(layproc, g, mainstacksize)) < 0)
 		sysfatal("runlayout: %r");
 	if(!noui)

@@ -64,6 +64,7 @@ drawedges(Graph *g)
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
+		yield();
 		u = getinode(g, e->u >> 1);
 		v = getinode(g, e->v >> 1);
 		assert(u != nil && v != nil);
@@ -80,6 +81,7 @@ drawnodes(Graph *g)
 
 	DPRINT(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);
 	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+		yield();
 		if(showarrows)
 			drawnodevec(u->vrect);
 		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes, u->sid);

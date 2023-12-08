@@ -86,6 +86,8 @@ int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
 void	quit(void);
 
+void	yield(void);	/* libthread */
+
 /* you gotta wonder what will come next */
 #define DPRINT(x,...)	do{ \
 	if((debug&(x)) != 0) \

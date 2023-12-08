@@ -188,6 +188,11 @@ coffeeover(void)
 }
 
 void
+yield(void)
+{
+}
+
+void
 sysinit(void)
 {
 	if((fux = mmap(NULL, sizeof(*fux), PROT_READ|PROT_WRITE,

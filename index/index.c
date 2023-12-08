@@ -155,7 +155,7 @@ setgraphdepth(Graph *g, int z)
 		return -1;
 	}
 	lvl = g->c->level;
-	stoplayout(g);
+	cleargraph(g);
 	if(z > lvl)
 		r = uncoarsen(g, z - lvl);
 	else if(z < lvl)
@@ -168,7 +168,7 @@ setgraphdepth(Graph *g, int z)
 		warn("setgraphdepth: %s\n", error());
 	assert(g->c->level == z);
 	if(g->layout.ll != nil)
-		return resetlayout(g);
+		runlayout(g);
 	return 0;
 }
 

@@ -269,7 +269,7 @@ drawproc(void *)
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
-		case Arefresh: renderlayout(g); break;
+		case Arefresh: renderlayout(g); redraw(); flushdraw(); break;
 		}
 	}
 }
@@ -283,6 +283,7 @@ reqdraw(int r)
 static void
 ticproc(void *)
 {
+	int n;
 	vlong t, t0, Δt, step;
 	Graph *g;
 
@@ -290,12 +291,13 @@ ticproc(void *)
 	t0 = nsec();
 	step = drawstep ? Nsec/140 : Nsec/60;
 	for(;;){
-		for(g=graphs; g<graphs+dylen(graphs); g++)
-			if(g->layout.tid >= 0)
-				break;
-		if(g == graphs + dylen(graphs))
+		for(g=graphs, n=0; g<graphs+dylen(graphs); g++)
+			if(g->layout.tid >= 0){
+				n++;
+				sendp(ticc, g);
+			}
+		if(n == 0)
 			break;
-		sendp(ticc, g);
 		t = nsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);

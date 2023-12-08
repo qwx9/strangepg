@@ -38,7 +38,6 @@ compute(Graph *g)
 	Node *u, *from, *v, *ne;
 	Edge *e;
 
-	//sleep(1000);
 	if(dylen(g->edges) < 1){
 		warn("no links to hand\n");
 		// FIXME: error exit
@@ -63,6 +62,7 @@ compute(Graph *g)
 			for(v=g->nodes; v<ne; v++){
 				if(v == u)
 					continue;
+				yield();
 				dv = subpt2(u->q1.o, v->vrect.o);
 				Δ = diff(dv);
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->weight * repulsion(Δ, K)));
@@ -70,6 +70,7 @@ compute(Graph *g)
 		}
 		for(u=g->nodes, i=0; u<ne; i++, u++){
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
+				yield();
 				if((e = getedge(g, *ep)) == nil)
 					continue;
 				if((from = getinode(g, e->u >> 1)) == nil)
@@ -80,7 +81,7 @@ compute(Graph *g)
 				// ed.w now always 1
 				Fu[i] = addpt2(Fu[i], mulpt2(dv, 1));
 				j = from - g->nodes;
-				if(1 < 1){
+				if(1 < 1){	// FIXME: ?? fix/optimize this garbage code
 					assert(1 > 0.0);
 					Fu[j] = subpt2(Fu[j], dv);
 				}else
@@ -88,6 +89,7 @@ compute(Graph *g)
 			}
 		}
 		for(u=g->nodes, R=0, i=0; u<ne; i++, u++){
+			yield();
 			dv = Fu[i];
 			Δ = diff(dv);
 			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));
@@ -100,6 +102,7 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
+		yield();
 	}
 	free(Fu);
 }

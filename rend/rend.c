@@ -122,8 +122,8 @@ rendershapes(Graph *g)
 	Quad d;
 	Vertex p;
 
-	coffeetime();
 	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+		yield();
 		DPRINT(Debugrender, "render node %.1f,%.1f:%.1f,%.1f", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
 		rendernode(g, u);
@@ -138,8 +138,6 @@ rendershapes(Graph *g)
 			d.v.y = p.y;
 	}
 	g->dim = d;
-	coffeeover();
-	reqdraw(Reqredraw);
 	return 0;
 }
 
@@ -147,6 +145,10 @@ int
 renderlayout(Graph *g)
 {
 	DPRINT(Debugrender, "renderlayout %#p", g);
+	if(g->layout.ll == nil){
+		werrstr("renderlayout: no layout");
+		return -1;
+	}
 	if(dylen(g->nodes) < 1){
 		werrstr("empty graph");
 		return -1;

@@ -11,8 +11,10 @@ compute(Graph *g)
 	int x;
 	Node *u, *ue;
 
-	for(u=g->nodes, ue=u+dylen(g->nodes), x=0; u<ue; u++, x+=Nodesz+10*Ptsz)
+	for(u=g->nodes, ue=u+dylen(g->nodes), x=0; u<ue; u++, x+=Nodesz+10*Ptsz){
 		putnode(u, x, 0);
+		yield();
+	}
 }
 
 static Layout ll = {

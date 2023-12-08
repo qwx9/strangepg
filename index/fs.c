@@ -37,7 +37,6 @@ loadlevel(Graph *g, int z, int Δ)
 	c = g->c;
 	DPRINT(Debugcoarse, "loadlevel %#p cur %d z %d Δ %d",
 		g, c->level, z, Δ);
-	cleargraph(g);
 	c->level = Δ > 0 ? z + Δ - 1 : z + Δ + 1;
 	l = c->levels + c->level;
 	seekfs(f, l->noff);

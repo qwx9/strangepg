@@ -133,6 +133,7 @@ cleargraph(Graph *g)
 {
 	Node *n;
 
+	stoplayout(g);	// FIXME: freeze drawing/rendering?
 	clearindex(g);
 	dyclear(g->edges);
 	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
@@ -140,7 +141,6 @@ cleargraph(Graph *g)
 		dyfree(n->out);
 	}
 	dyclear(g->nodes);
-	stoplayout(g);
 }
 
 void
