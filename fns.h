@@ -71,11 +71,14 @@ int	updatedraw(void);
 int	redraw(void);
 int shallowdraw(void);
 void	reqdraw(int);
+int	scrobj(Vertex);
+void	showobj(Obj*);
 
 void	initrend(void);
 int	renderlayout(Graph*);
 int	rerender(int);
 
+int	mouseselect(Vertex);
 int	panview(Vector);
 int	zoomview(Vector);
 void	initui(void);

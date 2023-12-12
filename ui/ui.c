@@ -1,5 +1,7 @@
 #include "strpg.h"
 
+Obj selected;
+
 static Vertex panmax;
 
 int
@@ -63,24 +65,21 @@ keyevent(Rune r)
 	return 0;
 }
 
-// FIXME: on plan9 maybe! don't handle that here
 /* the very first mouse event will have non-sense deltas */
+// FIXME: request a change to drawer, doing it here gets us out of sync
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
-	USED(v);
 	if((b & 7) == Mlmb){
-		// FIXME: select
-		// FIXME: drag → move
+		// FIXME: detect out of focus and click twice?
+		// FIXME: drag → move (in draw fsm)
+		if(mouseselect(v) >= 0)
+			reqdraw(Reqshallowdraw);
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
-	// FIXME: should be the other way around, this should happen in the draw
-	// proc
 	}else if((b & 7) == Mrmb){
 		if(panview(subpt2(ZV, Δ)) >= 0)
 			reqdraw(Reqredraw);
-	// FIXME: should be the other way around, this should happen in the draw
-	// proc
 	}else if((b & 7) == (Mlmb | Mrmb)){
 		if(zoomview(subpt2(ZV, Δ)) >= 0)
 			reqdraw(Reqredraw);

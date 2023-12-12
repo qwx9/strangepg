@@ -92,6 +92,18 @@ struct Graph{
 };
 extern Graph *graphs;	/* dynamic array */
 
+enum{
+	Onil,
+	Onode,
+	Oedge,
+};
+struct Obj{
+	int type;
+	Graph *g;
+	ssize idx;
+};
+extern Obj selected;	// FIXME: only one
+
 #define Bupkis 0xdeadbeefcafebabeULL	/* NA */
 
 enum{

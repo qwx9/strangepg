@@ -1,7 +1,7 @@
-int	drawline(Quad, double, int);
-int	drawbezier(Quad, double);
-int	drawquad(Quad, double, int);
-int	drawquad2(Quad, Quad, Quad, double, int, int);
+int	drawline(Quad, double, int, int);
+int	drawbezier(Quad, double, int);
+int	drawquad(Quad, double, int, int);
+int	drawquad2(Quad, Quad, Quad, double, int, int, int);
 int	drawlabel(Quad, Quad, Quad, vlong);
 void	cleardraw(void);
 Vertex	centerscalept2(Vertex);

@@ -4,6 +4,8 @@
 View view;
 int showarrows, drawstep;
 
+static Obj *visobj;
+
 Vertex
 centerscalept2(Vertex v)
 {
@@ -23,26 +25,65 @@ centerscalequad(Quad q)
 void
 drawguides(void)
 {
-	drawline(Qd(ZV, view.center), 0, 1);
-	drawline(Qd(ZV, view.pan), 0, 2);
+	drawline(Qd(ZV, view.center), 0, 1, -1);
+	drawline(Qd(ZV, view.pan), 0, 2, -1);
+}
+
+int
+mapvis(int type, Graph *g, int idx)
+{
+	Obj o;
+
+	o = (Obj){type, g, idx};
+	dypush(visobj, o);
+	return dylen(visobj) - 1;
+}
+
+Obj
+getvis(Vertex v)
+{
+	int i;
+
+	if((i = scrobj(v)) < 0)
+		return (Obj){Onil, nil, -1};
+	assert(i < dylen(visobj));
+	return visobj[i];
+}
+
+int
+mouseselect(Vertex v)
+{
+	Obj o;
+
+	o = getvis(v);
+	if(o.type == Onil)
+		return -1;
+	selected = o;
+	return 0;
 }
 
 /* FIXME: the interfaces here need refactoring, too cumbersome and
  * redundant */
 static int
-drawedge(Quad q, double w)
+drawedge(Graph *g, Quad q, double w, ssize idx)
 {
+	int i;
+
 	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
+	i = mapvis(Oedge, g, idx);
 	q.v = subpt2(q.v, q.o);	// FIXME
-	return drawbezier(q, w);
+	return drawbezier(q, w, i);
 }
 
 static int
-drawnode(Quad p, Quad q, Quad u, double θ, int c, vlong id)
+drawnode(Graph *g, Quad p, Quad q, Quad u, double θ, ssize id, ssize idx)
 {
+	int i;
+
 	DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	if(drawquad2(p, q, u, θ, 1, c) < 0
-	|| drawquad2(p, q, u, θ, 0, c) < 0
+	i = mapvis(Onode, g, idx);
+	if(drawquad2(p, q, u, θ, 1, idx, -1) < 0
+	|| drawquad2(p, q, u, θ, 0, idx, i) < 0
 	|| drawlabel(p, q, u, id) < 0)
 		return -1;
 	return 0;
@@ -52,7 +93,7 @@ static int
 drawnodevec(Quad q)
 {
 	DPRINT(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	return drawline(q, MAX(0., view.zoom/5), 1);
+	return drawline(q, MAX(0., view.zoom/5), 1, -1);
 }
 
 static int
@@ -69,7 +110,7 @@ drawedges(Graph *g)
 		v = getinode(g, e->v >> 1);
 		assert(u != nil && v != nil);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
-		drawedge(q, MAX(0., view.zoom/5));
+		drawedge(g, q, MAX(0., view.zoom/5), e - g->edges);
 	}
 	return 0;
 }
@@ -84,7 +125,7 @@ drawnodes(Graph *g)
 		yield();
 		if(showarrows)
 			drawnodevec(u->vrect);
-		drawnode(u->q1, u->q2, u->shape, u->θ, u - g->nodes, u->sid);
+		drawnode(g, u->q1, u->q2, u->shape, u->θ, u->sid, u - g->nodes);
 	}
 	return 0;
 }
@@ -101,7 +142,7 @@ drawworld(void)
 		drawedges(g);
 		drawnodes(g);
 		if(debug)
-			drawline(Qd(ZV, g->off), 0, g - graphs + 3);
+			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1);
 	}
 	if(debug)
 		drawguides();
@@ -110,6 +151,16 @@ drawworld(void)
 static void
 drawui(void)
 {
+	showobj(&selected);
+}
+
+// FIXME: move more control shit from os-specific draw to here
+//	+ clearer naming common vs. os
+
+void
+clearvismap(void)
+{
+	dyclear(visobj);
 }
 
 int
@@ -130,6 +181,7 @@ int
 redraw(void)
 {
 	DPRINT(Debugdraw, "redraw");
+	clearvismap();
 	cleardraw();
 	drawworld();
 	return updatedraw();

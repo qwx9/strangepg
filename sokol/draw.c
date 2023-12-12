@@ -15,7 +15,18 @@ static chan_t *drawc;
 static GLFWwindow *glw;
 
 int
-drawline(Quad q, double w, int emph)
+scrobj(Vertex)
+{
+	return -1;
+}
+
+void
+showobj(Obj *)
+{
+}
+
+int
+drawline(Quad q, double w, int emph, int)
 {
 	Color *c;
 
@@ -32,16 +43,16 @@ drawline(Quad q, double w, int emph)
 }
 
 int
-drawbezier(Quad q, double w)
+drawbezier(Quad q, double w, int)
 {
 	// FIXME
 	//q = centerscalequad(q);
-	return drawline(q, w, 0);
+	return drawline(q, w, 0, -1);
 }
 
 // FIXME: update or remove
 int
-drawquad(Quad q, double θ, int)
+drawquad(Quad q, double θ, int, int)
 {
 	q = centerscalequad(q);	// FIXME: part of transform?
 	sgp_push_transform();
@@ -63,7 +74,7 @@ drawlabel(Quad, Quad, Quad, vlong)
 /* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
 /* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
-drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int nc)
+drawquad2(Quad q1, Quad q2, Quad q, double θ, int sh, int nc, int)
 {
 	Color *c;
 

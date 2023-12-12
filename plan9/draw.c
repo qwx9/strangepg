@@ -17,9 +17,10 @@ static Pal nodepal[nelem(palette)];
 static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, hudr;
-static Image *viewfb, *edgesh;
+static Image *viewfb, *edgesh, *selfb;
 static Channel *drawc, *ticc;
 static int ttid = -1;
+static intptr *seltab;
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -63,7 +64,37 @@ centerscalerect(Quad q)
 	return Rpt(v2p(q.o), v2p(q.v));
 }
 
-// FIXME
+int
+scrobj(Vertex p)
+{
+	Rectangle r;
+	union { uchar u[4]; int v; } u;
+
+	r = Rpt(Pt(p.x,p.y), Pt(p.x+1, p.y+1));
+	unloadimage(selfb, r, u.u, 4);
+	return u.v - 1;
+}
+
+static Image *
+i2c(int idx)
+{
+	static Image *i;
+	union { uchar u[4]; int v; } u;
+
+	u.v = idx + 1;
+	if(i == nil)
+		i = eallocimage(Rect(0,0,1,1), screen->chan, 1, u.v);
+	else
+		loadimage(i, i->r, u.u, sizeof u.u);
+	return i;
+}
+
+void
+showobj(Obj *o)
+{
+	// FIXME: ...
+}
+
 int
 drawlabel(Quad, Quad, Quad q, vlong id)
 {
@@ -76,7 +107,7 @@ drawlabel(Quad, Quad, Quad q, vlong id)
 }
 
 int
-drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c)
+drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c, int idx)
 {
 	Rectangle r1, r2;
 	Pal *cp;
@@ -99,13 +130,16 @@ drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c)
 	};
 	if(sh)
 		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
-	else
+	else{
 		fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
+		if(idx >= 0)
+			fillpoly(selfb, p, nelem(p), ~0, i2c(idx), ZP);
+	}
 	return 0;
 }
 
 int
-drawquad(Quad q, double, int w)
+drawquad(Quad q, double, int w, int idx)
 {
 	Rectangle r;
 
@@ -120,11 +154,13 @@ drawquad(Quad q, double, int w)
 		r.min
 	};
 	poly(viewfb, p, nelem(p), 0, 0, w, col[Cemph], ZP);
+	if(idx >= 0)
+		poly(selfb, p, nelem(p), 0, 0, w, i2c(idx), ZP);
 	return 0;
 }
 
 int
-drawbezier(Quad q, double w)
+drawbezier(Quad q, double w, int idx)
 {
 	double θ;
 	Point p2, p3;
@@ -145,6 +181,9 @@ drawbezier(Quad q, double w)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+	if(idx >= 0)
+		bezier(selfb, r.min, p2, p3, r.max, Endsquare,
+			showarrows ? Endarrow : Endsquare, w, i2c(idx), ZP);
 	if(!haxx0rz && view.zoom > 1.)
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 			showarrows ? Endarrow : Endsquare, w+1, edgesh, ZP);
@@ -152,7 +191,7 @@ drawbezier(Quad q, double w)
 }
 
 int
-drawline(Quad q, double w, int emph)
+drawline(Quad q, double w, int emph, int idx)
 {
 	Rectangle r;
 	Image *c;
@@ -165,8 +204,11 @@ drawline(Quad q, double w, int emph)
 	case 1: c = col[Cemph]; break;
 	default: c = nodepal[emph % nelem(nodepal)].i; break;
 	}
-	line(viewfb, r.min, r.max, Endsquare, showarrows||emph ? Endarrow : Endsquare,
-		w, c, ZP);
+	line(viewfb, r.min, r.max,
+		Endsquare, showarrows||emph ? Endarrow : Endsquare, w, c, ZP);
+	if(idx >= 0)
+		line(selfb, r.min, r.max,
+			Endsquare, showarrows||emph ? Endarrow : Endsquare, w, i2c(idx), ZP);
 	return 0;
 }
 
@@ -177,15 +219,16 @@ flushdraw(void)
 	flushimage(display, 1);
 }
 
-static int
+static void
 resetdraw(void)
 {
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	viewr = rectsubpt(screen->r, screen->r.min);
 	DPRINT(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
+	freeimage(selfb);
 	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
-	return 0;
+	selfb = eallocimage(viewr, XRGB32, 0, DNofill);
 }
 
 void
@@ -218,6 +261,7 @@ cleardraw(void)
 		resetdraw();
 	}
 	drawop(viewfb, viewr, col[Cbg], nil, ZP, S);
+	draw(selfb, selfb->r, display->black, nil, ZP);
 	if(debug){
 		Point pl[] = {
 			r.min,
