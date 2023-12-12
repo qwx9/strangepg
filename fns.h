@@ -67,9 +67,9 @@ void	sysinit(void);
 void	sysquit(void);
 
 int	initsysdraw(void);
-int	updatedraw(void);
-int	redraw(void);
-int shallowdraw(void);
+void	drawui(void);
+void	redraw(void);
+void	flushdraw(void);
 void	reqdraw(int);
 int	scrobj(Vertex);
 void	showobj(Obj*);

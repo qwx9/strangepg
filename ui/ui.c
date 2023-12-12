@@ -70,11 +70,19 @@ keyevent(Rune r)
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
+	int r;
+
 	if((b & 7) == Mlmb){
 		// FIXME: detect out of focus and click twice?
 		// FIXME: drag → move (in draw fsm)
 		if(mouseselect(v) >= 0)
 			reqdraw(Reqshallowdraw);
+		else{
+			r = selected.type != Onil;
+			selected = (Obj){Onil, nil, -1};
+			if(r)
+				reqdraw(Reqshallowdraw);
+		}
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
 	}else if((b & 7) == Mrmb){

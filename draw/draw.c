@@ -148,41 +148,23 @@ drawworld(void)
 		drawguides();
 }
 
-static void
-drawui(void)
-{
-	showobj(&selected);
-}
-
 // FIXME: move more control shit from os-specific draw to here
 //	+ clearer naming common vs. os
 
 void
-clearvismap(void)
+drawui(void)
 {
-	dyclear(visobj);
+	if(selected.type == Onil)
+		return;
+	showobj(&selected);
 }
 
-int
-updatedraw(void)
-{
-	drawui();
-	return 0;
-}
-
-int
-shallowdraw(void)
-{
-	DPRINT(Debugdraw, "shallowdraw");
-	return updatedraw();
-}
-
-int
+void
 redraw(void)
 {
 	DPRINT(Debugdraw, "redraw");
-	clearvismap();
+	dyclear(visobj);
 	cleardraw();
 	drawworld();
-	return updatedraw();
+	flushdraw();
 }

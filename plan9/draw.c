@@ -16,11 +16,10 @@ static Pal nodepal[nelem(palette)];
 
 static Image *col[Cend];
 static Point panmax;
-static Rectangle viewr, hudr;
+static Rectangle viewr, statr;
 static Image *viewfb, *edgesh, *selfb;
 static Channel *drawc, *ticc;
 static int ttid = -1;
-static intptr *seltab;
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -71,6 +70,7 @@ scrobj(Vertex p)
 	union { uchar u[4]; int v; } u;
 
 	r = Rpt(Pt(p.x,p.y), Pt(p.x+1, p.y+1));
+	r = rectsubpt(r, screen->r.min);
 	unloadimage(selfb, r, u.u, 4);
 	return u.v - 1;
 }
@@ -92,7 +92,23 @@ i2c(int idx)
 void
 showobj(Obj *o)
 {
-	// FIXME: ...
+	char s[128];
+	Node *n;
+	Edge *e;
+
+	if(selected.type == Onil)
+		return;
+	switch(selected.type){
+	case Oedge:
+		e = o->g->edges + o->idx;
+		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
+		break;
+	case Onode:
+		n = o->g->nodes + o->idx;
+		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->sid);
+		break;
+	}
+	string(screen, statr.min, col[Ctext], ZP, font, s);
 }
 
 int
@@ -216,6 +232,7 @@ void
 flushdraw(void)
 {
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
+	drawui();
 	flushimage(display, 1);
 }
 
@@ -229,6 +246,8 @@ resetdraw(void)
 	freeimage(selfb);
 	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
 	selfb = eallocimage(viewr, XRGB32, 0, DNofill);
+	statr.min = addpt(screen->r.min, Pt(0, viewr.max.y - font->height));
+	statr.max = viewr.max;
 }
 
 void
@@ -308,7 +327,7 @@ drawproc(void *)
 			case Reqresetdraw: resetdraw(); /* wet floor */
 			case Reqresetui: resetui(1);	/* wet floor */
 			case Reqredraw: redraw(); flushdraw(); break;
-			case Reqshallowdraw: shallowdraw(); flushdraw(); break;
+			case Reqshallowdraw: flushdraw(); break;
 			case Reqrefresh: rerender(1); redraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
