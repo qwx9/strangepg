@@ -1,7 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
 #include "em.h"
-#include "index.h"
 
 /* - currently just greedily uses up as much memory as is given,
  * but could apply some balancing heuristic to free stuff that

@@ -1,11 +1,80 @@
 #include "strpg.h"
 #include "fs.h"
 #include "em.h"
-#include "index.h"
 
-/* FIXME: there's a problem showing inverted edge, perhaps even sd's */
+typedef struct Level Level;
 
-/* the actual level index is small and can remain in memory */
+struct Level{
+	vlong noff;
+	usize eoff;
+	usize nnodes;
+	usize nedges;
+};
+struct Coarse{
+	Level *levels;
+};
+
+// FIXME: this is a fucked way to encode a tree for this purpose
+void
+expandnode(Graph *g, ssize id)
+{
+	ssize i, u, v, par, w;
+	Level *l;
+	Coarse *c;
+	File *f;
+	Node *pp, *p, *n, *m;
+
+	f = g->f;
+	c = g->c;
+	printgraph(g);
+	if((pp = getnode(g, id)) == nil)
+		abort();	// FIXME
+	DPRINT(Debugcoarse, "split %#p node %zx level %d", g, id, pp->lvl);
+	l = c->levels + pp->lvl;
+	seekfs(f, l->noff);
+	for(i=0, p=nil; i<l->nnodes; i++){
+		u = get64(f);
+		get64(f);	/* idx */
+		par = get64(f);	/* par */
+		w = get64(f);	/* weight */
+		if(par != id)	// FIXME: performance
+			continue;
+		p = p == nil ? pushchild(g, u, pp, w) : pushsibling(g, u, p, w);
+	}
+	seekfs(f, l->eoff);
+	for(i=0; i<l->nedges; i++){
+		u = get64(f);
+		v = get64(f);
+		if((n = getnode(g, u)) == nil || (m = getnode(g, v)) == nil){
+			warn("expandnode: unsupported edge %zx,%zx\n", u, v);
+			continue;
+		}
+		if(n->pid == id || m->pid == id)
+			pushedge(g, n, m, Edgesense, Edgesense);
+	}
+	printgraph(g);
+}
+
+void
+retractnode(Graph *g, ssize id)
+{
+	Node *pp;
+
+	if((pp = getnode(g, id)) == nil)
+		abort();	// FIXME
+	DPRINT(Debugcoarse, "merge %#p node %zx level %d", g, id, pp->lvl);
+	poptree(g, pp);
+	printgraph(g);
+}
+
+int
+zoomgraph(Graph *g, int Δ)
+{
+	USED(g, Δ);
+	DPRINT(Debugcoarse, "zoomgraph %#p %d", g, Δ);
+	return 0;
+}
+
 static int
 readtree(Graph *g, char *path)
 {
@@ -26,8 +95,8 @@ readtree(Graph *g, char *path)
 	g->nedges = get64(f);
 	g->nsuper = get64(f);
 	nl = g->nlevels = get64(f);
-	DPRINT(Debugcoarse, "ct: nv+ns %zd ne %zd nl %d",
-		g->nnodes, g->nedges, g->nlevels);
+	DPRINT(Debugcoarse, "ct: nv %zd nv+ns %zd ne %zd nl %d",
+		g->nnodes, g->nsuper, g->nedges, g->nlevels);
 	c = g->c;
 	dyprealloc(c->levels, nl);
 	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
@@ -43,19 +112,52 @@ readtree(Graph *g, char *path)
 	return 0;
 }
 
+static void
+loadlevel(Graph *g, int lvl)
+{
+	usize par, w, u, v, i;
+	Coarse *c;
+	Level *l;
+	File *f;
+	Node *n, *m;
+
+	f = g->f;
+	c = g->c;
+	DPRINT(Debugcoarse, "loadlevel %#p %d", g, lvl);
+	l = c->levels + lvl;
+	seekfs(f, l->noff);
+	for(i=0, n=nil; i<l->nnodes; i++){
+		u = get64(f);
+		get64(f);	/* idx */
+		par = get64(f);
+		w = get64(f);
+		n = n != nil ? pushsibling(g, u, n, w) : pushnode(g, u, par, w);
+	}
+	seekfs(f, l->eoff);
+	for(i=0; i<l->nedges; i++){
+		u = get64(f);
+		v = get64(f);
+		n = getnode(g, u);
+		m = getnode(g, v);
+		assert(n != nil && m != nil);
+		pushedge(g, n, m, Edgesense, Edgesense);
+	}
+}
+
 static Graph *
 load(char *path)
 {
 	Graph *g;
+	Coarse *c;
 
 	if((g = initgraph()) == nil)
-		sysfatal("load: %s", error());
-	if(initindex(g) == nil)
-		sysfatal("load: initindex: %s", error());
+		sysfatal("loadgfa1: %r");
+	g->c = emalloc(sizeof *c);	// FIXME
 	if(readtree(g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
-	if(setgraphdepth(g, 0) < 0)
-		sysfatal("load: failed to load first level: %s", error());
+	pushnode(g, g->nsuper, -1, 1);
+	expandnode(g, g->nsuper);
+	//loadlevel(g, 0);
 	return g;
 }
 
@@ -68,6 +170,7 @@ save(Graph *)
 static void
 nuke(Graph *g)
 {
+	free(g->c);
 	nukegraph(g);
 }
 

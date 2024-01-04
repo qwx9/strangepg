@@ -249,8 +249,7 @@ coarsen(Graph *g, char *index)
 		k = w;
 		w = S;
 	}
-	DPRINT(Debugcoarse, "coarsen: ended at level %d", nlvl);
-		DPRINT(Debugcoarse, "stopping with %lld remaining edges", M);
+	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining edges", nlvl,  M);
 	/* add articial root node for all remaining */
 	// FIXME: out of date, untested
 #ifdef fuck

@@ -18,12 +18,6 @@ Quad	quadsubpt2(Quad, Vector);
 Vertex	floorpt2(Vertex);
 int	eqpt2(Point2, Point2);
 
-#define idmap() kh_init(id)
-void	idnuke(Htab*);
-int	idput(Htab*, char*, usize);
-int	idget(Htab*, char*, usize*);
-void	iddump(Htab*);
-
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 
@@ -31,21 +25,22 @@ int	errstr(char*, uint);
 
 int	zoomgraph(Graph*, int);
 
-// FIXME: use ssize for handles everywhere, make it a type
-int	pushsupernode(Graph*, ssize, ssize, ssize, int);
-int	pushsuperedge(Graph*, ssize, ssize, int, int);
-Node*	getinode(Graph*, ssize);
-ssize	getsupernode(Graph*, ssize);
-Node*	gethypernode(Graph*, ssize);
+void	expandnode(Graph*, ssize);
+void	retractnode(Graph*, ssize);
+
+Node*	getnode(Graph*, ssize);
 Edge*	getedge(Graph*, ssize);
+int	ischild(Graph*, ssize, ssize);
+Node*	pushnode(Graph*, ssize, ssize, int);
+Node*	pushsibling(Graph*, ssize, Node*, int);
+Node*	pushnamednode(Graph*, char*);
+Node*	pushchild(Graph*, ssize, Node*, int);
+Edge*	pushnamededge(Graph*, char*, char*, int, int);
+Edge*	pushedge(Graph*, Node*, Node*, int, int);
+void	poptree(Graph*, Node*);
 void	printgraph(Graph*);
-void	popnode(Graph*, ssize);
-void	popedge(Graph*, ssize);
-ssize	id2n(Graph*, char*);
-int	pushedge(Graph*, usize, usize, int, int);
-ssize	pushnode(Graph*, usize);
-int	pushnamednode(Graph*, char*);
-ssize	pushnamededge(Graph*, char*, char*, int, int);
+
+void	clearmeta(Graph*);
 void	cleargraph(Graph*);
 void	nukegraph(Graph*);
 Graph*	initgraph(void);

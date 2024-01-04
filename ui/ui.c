@@ -71,15 +71,19 @@ int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
 	int r;
+	Obj *o;
 
 	if((b & 7) == Mlmb){
+		o = &selected;
 		// FIXME: detect out of focus and click twice?
 		// FIXME: drag → move (in draw fsm)
-		if(mouseselect(v) >= 0)
+		if(mouseselect(v) >= 0){
+			if(o->type == Onode && memcmp(o, &selected, sizeof selected) == 0)
+				expandnode(o->g, o->idx);
 			reqdraw(Reqshallowdraw);
-		else{
+		}else{
 			r = selected.type != Onil;
-			selected = (Obj){Onil, nil, -1};
+			selected = (Obj){nil, Onil, -1};
 			if(r)
 				reqdraw(Reqshallowdraw);
 		}

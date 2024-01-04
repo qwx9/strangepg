@@ -4,7 +4,7 @@ static double
 faceyourfears(Graph *g, Node *u)
 {
 	int n, sign;
-	usize *ip, *ie;
+	ssize *ip, *ie;
 	double θ, dθ;
 	Edge *e;
 	Node *v;
@@ -28,7 +28,7 @@ faceyourfears(Graph *g, Node *u)
 			//	it's buggy anyway
 			if((e = getedge(g, *ip)) == nil)
 				continue;
-			v = getinode(g, e->v >> 1);	// FIXME: genericity: idx2n or sth
+			v = getnode(g, e->v >> 1);	// FIXME: genericity: idx2n or sth
 			assert(v != nil);
 			if(u == v)
 				continue;
@@ -49,7 +49,7 @@ faceyourfears(Graph *g, Node *u)
 		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
 			if((e = getedge(g, *ip)) == nil)
 				continue;
-			v = getinode(g, e->v >> 1);
+			v = getnode(g, e->v >> 1);
 			assert(v != nil);
 			if(u == v)
 				continue;
@@ -118,12 +118,14 @@ rendernode(Graph *g, Node *u)
 static int
 rendershapes(Graph *g)
 {
-	Node *u, *ue;
+	ssize i;
+	Node *u;
 	Quad d;
 	Vertex p;
 
-	for(d=ZQ, u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+	for(i=g->node0.next, d=ZQ; i>=0; i=u->next){
 		yield();
+		u = g->nodes + i;
 		DPRINT(Debugrender, "render node %.1f,%.1f:%.1f,%.1f", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;
 		rendernode(g, u);

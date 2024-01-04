@@ -22,7 +22,7 @@ gfa1seg(Graph *g, File *f)
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
-	return pushnamednode(g, f->fld[1]);
+	return pushnamednode(g, f->fld[1]) != nil ? 0 : -1;
 }
 
 static int
@@ -49,12 +49,12 @@ gfa1link(Graph *g, File *f)
 			return -1;
 		}
 		*s = *t = 0;
-		return pushnamededge(g, f->fld[1], f->fld[2], d1, d2);
+		return pushnamededge(g, f->fld[1], f->fld[2], d1, d2) != nil ? 0 : -1;;
 	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
 		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}
-	return pushnamededge(g, f->fld[1], f->fld[3], d1, d2);
+	return pushnamededge(g, f->fld[1], f->fld[3], d1, d2) != nil ? 0 : -1;;
 }
 
 static int
@@ -68,21 +68,22 @@ static Graph*
 loadgfa1(char *path)
 {
 	int (*parse)(Graph*, File*);
+	ssize nnodes, nedges;
 	Graph *g;
 	File *f;
 
+	nnodes = nedges = 0;
 	DPRINT(Debugfs, "loadgfa1 %s", path);
 	if((g = initgraph()) == nil)
 		sysfatal("loadgfa1: %r");
 	memset(&f, 0, sizeof f);
-	g->id2n = idmap();
 	if((f = graphopenfs(g, path, OREAD)) == nil)
 		return nil;
 	while(readrecord(f) != nil && f->err < 10){
 		switch(f->fld[0][0]){
 		case 'H': parse = gfa1hdr; break;
-		case 'S': parse = gfa1seg; break;
-		case 'L': parse = gfa1link; break;
+		case 'S': parse = gfa1seg; nnodes++; break;
+		case 'L': parse = gfa1link; nedges++; break;
 		case 'P': parse = gfa1path; break;
 		default: werrstr("line %d: unknown record type %c", f->nr, *f->fld[0]); continue;
 		}
@@ -93,15 +94,14 @@ loadgfa1(char *path)
 	}
 	DPRINT(Debugfs, "done loading gfa");
 	closefs(f);
-	idnuke(g->id2n);
-	g->id2n = nil;
+	clearmeta(g);	// FIXME: why? (em)
 	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
 	}
-	g->nnodes = dylen(g->nodes);
-	g->nedges = dylen(g->edges);
+	g->nedges = nedges;
+	g->nnodes = nnodes;
 	return g;
 }
 

@@ -15,8 +15,6 @@ OFILES=\
 	fs/load.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
-	index/fs.$O\
-	index/index.$O\
 	layout/conga.$O\
 	layout/force.$O\
 	layout/layout.$O\
@@ -28,7 +26,6 @@ OFILES=\
 	plan9/sys.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
-	util/htab.$O\
 	util/print.$O\
 
 OCOARSEN=\
@@ -37,7 +34,6 @@ OCOARSEN=\
 	fs/fs.$O\
 	plan9/fs.$O\
 	plan9/sys.$O\
-	util/htab.$O\
 	util/print.$O\
 
 HFILES=\
@@ -46,7 +42,6 @@ HFILES=\
 	draw/drw.h\
 	fs/em.h\
 	fs/fs.h\
-	index/index.h\
 	layout/layout.h\
 	lib/khash.h\
 	plan9/strpg.h\
@@ -56,7 +51,7 @@ HFILES=\
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
-	-I. -Icmd -Idraw -Ifs -Igraph -Iindex -Ilayout -Irend -Iui -Iutil \
+	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui -Iutil \
 
 #LDFLAGS=$LDFLAGS -p
 

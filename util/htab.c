@@ -8,6 +8,8 @@
  * hardly be a bottleneck globally unless something has gone very wrong.
  */
 
+FIXME: remove this; just check if there's useful bits
+
 void
 iddump(Htab *h)
 {

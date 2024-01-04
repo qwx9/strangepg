@@ -9,9 +9,11 @@ static void
 compute(Graph *g)
 {
 	int x;
-	Node *u, *ue;
+	ssize i;
+	Node *u;
 
-	for(u=g->nodes, ue=u+dylen(g->nodes), x=0; u<ue; u++, x+=Nodesz+10*Ptsz){
+	for(i=g->node0.next, x=0; i>=0; i=u->next, x+=Nodesz+10*Ptsz){
+		u = g->nodes + i;
 		putnode(u, x, 0);
 		yield();
 	}

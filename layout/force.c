@@ -31,11 +31,11 @@ repulsion(double d, double k)
 static void
 compute(Graph *g)
 {
-	int i, j, n, x, y;
+	int i, j, n;
 	double K, δ, R, Δ, ε, l;
-	usize *ep, *ee;
+	ssize ui, vi, x, y, *ep, *ee;
 	Vertex *Fu, dv;
-	Node *u, *from, *v, *ne;
+	Node *u, *from, *v;
 	Edge *e;
 
 	if(dylen(g->edges) < 1){
@@ -45,8 +45,10 @@ compute(Graph *g)
 	}
 	l = Length;
 	/* initial random placement, but in same scale as springs */
-	for(u=g->nodes, ne=u+dylen(g->nodes); u<ne; u++){
-		x = y = nrand(l);
+	for(ui=g->node0.next; ui>=0; ui=u->next){
+		u = g->nodes + ui;
+		x = nrand(l);
+		y = nrand(l);
 		putnode(u, x, y);
 	}
 	K = ceil(sqrt(l * l / dylen(g->nodes)));
@@ -54,12 +56,12 @@ compute(Graph *g)
 	ε = ceil(sqrt(l * l / dylen(g->edges)));
 	δ = 1.0;
 	Fu = emalloc(dylen(g->nodes) * sizeof *Fu);
-	u = g->nodes;
-	ne = u + dylen(g->nodes);
 	for(n=0; n<Nrep; n++){
 		memset(Fu, 0, dylen(g->nodes) * sizeof *Fu);
-		for(u=g->nodes, i=0; u<ne; i++, u++){
-			for(v=g->nodes; v<ne; v++){
+		for(ui=g->node0.next, i=0; ui>=0; i++, ui=u->next){
+			u = g->nodes + ui;
+			for(vi=g->node0.next; vi>=0; vi=v->next){
+				v = g->nodes + vi;
 				if(v == u)
 					continue;
 				yield();
@@ -68,28 +70,26 @@ compute(Graph *g)
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->weight * repulsion(Δ, K)));
 			}
 		}
-		for(u=g->nodes, i=0; u<ne; i++, u++){
+		for(ui=g->node0.next, i=0; ui>=0; i++, ui=u->next){
+			u = g->nodes + ui;
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
 				yield();
 				if((e = getedge(g, *ep)) == nil)
 					continue;
-				if((from = getinode(g, e->u >> 1)) == nil)
+				if((from = getnode(g, e->u >> 1)) == nil)
 					panic("phase error -- missing incident node");
 				dv = subpt2(from->vrect.o, u->vrect.o);
 				Δ = diff(dv);
 				dv = mulpt2(divpt2(dv, Δ), attraction(Δ, K));
-				// ed.w now always 1
-				Fu[i] = addpt2(Fu[i], mulpt2(dv, 1));
+				// FIXME: just a scaling issue
+				Fu[i] = addpt2(Fu[i], mulpt2(dv, Δ / dylen(g->edges) / ((double)dylen(g->edges)/dylen(g->nodes))));
 				j = from - g->nodes;
-				if(1 < 1){	// FIXME: ?? fix/optimize this garbage code
-					assert(1 > 0.0);
-					Fu[j] = subpt2(Fu[j], dv);
-				}else
-					Fu[j] = subpt2(Fu[j], divpt2(dv, 1));
+				Fu[j] = subpt2(Fu[j], mulpt2(dv, Δ / dylen(g->edges) / ((double)dylen(g->edges)/dylen(g->nodes))));
 			}
 		}
-		for(u=g->nodes, R=0, i=0; u<ne; i++, u++){
+		for(ui=g->node0.next, i=0, R=0; ui>=0; i++, ui=u->next){
 			yield();
+			u = g->nodes + ui;
 			dv = Fu[i];
 			Δ = diff(dv);
 			dv = mulpt2(divpt2(dv, Δ), MIN(Δ, δ));

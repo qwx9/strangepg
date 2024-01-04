@@ -13,12 +13,13 @@ typedef struct Coarse Coarse;
 #pragma incomplete File
 #pragma incomplete Coarse
 
+KHASH_MAP_INIT_STR(strmap, ssize)
+KHASH_MAP_INIT_INT64(idmap, ssize)
+
 enum{
 	Vforward = 0,
 	Vreverse = 1,
 };
-
-#define Htab khash_t(id)
 
 typedef Point2 Vertex;
 typedef Point2 Vector;
@@ -55,10 +56,11 @@ struct Layouting{
 };
 
 struct Node{
-	usize idx;
-	usize sid;
-	usize *in;		/* dynamic array (v indices) */
-	usize *out;		/* dynamic array (v indices) */
+	ssize id;
+	ssize pid;
+	int lvl;
+	ssize *in;		/* dynamic array (v indices) */
+	ssize *out;		/* dynamic array (v indices) */
 	vlong metaoff;
 	int weight;
 	Quad q1;		/* bounding polygon */
@@ -66,14 +68,22 @@ struct Node{
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	double θ;
+	ssize prev;
+	ssize next;
+	ssize ch;
+};
+enum{
+	Sbit = 1ULL<<63,
 };
 enum{
 	Edgesense = 0<<0,
 	Edgeantisense = 1<<0,
 };
 struct Edge{
-	usize u;
-	usize v;
+	ssize u;
+	ssize v;
+	ssize next;
+	ssize prev;
 };
 struct Graph{
 	int type;
@@ -83,9 +93,13 @@ struct Graph{
 	usize nedges;
 	usize nsuper;
 	int nlevels;
-	Node *nodes;	/* dynamic array */
-	Edge *edges;	/* dynamic array */
-	Htab *id2n;
+	Node *nodes;
+	Edge *edges;
+	Node node0;
+	Edge edge0;
+	khash_t(idmap) *nmap;
+	khash_t(idmap) *emap;
+	khash_t(strmap) *strnmap;
 	Layouting layout;
 	Quad dim;
 	Vertex off;
@@ -98,8 +112,8 @@ enum{
 	Oedge,
 };
 struct Obj{
-	int type;
 	Graph *g;
+	int type;
 	ssize idx;
 };
 extern Obj selected;	// FIXME: only one

@@ -30,11 +30,11 @@ drawguides(void)
 }
 
 int
-mapvis(int type, Graph *g, int idx)
+mapvis(Graph *g, int type, int idx)
 {
 	Obj o;
 
-	o = (Obj){type, g, idx};
+	o = (Obj){g, type, idx};
 	dypush(visobj, o);
 	return dylen(visobj) - 1;
 }
@@ -45,7 +45,7 @@ getvis(Vertex v)
 	int i;
 
 	if((i = scrobj(v)) < 0)
-		return (Obj){Onil, nil, -1};
+		return (Obj){nil, Onil, -1};
 	assert(i < dylen(visobj));
 	return visobj[i];
 }
@@ -70,7 +70,7 @@ drawedge(Graph *g, Quad q, double w, ssize idx)
 	int i;
 
 	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	i = mapvis(Oedge, g, idx);
+	i = mapvis(g, Oedge, idx);
 	q.v = subpt2(q.v, q.o);	// FIXME
 	return drawbezier(q, w, i);
 }
@@ -81,7 +81,7 @@ drawnode(Graph *g, Quad p, Quad q, Quad u, double θ, ssize id, ssize idx)
 	int i;
 
 	DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	i = mapvis(Onode, g, idx);
+	i = mapvis(g, Onode, idx);
 	if(drawquad2(p, q, u, θ, 1, idx, -1) < 0
 	|| drawquad2(p, q, u, θ, 0, idx, i) < 0
 	|| drawlabel(p, q, u, id) < 0)
@@ -99,15 +99,17 @@ drawnodevec(Quad q)
 static int
 drawedges(Graph *g)
 {
-	Edge *e, *ee;
+	ssize i;
+	Edge *e;
 	Node *u, *v;
 	Quad q;
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
-	for(e=g->edges, ee=e+dylen(g->edges); e<ee; e++){
+	for(i=g->edge0.next; i>=0; i=e->next){
 		yield();
-		u = getinode(g, e->u >> 1);
-		v = getinode(g, e->v >> 1);
+		e = g->edges + i;
+		u = getnode(g, e->u >> 1);
+		v = getnode(g, e->v >> 1);
 		assert(u != nil && v != nil);
 		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
 		drawedge(g, q, MAX(0., view.zoom/5), e - g->edges);
@@ -118,14 +120,16 @@ drawedges(Graph *g)
 static int
 drawnodes(Graph *g)
 {
-	Node *u, *ue;
+	ssize i;
+	Node *n;
 
 	DPRINT(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);
-	for(u=g->nodes, ue=u+dylen(g->nodes); u<ue; u++){
+	for(i=g->node0.next; i>=0; i=n->next){
 		yield();
+		n = g->nodes + i;
 		if(showarrows)
-			drawnodevec(u->vrect);
-		drawnode(g, u->q1, u->q2, u->shape, u->θ, u->sid, u - g->nodes);
+			drawnodevec(n->vrect);
+		drawnode(g, n->q1, n->q2, n->shape, n->θ, n->id, n->id);
 	}
 	return 0;
 }

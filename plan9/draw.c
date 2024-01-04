@@ -105,7 +105,7 @@ showobj(Obj *o)
 		break;
 	case Onode:
 		n = o->g->nodes + o->idx;
-		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->sid);
+		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
 		break;
 	}
 	string(screen, statr.min, col[Ctext], ZP, font, s);
