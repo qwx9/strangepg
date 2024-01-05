@@ -16,21 +16,19 @@ struct Coarse{
 
 // FIXME: this is a fucked way to encode a tree for this purpose
 void
-expandnode(Graph *g, ssize id)
+expandnode(Graph *g, Node *pp)
 {
 	ssize i, u, v, par, w;
 	Level *l;
 	Coarse *c;
 	File *f;
-	Node *pp, *p, *n, *m;
+	Node *p, *n, *m;
 
 	f = g->f;
 	c = g->c;
 	printgraph(g);
-	if((pp = getnode(g, id)) == nil)
-		abort();	// FIXME
 	stoplayout(g);
-	DPRINT(Debugcoarse, "split %#p node %zx level %d", g, id, pp->lvl);
+	DPRINT(Debugcoarse, "split %#p node %zx level %d", g, pp->id, pp->lvl);
 	l = c->levels + pp->lvl;
 	seekfs(f, l->noff);
 	for(i=0, p=nil; i<l->nnodes; i++){
@@ -38,7 +36,7 @@ expandnode(Graph *g, ssize id)
 		get64(f);	/* idx */
 		par = get64(f);	/* par */
 		w = get64(f);	/* weight */
-		if(par != id)	// FIXME: performance
+		if(par != pp->id)	// FIXME: performance
 			continue;
 		p = p == nil ? pushchild(g, u, pp, w) : pushsibling(g, u, p, w);
 	}
@@ -50,7 +48,7 @@ expandnode(Graph *g, ssize id)
 			warn("expandnode: unsupported edge %zx,%zx\n", u, v);
 			continue;
 		}
-		if(n->pid == id || m->pid == id)
+		if(n->pid == pp->id || m->pid == pp->id)
 			pushedge(g, n, m, Edgesense, Edgesense);
 	}
 	updatelayout(g);
@@ -58,13 +56,9 @@ expandnode(Graph *g, ssize id)
 }
 
 void
-retractnode(Graph *g, ssize id)
+retractnode(Graph *g, Node *pp)
 {
-	Node *pp;
-
-	if((pp = getnode(g, id)) == nil)
-		abort();	// FIXME
-	DPRINT(Debugcoarse, "merge %#p node %zx level %d", g, id, pp->lvl);
+	DPRINT(Debugcoarse, "merge %#p node %zx level %d", g, pp->id, pp->lvl);
 	poptree(g, pp);
 	printgraph(g);
 }
@@ -158,7 +152,7 @@ load(char *path)
 	if(readtree(g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
 	pushnode(g, g->nsuper, -1, 1);
-	expandnode(g, g->nsuper);
+	expandnode(g, g->nodes);
 	//loadlevel(g, 0);
 	return g;
 }

@@ -25,8 +25,8 @@ int	errstr(char*, uint);
 
 int	zoomgraph(Graph*, int);
 
-void	expandnode(Graph*, ssize);
-void	retractnode(Graph*, ssize);
+void	expandnode(Graph*, Node*);
+void	retractnode(Graph*, Node*);
 
 Node*	getnode(Graph*, ssize);
 Edge*	getedge(Graph*, ssize);

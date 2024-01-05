@@ -80,8 +80,10 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		coffeetime();
 		selected = mouseselect(v);
 		if(selected.type == Onode){
-			if(memcmp(&selected, &o, sizeof o) == 0)
-				expandnode(o.g, o.idx);
+			if(memcmp(&selected, &o, sizeof o) == 0){
+				assert(o.idx < dylen(o.g->nodes));
+				expandnode(o.g, o.g->nodes + o.idx);
+			}
 			reqdraw(Reqshallowdraw);
 		}
 		coffeeover();

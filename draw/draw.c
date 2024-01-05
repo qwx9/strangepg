@@ -117,7 +117,7 @@ drawnodes(Graph *g)
 		n = g->nodes + i;
 		if(showarrows)
 			drawnodevec(n->vrect);
-		drawnode(g, n->q1, n->q2, n->shape, n->θ, n->id, n->id);
+		drawnode(g, n->q1, n->q2, n->shape, n->θ, n->id, n - g->nodes);
 	}
 	return 0;
 }

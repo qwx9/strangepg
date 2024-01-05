@@ -45,14 +45,14 @@ printgraph(Graph *g)
 	assert(dylen(g->nodes) > 0);
 	for(i=g->node0.next; i>=0; i=n->next){
 		n = g->nodes + i;
-		warn("n[%04zx] %#p %zx pid %zd weight %d ch %zd → [ ",
+		warn("n[%04zx] %#p %zx pid %zx weight %d ch %zx → [ ",
 			i, n, n->id, n->pid, n->weight, n->ch);
 		for(np=n->out, nq=np+dylen(np); np<nq; np++)
 			warn("%zx ", *np);
 		warn("] ← [ ");
 		for(np=n->in, nq=np+dylen(np); np<nq; np++)
 			warn("%zx ", *np);
-		warn("] >%zd <%zd\n", n->next, n->prev);
+		warn("] >%zx <%zx\n", n->next, n->prev);
 	}
 }
 
@@ -225,7 +225,7 @@ newnode(Graph *g, ssize id, ssize pid, int w)
 	kh_val(g->nmap, k) = i;
 	np = g->nodes + i;
 	np->prev = np->next = i;
-	warn("newnode %zd <%zd\n", id, pid);
+	warn("newnode %zx <%zx\n", id, pid);
 	return np;
 }
 
@@ -236,7 +236,7 @@ pushnode(Graph *g, ssize id, ssize pid, int w)
 	Node *n, *m;
 
 	n = newnode(g, id, pid, w);
-	warn("pushnode %zd id %zd pid %zd len %zd\n", n - g->nodes, n->id, n->pid, dylen(g->nodes));
+	warn("pushnode %zx id %zx pid %zx len %zd\n", n - g->nodes, n->id, n->pid, dylen(g->nodes));
 	printgraph(g);
 	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
 		m = g->nodes + i;
@@ -253,7 +253,7 @@ pushsibling(Graph *g, ssize id, Node *m, int w)
 	Node *n;
 
 	n = newnode(g, id, m->pid, w);
-	warn("pushsibling %zd id %zd pid %zd\n", n - g->nodes, n->id, n->pid);
+	warn("pushsibling %zx id %zx pid %zx\n", n - g->nodes, n->id, n->pid);
 	n->lvl = m->lvl;
 	LINK(g->nodes, &g->node0, m, n);
 	printgraph(g);
@@ -267,7 +267,7 @@ pushchild(Graph *g, ssize id, Node *pp, int w)
 	Node *n, *m;
 
 	n = newnode(g, id, pp != nil ? pp->id : -1, w);
-	warn("pushchild %zd id %zd pid %zd len %zd\n", n - g->nodes, n->id, n->pid, dylen(g->nodes));
+	warn("pushchild %zx id %zx pid %zx len %zd\n", n - g->nodes, n->id, n->pid, dylen(g->nodes));
 	if(pp != nil){
 		pp->ch = n - g->nodes;
 		UNLINK(g->nodes, &g->node0, pp, pp);
@@ -291,11 +291,11 @@ pushnamednode(Graph *g, char *s)
 	ssize i, id;
 	Node *n;
 	khiter_t k;
-	char *kk;
-	usize vv;
+	//char *kk;
+	//usize vv;
 
 	warn("pushnamednode %s\n", s);
-	kh_foreach(g->strnmap, kk, vv, {warn("%s:%zd\n", kk, vv);});
+	//kh_foreach(g->strnmap, kk, vv, {warn("%s:%zx\n", kk, vv);});
 	if(getnamednode(g, s) != nil){
 		werrstr("duplicate node id %s", s);
 		return nil;
@@ -322,7 +322,7 @@ pushedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	Edge e = {0}, *ep, *pp;
 	khiter_t k;
 
-	warn("pushedge %zd,%zd\n", u->id, v->id);
+	warn("pushedge %zx,%zx\n", u->id, v->id);
 	id = dylen(g->edges);
 	k = kh_put(idmap, g->emap, id, &ret);
 	assert(ret != 0);
