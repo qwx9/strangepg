@@ -13,6 +13,7 @@ putnode(Node *u, int x, int y)
 	u->vrect.v = ZV;
 }
 
+// FIXME: restrict update to selection
 int
 updatelayout(Graph *g)
 {

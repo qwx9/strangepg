@@ -69,6 +69,8 @@ scrobj(Vertex p)
 	Rectangle r;
 	union { uchar u[4]; int v; } u;
 
+	if(selfb == nil)
+		return -1;
 	r = Rpt(Pt(p.x,p.y), Pt(p.x+1, p.y+1));
 	r = rectsubpt(r, screen->r.min);
 	unloadimage(selfb, r, u.u, 4);
@@ -245,7 +247,7 @@ resetdraw(void)
 	freeimage(viewfb);
 	freeimage(selfb);
 	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
-	selfb = eallocimage(viewr, XRGB32, 0, DNofill);
+	selfb = eallocimage(viewr, XRGB32, 0, DBlack);
 	statr.min = addpt(screen->r.min, Pt(0, viewr.max.y - font->height));
 	statr.max = viewr.max;
 }

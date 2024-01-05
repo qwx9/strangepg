@@ -22,14 +22,14 @@ centerscalequad(Quad q)
 	return q;
 }
 
-void
+static void
 drawguides(void)
 {
 	drawline(Qd(ZV, view.center), 0, 1, -1);
 	drawline(Qd(ZV, view.pan), 0, 2, -1);
 }
 
-int
+static int
 mapvis(Graph *g, int type, int idx)
 {
 	Obj o;
@@ -40,7 +40,7 @@ mapvis(Graph *g, int type, int idx)
 }
 
 Obj
-getvis(Vertex v)
+mouseselect(Vertex v)
 {
 	int i;
 
@@ -48,18 +48,6 @@ getvis(Vertex v)
 		return (Obj){nil, Onil, -1};
 	assert(i < dylen(visobj));
 	return visobj[i];
-}
-
-int
-mouseselect(Vertex v)
-{
-	Obj o;
-
-	o = getvis(v);
-	if(o.type == Onil)
-		return -1;
-	selected = o;
-	return 0;
 }
 
 /* FIXME: the interfaces here need refactoring, too cumbersome and
@@ -167,8 +155,10 @@ void
 redraw(void)
 {
 	DPRINT(Debugdraw, "redraw");
+	coffeetime();
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
+	coffeeover();
 	flushdraw();
 }

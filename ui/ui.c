@@ -70,23 +70,21 @@ keyevent(Rune r)
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
-	int r;
-	Obj *o;
+	Obj o;
 
 	if((b & 7) == Mlmb){
-		o = &selected;
 		// FIXME: detect out of focus and click twice?
 		// FIXME: drag → move (in draw fsm)
-		if(mouseselect(v) >= 0){
-			if(o->type == Onode && memcmp(o, &selected, sizeof selected) == 0)
-				expandnode(o->g, o->idx);
+		o = selected;
+		// FIXME: everything should stop while this does its thing
+		coffeetime();
+		selected = mouseselect(v);
+		if(selected.type == Onode){
+			if(memcmp(&selected, &o, sizeof o) == 0)
+				expandnode(o.g, o.idx);
 			reqdraw(Reqshallowdraw);
-		}else{
-			r = selected.type != Onil;
-			selected = (Obj){nil, Onil, -1};
-			if(r)
-				reqdraw(Reqshallowdraw);
 		}
+		coffeeover();
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
 	}else if((b & 7) == Mrmb){

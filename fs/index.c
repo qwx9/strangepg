@@ -29,6 +29,7 @@ expandnode(Graph *g, ssize id)
 	printgraph(g);
 	if((pp = getnode(g, id)) == nil)
 		abort();	// FIXME
+	stoplayout(g);
 	DPRINT(Debugcoarse, "split %#p node %zx level %d", g, id, pp->lvl);
 	l = c->levels + pp->lvl;
 	seekfs(f, l->noff);
@@ -52,6 +53,7 @@ expandnode(Graph *g, ssize id)
 		if(n->pid == id || m->pid == id)
 			pushedge(g, n, m, Edgesense, Edgesense);
 	}
+	updatelayout(g);
 	printgraph(g);
 }
 

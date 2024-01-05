@@ -73,7 +73,7 @@ void	initrend(void);
 int	renderlayout(Graph*);
 int	rerender(int);
 
-int	mouseselect(Vertex);
+Obj	mouseselect(Vertex);
 int	panview(Vector);
 int	zoomview(Vector);
 void	initui(void);
