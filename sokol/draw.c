@@ -25,6 +25,11 @@ showobj(Obj *)
 {
 }
 
+void
+flushdraw(void)
+{
+}
+
 int
 drawline(Quad q, double w, int emph, int)
 {

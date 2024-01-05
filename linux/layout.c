@@ -37,6 +37,8 @@ runlayout(Graph *g)
 	int r;
 	pthread_t th;
 
+	if(g->layout.ll == nil || g->layout.ll->compute == nil)
+		return;
 	if(g->layout.aux == nil)
 		g->layout.aux = emalloc(sizeof th);
 	if((r = pthread_create(g->layout.aux, NULL, layproc, g)) != 0)

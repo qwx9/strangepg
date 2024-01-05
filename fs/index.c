@@ -66,7 +66,7 @@ retractnode(Graph *g, Node *pp)
 int
 zoomgraph(Graph *g, int Δ)
 {
-	USED(g, Δ);
+	USED((g, Δ));
 	DPRINT(Debugcoarse, "zoomgraph %#p %d", g, Δ);
 	return 0;
 }
