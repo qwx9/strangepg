@@ -6,7 +6,7 @@
  * supposed to in fine unravel/unload while we go */
 
 static void
-compute(Graph *g)
+init(Graph *g)
 {
 	int x;
 	ssize i;
@@ -19,8 +19,14 @@ compute(Graph *g)
 	}
 }
 
+static void
+compute(Graph *)
+{
+}
+
 static Layout ll = {
 	.name = "congaline",
+	.init = init,
 	.compute = compute,
 };
 

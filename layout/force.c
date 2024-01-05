@@ -10,6 +10,19 @@ enum{
 
 #define	ΔT	(1.0 - 1.0 / Nrep)		/* eg. δ *= 0.999 at every step */
 
+static void
+init(Graph *g)
+{
+	ssize ui;
+	Node *u;
+
+	/* initial random placement, but in same scale as springs */
+	for(ui=g->node0.next; ui>=0; ui=u->next){
+		u = g->nodes + ui;
+		putnode(u, nrand(Length), nrand(Length));
+	}
+}
+
 static double
 diff(Vertex v)
 {
@@ -33,7 +46,7 @@ compute(Graph *g)
 {
 	int i, j, n;
 	double K, δ, R, Δ, ε, l;
-	ssize ui, vi, x, y, *ep, *ee;
+	ssize ui, vi, *ep, *ee;
 	Vertex *Fu, dv;
 	Node *u, *from, *v;
 	Edge *e;
@@ -44,13 +57,6 @@ compute(Graph *g)
 		return;
 	}
 	l = Length;
-	/* initial random placement, but in same scale as springs */
-	for(ui=g->node0.next; ui>=0; ui=u->next){
-		u = g->nodes + ui;
-		x = nrand(l);
-		y = nrand(l);
-		putnode(u, x, y);
-	}
 	K = ceil(sqrt(l * l / dylen(g->nodes)));
 	/* arbitrary displacement minimum function */
 	ε = ceil(sqrt(l * l / dylen(g->edges)));
@@ -109,6 +115,7 @@ compute(Graph *g)
 
 static Layout ll = {
 	.name = "force",
+	.init = init,
 	.compute = compute,
 };
 

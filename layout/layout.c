@@ -17,6 +17,7 @@ putnode(Node *u, int x, int y)
 int
 updatelayout(Graph *g)
 {
+	stoplayout(g);
 	if(g->layout.tid >= 0){
 		werrstr("updatelayout: already running");
 		return -1;
@@ -30,6 +31,8 @@ int
 resetlayout(Graph *g)
 {
 	stoplayout(g);
+	g->layout.ll->init(g);
+	g->layout.armed = 1;
 	runlayout(g);
 	return 0;
 }
@@ -57,6 +60,8 @@ newlayout(Graph *g, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
+	ll->init(g);
+	g->layout.armed = 1;
 	runlayout(g);
 	return 0;
 }

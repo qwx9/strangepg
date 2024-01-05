@@ -31,7 +31,7 @@ stoplayout(Graph *g)
 void
 runlayout(Graph *g)
 {
-	if(g->layout.ll == nil || g->layout.ll->compute == nil)
+	if(!g->layout.armed)
 		return;
 	assert(g->layout.tid < 0);
 	if((g->layout.tid = proccreate(layproc, g, mainstacksize)) < 0)

@@ -5,7 +5,7 @@
  * no need to do anything */
 
 static void
-compute(Graph *g)
+init(Graph *g)
 {
 	ssize i;
 	Node *u;
@@ -17,8 +17,14 @@ compute(Graph *g)
 	}
 }
 
+static void
+compute(Graph *)
+{
+}
+
 static Layout ll = {
 	.name = "random",
+	.init = init,
 	.compute = compute,
 };
 

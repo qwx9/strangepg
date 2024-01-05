@@ -37,7 +37,7 @@ runlayout(Graph *g)
 	int r;
 	pthread_t th;
 
-	if(g->layout.ll == nil || g->layout.ll->compute == nil)
+	if(!g->layout.armed)
 		return;
 	if(g->layout.aux == nil)
 		g->layout.aux = emalloc(sizeof th);

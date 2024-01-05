@@ -46,11 +46,13 @@ enum{
 struct Layout{
 	char *name;
 	void (*compute)(Graph*);
+	void (*init)(Graph*);
 };
 extern int deflayout;
 
 struct Layouting{
 	int tid;
+	int armed;
 	void *aux;
 	Layout *ll;
 };
