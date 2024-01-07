@@ -44,9 +44,8 @@ mouseselect(Vertex v)
 {
 	int i;
 
-	if((i = scrobj(v)) < 0)
+	if((i = scrobj(v)) < 0 || i >= dylen(visobj))
 		return (Obj){nil, Onil, -1};
-	assert(i < dylen(visobj));
 	return visobj[i];
 }
 
