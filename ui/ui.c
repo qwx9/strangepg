@@ -83,6 +83,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));
 				expandnode(o.g, o.g->nodes + o.idx);
+				selected = aintnothingthere;
 			}
 			reqdraw(Reqshallowdraw);
 		}

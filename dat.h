@@ -58,11 +58,12 @@ struct Layouting{
 };
 
 struct Node{
-	ssize id;
-	ssize pid;
+	ssize id;		/* key */
+	ssize idx;		/* index (leaf) */
+	ssize pid;		/* key */
 	int lvl;
-	ssize *in;		/* dynamic array (v indices) */
-	ssize *out;		/* dynamic array (v indices) */
+	ssize *in;		/* dynamic array (edge indices) */
+	ssize *out;		/* dynamic array (edge indices) */
 	vlong metaoff;
 	int weight;
 	Quad q1;		/* bounding polygon */
@@ -70,9 +71,9 @@ struct Node{
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	double θ;
-	ssize prev;
-	ssize next;
-	ssize ch;
+	ssize prev;		/* index */
+	ssize next;		/* index */
+	ssize ch;		/* index */
 };
 enum{
 	Sbit = 1ULL<<63,
@@ -82,6 +83,7 @@ enum{
 	Edgeantisense = 1<<0,
 };
 struct Edge{
+	ssize id;
 	ssize u;
 	ssize v;
 	ssize next;
@@ -119,6 +121,7 @@ struct Obj{
 	ssize idx;
 };
 extern Obj selected;	// FIXME: only one
+extern Obj aintnothingthere;
 
 #define Bupkis 0xdeadbeefcafebabeULL	/* NA */
 
