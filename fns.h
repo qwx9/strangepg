@@ -29,12 +29,15 @@ void	expandnode(Graph*, Node*);
 void	retractnode(Graph*, Node*);
 
 Node*	getnode(Graph*, ssize);
+Node*	getactivenode(Graph*, Node*);
 Edge*	getedge(Graph*, ssize);
 int	ischild(Graph*, ssize, ssize);
-Node*	pushnode(Graph*, ssize, ssize, int);
-Node*	pushsibling(Graph*, ssize, Node*, int);
+Node*	touchnode(Graph*g, ssize id, ssize pid, ssize idx, int w);
+Node*	pushnode(Graph*, ssize, ssize, ssize, int);
+Node*	touchnode(Graph*g, ssize id, ssize pid, ssize idx, int w);
+Node*	pushsibling(Graph*, ssize, Node*, ssize, int);
 Node*	pushnamednode(Graph*, char*);
-Node*	pushchild(Graph*, ssize, Node*, int);
+Node*	pushchild(Graph*, ssize, Node*, ssize, int);
 Edge*	pushnamededge(Graph*, char*, char*, int, int);
 Edge*	pushedge(Graph*, Node*, Node*, int, int);
 void	poptree(Graph*, Node*);
