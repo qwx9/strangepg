@@ -19,9 +19,10 @@ struct Dyhdr{
 
 /* public */
 #define dyfree(a)	do{ \
-	if((a) != nil) \
+	if((a) != nil){ \
 		free(dyhdr(a)); \
-	}while(0)
+		(a) = nil; \
+	}}while(0)
 #define dylen(a)	((a) == nil ? 0 : dyhdr(a)->len)
 #define dyavail(a)	((a) == nil ? 0 : dyhdr(a)->sz - dyhdr(a)->len)
 #define dypush(a,v)	do{Dyhdr*__h = dyhdr(a); (a) = dychecksz((a),__h,__h->len); (a)[dyhdr(a)->len++] = v;}while(0)
