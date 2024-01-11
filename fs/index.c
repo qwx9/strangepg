@@ -14,11 +14,10 @@ struct Coarse{
 	Level *levels;
 };
 
-// FIXME: this is a fucked way to encode a tree for this purpose
 void
 expandnode(Graph *g, Node *pp)
 {
-	ssize i, u, v, par, w;
+	ssize i, idx, u, v, par, w;
 	Level *l;
 	Coarse *c;
 	File *f;
@@ -26,30 +25,37 @@ expandnode(Graph *g, Node *pp)
 
 	f = g->f;
 	c = g->c;
+	l = c->levels + pp->lvl;
+	if(pp->lvl >= dylen(c->levels))
+		return;
 	printgraph(g);
 	stoplayout(g);
-	DPRINT(Debugcoarse, "split %#p node %zx level %d", g, pp->id, pp->lvl);
-	l = c->levels + pp->lvl;
+	DPRINT(Debugcoarse, "split %#p node %zx level %d idx %zx", g, pp->id, pp->lvl, pp->idx);
 	seekfs(f, l->noff);
 	for(i=0, p=nil; i<l->nnodes; i++){
 		u = get64(f);
-		get64(f);	/* idx */
-		par = get64(f);	/* par */
-		w = get64(f);	/* weight */
-		if(par != pp->id)	// FIXME: performance
+		idx = get64(f);
+		par = get64(f);
+		w = get64(f);
+		// FIXME: better way?
+		if(par != pp->id){
+			touchnode(g, u, par, idx, w);
 			continue;
-		p = p == nil ? pushchild(g, u, pp, w) : pushsibling(g, u, p, w);
+		}
+		p = p == nil ? pushchild(g, u, pp, idx, w) : pushsibling(g, u, p, idx, w);
 	}
 	seekfs(f, l->eoff);
 	for(i=0; i<l->nedges; i++){
 		u = get64(f);
 		v = get64(f);
-		if((n = getnode(g, u)) == nil || (m = getnode(g, v)) == nil){
-			warn("expandnode: unsupported edge %zx,%zx\n", u, v);
+		n = getnode(g, u);
+		m = getnode(g, v);
+		assert(n != nil && m != nil);
+		if(n->pid != pp->id && m->pid != pp->id)
 			continue;
-		}
-		if(n->pid == pp->id || m->pid == pp->id)
-			pushedge(g, n, m, Edgesense, Edgesense);
+		n = getactivenode(g, n);
+		m = getactivenode(g, m);
+		pushedge(g, n, m, Edgesense, Edgesense);
 	}
 	updatelayout(g);
 	printgraph(g);
@@ -111,7 +117,7 @@ readtree(Graph *g, char *path)
 static void
 loadlevel(Graph *g, int lvl)
 {
-	usize par, w, u, v, i;
+	usize par, w, u, v, i, idx;
 	Coarse *c;
 	Level *l;
 	File *f;
@@ -124,10 +130,10 @@ loadlevel(Graph *g, int lvl)
 	seekfs(f, l->noff);
 	for(i=0, n=nil; i<l->nnodes; i++){
 		u = get64(f);
-		get64(f);	/* idx */
+		idx = get64(f);	/* idx */
 		par = get64(f);
 		w = get64(f);
-		n = n != nil ? pushsibling(g, u, n, w) : pushnode(g, u, par, w);
+		n = n != nil ? pushsibling(g, u, n, idx, w) : pushnode(g, u, par, idx, w);
 	}
 	seekfs(f, l->eoff);
 	for(i=0; i<l->nedges; i++){
@@ -151,9 +157,8 @@ load(char *path)
 	g->c = emalloc(sizeof *c);	// FIXME
 	if(readtree(g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
-	pushnode(g, g->nsuper, -1, 1);
+	pushnode(g, g->nsuper, -1, g->nsuper, 1);
 	expandnode(g, g->nodes);
-	//loadlevel(g, 0);
 	return g;
 }
 

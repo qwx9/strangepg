@@ -4,6 +4,7 @@
 View view;
 int showarrows, drawstep;
 
+Obj aintnothingthere = {nil, Onil, -1};
 static Obj *visobj;
 
 Vertex
@@ -45,7 +46,7 @@ mouseselect(Vertex v)
 	int i;
 
 	if((i = scrobj(v)) < 0 || i >= dylen(visobj))
-		return (Obj){nil, Onil, -1};
+		return aintnothingthere;
 	return visobj[i];
 }
 
