@@ -163,6 +163,7 @@ enum{
 	Debugfs = 1<<3,
 	Debugcoarse = 1<<4,
 	Debugextmem = 1<<5,
+	Debugcmd = 1<<6,
 	Debugtheworld = 0xffffffff,
 
 	/* unicode arrows, children's compilers, mandrake */

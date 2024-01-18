@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "cmd.h"
 #include "em.h"
 
 int haxx0rz;
@@ -50,7 +51,9 @@ parseargs(int argc, char **argv)
 	ARGBEGIN{
 	case 'D':
 		s = EARGF(usage());
-		if(strcmp(s, "draw") == 0)
+		if(strcmp(s, "cmd") == 0)
+			debug |= Debugcmd;
+		else if(strcmp(s, "draw") == 0)
 			debug |= Debugdraw;
 		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
@@ -100,6 +103,7 @@ parseargs(int argc, char **argv)
 static void
 init(void)
 {
+	initcmd();
 	initfs();
 	initlayout();
 	initrend();

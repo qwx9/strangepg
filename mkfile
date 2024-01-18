@@ -6,6 +6,7 @@ TARG=\
 
 OFILES=\
 	strpg.$O\
+	cmd/cmd.$O\
 	draw/color.$O\
 	draw/draw.$O\
 	fs/em.$O\
@@ -20,6 +21,7 @@ OFILES=\
 	layout/layout.$O\
 	layout/random.$O\
 	rend/rend.$O\
+	plan9/cmd.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\
@@ -39,6 +41,7 @@ OCOARSEN=\
 HFILES=\
 	dat.h\
 	fns.h\
+	cmd/cmd.h\
 	draw/drw.h\
 	fs/em.h\
 	fs/fs.h\

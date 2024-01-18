@@ -1,8 +1,11 @@
 #include "strpg.h"
+#include "cmd.h"
 #include <thread.h>
 #include <draw.h>
 #include <mouse.h>
 #include <keyboard.h>
+
+extern Channel *cmdc;
 
 static Keyboardctl *kc;
 static Mousectl *mc;
@@ -23,6 +26,7 @@ k2e(Rune r)
 void
 evloop(void)
 {
+	char *s;
 	Rune r;
 	Point Δ;
 	Mouse mold;
@@ -31,12 +35,14 @@ evloop(void)
 		Aresize,
 		Amouse,
 		Akbd,
+		Acmd,
 		Aend,
 	};
 	Alt a[] = {
 		[Aresize] {mc->resizec, nil, CHANRCV},
 		[Amouse] {mc->c, &mc->Mouse, CHANRCV},
 		[Akbd] {kc->c, &r, CHANRCV},
+		[Acmd] {cmdc, &s, CHANRCV},
 		[Aend] {nil, nil, CHANEND},
 	};
 	mold = mc->Mouse;	/* likely blank */
@@ -63,6 +69,11 @@ evloop(void)
 			case 'q': quit();
 			default: keyevent(k2e(r)); break;
 			}
+			break;
+		case Acmd:
+			DPRINT(Debugcmd, "← <%s>", s);
+			parseresponse(s);
+			free(s);
 			break;
 		}
 	}

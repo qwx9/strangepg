@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "em.h"
+#include "cmd.h"
 
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
@@ -227,7 +228,6 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	kh_val(g->nmap, k) = i;
 	np = g->nodes + i;
 	np->prev = np->next = i;
-	warn("newnode %zx <%zx\n", id, pid);
 	return np;
 }
 
@@ -255,6 +255,7 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
+	pushcmd("n %d %d\n", id, id);
 	return n;
 }
 
@@ -264,7 +265,6 @@ pushsibling(Graph *g, ssize id, Node *m, ssize idx, int w)
 	Node *n;
 
 	n = touchnode(g, id, m->pid, idx, w);
-	warn("pushsibling %zx id %zx pid %zx\n", n - g->nodes, n->id, n->pid);
 	n->lvl = m->lvl;
 	LINK(g->nodes, &g->node0, m, n);
 	return n;
@@ -277,7 +277,6 @@ pushchild(Graph *g, ssize id, Node *pp, ssize idx, int w)
 	Node *n, *m;
 
 	n = newnode(g, id, pp != nil ? pp->id : -1, idx, w);
-	warn("pushchild %zx id %zx pid %zx len %zd idx %zx\n", n - g->nodes, n->id, n->pid, dylen(g->nodes), idx);
 	if(pp != nil){
 		hidenode(g, pp);
 		pp->ch = n - g->nodes;
@@ -317,6 +316,7 @@ pushnamednode(Graph *g, char *s)
 	k = kh_put(strmap, g->strnmap, s, &ret);
 	assert(ret != 0);
 	kh_val(g->strnmap, k) = id;
+	pushcmd("N %d %s\n", id, s);
 	return n;
 }
 
@@ -376,6 +376,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	|| (v = getnamednode(g, ev)) == nil)
 		return nil;
 	e = pushedge(g, u, v, d1, d2);
+	pushcmd("E %d %s %s %d %d\n", e->id, eu, ev, d1, d2);
 	return e;
 }
 

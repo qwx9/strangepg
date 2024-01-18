@@ -17,6 +17,7 @@ dprint(int flags, char *fmt, ...)
 
 	switch(debug & flags){
 	case 0: return;
+	case Debugcmd: type = "cmd"; break;
 	case Debugdraw: type = "draw"; break;
 	case Debugrender: type = "render"; break;
 	case Debuglayout: type = "layout"; break;
