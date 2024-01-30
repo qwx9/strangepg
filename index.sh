@@ -12,7 +12,7 @@ if [[ "x$out" == "x-" ]]; then out="stdin.$uuid"; fi
 mkdir -p $tmpdir
 tmp="$tmpdir/$uuid"
 
-rm -f "$out".{s,e,u,bs,be}
+rm -f "$out".{s,e,u,bs,be,hs,he}
 
 # FIXME: slow af, redundancies; python doubles runtime, but
 # first step is even more expensive: 1e5: 1.3s + 0.2s + 1s
@@ -47,8 +47,8 @@ $1 == "L"{ print $1, $2, $3, $4, $5, $6; d++ }
 	| sort +1V -2 +0rd -1 +2V -3 +3d -4 \
 	| awk -v out="$out" '
 BEGIN{OFS="\t"}
-# d i off len ei
-$1 == "S"{ print $6, $5, $3, $4, $7 | "sort +0V -1 +1V -2 +2V -3 >>" out ".s"; u=$5 }
+# d i ei off len
+$1 == "S"{ print $6, $5, $7, $3, $4 | "sort +0V -1 +1V -2 +2V -3 >>" out ".s"; u=$5 }
 # 
 $1 == "L"{ print u, $2, $3, $4, $5, $6 }
 ' \
@@ -87,15 +87,15 @@ for l in of:
 		s[2] = 3
 	if s[3] == "x":
 		s[3] = -1
-	# sorted by u, v, o
-	f.write(pack("n", int(s[0])))	# u (i)
-	f.write(pack("n", int(s[1])))	# v (j)
-	f.write(pack("B", int(s[2])))	# dir
-	f.write(pack("n", int(s[3])))	# off
-	f.write(pack("n", int(s[4])))	# len
-	nse += 1
-	if s[2] != "x":
+	else:
 		ne += 1
+	nse += 1
+	# sorted by u, v, o
+	f.write(pack("n", int(s[0])))	# i		u int id
+	f.write(pack("n", int(s[1])))	# j		v int id	
+	f.write(pack("n", int(s[2])))	# dir	orientation (should be B)
+	f.write(pack("n", int(s[3])))	# off	off/len in gfa
+	f.write(pack("n", int(s[4])))	# len	(should be L)
 f.close()
 of.close()
 of = open(out+".s", "r")
@@ -103,13 +103,25 @@ f = open(out+".bs", "wb")
 for l in of:
 	s = l.rstrip("\n").split()
 	assert(len(s) == 5)
+	print(s)
 	# sorted by d, i, off
-	f.write(pack("L", int(s[0])))	# d
-	f.write(pack("n", int(s[1])))	# i
-	f.write(pack("n", int(s[2])))	# off
-	f.write(pack("L", int(s[3])))	# len
-	f.write(pack("n", int(s[4])))	# ei, first edge in $out.be
+	f.write(pack("n", int(s[0])))	# d		degree (should be L)
+	f.write(pack("n", int(s[1])))	# i		u int id
+	f.write(pack("n", int(s[2])))	# ei	(first edge in $out.be)
+	f.write(pack("n", int(s[3])))	# off	off/len in gfa
+	f.write(pack("n", int(s[4])))	# len	(should be L)
 	nn += 1
 of.close()
 f.close()
+f = open(out+".hs", "wb")
+f.write(pack("Q", nn))
+f.close()
+f = open(out+".he", "wb")
+f.write(pack("Q", ne))
+f.write(pack("Q", nse))
+f.close()
 '
+# FIXME: stdout pipeline; print/read beforehand
+cat "$out.hs" "$out.bs" > "$out.bs.1" && mv "$out.bs.1" "$out.bs"
+cat "$out.he" "$out.be" > "$out.be.1" && mv "$out.be.1" "$out.be"
+rm "$out.hs" "$out.he"

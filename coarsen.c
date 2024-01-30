@@ -3,7 +3,8 @@
 #include "em.h"
 
 enum{
-	Minedges = 0,
+	// FIXME: configurable
+	Minnodes = 1,
 	Lrecsz = 4 * sizeof(u64int),
 	Nrecsz = 4 * sizeof(u64int),
 	Erecsz = 2 * sizeof(u64int),
@@ -150,32 +151,40 @@ mark(ssize s, ssize t, EM *edges, int width)
 }
 
 Lbuf *
-coarsen(Graph *g, char *index)
+coarsen(Graph *g, char *uindex, char *eindex)
 {
-	int nlvl;
-	ssize top, w, u, v, u0, v0, k, s, t, m, e, x, M, S;
-	EM /**visited,*/ *edges, *edgeuv, *edgeset;
+	int nlvl, d, di, eoff, ismirror;
+	ssize top, w, u, v, u0, v0, k, s, t, m, e, x, M, S, S0;
+	EM /**visited,*/ *edges, *nodes, *edgeuv, *edgeset;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
 	khash_t(ugh) *visited;
 
-	if((edges = emopen(index, 0)) == nil)
+	if((edges = emopen(eindex, 0)) == nil)
 		sysfatal("coarsen: %s", error());
-	g->nnodes = emr64(edges, 0);
-	g->nedges = emr64(edges, 1);
-	if(g->nedges <= Minedges){
-		werrstr("number of edges below set threshold, nothing to do");
+	if((nodes = emopen(uindex, 0)) == nil)
+		sysfatal("coarsen: %s", error());
+	g->nnodes = emr64(nodes, 0);
+	g->nedges = emr64(edges, 0);
+	M = emr64(edges, 1);
+	S0 = g->nnodes;
+	if(S0 <= Minnodes){
+		werrstr("number of nodes below set threshold, nothing to do");
 		return nil;
 	}
-	DPRINT(Debugcoarse, "graph %s nnodes %lld nedges %lld", index, g->nnodes, g->nedges);
+	S = S0 - 1;
+	DPRINT(Debugcoarse, "graph %s:%s nnodes %lld nedges %lld tot edges %lld", uindex, eindex, g->nnodes, g->nedges, M);
 	edgeuv = emopen(nil, 0);
-	M = g->nedges;
-	S = g->nnodes - 1;
 	lp = lvl = nil;
 	nlvl = 0;
 	w = S;
 	k = 0;
-	while(M > Minedges){
+	d = di = 0;
+	u0 = 0;
+	u = -1;
+	ismirror = 0;
+	eoff = -1;
+	while(S0 > Minnodes){
 		h = kh_init(meh);
 		//visited = emopen(nil, 0);
 		visited = kh_init(ugh);
@@ -197,11 +206,21 @@ coarsen(Graph *g, char *index)
 				u0 = x % g->nnodes;
 				v0 = x / g->nnodes;
 			}else{
-				u0 = u = emr64(edges, 2+2*e);
-				v0 = v = emr64(edges, 2+2*e+1);
+				if(di >= d){
+					di = 0;
+					d = emr64(nodes, 1+5*u0);
+					u = emr64(nodes, 1+5*u0+1);
+					eoff = emr64(nodes, 1+5*u0+2);
+					u0++;
+				}
+				// FIXME: could use len field
+				v0 = v = emr64(edges, 2+5*(eoff+di)+1);
+				ismirror = (ssize)emr64(edges, 2+5*(eoff+di)+3) < 0;
+				di++;
 			}
 			DPRINT(Debugcoarse, "edge [%03zd] [%zx,%zx] %zx,%zx: ", e, u0, v0, u, v);
-			outputedge(lp, u, v);
+			if(!ismirror)
+				outputedge(lp, u, v);
 //			if((s = emr64(visited, u) - 1) < 0 || s <= w){
 			/* below memory limit, this over EM *visited has barely any effect */
 			if((s = HESDEADJIM(visited, u)) == kh_end(visited) || (s = SULUGOTOWARP(visited, s)) <= w){
@@ -218,6 +237,7 @@ coarsen(Graph *g, char *index)
 					NOTAMILKMAN(visited, v, s);
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; merge [%zx]%zx", v0, v);
 					outputnode(lp, v, v0, s, 1);
+					S0--;
 				}else
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
 			}else if(u == v)
@@ -227,7 +247,7 @@ coarsen(Graph *g, char *index)
 			else if(EXISTS(h, s-w, t-w, g->nnodes)) 
 //			else if(exists(s-w, t-w, edgeset, g->nnodes)) 
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; redundant %zx,%zx", s, t);
-			else{
+			else if(!ismirror){
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external %zx,%zx", s, t);
 				s -= w;
 				t -= w;
@@ -242,14 +262,19 @@ coarsen(Graph *g, char *index)
 		kh_destroy(meh, h);
 		kh_destroy(ugh, visited);
 		emclose(edgeset);
+		if(nodes != nil){
+			emclose(nodes);
+			nodes = nil;
+		}
 		//emclose(visited);
 		if(!plaintext)
 			endlevel(lp);
 		nlvl++;
 		k = w;
 		w = S;
+		ismirror = 0;
 	}
-	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining edges", nlvl,  M);
+	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining nodes, %zd edges", nlvl, S0, M);
 	/* add articial root node for all remaining */
 	// FIXME: out of date, untested
 #ifdef fuck
@@ -278,7 +303,7 @@ coarsen(Graph *g, char *index)
 static void
 usage(void)
 {
-	warn("usage: %s [-n] [-m 16-63] WIDELIST\n", argv0);
+	warn("usage: %s [-n] [-m 16-63] BINNODES BINEDGES\n", argv0);
 	sysfatal("usage");
 }
 
@@ -321,9 +346,9 @@ main(int argc, char **argv)
 		plaintext = 1;
 		break;
 	}ARGEND
-	if(argc < 1)
+	if(argc < 2)
 		usage();
-	lvl = coarsen(&g, argv[0]);
+	lvl = coarsen(&g, argv[0], argv[1]);
 	if(plaintext)
 		return 0;
 	else if(lvl == nil)
