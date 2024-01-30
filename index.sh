@@ -6,48 +6,110 @@
 # FIXME: general usage; document
 uuid=`uuidgen`
 tmpdir=$TMPDIR
-out=$1
+out=${1/.gfa/}
 if [[ "x$tmpdir" == x ]]; then tmpdir=$HOME/tmp; fi
 if [[ "x$out" == "x-" ]]; then out="stdin.$uuid"; fi
 mkdir -p $tmpdir
 tmp="$tmpdir/$uuid"
 
-awk 'BEGIN{OFS="\t"}$1=="L"{print $2, $4 "\n" $4, $2}' "$1" \
-	| sort -k1,2V -u -T $tmpdir -S 10G \
-	| awk 'BEGIN{OFS="\t"}{if(u!=$1) n++; u=$1; print n, $1, $2}' \
-	> $tmp.ulist
+rm -f "$out".{s,e,u,bs,be}
 
-# FIXME: is this strictly necessary?? check for duplicate work with named
-# non sequential links/nodes
-sort -k3V -k2V $tmp.ulist -T $tmpdir -S 10G \
-	| paste $tmp.ulist - \
-	| awk '{if(u!=$1){u=$1; printf "%s%s\t", (NR==1?"":"\n"), u}; printf "%s\t", $4}END{printf "\n"}' \
-	| awk 'BEGIN{OFS="\t"}{print NF-1, $0}' \
-	| sort -k1V -k2V -k3V -T $tmpdir -S 10G \
-	> $tmp.elist
+# FIXME: slow af, redundancies; python doubles runtime, but
+# first step is even more expensive: 1e5: 1.3s + 0.2s + 1s
+# as opposed to 1.0s total
+# FIXME: tmpdir
 
-rm -f $tmp.ulist
+# save indices of original elements and reorder directly by left node
+awk -v out="$out" '
+BEGIN{OFS="\t"; e=0; off=0; i0=0; nn=0; ne=0}
+{
+	off0 = off
+	ll = length($0)
+	off += ll
+}$1 == "S"{
+	# S u off len idx
+	print "S", $2, off0, ll, nn++
+}$1 == "L"{
+	# L u v o off len idx
+	print "L", $2, $4, $3 $5, off0, ll, ne
+	o = ($3=="+"?"-":"+") ($5=="+"?"-":"+"_)
+	# L v u o "x" len idx
+	print "L", $4, $2, o, "x", ll, ne++
+}' "$1" \
+	| sort +1V -2 +0d -1 +2V -3 +3d -4 \
+	| awk -v out="$out" '
+BEGIN{OFS="\t"; d=0; u=0; s=0; nn=0}
+# S U off len idx d s
+$1 == "S"{ print $0, d, s; s+=d; d=0; u=$5; nn++ }
+# L U V o off len
+$1 == "L"{ print $1, $2, $3, $4, $5, $6; d++ }
+' \
+	| sort +1V -2 +0rd -1 +2V -3 +3d -4 \
+	| awk -v out="$out" '
+BEGIN{OFS="\t"}
+# d i off len ei
+$1 == "S"{ print $6, $5, $3, $4, $7 | "sort +0V -1 +1V -2 +2V -3 >>" out ".s"; u=$5 }
+# 
+$1 == "L"{ print u, $2, $3, $4, $5, $6 }
+' \
+	> "$out.u"
+sort +2V -3 +1V -2 +3d -3 "$out.u" \
+	| paste "$out.u" - \
+	| awk '
+BEGIN{OFS="\t"}
+# i j o off len
+{ print $1, $7, $4, $5, $6 }
+' > "$out.e"
 
-<$tmp.elist /usr/bin/env python3 -c '
+rm "$out.u"
+
+/usr/bin/env python3 -c '
 import fileinput
 import sys
 from struct import pack
-edges = open("'$tmp'", "wb")
-nn = ne = 0
-for l in fileinput.input():
+out = "'$out'"
+ne = 0
+nse = 0
+nn = 0
+# binarize sorted edge list
+of = open(out+".e", "r")
+f = open(out+".be", "wb")
+for l in of:
 	s = l.rstrip("\n").split()
-	d = int(s[0])
-	u = int(s[1]) - 1
-	nn += 1	
-	for e in range(2, 2+d):
-		v = int(s[e]) - 1
-		edges.write(pack("Q", u))
-		edges.write(pack("Q", v))
+	assert(len(s) == 5)
+	if s[2] == "++":
+		s[2] = 0
+	elif s[2] == "+-":
+		s[2] = 1
+	elif s[2] == "-+":
+		s[2] = 2
+	elif s[2] == "--":
+		s[2] = 3
+	if s[3] == "x":
+		s[3] = -1
+	# sorted by u, v, o
+	f.write(pack("n", int(s[0])))	# u (i)
+	f.write(pack("n", int(s[1])))	# v (j)
+	f.write(pack("B", int(s[2])))	# dir
+	f.write(pack("n", int(s[3])))	# off
+	f.write(pack("n", int(s[4])))	# len
+	nse += 1
+	if s[2] != "x":
 		ne += 1
-f = sys.stdout.buffer
-f.write(pack("Q", nn))
-f.write(pack("Q", ne))
-edges.close()
-' > "$out.idx"
-cat $tmp >> "$out.idx" && rm $tmp
-mv $tmp.elist "$out.idxe"
+f.close()
+of.close()
+of = open(out+".s", "r")
+f = open(out+".bs", "wb")
+for l in of:
+	s = l.rstrip("\n").split()
+	assert(len(s) == 5)
+	# sorted by d, i, off
+	f.write(pack("L", int(s[0])))	# d
+	f.write(pack("n", int(s[1])))	# i
+	f.write(pack("n", int(s[2])))	# off
+	f.write(pack("L", int(s[3])))	# len
+	f.write(pack("n", int(s[4])))	# ei, first edge in $out.be
+	nn += 1
+of.close()
+f.close()
+'
