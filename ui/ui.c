@@ -82,8 +82,10 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		if(selected.type == Onode){
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));
+				stoplayout(o.g);
 				expandnode(o.g, o.g->nodes + o.idx);
 				selected = aintnothingthere;
+				updatelayout(o.g);
 			}
 			reqdraw(Reqshallowdraw);
 		}

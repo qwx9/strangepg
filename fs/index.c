@@ -1,18 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 #include "em.h"
-
-typedef struct Level Level;
-
-struct Level{
-	vlong noff;
-	usize eoff;
-	usize nnodes;
-	usize nedges;
-};
-struct Coarse{
-	Level *levels;
-};
+#include "index.h"
 
 void
 expandnode(Graph *g, Node *pp)
@@ -29,7 +18,6 @@ expandnode(Graph *g, Node *pp)
 	if(pp->lvl >= dylen(c->levels))
 		return;
 	printgraph(g);
-	stoplayout(g);
 	DPRINT(Debugcoarse, "split %#p node %zx level %d idx %zx", g, pp->id, pp->lvl, pp->idx);
 	seekfs(f, l->noff);
 	for(i=0, p=nil; i<l->nnodes; i++){
@@ -57,7 +45,6 @@ expandnode(Graph *g, Node *pp)
 		m = getactivenode(g, m);
 		pushedge(g, n, m, Edgesense, Edgesense);
 	}
-	updatelayout(g);
 	printgraph(g);
 }
 
@@ -77,7 +64,7 @@ zoomgraph(Graph *g, int Δ)
 	return 0;
 }
 
-static int
+int
 readtree(Graph *g, char *path)
 {
 	usize nl;
@@ -99,6 +86,7 @@ readtree(Graph *g, char *path)
 	nl = g->nlevels = get64(f);
 	DPRINT(Debugcoarse, "ct: nv %zd nv+ns %zd ne %zd nl %d",
 		g->nnodes, g->nsuper, g->nedges, g->nlevels);
+	g->c = emalloc(sizeof *c);
 	c = g->c;
 	dyprealloc(c->levels, nl);
 	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
@@ -130,7 +118,7 @@ loadlevel(Graph *g, int lvl)
 	seekfs(f, l->noff);
 	for(i=0, n=nil; i<l->nnodes; i++){
 		u = get64(f);
-		idx = get64(f);	/* idx */
+		idx = get64(f);
 		par = get64(f);
 		w = get64(f);
 		n = n != nil ? pushsibling(g, u, n, idx, w) : pushnode(g, u, par, idx, w);
@@ -150,11 +138,9 @@ static Graph *
 load(char *path)
 {
 	Graph *g;
-	Coarse *c;
 
 	if((g = initgraph()) == nil)
-		sysfatal("loadgfa1: %r");
-	g->c = emalloc(sizeof *c);	// FIXME
+		sysfatal("initgraph: %r");
 	if(readtree(g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
 	pushnode(g, g->nsuper, -1, g->nsuper, 1);
