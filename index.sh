@@ -103,7 +103,6 @@ f = open(out+".bs", "wb")
 for l in of:
 	s = l.rstrip("\n").split()
 	assert(len(s) == 5)
-	print(s)
 	# sorted by d, i, off
 	f.write(pack("n", int(s[0])))	# d		degree (should be L)
 	f.write(pack("n", int(s[1])))	# i		u int id
