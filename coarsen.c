@@ -76,6 +76,7 @@ outputedge(Lbuf *lp, ssize u, ssize v)
 	ssize off;
 	EM *em;
 
+	DPRINT(Debugcoarse, "outputedge %zx,%zx", u, v);
 	em = lp->edges;
 	off = lp->nedges++;
 	emw64(em, 2*off, u);
@@ -153,9 +154,9 @@ mark(ssize s, ssize t, EM *edges, int width)
 Lbuf *
 coarsen(Graph *g, char *uindex, char *eindex)
 {
-	int nlvl, d, di, eoff, ismirror;
+	int nlvl, d, di, eoff;
 	ssize top, w, u, v, u0, v0, k, s, t, m, e, x, M, S, S0;
-	EM /**visited,*/ *edges, *nodes, *edgeuv, *edgeset;
+	EM *edges, *nodes, *edgeuv, *edgeset;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
 	khash_t(ugh) *visited;
@@ -182,17 +183,17 @@ coarsen(Graph *g, char *uindex, char *eindex)
 	d = di = 0;
 	u0 = 0;
 	u = -1;
-	ismirror = 0;
+	//ismirror = 0;
 	eoff = -1;
 	while(S0 > Minnodes){
 		h = kh_init(meh);
-		//visited = emopen(nil, 0);
 		visited = kh_init(ugh);
 		edgeset = emopen(nil, 0);
 		if(!plaintext){
 			lvl = newlevel(lvl);
 			lp = lvl + dylen(lvl) - 1;
 		}
+		// FIXME: use index for ids rather than y*i+x which will blow up
 		DPRINT(Debugcoarse, "===== level %zx", lp-lvl+1);
 		m = M;
 		M = 0;
@@ -213,49 +214,56 @@ coarsen(Graph *g, char *uindex, char *eindex)
 					eoff = emr64(nodes, 1+5*u0+2);
 					u0++;
 				}
-				// FIXME: could use len field
+				// FIXME: could use len field?
 				v0 = v = emr64(edges, 2+5*(eoff+di)+1);
-				ismirror = (ssize)emr64(edges, 2+5*(eoff+di)+3) < 0;
+				//o = emr64(edges, 2+5*(eoff+di)+2);
+				//ismirror = (ssize)emr64(edges, 2+5*(eoff+di)+3) < 0;
 				di++;
 			}
 			DPRINT(Debugcoarse, "edge [%03zd] [%zx,%zx] %zx,%zx: ", e, u0, v0, u, v);
-			if(!ismirror)
-				outputedge(lp, u, v);
-//			if((s = emr64(visited, u) - 1) < 0 || s <= w){
 			/* below memory limit, this over EM *visited has barely any effect */
 			if((s = HESDEADJIM(visited, u)) == kh_end(visited) || (s = SULUGOTOWARP(visited, s)) <= w){
 				s = ++S;
 				NOTAMILKMAN(visited, u, s);
-				//emw64(visited, u, s+1);
 				top = u;
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\bnew super [%zx]%zx→%zx", u0, u, s);
 				outputnode(lp, u, u0, s, 1);
 			}
 			if((t = HESDEADJIM(visited, v)) == kh_end(visited) || (t = SULUGOTOWARP(visited, t)) <= w){
 				if(u == top){
-					//emw64(visited, v, s+1);
 					NOTAMILKMAN(visited, v, s);
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; merge [%zx]%zx", v0, v);
 					outputnode(lp, v, v0, s, 1);
 					S0--;
+					outputedge(lp, u, v);
 				}else
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
-			}else if(u == v)
-				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; self edge");
-			else if(t == s)
-				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; mirror %zx,%zx", s, t);
-			else if(EXISTS(h, s-w, t-w, g->nnodes)) 
-//			else if(exists(s-w, t-w, edgeset, g->nnodes)) 
+			}else if(EXISTS(h, u, v, g->nnodes)){
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; redundant %zx,%zx", s, t);
-			else if(!ismirror){
+				// FIXME: handle orientation correctly; we just output ++ always,
+				//	so at lvl0, output all with unique orientation
+				//	at lvl > 0, just output with orientation
+				//	just use lower bit
+				/*
+				if(!ismirror){
+					outputedge(lp, u, v);
+					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b but unique orientation", s, t);
+				}
+				*/
+			}else if(u == v){
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; self edge");
+				outputedge(lp, u, v);
+				SPAWN(h, u, v, g->nnodes);
+			}else if(t == s)
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; mirror %zx,%zx", s, t);
+			else{
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external %zx,%zx", s, t);
 				s -= w;
 				t -= w;
-				SPAWN(h, s, t, g->nnodes);
-				//mark(s, t, edgeset, g->nnodes);
+				SPAWN(h, u, v, g->nnodes);
 				emw64(edges, M, t * g->nnodes + s);
 				emw64(edgeuv, M, v0 * g->nnodes + u0);
-				//outputedge(lp, s+w, t+w);
+				outputedge(lp, u, v);
 				M++;
 			}
 		}
@@ -266,13 +274,12 @@ coarsen(Graph *g, char *uindex, char *eindex)
 			emclose(nodes);
 			nodes = nil;
 		}
-		//emclose(visited);
 		if(!plaintext)
 			endlevel(lp);
 		nlvl++;
 		k = w;
 		w = S;
-		ismirror = 0;
+		//ismirror = 0;
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining nodes, %zd edges", nlvl, S0, M);
 	/* add articial root node for all remaining */
