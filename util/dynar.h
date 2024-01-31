@@ -46,9 +46,9 @@ struct Dyhdr{
 		__h->len = (i)+1; \
 	}while(0)
 #define dydelete(a,i)	do{ \
-	ssize __Δ = dyhdr(a)->len - 1 - (i); \
+	ssize __Δ = dyhdr(a)->len - (i) - 1; \
 	assert(__Δ >= 0); \
 	if(__Δ > 0) \
-		memmove((a)+(i)*sizeof(*(a)), (a)+((i)+1)*sizeof(*(a)), __Δ*sizeof(*(a))); \
+		memmove((a)+(i), (a)+(i)+1, __Δ*sizeof(*(a))); \
 	dypop((a)); \
 	}while(0)
