@@ -36,14 +36,14 @@ expandnode(Graph *g, Node *pp)
 	for(i=0; i<l->nedges; i++){
 		u = get64(f);
 		v = get64(f);
-		n = getnode(g, u);
-		m = getnode(g, v);
+		n = getnode(g, u >> 1);
+		m = getnode(g, v >> 1);
 		assert(n != nil && m != nil);
 		if(n->pid != pp->id && m->pid != pp->id)
 			continue;
 		n = getactivenode(g, n);
 		m = getactivenode(g, m);
-		pushedge(g, n, m, Edgesense, Edgesense);
+		pushedge(g, n, m, u&1, u&1);
 	}
 	printgraph(g);
 }
@@ -127,6 +127,7 @@ loadlevel(Graph *g, int lvl)
 	for(i=0; i<l->nedges; i++){
 		u = get64(f);
 		v = get64(f);
+		get64(f);	/* ei */
 		n = getnode(g, u);
 		m = getnode(g, v);
 		assert(n != nil && m != nil);
