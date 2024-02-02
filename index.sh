@@ -79,9 +79,9 @@ for l in of:
 	assert(len(s) == 5)
 	if s[2] == "++":
 		s[2] = 0
-	elif s[2] == "+-":
-		s[2] = 1
 	elif s[2] == "-+":
+		s[2] = 1
+	elif s[2] == "+-":
 		s[2] = 2
 	elif s[2] == "--":
 		s[2] = 3
