@@ -7,13 +7,11 @@ void
 threadmain(int argc, char **argv)
 {
 	int i;
-	ssize u, v, idx, par, w;
-	EM *em;
+	ssize u, v, idx, par, w, ei;
 	Graph *g;
 	Level *l;
 	File *f;
 	Coarse *c;
-	Node *n;
 
 	ARGBEGIN{
 	}ARGEND
@@ -43,7 +41,8 @@ threadmain(int argc, char **argv)
 		for(i=0; i<l->nedges; i++){
 			u = get64(f);
 			v = get64(f);
-			print(" %zx,%zx", u, v);
+			ei = get64(f);
+			print(" [%zx]%zx,%zx", ei, u&1?-u/2:u/2, v&1?-v/2:v/2);
 		}
 		print("\n");
 	}
