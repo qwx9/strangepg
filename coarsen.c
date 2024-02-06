@@ -79,8 +79,8 @@ outputedge(Lbuf *lp, ssize u, ssize v, int o, ssize ei)
 	DPRINT(Debugcoarse, "outputedge %zx:%d,%zx:%d", u, o&1, v, o>>1&1);
 	em = lp->edges;
 	off = lp->nedges++;
-	emw64(em, 3*off, u);
-	emw64(em, 3*off+1, v);
+	emw64(em, 3*off, u << 1 | o & 1);
+	emw64(em, 3*off+1, v << 1 | o >> 1 & 1);
 	emw64(em, 3*off+2, ei);
 }
 
@@ -130,29 +130,6 @@ KHASH_MAP_INIT_INT64(ugh, ssize)
 	}while(0)
 #define HESDEADJIM(h, u)	(kh_get(ugh, (h), (u)))	/* put an torpe-do-oh-oh */
 #define SULUGOTOWARP(h, k)	(kh_value((h), (k)))	/* warp 3, sir? */
-
-int
-exists(ssize s, ssize t, EM *edges, int width)
-{
-	ssize x, v;
-
-	x = s * width + t;
-	v = emr64(edges, x >> 6);
-	return (v & 1ULL << (x & 63)) != 0;
-}
-
-void
-mark(ssize s, ssize t, EM *edges, int width)
-{
-	ssize x, v;
-
-	x = t * width + s;
-	v = emr64(edges, x >> 6);
-	emw64(edges, x >> 6, v | 1ULL << (x & 63));
-	x = s * width + t;
-	v = emr64(edges, x >> 6);
-	emw64(edges, x >> 6, v | 1ULL << (x & 63));
-}
 
 Lbuf *
 coarsen(Graph *g, char *uindex, char *eindex)
