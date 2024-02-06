@@ -7,6 +7,7 @@ TARG=\
 OFILES=\
 	strpg.$O\
 	cmd/cmd.$O\
+	cmd/awk.$O\
 	draw/color.$O\
 	draw/draw.$O\
 	fs/em.$O\
@@ -21,7 +22,7 @@ OFILES=\
 	layout/layout.$O\
 	layout/random.$O\
 	rend/rend.$O\
-	plan9/cmd.$O\
+	plan9/awk.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
 	plan9/layout.$O\

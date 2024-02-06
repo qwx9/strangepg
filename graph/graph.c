@@ -39,7 +39,7 @@ printgraph(Graph *g)
 	Edge *e;
 	Node *n;
 
-	if(debug == 0)
+	if((debug & Debugcoarse) == 0)
 		return;
 	warn("graph %#p nn %zd ne %zd ns %zd\n", g, g->nnodes, g->nedges, g->nsuper);
 	for(i=g->edge0.next; i>=0; i=e->next){
@@ -257,7 +257,7 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
-	//pushcmd("n %d %d\n", id, id);
+	pushcmd("n %d %d\n", id, id);
 	return n;
 }
 
@@ -324,7 +324,7 @@ pushnamednode(Graph *g, char *s)
 	k = kh_put(strmap, g->strnmap, s, &ret);
 	assert(ret != 0);
 	kh_val(g->strnmap, k) = id;
-	//pushcmd("N %d %s\n", id, s);
+	pushcmd("N %d %s\n", id, s);
 	return n;
 }
 
@@ -384,7 +384,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	|| (v = getnamednode(g, ev)) == nil)
 		return nil;
 	e = pushedge(g, u, v, d1, d2);
-	//pushcmd("E %d %s %s %d %d\n", e->id, eu, ev, d1, d2);
+	pushcmd("E %d %s %s %d %d\n", e->id, eu, ev, d1, d2);
 	return e;
 }
 

@@ -12,7 +12,7 @@ cproc(void *)
 	dup(epfd[0], 0);
 	dup(epfd[0], 1);
 	close(epfd[0]);
-	procexecl(nil, "/bin/awk", "awk", "-safe", "-f", "/tmp/lib.awk", nil);
+	procexecl(nil, "/bin/awk", "awk", "-safe", "-f", "/tmp/main.awk", nil);
 	sysfatal("procexecl: %r");
 }
 
@@ -28,7 +28,7 @@ readcproc(void *)
 		if(n == sizeof buf)	// FIXME: unhandled
 			n--;
 		buf[n] = 0;
-		DPRINT(Debugcmd, "← %s[%d]", buf, n);
+		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
 		for(s=p=buf; p<buf+n; s=++p){
 			if((p = strchr(p, '\n')) == nil)
 				break;
@@ -50,7 +50,7 @@ sendcmd(char *cmd)
 	int n;
 
 	n = strlen(cmd);
-	DPRINT(Debugcmd, "→ %s[%d]", cmd, n);
+	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
 	if(epfd[1] < 0)
 		warn("sendcmd: closed pipe\n");
 	else if(write(epfd[1], cmd, n) != n)
@@ -58,7 +58,7 @@ sendcmd(char *cmd)
 }
 
 int
-sysinitcmd(void)
+startengine(void)
 {
 	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
 		return -1;

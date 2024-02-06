@@ -55,6 +55,8 @@ void	stoplayout(Graph*);
 void	runlayout(Graph*);
 int	updatelayout(Graph*);
 
+int	initcmd(void);
+
 void	initfs(void);
 void	freefs(File*);
 int	loadfs(char*, int);

@@ -71,7 +71,7 @@ evloop(void)
 			}
 			break;
 		case Acmd:
-			DPRINT(Debugcmd, "← <%s>", s);
+			DPRINT(Debugcmd, "← ui:<%s>", s);
 			parseresponse(s);
 			free(s);
 			break;
