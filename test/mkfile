@@ -17,7 +17,7 @@ BIN=.
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe \
 	-I.. \
-	-I../cmd -I../draw -I../fs -I../graph -I../index \
+	-I../cmd -I../draw -I../fs -I../graph -I../index -I../lib \
 	-I../layout -I../plan9 -I../rend -I../ui -I../util \
 
 %.$O: %.c
