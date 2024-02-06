@@ -36,6 +36,7 @@ expandnode(Graph *g, Node *pp)
 	for(i=0; i<l->nedges; i++){
 		u = get64(f);
 		v = get64(f);
+		get64(f);	/* ei */
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
 		assert(n != nil && m != nil);
