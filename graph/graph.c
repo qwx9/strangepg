@@ -186,6 +186,7 @@ redactedge(Graph *g, ssize id)
 	cuttie((e->v & 1) == 0 ? v->in : v->out, id);
 	k = kh_get(idmap, g->emap, id);
 	kh_del(idmap, g->emap, k);
+	pushcmd("c %d %d\n", e->u, e->v);
 	UNLINK(g->edges, &g->edge0, e, e);
 	printgraph(g);
 }
@@ -201,6 +202,7 @@ hidenode(Graph *g, Node *n)
 		redactedge(g, *e);
 	for(e=n->in, ee=e+dylen(n->in); e<ee; e++)
 		redactedge(g, *e);
+	pushcmd("d %d\n", n->id);
 	UNLINK(g->nodes, &g->node0, n, n);
 	dyfree(n->out);
 	dyfree(n->in);
@@ -230,6 +232,7 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	kh_val(g->nmap, k) = i;
 	np = g->nodes + i;
 	np->prev = np->next = i;
+	pushcmd("n %d %d\n", id, id);
 	return np;
 }
 
@@ -257,7 +260,6 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
-	pushcmd("n %d %d\n", id, id);
 	return n;
 }
 
@@ -354,6 +356,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	kh_val(g->emap, k) = i;
 	ep = g->edges + i;
 	ep->prev = ep->next = i;
+	pushcmd("e %d %d %d %d %d\n", id, u->id, v->id, udir, vdir);
 	return ep;
 }
 
