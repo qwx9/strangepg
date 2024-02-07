@@ -192,6 +192,17 @@ yield(void)
 {
 }
 
+int
+proccreate(void *(*f)(void *arg), void *arg, uint)
+{
+	int r;
+	pthread_t th;
+
+	if((r = pthread_create(&th, NULL, f, arg)) != 0)
+		return -1;
+	return 0;
+}
+
 void
 sysinit(void)
 {
