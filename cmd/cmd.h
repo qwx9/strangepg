@@ -1,4 +1,4 @@
-int epfd[2];
+extern int epfd[2];
 
 void	parseresponse(char*);
 void	sendcmd(char*);

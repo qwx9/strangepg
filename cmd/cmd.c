@@ -1,6 +1,8 @@
 #include "strpg.h"
 #include "cmd.h"
 
+int epfd[2] = {-1, -1};
+
 /* FIXME: per-graph state */
 
 void
