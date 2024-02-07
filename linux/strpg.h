@@ -67,6 +67,8 @@ extern char *argv0;
 int nrand(int);
 long	lrand(void);
 int	getfields(char*, char**, int, int, char*);
+char*	seprint(char*, char*, char*, ...);
+char*	strecpy(char*, char*, char*);
 
 /* /sys/include/geometry.h */
 typedef struct Point2 Point2;

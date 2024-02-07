@@ -35,12 +35,11 @@ void
 runlayout(Graph *g)
 {
 	int r;
-	pthread_t th;
 
 	if(!g->layout.armed)
 		return;
 	if(g->layout.aux == nil)
-		g->layout.aux = emalloc(sizeof th);
+		g->layout.aux = emalloc(sizeof(pthread_t));
 	if((r = pthread_create(g->layout.aux, NULL, layproc, g)) != 0)
 		warn("runlayout: pthread_create failed with err=%d", r);
 }
