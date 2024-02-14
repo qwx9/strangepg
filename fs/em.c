@@ -13,6 +13,8 @@
  *	cache, etc. ← would be external to em, this is generic enough */
 /* FIXME: don't do while loop in dygrow, compute size directly */
 
+KHASH_MAP_INIT_INT64(pagetab, void*)
+
 enum{
 	/* must be powers of two */
 	Poolsz = 1ULL<<32,
@@ -87,7 +89,7 @@ poolcheck(void)
 	for(ep=etab; ep<etab+dylen(etab); ep++){
 		if((em = *ep) == nil)
 			continue;
-		for(b=em->banks; b<em->banks+nelem(em->banks); b++){
+		for(b=em->banks; b<em->banks+dylen(em->banks); b++){
 			if(*b == nil)
 				continue;
 			for(pp=*b, pe=pp+Banksz; pp<pe; pp++){
@@ -95,7 +97,7 @@ poolcheck(void)
 					continue;
 				assert(p->e == em->id);
 				assert(p->e == ep - etab);
-				assert(BADDR(p->addr) < nelem(em->banks));
+				assert(BADDR(p->addr) < dylen(em->banks));
 				assert(em->banks[BADDR(p->addr)] != nil);
 				assert(em->banks[BADDR(p->addr)][PADDR(p->addr)] == p);
 			}
@@ -253,53 +255,27 @@ emw64(EM *em, vlong off, u64int v)
 	p->dirty = 1;
 }
 
+/* FIXME: slow as sloth taking shit */
 int
 em2fs(EM *em, File *f, ssize nbytes)
 {
-	vlong n;
-	Page ***b, **p, **pe;
-	File *ef;
-	uchar iobuf[IOUNIT];
+	u64int u;
+	vlong off;
 
 	if(em->banks == nil)
 		return 0;
-	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
-		if(*b != nil)
-			for(p=*b, pe=p+Banksz; p<pe; p++)
-				if(*p > Sucks)
-					freepage(em, *p);
-	ef = emalloc(sizeof *ef);
-	seek(em->fd, 0, 0);
-	if(fdopenfs(ef, em->fd, OREAD) < 0)
-		goto err;
-	for(;; nbytes-=n){
-		n = nbytes < sizeof iobuf ? nbytes : sizeof iobuf;
-		if((n = readfs(ef, iobuf, n)) <= 0)
-			break;
-		if(writefs(f, iobuf, n) < 0)
-			goto err;
+	for(off=0; off<nbytes/sizeof u; off++){
+		//n = nbytes - off > Pagesz ? Pagesz : nbytes - off;
+		u = emr64(em, off);
+		put64(f, u);
 	}
-	closefs(ef);
-	free(ef);
-	if(n == 0)
-		return 0;
-err:
-	free(ef);
-	return -1;
+	emclose(em);
+	return 0;
 }
 
 void
 emclose(EM *em)
 {
-	Page ***b, **p, **pe;
-
-	if(em->banks != nil){
-		for(b=em->banks; b<em->banks+nelem(em->banks); b++)
-			if(*b != nil)
-				for(p=*b, pe=p+Banksz; p<pe; p++)
-					if(*p > Sucks)
-						freepage(em, *p);
-	}
 	if(em->infd >= 0)
 		close(em->infd);
 	if(em->fd >= 0)
