@@ -136,18 +136,18 @@ coarsen(Graph *g, char *uindex, char *eindex)
 {
 	int nlvl, d, di, eoff, o;
 	ssize top, w, U, V, u, v, u0, v0, k, s, t, m, e, x, M, S, S0, ei;
-	EM *edges, *nodes, *edgeset;
+	EM *edges, *nodes, *edges0;
 	Lbuf *lvl, *lp;
 	khash_t(meh) *h;
 	khash_t(ugh) *visited;
 
-	if((edges = emopen(eindex, 0)) == nil)
+	if((edges0 = emopen(eindex, 0)) == nil)
 		sysfatal("coarsen: %s", error());
 	if((nodes = emopen(uindex, 0)) == nil)
 		sysfatal("coarsen: %s", error());
 	g->nnodes = emr64(nodes, 0);
-	g->nedges = emr64(edges, 0);
-	M = emr64(edges, 1);
+	g->nedges = emr64(edges0, 0);
+	M = emr64(edges0, 1);
 	S0 = g->nnodes;
 	if(S0 <= Minnodes){
 		werrstr("number of nodes below set threshold, nothing to do");
@@ -163,16 +163,18 @@ coarsen(Graph *g, char *uindex, char *eindex)
 	u0 = 0;
 	u = -1;
 	eoff = -1;
+	if((edges = emopen(nil, 0)) == nil)
+		sysfatal("coarsen: %s", error());
 	while(S0 > Minnodes){
 		h = kh_init(meh);
 		visited = kh_init(ugh);
-		edgeset = emopen(nil, 0);
+		// FIXME: redundant with lp edge array
 		if(!plaintext){
 			lvl = newlevel(lvl);
 			lp = lvl + dylen(lvl) - 1;
 		}
 		// FIXME: use index for ids rather than y*i+x which will blow up
-		DPRINT(Debugcoarse, "===== level %zx", lp-lvl+1);
+		DPRINT(Debugcoarse, "===== level %zx nn %zx ne %zx", lp-lvl+1, S0, M);
 		m = M;
 		M = 0;
 		top = -1;
@@ -198,16 +200,15 @@ coarsen(Graph *g, char *uindex, char *eindex)
 				}
 				ei = eoff + di;
 				// FIXME: could use len field?
-				v0 = v = emr64(edges, 2+5*ei+1);
-				o = emr64(edges, 2+5*ei+2);
+				v0 = v = emr64(edges0, 2+5*ei+1);
+				o = emr64(edges0, 2+5*ei+2);
 				U = u << 1 | o & 1;
 				V = v << 1 | o >> 1 & 1;
 				assert((o & ~3) == 0);
-				//ismirror = (ssize)emr64(edges, 2+5*ei+3) < 0;
 				di++;
 			}
-			DPRINT(Debugcoarse, "edge [%03zd] [%zx,%zx] %zx,%zx UV %zx,%zx: ",
-				e, u0, v0, u, v, U, V);
+			DPRINT(Debugcoarse, "edge [%03zd] [%zx,%zx] %zx,%zx UV %zx,%zx o %x: ",
+				e, u0, v0, u, v, U, V, o);
 			if((s = HESDEADJIM(visited, u)) == kh_end(visited) || (s = SULUGOTOWARP(visited, s)) <= w){
 				s = ++S;
 				NOTAMILKMAN(visited, u, s);
@@ -220,7 +221,6 @@ coarsen(Graph *g, char *uindex, char *eindex)
 					NOTAMILKMAN(visited, v, s);
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; merge [%zx]%zx", v0, v);
 					outputnode(lp, v, v0, s, 1);
-					S0--;
 					outputedge(lp, u, v, o, ei);
 				}else
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
@@ -245,7 +245,7 @@ coarsen(Graph *g, char *uindex, char *eindex)
 			}else if(t == s)
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; mirror %zx,%zx", s, t);
 			else{
-				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external %zx,%zx", s, t);
+				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external[%zx] %zx,%zx", M, s, t);
 				s = (s-w) << 1 | o & 1;
 				t = (t-w) << 1 | o >> 1 & 1;
 				SPAWN(h, u, v, 2*g->nnodes);
@@ -262,15 +262,19 @@ coarsen(Graph *g, char *uindex, char *eindex)
 		}
 		kh_destroy(meh, h);
 		kh_destroy(ugh, visited);
-		emclose(edgeset);
 		if(nodes != nil){
 			emclose(nodes);
 			nodes = nil;
+		}
+		if(edges0 != nil){
+			emclose(edges0);
+			edges0 = nil;
 		}
 		if(!plaintext)
 			endlevel(lp);
 		nlvl++;
 		k = w;
+		S0 = S - w;
 		w = S;
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining nodes, %zd edges", nlvl, S0, M);
