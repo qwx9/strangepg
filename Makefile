@@ -12,11 +12,16 @@ OBJS:=\
 	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
 	lib/plan9/nrand.o\
+	lib/plan9/seprint.o\
+	lib/plan9/strecpy.o\
+	linux/awk.o\
 	linux/fs.o\
 	linux/layout.o\
 	linux/sys.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
+	cmd/awk.o\
+	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
 	fs/em.o\
@@ -63,10 +68,12 @@ WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
+	-Icmd\
 	-Idraw\
 	-Ifs\
 	-Igraph\
 	-Ilayout\
+	-Ilib\
 	-Ilinux\
 	-Irend\
 	-Iui\

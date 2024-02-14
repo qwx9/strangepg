@@ -1,14 +1,22 @@
 ALLTARGETS:= $(patsubst %.c,%,$(wildcard *.c))
 OBJS:=\
+	../cmd/cmd.o\
+	../graph/graph.o\
 	../fs/fs.o\
 	../fs/em.o\
+	../fs/index.o\
+	../lib/chan.o\
+	../lib/queue.o\
 	../lib/plan9/nrand.o\
 	../lib/plan9/getfields.o\
+	../lib/plan9/seprint.o\
+	../lib/plan9/strecpy.o\
+	../linux/awk.o\
 	../linux/fs.o\
 	../linux/sys.o\
 	../util/print.o\
 
-ALLOBJS:=$(OBJS)
+#ALLOBJS:=$(OBJS)
 
 CC= clang
 OFLAGS?= -O2 -pipe -march=native
@@ -73,6 +81,8 @@ ifeq ($(wildcard .git),.git)
 		VERSION:= git_$(GIT_HEAD)
 	endif
 endif
+
+CFLAGS+= $(OBJS)
 
 all:	$(ALLTARGETS)
 
