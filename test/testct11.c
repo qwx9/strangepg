@@ -14,7 +14,6 @@ main(int, char **)
 		f = i % nelem(em);
 		emw64(em[f], i, i);
 	}
-	debug |= Debugtheworld;
 	for(i=0; i<100000000; i++){
 		f = i % nelem(em);
 		if((w = emr64(em[f], i)) != i){

@@ -2,10 +2,12 @@
 TARG=`{ls | sed -n '/\.c$/s/\.c$//p'}
 
 OFILES=\
+	../cmd/cmd.$O\
 	../graph/graph.$O\
 	../fs/fs.$O\
 	../fs/em.$O\
 	../fs/index.$O\
+	../plan9/awk.$O\
 	../plan9/fs.$O\
 	../plan9/sys.$O\
 	../util/print.$O\
