@@ -11,23 +11,23 @@
 /* FIXME: let the abstraction follow dfc-like specs and semantics...?
  *	eg. fetch record n of type x from EM image y → calculate offset,
  *	cache, etc. ← would be external to em, this is generic enough */
-/* FIXME: linux: mmap? plan9: see also readv(2) */
 /* FIXME: don't do while loop in dygrow, compute size directly */
 
 enum{
 	/* must be powers of two */
 	Poolsz = 1ULL<<32,
-	Bshift = 24,
-	Banksz = 1<<8,
-	Bmask = Banksz - 1,
 	Pshift = 16,
-	Pagesz = 1<<16,
+	Pagesz = 1<<Pshift,
 	Pmask = Pagesz - 1,
+	Bshift = 12,
+	Banksz = 1<<Bshift,
+	Bmask = Banksz - 1,
 };
 static uvlong poolsz = Poolsz;
 typedef struct Page Page;
 struct Page{
 	int e;
+	char dirty;
 	usize addr;
 	uchar buf[Pagesz];
 	Page *lleft;
@@ -45,7 +45,6 @@ static EM **etab;
 static Page pused = {.lleft = &pused, .lright = &pused},
 	pfree = {.lleft = &pfree, .lright = &pfree};
 static ssize memfree, memreallyfree = Poolsz / Pagesz;
-static uchar iobuf[IOUNIT];
 #define Sucks	((Page*)0x1)	/* yes it does */
 
 #define PLINK(u,v)	do{ \
@@ -62,11 +61,19 @@ static uchar iobuf[IOUNIT];
 	a->lleft = b; \
 	b->lright = a; \
 	}while(0)
+#define PRELINK(ll, p)	do{ \
+	(p)->lleft->lright = (p)->lright; \
+	(p)->lright->lleft = (p)->lleft; \
+	(ll)->lright->lleft = (p); \
+	(p)->lleft = (ll); \
+	(p)->lright = (ll)->lright; \
+	(ll)->lright = (p); \
+	}while(0)
 #define POKE(p)	do{	\
 	PUNLINK((p), (p)); \
 	PLINK(pused.lleft, (p)); \
 	}while(0)
-#define BADDR(p)	((p) >> Bshift)
+#define BADDR(p)	((p) >> Pshift + Bshift)
 #define PADDR(p)	((p) >> Pshift & Bmask)
 #define POFF(p)		((p) & Pmask)
 #define PLEA(p, a)	((p)->buf + POFF((a)))
@@ -98,12 +105,8 @@ poolcheck(void)
 
 /* FIXME: make these unto macros as well? */
 static int
-flush(Page *p)
+flush(EM *em, Page *p)
 {
-	EM *em;
-
-	if((em = etab[p->e]) == nil)
-		return -1;
 	if(em->fd < 0){
 		if(em->path == nil)
 			em->path = sysmktmp();	/* can be stupidly expensive */
@@ -111,20 +114,18 @@ flush(Page *p)
 			return -1;
 	}
 	if(seek(em->fd, p->addr, 0) < 0)
-		warn("seek: %s\n", error());
+		warn("flush: seek %d: %s\n", em->fd, error());
 	if(write(em->fd, p->buf, sizeof p->buf) != sizeof p->buf)
-		warn("write: %s\n", error());
+		warn("flush: write %d: %s\n", em->fd, error());
 	return 0;
 }
 static void
-freepage(Page *p)
+freepage(EM *em, Page *p)
 {
-	EM *em;
-
-	if((em = etab[p->e]) != nil)
-		em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
-	PUNLINK(p, p);
-	PLINK(pfree.lleft, p);
+	if(p->dirty)
+		flush(em, p);
+	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
+	PRELINK(pfree.lleft, p);
 	memfree++;
 }
 
@@ -136,7 +137,8 @@ preclaim(void)
 
 	p = pused.lright;
 	if((em = etab[p->e]) != nil){
-		flush(p);
+		if(p->dirty)
+			flush(em, p);
 		em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
 	}
 	memset(p->buf, 0, Pagesz);
@@ -159,7 +161,7 @@ new(void)
 	int n;
 	Page *p, *pl, *pe;
 
-	n = memreallyfree < 1024 ? memreallyfree : 1024;
+	n = memreallyfree < Banksz ? memreallyfree : Banksz;
 	pl = emalloc(n * sizeof *pl);
 	memreallyfree -= n;
 	pl->lright = pl->lleft = pl;
@@ -248,6 +250,7 @@ emw64(EM *em, vlong off, u64int v)
 	u = PLEA(p, off);
 	DPRINT(Debugextmem, "w64 %#p:%#p [%zx] %llx %llx [%#p]", em, em->banks[BADDR(off)], off/8, off, v, u);
 	PBIT64(u, v);
+	p->dirty = 1;
 }
 
 int
@@ -256,20 +259,15 @@ em2fs(EM *em, File *f, ssize nbytes)
 	vlong n;
 	Page ***b, **p, **pe;
 	File *ef;
+	uchar iobuf[IOUNIT];
 
 	if(em->banks == nil)
 		return 0;
 	for(b=em->banks; b<em->banks+nelem(em->banks); b++)
 		if(*b != nil)
 			for(p=*b, pe=p+Banksz; p<pe; p++)
-				if(*p > Sucks){
-					flush(*p);
-					freepage(*p);
-				}
-	if(em->fd < 0){
-		warn("em2fs: nothing to write\n");
-		return 0;
-	}
+				if(*p > Sucks)
+					freepage(em, *p);
 	ef = emalloc(sizeof *ef);
 	seek(em->fd, 0, 0);
 	if(fdopenfs(ef, em->fd, OREAD) < 0)
@@ -300,7 +298,7 @@ emclose(EM *em)
 			if(*b != nil)
 				for(p=*b, pe=p+Banksz; p<pe; p++)
 					if(*p > Sucks)
-						freepage(*p);
+						freepage(em, *p);
 	}
 	if(em->infd >= 0)
 		close(em->infd);
