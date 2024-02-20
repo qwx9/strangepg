@@ -338,17 +338,18 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	Edge e = {0}, *ep;
 	khiter_t k;
 
-	id = v->id * g->nsuper + u->id;
-	DPRINT(Debugcoarse, "newedge %zx: %zx,%zx", id, u->id, v->id);
+	/* FIXME: won't scale; could have another pass after input parsing to remap */
+	//id = v->id * g->nsuper + u->id << 2 | udir << 1 & 1 | vdir & 1;
+	id = dylen(g->edges) << 2 | udir << 1 & 1 | vdir & 1;
 	k = kh_put(idmap, g->emap, id, &ret);
 	if(ret == 0){
-		warn("newedge: not overwriting existing edge %zx\n", id);
+		warn("newedge: not overwriting existing edge [%zx] %zx,%zx\n", id, u->id, v->id);
 		i = kh_val(g->emap, k);
 		return g->edges + i;
 	}
 	e.id = id;
-	e.u = u->id << 1 | udir;
-	e.v = v->id << 1 | vdir;
+	e.u = u->id << 1 | udir & 1;
+	e.v = v->id << 1 | vdir & 1;
 	dypush(u->out, id);
 	dypush(v->in, id);
 	dypush(g->edges, e);
