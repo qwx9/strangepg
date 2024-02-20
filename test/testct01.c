@@ -4,13 +4,15 @@
 int
 main(int, char **)
 {
+	ssize v;
 	EM *em;
 
+	initem();
 	if((em = emopen(nil, 0)) == nil)
 		sysfatal("emopen: %s", error());
 	emw64(em, 0, 0xdeadbeefcafebabeULL);
-	if(emr64(em, 0) != 0xdeadbeefcafebabeULL)
-		sysfatal("emr64: %s", error());
+	if((v = emr64(em, 0)) != 0xdeadbeefcafebabeULL)
+		sysfatal("emr64: %zx not %zx", v, 0xdeadbeefcafebabeULL);
 	emclose(em);
 	sysquit();
 	return 0;

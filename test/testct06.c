@@ -40,6 +40,7 @@ main(int, char **)
 	u64int v, w;
 	EM *em;
 
+	initem();
 	path = touch();
 	if((em = emopen(path, 0)) == nil)
 		sysfatal("emopen: %s", error());

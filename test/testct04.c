@@ -38,6 +38,7 @@ main(int, char **)
 	char *path;
 	EM *em;
 
+	initem();
 	path = touch(Addr);
 	if((em = emopen(path, 0)) == nil)
 		sysfatal("emopen: %s", error());

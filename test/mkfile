@@ -16,6 +16,8 @@ HFILES=
 </sys/src/cmd/mkmany
 BIN=.
 
+LDFLAGS=$LDFLAGS -p
+
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe \
 	-I.. \

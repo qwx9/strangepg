@@ -7,6 +7,7 @@ main(int, char **)
 {
 	EM *em;
 
+	initem();
 	if((em = emopen(nil, 0)) == nil)
 		sysfatal("emopen: %s", error());
 	if(emr64(em, 1) != 0)

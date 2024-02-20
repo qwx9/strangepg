@@ -13,6 +13,8 @@
  *	cache, etc. ← would be external to em, this is generic enough */
 /* FIXME: don't do while loop in dygrow, compute size directly */
 
+int multiplier = 29;
+
 KHASH_MAP_INIT_INT64(pagetab, void*)
 
 enum{
@@ -309,14 +311,11 @@ emopen(char *path, int flags)
 	return em;
 }
 
-int
-eminit(int m)
+void
+initem(void)
 {
-	if(m < 16 || m > 63){
-		werrstr("invalid memory size");
-		return -1;
-	}
-	poolsz = 1ULL << m;
+	if(multiplier < 16 || multiplier > 63)
+		sysfatal("invalid memory size");
+	poolsz = 1ULL << multiplier;
 	memreallyfree = poolsz / Pagesz;
-	return 0;
 }

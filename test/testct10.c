@@ -7,6 +7,7 @@ main(int, char **)
 	ssize r, i, v, w, f;
 	EM *em[10];
 
+	initem();
 	for(i=0; i<nelem(em); i++)
 		if((em[i] = emopen(nil, 0)) == nil)
 			sysfatal("emopen: %s", error());

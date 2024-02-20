@@ -44,7 +44,6 @@ usage(void)
 static int
 parseargs(int argc, char **argv)
 {
-	int multiplier;
 	char *s;
 
 	intype = FFgfa;
@@ -89,8 +88,6 @@ parseargs(int argc, char **argv)
 		break;
 	case 'm':
 		multiplier = atoi(EARGF(usage()));
-		if(eminit(multiplier) < 0)
-			sysfatal("invalid multiplier");
 		break;
 	case 'n': noui = 1; break;
 	case 's': drawstep = 1; break;
@@ -103,6 +100,7 @@ parseargs(int argc, char **argv)
 static void
 init(void)
 {
+	initem();
 	initcmd();
 	initfs();
 	initlayout();

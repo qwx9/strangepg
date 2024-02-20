@@ -78,6 +78,7 @@ struct Node{
 enum{
 	Sbit = 1ULL<<63,
 };
+// FIXME
 enum{
 	Edgesense = 0<<0,
 	Edgeantisense = 1<<0,
@@ -176,4 +177,3 @@ enum{
 
 extern int debug;
 extern int noui;
-extern int multiplier;

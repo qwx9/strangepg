@@ -10,6 +10,7 @@ main(int, char **)
 	int u[] = {0,9,1,8,6,2,4,3,7,5};
 	EM *em;
 
+	initem();
 	if((em = emopen(nil, 0)) == nil)
 		sysfatal("emopen: %s", error());
 	for(i=0; i<nelem(u); i++)

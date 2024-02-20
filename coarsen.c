@@ -292,7 +292,6 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-	int m;
 	char *s;
 	Graph g;
 	Lbuf *lvl;
@@ -320,9 +319,7 @@ main(int argc, char **argv)
 		}
 		break;
 	case 'm':
-		m = atoi(EARGF(usage()));
-		if(eminit(m) < 0)
-			sysfatal("invalid multiplier");
+		multiplier = atoi(EARGF(usage()));
 		break;
 	case 'n':
 		plaintext = 1;
@@ -330,6 +327,7 @@ main(int argc, char **argv)
 	}ARGEND
 	if(argc < 2)
 		usage();
+	initem();
 	lvl = coarsen(&g, argv[0], argv[1]);
 	if(plaintext)
 		return 0;

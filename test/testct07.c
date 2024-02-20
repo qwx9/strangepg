@@ -7,6 +7,8 @@ main(int, char **)
 	ssize r, i, v, w;
 	EM *em;
 
+	initem();
+	srand(42);
 	em = emopen(nil, 0);
 	for(i=0; i<10000000; i++){
 		r = lrand() % ((1<<16)-1);
