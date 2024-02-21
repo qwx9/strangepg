@@ -20,6 +20,7 @@ struct Filefmt{
 
 Filefmt*	reggfa(void);
 Filefmt*	regindex(void);
+int	readchar(File*);
 char*	readrecord(File*);
 void	regfs(Filefmt*);
 

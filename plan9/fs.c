@@ -98,6 +98,18 @@ sysread(File *f, void *buf, int n)
 	return Bread(f->aux, buf, n);
 }
 
+int
+readchar(File *f)
+{
+	int c;
+	Biobuf *bf;
+
+	bf = f->aux;
+	if((c = Bgetc(bf)) <= 0)
+		return -1;
+	return c;
+}
+
 // FIXME: generic + os-specific
 char *
 readrecord(File *f)
