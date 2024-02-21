@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "cmd.h"
 
 Obj selected;
 
@@ -43,6 +44,17 @@ zoomview(Vector v)
 	return 0;
 }
 
+void
+keyprompt(Rune r)
+{
+	char *s;
+
+	if((s = enterprompt(r)) == nil)
+		return; 
+	sendcmd(s);
+	free(s);
+}
+
 int
 keyevent(Rune r)
 {
@@ -60,7 +72,7 @@ keyevent(Rune r)
 	case '-': for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); break;
 	case 'R': for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
-	default: break;
+	default: keyprompt(r); break;
 	}
 	return 0;
 }

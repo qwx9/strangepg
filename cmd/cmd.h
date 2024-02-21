@@ -5,3 +5,4 @@ void	sendcmd(char*);
 void	pushcmd(char*, ...);
 int	sysinitcmd(void);
 int	startengine(void);
+char*	enterprompt(Rune);

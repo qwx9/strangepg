@@ -23,6 +23,22 @@ k2e(Rune r)
 	return r;
 }
 
+char *
+enterprompt(Rune r)
+{
+	int n;
+	char buf[256] = {0};
+
+	runetochar(buf, &r);
+	if((n = enter("Cmd: ", buf, sizeof(buf)-UTFmax, mc, kc, nil)) < 0){
+		warn("enterprompt: %r\n");
+		return nil;
+	}else if(n > 0)
+		return estrdup(buf);
+	else
+		return nil;
+}
+
 void
 evloop(void)
 {
