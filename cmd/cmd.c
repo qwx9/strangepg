@@ -36,27 +36,25 @@ pushcmd(char *fmt, ...)
 		return;
 	}
 	va_start(arg, fmt);
-	for(f=fmt, sp=sb; sp<sb+sizeof sb;){
-		if((c = *f++) == 0){
-			*sp = 0;
+	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
+		if((c = *f++) == 0)
 			break;
-		}else if(c != '%'){
+		else if(c != '%'){
 			*sp++ = c;
 			continue;
 		}
 		if((c = *f++) == 0){
 			warn("pushcmd: malformed command %s", fmt);
-			*sp = 0;
 			break;
 		}
 		switch(c){
 		case 's':
 			as = va_arg(arg, char*);
-			sp = strecpy(sp, sb+sizeof sb, as);
+			sp = strecpy(sp, sb+sizeof sb-1, as);
 			break;
 		case 'd':
 			ai = va_arg(arg, ssize);
-			sp = seprint(sp, sb+sizeof sb, "%zd", ai);
+			sp = seprint(sp, sb+sizeof sb-1, "%zd", ai);
 			break;
 		default:
 			warn("pushcmd: unknown format %c", c);
@@ -65,5 +63,8 @@ pushcmd(char *fmt, ...)
 		}
 	}
 	va_end(arg);
+	if(sp < sb + sizeof sb - 1)
+		*sp++ = '\n';
+	*sp = 0;
 	sendcmd(sb);
 }

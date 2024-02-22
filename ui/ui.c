@@ -50,8 +50,8 @@ keyprompt(Rune r)
 	char *s;
 
 	if((s = enterprompt(r)) == nil)
-		return; 
-	sendcmd(s);
+		return;
+	pushcmd(s);
 	free(s);
 }
 
