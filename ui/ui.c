@@ -72,6 +72,7 @@ keyevent(Rune r)
 	case '-': for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); break;
 	case 'R': for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
+	case 'r': norefresh ^= 1; break;
 	default: keyprompt(r); break;
 	}
 	return 0;

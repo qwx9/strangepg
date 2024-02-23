@@ -1,10 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
 
-/* assumptions:
- * - all segments are defined before any links
- */
-
 static int
 gfa1hdr(Graph *, File *f)
 {

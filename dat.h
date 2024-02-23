@@ -177,3 +177,4 @@ enum{
 
 extern int debug;
 extern int noui;
+extern int norefresh;

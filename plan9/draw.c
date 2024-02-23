@@ -4,6 +4,7 @@
 #include "drw.h"
 
 QLock drawlock;
+int norefresh;
 
 typedef struct Pal Pal;
 struct Pal{
@@ -330,7 +331,7 @@ drawproc(void *)
 			case Reqresetui: resetui(1);	/* wet floor */
 			case Reqredraw: redraw(); flushdraw(); break;
 			case Reqshallowdraw: flushdraw(); break;
-			case Reqrefresh: rerender(1); redraw(); flushdraw(); break;
+			case Reqrefresh: if(norefresh) break; rerender(1); redraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
 			break;
