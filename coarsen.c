@@ -71,11 +71,15 @@ endlevel(Lbuf *lp)
 }
 
 static void
-outputedge(Lbuf *lp, ssize u, ssize v, int o, ssize ei)
+outputedge(Lbuf *lp, ssize u, ssize v, int o, ssize ei, int nlvl)
 {
 	ssize off;
 	EM *em;
 
+	if(plaintext){
+		print("%d e[%zx] %c%zx,%c%zx\n", nlvl, ei, (o&1)!=0?'-':'+', u, (o>>1&1)!=0?'-':'+', v);
+		return;
+	}
 	DPRINT(Debugcoarse, "outputedge %zx:%d,%zx:%d", u, o&1, v, o>>1&1);
 	em = lp->edges;
 	off = lp->nedges++;
@@ -85,11 +89,15 @@ outputedge(Lbuf *lp, ssize u, ssize v, int o, ssize ei)
 }
 
 static void
-outputnode(Lbuf *lp, ssize idx, ssize old, ssize new, ssize len)
+outputnode(Lbuf *lp, ssize idx, ssize old, ssize new, ssize len, int nlvl)
 {
 	ssize off;
 	EM *em;
 
+	if(plaintext){
+		print("%d n[%zx] %zx→%zx w:%zd\n", nlvl, old, idx, new, len);
+		return;
+	}
 	em = lp->nodes;
 	off = lp->nnodes++;
 	emw64(em, 4*off, idx);
@@ -103,6 +111,10 @@ newlevel(Lbuf *lvl)
 {
 	Lbuf l = {0};
 
+	if(plaintext){
+		print("========\n");
+		return nil;
+	}
 	if((l.nodes = emopen(nil, 0)) == nil)
 		sysfatal("newlevel: %s", error());
 	if((l.edges = emopen(nil, 0)) == nil)
@@ -169,10 +181,8 @@ coarsen(Graph *g, char *uindex, char *eindex)
 		h = kh_init(meh);
 		visited = kh_init(ugh);
 		// FIXME: redundant with lp edge array
-		if(!plaintext){
-			lvl = newlevel(lvl);
+		if((lvl = newlevel(lvl)) != nil)
 			lp = lvl + dylen(lvl) - 1;
-		}
 		// FIXME: use index for ids rather than y*i+x which will blow up
 		DPRINT(Debugcoarse, "===== level %zx nn %zx ne %zx", lp-lvl+1, S0, M);
 		m = M;
@@ -214,14 +224,14 @@ coarsen(Graph *g, char *uindex, char *eindex)
 				NOTAMILKMAN(visited, u, s);
 				top = u;
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\bnew super [%zx]%zx→%zx", u0, u, s);
-				outputnode(lp, u, u0, s, 1);
+				outputnode(lp, u, u0, s, 1, nlvl);
 			}
 			if((t = HESDEADJIM(visited, v)) == kh_end(visited) || (t = SULUGOTOWARP(visited, t)) <= w){
 				if(u == top){
 					NOTAMILKMAN(visited, v, s);
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; merge [%zx]%zx", v0, v);
-					outputnode(lp, v, v0, s, 1);
-					outputedge(lp, u, v, o, ei);
+					outputnode(lp, v, v0, s, 1, nlvl);
+					outputedge(lp, u, v, o, ei, nlvl);
 				}else
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
 			}else if(EXISTS(h, u, v, 2*g->nnodes)){
@@ -229,12 +239,12 @@ coarsen(Graph *g, char *uindex, char *eindex)
 				if(!EXISTS(h, U, V, 2*g->nnodes) && !EXISTSONE(h, U^1, V^1, 2*g->nnodes)){
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b but with unique orientation %d,%d", o&1, o>>1&1);
 					SPAWN(h, U, V, 2*g->nnodes);
-					outputedge(lp, u, v, o, ei);
+					outputedge(lp, u, v, o, ei, nlvl);
 				}
 			}else if(u == v){
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; self edge");
 				if(!EXISTS(h, U, V, 2*g->nnodes)){
-					outputedge(lp, u, v, o, ei);
+					outputedge(lp, u, v, o, ei, nlvl);
 					SPAWN(h, u, v, 2*g->nnodes);
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; added %zx:%zd,%zx:%zd", u, u&1, v, v&1);
 					if(nlvl == 0){
@@ -256,7 +266,7 @@ coarsen(Graph *g, char *uindex, char *eindex)
 				emw64(edges, 3*M, t * 2*g->nnodes + s);
 				emw64(edges, 3*M+1, v0 * g->nnodes + u0);
 				emw64(edges, 3*M+2, ei);
-				outputedge(lp, u, v, o, ei);
+				outputedge(lp, u, v, o, ei, nlvl);
 				M++;
 			}
 		}
