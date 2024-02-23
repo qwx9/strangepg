@@ -22,6 +22,7 @@ gfa1seg(Graph *g, File *f)
 		werrstr("line %d: malformed segment", f->nr);
 		return -1;
 	}
+	DPRINT(Debugfs, "gfa pushnamednode %s", f->fld[1]);
 	return pushnamednode(g, f->fld[1]) != nil ? 0 : -1;
 }
 
@@ -49,11 +50,13 @@ gfa1link(Graph *g, File *f)
 			return -1;
 		}
 		*s = *t = 0;
+		DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', f->fld[1], d2?'-':'+', f->fld[3]);
 		return pushnamededge(g, f->fld[1], f->fld[2], d1, d2) != nil ? 0 : -1;
 	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
 		werrstr("line %d: malformed link orientation", f->nr);
 		return -1;
 	}
+	DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', f->fld[1], d2?'-':'+', f->fld[3]);
 	return pushnamededge(g, f->fld[1], f->fld[3], d1, d2) != nil ? 0 : -1;
 }
 

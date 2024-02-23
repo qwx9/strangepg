@@ -312,12 +312,11 @@ pushnamednode(Graph *g, char *s)
 	//char *kk;
 	//usize vv;
 
-	DPRINT(Debugcoarse, "pushnamednode %s", s);
 	// FIXME: ↓
 	//kh_foreach(g->strnmap, kk, vv, {warn("%s:%zx\n", kk, vv);});
-	if(getnamednode(g, s) != nil){
-		werrstr("duplicate node id %s", s);
-		return nil;
+	if((n = getnamednode(g, s)) != nil){
+		warn("duplicate node %s\n", s);
+		return n;
 	}
 	i = dylen(g->nodes);
 	id = i;
@@ -326,6 +325,7 @@ pushnamednode(Graph *g, char *s)
 	k = kh_put(strmap, g->strnmap, s, &ret);
 	assert(ret != 0);
 	kh_val(g->strnmap, k) = id;
+	DPRINT(Debugcoarse, "pushnamednode %zd", id);
 	pushcmd("N %d %s", id, s);
 	return n;
 }
@@ -357,6 +357,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	kh_val(g->emap, k) = i;
 	ep = g->edges + i;
 	ep->prev = ep->next = i;
+	DPRINT(Debugcoarse, "newedge %zx[%zd]: %zd,%zd", e.id, i, e.u>>1, e.v>>1);
 	pushcmd("e %d %d %d %d %d", id, u->id, v->id, udir, vdir);
 	return ep;
 }
@@ -385,8 +386,11 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 
 	DPRINT(Debugcoarse, "pushnamededge %s,%s", eu, ev);
 	if((u = getnamednode(g, eu)) == nil
-	|| (v = getnamednode(g, ev)) == nil)
-		return nil;
+	&& (u = pushnamednode(g, eu)) == nil)
+			warn("pushnamededge: %s\n", error());
+	if((v = getnamednode(g, ev)) == nil
+	&& (v = pushnamednode(g, ev)) == nil)
+			warn("pushnamededge: %s\n", error());
 	e = pushedge(g, u, v, d1, d2);
 	pushcmd("E %d %s %s %d %d", e->id, eu, ev, d1, d2);
 	return e;
