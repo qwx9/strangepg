@@ -1,69 +1,52 @@
 #include "strpg.h"
+#include "draw.h"
 
 static double
-faceyourfears(Graph *g, Node *u)
+faceyourfears(Graph *g, Node *u, ssize *ep, double *res, int rev)
 {
-	int n, sign;
-	ssize *ip, *ie;
-	double θ, dθ;
+	int n;
+	double θ;
+	ssize *ee;
 	Edge *e;
 	Node *v;
 	Vector Δ;
 
-	/* FIXME:
-	 * - fix perpendicular orientations
-	 *	=> look at outgoing: then dignore things "behind" us
-	 * - take into account orientation?
-	 * - out/in
-	 * - optionally don't show nodes at all, just have points
-	 */
+	ee = ep + dylen(ep);
+	if(ep >= ee){
+		return -1;
+	}
+	for(n=0, θ=0.; ep<ee; ep++){
+		if((e = getedge(g, *ep)) == nil){
+			warn("rend: dangling edge reference in adjacency array\n");
+			continue;
+		}
+		v = getnode(g, e->v >> 1);
+		assert(v != nil);
+		if(u == v){
+			u = v;
+			v = getnode(g, e->u >> 1);
+			if(u == v)
+				continue;
+		}
+		Δ = rev ? subpt2(u->vrect.o, v->vrect.o)
+			: subpt2(v->vrect.o, u->vrect.o);
+		θ += atan2(Δ.y, Δ.x);
+		n++;
+	}
+	*res = (rev ? -θ : θ) / n;
+	return 0;
+}
 
-	θ = 0.;
-	n = 0;
+static double
+makenicerkindof(Graph *g, Node *u)
+{
+	double θ;
+
 	/* face outgoing */
-	if(dylen(u->out) > 0){
-		for(ip=u->out, ie=ip+dylen(u->out); ip<ie; ip++){
-			// FIXME: review this code with the diff; there's some
-			//	redundancy and it might be unintentional
-			//	it's buggy anyway
-			if((e = getedge(g, *ip)) == nil)
-				continue;
-			v = getnode(g, e->v >> 1);	// FIXME: genericity: idx2n or sth
-			assert(v != nil);
-			if(u == v)
-				continue;
-			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			Δ = subpt2(v->vrect.o, u->vrect.o);
-			dθ = sign * atan2(Δ.y, Δ.x);
-			// FIXME: needs to be scaled down
-			/* weight inversely proportional to distance: prefer
-			 * facing closer nodes
-			 * also node weights */
-			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			θ -= dθ;
-			n++;
-		}
-	}
+	if(faceyourfears(g, u, u->out, &θ, 0) < 0
 	/* face away from incoming */
-	if(dylen(u->in) > 0){
-		for(ip=u->in, ie=ip+dylen(u->in); ip<ie; ip++){
-			if((e = getedge(g, *ip)) == nil)
-				continue;
-			v = getnode(g, e->v >> 1);
-			assert(v != nil);
-			if(u == v)
-				continue;
-			sign = (e->u & 1) != (e->v & 1) ? 1 : -1;
-			Δ = subpt2(u->vrect.o, v->vrect.o);
-			dθ = sign * atan2(Δ.y, Δ.x);
-			/* FIXME: see comment above */
-			//d = sqrt(Δ.x * Δ.x + Δ.y * Δ.y);
-			θ -= dθ;
-			n++;
-		}
-	}
-	if(n > 0)
-		θ /= n;
+	&& faceyourfears(g, u, u->in, &θ, 1) < 0)
+		return 0;
 	θ -= PI / 4;	/* upper left to bottom right corner */
 	while(θ >= 2*PI)
 		θ -= 2*PI;
@@ -82,7 +65,7 @@ rendernode(Graph *g, Node *u)
 	//	all; adding o and v happens way too often, it's stupid and so is
 	//	this code
 	// ^- just have upper left corner, width, height, angle
-	u->θ = faceyourfears(g, u);
+	u->θ = makenicerkindof(g, u);
 	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
 	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
 	u->vrect.v = Vec2(vx, vy);
