@@ -271,7 +271,6 @@ em2fs(EM *em, File *f, ssize nbytes)
 		u = emr64(em, off);
 		put64(f, u);
 	}
-	emclose(em);
 	return 0;
 }
 
