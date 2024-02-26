@@ -12,9 +12,8 @@ faceyourfears(Graph *g, Node *u, ssize *ep, double *res, int rev)
 	Vector Δ;
 
 	ee = ep + dylen(ep);
-	if(ep >= ee){
+	if(ep >= ee)
 		return -1;
-	}
 	for(n=0, θ=0.; ep<ee; ep++){
 		if((e = getedge(g, *ep)) == nil){
 			warn("rend: dangling edge reference in adjacency array\n");
@@ -33,6 +32,8 @@ faceyourfears(Graph *g, Node *u, ssize *ep, double *res, int rev)
 		θ += atan2(Δ.y, Δ.x);
 		n++;
 	}
+	if(n == 0)
+		return -1;
 	*res = (rev ? -θ : θ) / n;
 	return 0;
 }
