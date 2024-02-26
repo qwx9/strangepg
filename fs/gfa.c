@@ -1,25 +1,22 @@
 #include "strpg.h"
 #include "fs.h"
 
+/* assumptions:
+ * - required field separator is \t
+ */
+
 static int
-gfa1hdr(Graph *, File *f)
+gfa1hdr(Graph *, char *)
 {
-	if(f->nf < 2){
-		werrstr("line %d: malformed header", f->nr);
-		return -1;
-	}
 	return 0;
 }
 
 static int
-gfa1seg(Graph *g, File *f)
+gfa1seg(Graph *g, char *s)
 {
-	if(f->nf < 3){
-		werrstr("line %d: malformed segment", f->nr);
-		return -1;
-	}
-	DPRINT(Debugfs, "gfa pushnamednode %s", f->fld[1]);
-	return pushnamednode(g, f->fld[1]) != nil ? 0 : -1;
+	getfield(s);
+	DPRINT(Debugfs, "gfa pushnamednode %s", s);
+	return pushnamednode(g, s) != nil ? 0 : -1;
 }
 
 static int
@@ -33,31 +30,29 @@ todir(char *s)
 }
 
 static int
-gfa1link(Graph *g, File *f)
+gfa1link(Graph *g, char *s)
 {
 	int d1, d2;
-	char *s, *t;
+	char *t, *fld[4], **fp;
 
-	if(f->nf < 6){
-		s = f->fld[1] + strlen(f->fld[1]) - 1;
-		t = f->fld[2] + strlen(f->fld[2]) - 1;
-		if((d1 = todir(s)) < 0 || (d2 = todir(t)) < 0){
-			werrstr("line %d: malformed link", f->nr);
+	for(fp=fld; fp<fld+nelem(fld); fp++, s=t){
+		if(s == nil){
+			werrstr("malformed link");
 			return -1;
 		}
-		*s = *t = 0;
-		DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', f->fld[1], d2?'-':'+', f->fld[3]);
-		return pushnamededge(g, f->fld[1], f->fld[2], d1, d2) != nil ? 0 : -1;
-	}else if((d1 = todir(f->fld[2])) < 0 || (d2 = todir(f->fld[4])) < 0){
-		werrstr("line %d: malformed link orientation", f->nr);
+		t = getfield(s);
+		*fp = s;
+	}
+	if((d1 = todir(fld[1])) < 0 || (d2 = todir(fld[3])) < 0){
+		werrstr("malformed link orientation");
 		return -1;
 	}
-	DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', f->fld[1], d2?'-':'+', f->fld[3]);
-	return pushnamededge(g, f->fld[1], f->fld[3], d1, d2) != nil ? 0 : -1;
+	DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', fld[0], d2?'-':'+', fld[2]);
+	return pushnamededge(g, fld[0], fld[2], d1, d2) != nil ? 0 : -1;
 }
 
 static int
-gfa1path(Graph *, File *)
+gfa1path(Graph *, char *)
 {
 	return 0;
 }
@@ -66,7 +61,8 @@ gfa1path(Graph *, File *)
 static Graph*
 loadgfa1(char *path)
 {
-	int (*parse)(Graph*, File*);
+	int n, (*parse)(Graph*, char*);
+	char *s, *t;
 	ssize nnodes, nedges;
 	Graph *g;
 	File *f;
@@ -78,27 +74,28 @@ loadgfa1(char *path)
 	memset(&f, 0, sizeof f);
 	if((f = graphopenfs(g, path, OREAD)) == nil)
 		return nil;
-	while(readrecord(f) != nil && f->err < 10){
-		switch(f->fld[0][0]){
+	while((s = readline(f, &n)) != nil){
+		t = getfield(s);
+		switch(s[0]){
 		case 'H': parse = gfa1hdr; break;
 		case 'S': parse = gfa1seg; nnodes++; break;
 		case 'L': parse = gfa1link; nedges++; break;
 		case 'P': parse = gfa1path; break;
-		default: werrstr("line %d: unknown record type %c", f->nr, *f->fld[0]); continue;
+		default: werrstr("line %d: unknown record type %c", f->nr, s[0]); continue;
 		}
-		if(parse(g, f) < 0){
-			warn("loadgfa1: %s\n", error());
+		if(parse(g, t) < 0){
+			warn("loadgfa1: line %d: %s\n", f->nr, error());
 			f->err++;
 		}
 	}
-	DPRINT(Debugfs, "done loading gfa");
 	closefs(f);
-	clearmeta(g);	// FIXME: why? (em)
+	clearmeta(g);
 	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(g);
 		return nil;
 	}
+	DPRINT(Debugfs, "done loading gfa");
 	g->nedges = nedges;
 	g->nnodes = nnodes;
 	return g;

@@ -3,31 +3,29 @@
 #include <bio.h>
 
 int
-sysopen(File *f, int mode)
+sysfdopen(File *f, int fd, int mode)
 {
-	Biobuf *bf;
-
-	assert(f->path != nil);
-	if((bf = Bopen(f->path, mode)) == nil)
+	f->aux = emalloc(sizeof(Biobufhdr));	/* FIXME: danger zone */
+	/* for line parsing, extra byte to always insures 0-terminated string */
+	if(Binits(f->aux, fd, mode, f->buf, sizeof f->buf - 1) < 0)
 		return -1;
-	f->aux = bf;
 	return 0;
 }
 
 int
-sysfdopen(File *f, int fd, int mode)
+sysopen(File *f, int mode)
 {
-	Biobuf *bf;
+	int fd;
 
-	if((bf = Bfdopen(fd, mode)) == nil)
+	if((fd = open(f->path, mode)) < 0)
 		return -1;
-	f->aux = bf;
-	return 0;
+	return sysfdopen(f, fd, mode);
 }
 
 void
 sysclose(File *f)
 {
+	assert(f->aux != nil);
 	Bterm(f->aux);
 	f->aux = nil;
 }
@@ -110,27 +108,51 @@ readchar(File *f)
 	return c;
 }
 
-// FIXME: generic + os-specific
 char *
-readrecord(File *f)
+getfield(char *s)
 {
+	char *t;
+
+	if(s == nil)
+		return nil;
+	if((t = strchr(s, '\t')) != nil)
+		*t++ = 0;
+	return t;
+}
+
+/* Brdline sucks but Brdstr will choke us when lines are very long;
+ * so instead of removing bio, we break Brdline. */
+char *
+readline(File *f, int *len)
+{
+	char *s;
 	Biobuf *bf;
 
-	assert(f != nil && f->path != nil);
-	assert(f->aux != nil);
+	assert(f != nil && f->path != nil && f->aux != nil);
 	bf = f->aux;
-	free(f->s);
+	/* previous line unterminated, longer than size of buffer */
+	if(f->trunc){
+		f->trunc = 0;
+		for(;;){
+			if(Brdline(bf, '\n') != nil)
+				break;
+			else if(Blinelen(bf) == 0)
+				return nil;
+			/* hack 1: force Brdline to discard truncated line and
+			 * continue reading, which this bullshit should do itself */
+			bf->icount = 0;
+		}
+	}
 	f->foff = Boffset(bf);
-	f->s = nil;
-	// FIXME: beware of \r
-	if((f->s = Brdstr(bf, '\n', 0)) == nil)
-		return nil;
-	if((f->nf = getfields(f->s, f->fld, nelem(f->fld), 1, "\t ")) < 1){
-		free(f->s);
-		f->s = nil;
-		werrstr("line %d: invalid record", f->nr+1);
-		return nil;
+	s = Brdline(bf, '\n');
+	*len = Blinelen(bf);
+	if(s == nil){
+		/* hack 2: return truncated buffer as valid */
+		if(*len != 0){
+			s = (char *)bf->gbuf;
+			f->trunc = 1;
+		}
 	}
 	f->nr++;
-	return f->s;
+	return s;
 }

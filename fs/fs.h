@@ -3,11 +3,12 @@ typedef struct Filefmt Filefmt;
 struct File{
 	char *path;
 	void *aux;
-	char *s;
-	char *fld[16];	/* FIXME: why */
-	int nf;
+	uchar buf[IOUNIT+1];
+	int trunc;
 	int nr;
 	int err;
+	/* FIXME: fix rest of File* interface */
+	char *s;
 	vlong foff;		/* file offset at *start of record* */
 };
 
@@ -21,7 +22,8 @@ struct Filefmt{
 Filefmt*	reggfa(void);
 Filefmt*	regindex(void);
 int	readchar(File*);
-char*	readrecord(File*);
+char*	getfield(char*);
+char*	readline(File*, int*);
 void	regfs(Filefmt*);
 
 #define	GBIT8(p)	(((uchar*)(p))[0])
