@@ -333,6 +333,6 @@ initsysdraw(void)
 }
 
 void
-initui(void)
+initsysui(void)
 {
 }

@@ -58,22 +58,21 @@ gfa1path(Graph *, char *)
 }
 
 // FIXME: actually handle bad input
-static Graph*
-loadgfa1(char *path)
+static void
+loadgfa1(void *path)
 {
 	int n, (*parse)(Graph*, char*);
 	char *s, *t;
 	ssize nnodes, nedges;
-	Graph *g;
+	Graph g;
 	File *f;
 
 	nnodes = nedges = 0;
-	DPRINT(Debugfs, "loadgfa1 %s", path);
-	if((g = initgraph()) == nil)
-		sysfatal("loadgfa1: %r");
+	DPRINT(Debugfs, "loadgfa1 %s", (char *)path);
+	g = initgraph(FFgfa);
 	memset(&f, 0, sizeof f);
-	if((f = graphopenfs(g, path, OREAD)) == nil)
-		return nil;
+	if((f = graphopenfs(&g, (char *)path, OREAD)) == nil)
+		threadexits(error());
 	while((s = readline(f, &n)) != nil){
 		t = getfield(s);
 		switch(s[0]){
@@ -83,22 +82,23 @@ loadgfa1(char *path)
 		case 'P': parse = gfa1path; break;
 		default: werrstr("line %d: unknown record type %c", f->nr, s[0]); continue;
 		}
-		if(parse(g, t) < 0){
+		if(parse(&g, t) < 0){
 			warn("loadgfa1: line %d: %s\n", f->nr, error());
 			f->err++;
 		}
 	}
 	closefs(f);
-	clearmeta(g);
+	clearmeta(&g);
 	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
-		nukegraph(g);
-		return nil;
+		nukegraph(&g);
+		threadexits(error());
 	}
 	DPRINT(Debugfs, "done loading gfa");
-	g->nedges = nedges;
-	g->nnodes = nnodes;
-	return g;
+	g.nedges = nedges;
+	g.nnodes = nnodes;
+	pushgraph(g);
+	threadexits(nil);
 }
 
 static int

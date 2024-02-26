@@ -164,7 +164,6 @@ coffeetime(void)
 	u32int one;
 
 	one = 1;
-	warn("one %#x\n", one);
 	for(;;){
 		if(atomic_compare_exchange_strong(fux, &one, 0))
 			break;
@@ -179,11 +178,9 @@ coffeeover(void)
 	u32int zilch;
 
 	zilch = 0;
-	warn("zilch %#x\n", zilch);
 	if(atomic_compare_exchange_strong(fux, &zilch, 1)){
 		if(futex(fux, FUTEX_WAKE, 1) < 0)
 			sysfatal("coffeeover: futex wake");
-		warn("wakezilch %#x\n", zilch);
 	}
 }
 
@@ -191,6 +188,8 @@ void
 yield(void)
 {
 }
+
+// FIXME: need threadexits
 
 int
 proccreate(void *(*f)(void *arg), void *arg, uint)

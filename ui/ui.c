@@ -68,9 +68,9 @@ keyevent(Rune r)
 	case KBleft: if(panview(Vec2(+16,0)) >= 0) reqdraw(Reqredraw); break;
 	case KBescape: reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
-	case '+': for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); break;
-	case '-': for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); break;
-	case 'R': for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); break;
+	case '+': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(); break;
+	case '-': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(); break;
+	case 'R': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
 	case 'r': norefresh ^= 1; break;
 	default: keyprompt(r); break;
@@ -125,4 +125,10 @@ resetui(int all)
 		view.pan = ZV;
 		view.zoom = 1.0;
 	}
+}
+
+void
+initui(void)
+{
+	initsysui();
 }

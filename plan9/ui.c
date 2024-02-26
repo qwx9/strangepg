@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include "cmd.h"
-#include <thread.h>
 #include <draw.h>
 #include <mouse.h>
 #include <keyboard.h>
@@ -96,7 +95,7 @@ evloop(void)
 }
 
 void
-initui(void)
+initsysui(void)
 {
 	if((kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");

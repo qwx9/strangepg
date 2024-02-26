@@ -133,5 +133,6 @@ vlong	seek(int, vlong, int);
 int	create(char*, int, int);
 
 extern int mainstacksize;
+// FIXME: proc/thread stuff → sys.c? thread.c? emulate thread.h?
 
 #define snprint	snprintf

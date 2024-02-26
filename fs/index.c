@@ -136,18 +136,18 @@ loadlevel(Graph *g, int lvl)
 	}
 }
 
-static Graph *
-load(char *path)
+static void
+load(void *path)
 {
-	Graph *g;
+	Graph g;
 
-	if((g = initgraph()) == nil)
-		sysfatal("initgraph: %r");
-	if(readtree(g, path) < 0)
+	g = initgraph(FFindex);
+	if(readtree(&g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
-	pushnode(g, g->nsuper, -1, g->nsuper, 1);
-	expandnode(g, g->nodes);
-	return g;
+	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
+	expandnode(&g, g.nodes);
+	pushgraph(g);
+	threadexits(nil);
 }
 
 static int

@@ -127,9 +127,9 @@ extern Obj aintnothingthere;
 #define Bupkis 0xdeadbeefcafebabeULL	/* NA */
 
 enum{
+	FFdead,	/* deallocated */
 	FFgfa,
 	FFindex,
-	FFlevel,
 	FFnil,
 };
 
@@ -178,3 +178,5 @@ enum{
 extern int debug;
 extern int noui;
 extern int norefresh;
+
+extern int mainstacksize;	// FIXME

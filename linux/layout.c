@@ -40,6 +40,7 @@ runlayout(Graph *g)
 		return;
 	if(g->layout.aux == nil)
 		g->layout.aux = emalloc(sizeof(pthread_t));
+	// FIXME: thread.c or w/e abstraction
 	if((r = pthread_create(g->layout.aux, NULL, layproc, g)) != 0)
 		warn("runlayout: pthread_create failed with err=%d", r);
 }

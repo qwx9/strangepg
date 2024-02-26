@@ -127,8 +127,9 @@ drawworld(void)
 {
 	Graph *g;
 
+	lockgraphs();
 	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->layout.ll == nil)
+		if(g->type <= FFdead || g->layout.ll == nil)
 			continue;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
@@ -136,6 +137,7 @@ drawworld(void)
 		if(debug)
 			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1);
 	}
+	unlockgraphs();
 	if(debug)
 		drawguides();
 }

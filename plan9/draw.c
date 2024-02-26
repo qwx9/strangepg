@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include <thread.h>
 #include <draw.h>
 #include "drw.h"
 
@@ -260,7 +259,10 @@ cleardraw(void)
 	Rectangle r, q;
 
 	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
+	lockgraphs();
 	for(g=graphs; g<graphs+dylen(graphs); g++){
+		if(g->type == FFdead)
+			continue;
 		g->off = ZV;
 		DPRINT(Debugdraw, "cleardraw: graph %#p dim %.1f,%.1f", g, g->dim.v.x, g->dim.v.y);
 		q = Rpt(v2p(g->dim.o), v2p(addpt2(g->dim.o, g->dim.v)));
@@ -303,6 +305,7 @@ cleardraw(void)
 			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
 			Endsquare, Endarrow, 0, col[Ctext], ZP);
 	}
+	unlockgraphs();
 }
 
 static void
@@ -357,11 +360,18 @@ ticproc(void *)
 	t0 = nsec();
 	step = drawstep ? Nsec/140 : Nsec/60;
 	for(;;){
-		for(g=graphs, n=0; g<graphs+dylen(graphs); g++)
+		lockgraphs();
+		for(g=graphs, n=0; g<graphs+dylen(graphs); g++){
+			if(g->type == FFdead)
+				continue;
 			if(g->layout.tid >= 0){
 				n++;
+				unlockgraphs();
 				sendp(ticc, g);
+				lockgraphs();
 			}
+		}
+		unlockgraphs();
 		if(n == 0)
 			break;
 		t = nsec();

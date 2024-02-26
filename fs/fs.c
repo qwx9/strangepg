@@ -7,7 +7,7 @@ closefs(File *f)
 	free(f->s);
 	f->s = nil;
 	sysclose(f);
-	/* not freeing f->path */
+	/* not freeing f->path */	// FIXME: are you sure about that
 }
 
 vlong

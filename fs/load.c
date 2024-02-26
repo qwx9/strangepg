@@ -19,7 +19,7 @@ loadfs(char *path, int type)
 	Filefmt *ff;
 	Graph *g;
 
-	if(type < 0 || type >= nelem(fftab)){
+	if(type <= FFdead || type >= nelem(fftab)){
 		werrstr("invalid fs type");
 		return -1;
 	}
@@ -29,10 +29,9 @@ loadfs(char *path, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	if((g = ff->load(path)) == nil)
+	if(proccreate(ff->load, path, mainstacksize) < 0)
 		return -1;
-	g->type = type;
-	return newlayout(g, -1);
+	return 0;
 }
 
 void
@@ -41,7 +40,7 @@ nukefs(Graph *g)
 	Filefmt *ff;
 
 	ff = fftab[g->type];
-	if(g->type < 0 || g->type >= nelem(fftab)){
+	if(g->type <= FFdead || g->type >= nelem(fftab)){
 		warn("nukefs: invalid graph type %d", g->type);
 		return;
 	}

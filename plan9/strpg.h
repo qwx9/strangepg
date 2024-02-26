@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <geometry.h>
+#include <thread.h>
 
 typedef intptr ssize;
 

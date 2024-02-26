@@ -31,6 +31,7 @@
  */
 
 Graph *graphs;
+QLock graphlock;
 
 void
 printgraph(Graph *g)
@@ -439,24 +440,47 @@ cleargraph(Graph *g)
 void
 nukegraph(Graph *g)
 {
+	if(g->type <= FFdead)
+		return;
 	cleargraph(g);
 	freefs(g->f);	// FIXME: probably not necessary to have in the first place
 	free(g->layout.aux);
 	memset(g, 0, sizeof *g);
-	dydelete(graphs, g-graphs);
 }
 
-Graph*
-initgraph(void)
+void
+pushgraph(Graph g)
+{
+	lockgraphs();
+	dypush(graphs, g);
+	unlockgraphs();
+	newlayout(graphs + dylen(graphs) - 1, -1);
+}
+
+// FIXME: need a layer for the threading shit, either sys.c or thread.c
+void
+lockgraphs(void)
+{
+	qlock(&graphlock);
+}
+
+void
+unlockgraphs(void)
+{
+	qunlock(&graphlock);
+}
+
+Graph
+initgraph(int type)
 {
 	Graph g = {0};
 
+	g.type = type;
 	g.layout.tid = -1;
 	g.node0.next = g.node0.prev = -1;
 	g.edge0.next = g.edge0.prev = -1;
 	g.nmap = kh_init(idmap);
 	g.emap = kh_init(idmap);
 	g.strnmap = kh_init(strmap);
-	dypush(graphs, g);
-	return graphs;
+	return g;
 }

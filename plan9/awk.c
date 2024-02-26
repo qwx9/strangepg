@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include "cmd.h"
-#include <thread.h>
 #include <bio.h>
 
 Channel *cmdc;

@@ -14,14 +14,12 @@ quit(void)
 }
 
 static void
-loadinputs(char **files,  int type)
+load(char **files)
 {
 	char *s;
 
-	if(files == nil)
-		sysfatal("no input files");
 	while((s = *files++) != nil){
-		if(loadfs(s, type) < 0)
+		if(loadfs(s, intype) < 0)
 			sysfatal("loadfs: could not load %s: %r\n", s);
 	}
 }
@@ -29,7 +27,6 @@ loadinputs(char **files,  int type)
 static void
 run(void)
 {
-	loadinputs(filev, intype);
 	if(noui)
 		quit();
 	evloop();
@@ -41,7 +38,7 @@ usage(void)
 	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [FILE]\n", argv0);
 }
 
-static int
+static char **
 parseargs(int argc, char **argv)
 {
 	char *s;
@@ -93,8 +90,9 @@ parseargs(int argc, char **argv)
 	case 's': drawstep = 1; break;
 	default: usage();
 	}ARGEND
-	filev = argv;
-	return 0;
+	if(argv == nil)
+		usage();
+	return argv;
 }
 
 static void
@@ -118,9 +116,9 @@ main(int argc, char **argv)
 {
 	sysinit();
 	srand(time(nil));
-	if(parseargs(argc, argv) < 0)
-		sysfatal("usage");
+	argv = parseargs(argc, argv);
 	init();
+	load(argv);
 	run();
 	sysquit();
 	return 0;

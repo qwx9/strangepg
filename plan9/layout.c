@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include <thread.h>
 
 static void
 layproc(void *gp)

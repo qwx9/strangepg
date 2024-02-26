@@ -148,11 +148,13 @@ rerender(int force)
 	Graph *g;
 
 	r = 0;
+	lockgraphs();
 	for(g=graphs; g<graphs+dylen(graphs); g++)
-		if(force || g->layout.tid >= 0){
+		if(g->type != FFdead && (force || g->layout.tid >= 0)){
 			renderlayout(g);
 			r = 1;
 		}
+	unlockgraphs();
 	return r;
 }
 
