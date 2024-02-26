@@ -77,8 +77,8 @@ loadgfa1(void *path)
 		t = getfield(s);
 		switch(s[0]){
 		case 'H': parse = gfa1hdr; break;
-		case 'S': parse = gfa1seg; nnodes++; break;
-		case 'L': parse = gfa1link; nedges++; break;
+		case 'S': parse = gfa1seg; if(++nnodes % 10000 == 0) warn("loadgfa: %zd nodes...\n", nnodes); break;
+		case 'L': parse = gfa1link; if(++nedges % 10000 == 0) warn("loadgfa: %zd edges...\n", nedges); break;
 		case 'P': parse = gfa1path; break;
 		default: werrstr("line %d: unknown record type %c", f->nr, s[0]); continue;
 		}

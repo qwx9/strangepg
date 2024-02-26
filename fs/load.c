@@ -17,7 +17,6 @@ int
 loadfs(char *path, int type)
 {
 	Filefmt *ff;
-	Graph *g;
 
 	if(type <= FFdead || type >= nelem(fftab)){
 		werrstr("invalid fs type");

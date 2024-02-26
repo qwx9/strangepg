@@ -94,7 +94,6 @@ drawedges(Graph *g)
 
 	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(i=g->edge0.next; i>=0; i=e->next){
-		yield();
 		e = g->edges + i;
 		u = getnode(g, e->u >> 1);
 		v = getnode(g, e->v >> 1);
@@ -113,7 +112,6 @@ drawnodes(Graph *g)
 
 	DPRINT(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);
 	for(i=g->node0.next; i>=0; i=n->next){
-		yield();
 		n = g->nodes + i;
 		if(showarrows)
 			drawnodevec(n->vrect);

@@ -13,7 +13,6 @@ init(Graph *g)
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
-		yield();
 	}
 }
 

@@ -108,7 +108,6 @@ rendershapes(Graph *g)
 	Vertex p;
 
 	for(i=g->node0.next, d=ZQ; i>=0; i=u->next){
-		yield();
 		u = g->nodes + i;
 		DPRINT(Debugrender, "render node %.1f,%.1f:%.1f,%.1f", u->vrect.o.x, u->vrect.o.y, u->vrect.v.x, u->vrect.v.y);
 		u->vrect.v = ZV;

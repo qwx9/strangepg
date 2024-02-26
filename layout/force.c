@@ -70,7 +70,6 @@ compute(Graph *g)
 				v = g->nodes + vi;
 				if(v == u)
 					continue;
-				yield();
 				dv = subpt2(u->q1.o, v->vrect.o);
 				Δ = diff(dv);
 				Fu[i] = addpt2(Fu[i], mulpt2(divpt2(dv, Δ), v->weight * repulsion(Δ, K)));
@@ -79,7 +78,6 @@ compute(Graph *g)
 		for(ui=g->node0.next, i=0; ui>=0; i++, ui=u->next){
 			u = g->nodes + ui;
 			for(ep=u->in,ee=ep+dylen(u->in); ep!=nil && ep<ee; ep++){
-				yield();
 				if((e = getedge(g, *ep)) == nil)
 					continue;
 				if((from = getnode(g, e->u >> 1)) == nil)
@@ -94,7 +92,6 @@ compute(Graph *g)
 			}
 		}
 		for(ui=g->node0.next, i=0, R=0; ui>=0; i++, ui=u->next){
-			yield();
 			u = g->nodes + ui;
 			dv = Fu[i];
 			Δ = diff(dv);
@@ -108,7 +105,6 @@ compute(Graph *g)
 			break;
 		if(δ > 0.0001)
 			δ *= ΔT;
-		yield();
 	}
 	free(Fu);
 }
