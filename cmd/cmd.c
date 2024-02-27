@@ -8,19 +8,7 @@ int epfd[2] = {-1, -1};
 void
 parseresponse(char *s)
 {
-	int i, n;
-	char *fld[16];
-
-	if((n = getfields(s, fld, nelem(fld), 1, " \t")) < 1)
-		sysfatal("getfields: short read: %s", error());
-	USED(n);
-	USED(i=0);
-	/*
-	warn("Rcmd[%d]:", n);
-	for(i=0; i<n; i++)
-		warn(" [%s]", fld[i]);
-	warn("\n");
-	*/
+	warn("> %s\n", s);
 }
 
 void
