@@ -89,6 +89,7 @@ struct Edge{
 	ssize v;
 	ssize next;
 	ssize prev;
+	vlong metaoff;
 };
 struct Graph{
 	int type;

@@ -6,17 +6,22 @@
  */
 
 static int
-gfa1hdr(Graph *, char *)
+gfa1hdr(Graph *, File *, char *)
 {
 	return 0;
 }
 
 static int
-gfa1seg(Graph *g, char *s)
+gfa1seg(Graph *g, File *f, char *s)
 {
+	Node *u;
+
 	getfield(s);
 	DPRINT(Debugfs, "gfa pushnamednode %s", s);
-	return pushnamednode(g, s) != nil ? 0 : -1;
+	if((u = pushnamednode(g, s)) == nil)
+		return -1;
+	u->metaoff = f->foff;
+	return 0;
 }
 
 static int
@@ -30,10 +35,11 @@ todir(char *s)
 }
 
 static int
-gfa1link(Graph *g, char *s)
+gfa1link(Graph *g, File *f, char *s)
 {
 	int d1, d2;
 	char *t, *fld[4], **fp;
+	Edge *e;
 
 	for(fp=fld; fp<fld+nelem(fld); fp++, s=t){
 		if(s == nil){
@@ -48,11 +54,14 @@ gfa1link(Graph *g, char *s)
 		return -1;
 	}
 	DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', fld[0], d2?'-':'+', fld[2]);
-	return pushnamededge(g, fld[0], fld[2], d1, d2) != nil ? 0 : -1;
+	if((e = pushnamededge(g, fld[0], fld[2], d1, d2)) == nil)
+		return -1;
+	e->metaoff = f->foff;
+	return 0;
 }
 
 static int
-gfa1path(Graph *, char *)
+gfa1path(Graph *, File *, char *)
 {
 	return 0;
 }
@@ -61,7 +70,7 @@ gfa1path(Graph *, char *)
 static void
 loadgfa1(void *path)
 {
-	int n, (*parse)(Graph*, char*);
+	int n, (*parse)(Graph*, File*, char*);
 	char *s, *t;
 	ssize nnodes, nedges;
 	Graph g;
@@ -82,7 +91,7 @@ loadgfa1(void *path)
 		case 'P': parse = gfa1path; break;
 		default: werrstr("line %d: unknown record type %c", f->nr, s[0]); continue;
 		}
-		if(parse(&g, t) < 0){
+		if(parse(&g, f, t) < 0){
 			warn("loadgfa1: line %d: %s\n", f->nr, error());
 			f->err++;
 		}
