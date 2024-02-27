@@ -257,7 +257,8 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	n = touchnode(g, id, pid, idx, w);
 	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
 		m = g->nodes + i;
-		if(m->id > n->id)	/* ids in reverse order */
+		// FIXME: correct?
+		if(m->id < n->id)	/* ids in reverse order */
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
@@ -296,7 +297,7 @@ pushchild(Graph *g, ssize id, Node *pp, ssize idx, int w)
 		n->lvl = 0;
 	for(i=g->node0.prev, m=&g->node0; i>=0; i=m->prev){
 		m = g->nodes + i;
-		if(m->id > n->id)	/* ids in reverse order */
+		if(m->id < n->id)	/* ids in reverse order */
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
@@ -359,7 +360,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	ep = g->edges + i;
 	ep->prev = ep->next = i;
 	DPRINT(Debugcoarse, "newedge %zx[%zd]: %zd,%zd", e.id, i, e.u>>1, e.v>>1);
-	pushcmd("e %d %d %d %d %d", id, u->id, v->id, udir, vdir);
+	pushcmd("e %d %d %d", id, e.u, e.v);
 	return ep;
 }
 
@@ -393,7 +394,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	&& (v = pushnamednode(g, ev)) == nil)
 			warn("pushnamededge: %s\n", error());
 	e = pushedge(g, u, v, d1, d2);
-	pushcmd("e %d %s %s %d %d", e->id, eu, ev, d1, d2);
+	pushcmd("e %d %d %d", e->id, e->u, e->v);
 	return e;
 }
 

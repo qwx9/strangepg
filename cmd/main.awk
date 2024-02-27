@@ -4,11 +4,9 @@ $1 == "n"{
 	next
 }
 $1 == "e"{
-	edge[$2,1] = $3
-	edge[$2,2] = $4
-	edge[$2,3] = $5
-	edge[$2,4] = $6
-	ledge[$3,$4] = $2
+	e = $3 "\x1c" $4
+	edge[e] = $2
+	ledge[$2] = e
 	next
 }
 $1 == "d"{
@@ -17,21 +15,15 @@ $1 == "d"{
 	next
 }
 $1 == "c"{
-	id = edge[$2,1] "\x1c" edge[$2,2]
-	delete ledge[id]
-	delete edge[$2,1]
-	delete edge[$2,2]
-	delete edge[$2,3]
-	delete edge[$2,4]
+	id = ledge[$2]
+	delete edge[id]
+	delete ledge[$2]
 	next
 }
 $1 == "C"{
-	id = ledge[$2,$3]
+	id = edge[$2,$3]
 	delete ledge[id]
-	delete edge[id,1]
-	delete edge[id,2]
-	delete edge[id,3]
-	delete edge[id,4]
+	delete edge[$2,$3]
 	next
 }
 {
