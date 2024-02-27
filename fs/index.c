@@ -25,6 +25,7 @@ expandnode(Graph *g, Node *pp)
 		idx = get64(f);
 		par = get64(f);
 		w = get64(f);
+		DPRINT(Debugcoarse, "expanding node [%zx]%zx←%zx", idx, u, par);
 		// FIXME: better way?
 		if(par != pp->id){
 			touchnode(g, u, par, idx, w);
@@ -37,6 +38,7 @@ expandnode(Graph *g, Node *pp)
 		u = get64(f);
 		v = get64(f);
 		get64(f);	/* ei */
+		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx (%zx)", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
 		assert(n != nil && m != nil);
@@ -44,7 +46,7 @@ expandnode(Graph *g, Node *pp)
 			continue;
 		n = getactivenode(g, n);
 		m = getactivenode(g, m);
-		pushedge(g, n, m, u&1, u&1);
+		pushedge(g, n, m, u&1, v&1);
 	}
 	printgraph(g);
 }
@@ -104,39 +106,6 @@ readtree(Graph *g, char *path)
 }
 
 static void
-loadlevel(Graph *g, int lvl)
-{
-	usize par, w, u, v, i, idx;
-	Coarse *c;
-	Level *l;
-	File *f;
-	Node *n, *m;
-
-	f = g->f;
-	c = g->c;
-	DPRINT(Debugcoarse, "loadlevel %#p %d", g, lvl);
-	l = c->levels + lvl;
-	seekfs(f, l->noff);
-	for(i=0, n=nil; i<l->nnodes; i++){
-		u = get64(f);
-		idx = get64(f);
-		par = get64(f);
-		w = get64(f);
-		n = n != nil ? pushsibling(g, u, n, idx, w) : pushnode(g, u, par, idx, w);
-	}
-	seekfs(f, l->eoff);
-	for(i=0; i<l->nedges; i++){
-		u = get64(f);
-		v = get64(f);
-		get64(f);	/* ei */
-		n = getnode(g, u);
-		m = getnode(g, v);
-		assert(n != nil && m != nil);
-		pushedge(g, n, m, Edgesense, Edgesense);
-	}
-}
-
-static void
 load(void *path)
 {
 	Graph g;
@@ -144,6 +113,8 @@ load(void *path)
 	g = initgraph(FFindex);
 	if(readtree(&g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
+	// FIXME: don't rely on this number, there isn't always just one anyway
+	// instead look at the top level and make parents
 	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
 	expandnode(&g, g.nodes);
 	pushgraph(g);
