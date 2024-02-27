@@ -187,7 +187,7 @@ redactedge(Graph *g, ssize id)
 	cuttie((e->v & 1) == 0 ? v->in : v->out, id);
 	k = kh_get(idmap, g->emap, id);
 	kh_del(idmap, g->emap, k);
-	pushcmd("c %d %d", e->u, e->v);
+	pushcmd("C %d %d", e->u, e->v);
 	UNLINK(g->edges, &g->edge0, e, e);
 	printgraph(g);
 }
@@ -327,7 +327,7 @@ pushnamednode(Graph *g, char *s)
 	assert(ret != 0);
 	kh_val(g->strnmap, k) = id;
 	DPRINT(Debugcoarse, "pushnamednode %zd", id);
-	pushcmd("N %d %s", id, s);
+	pushcmd("n %d %s", id, s);
 	return n;
 }
 
@@ -393,7 +393,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 	&& (v = pushnamednode(g, ev)) == nil)
 			warn("pushnamededge: %s\n", error());
 	e = pushedge(g, u, v, d1, d2);
-	pushcmd("E %d %s %s %d %d", e->id, eu, ev, d1, d2);
+	pushcmd("e %d %s %s %d %d", e->id, eu, ev, d1, d2);
 	return e;
 }
 
@@ -409,15 +409,6 @@ poptree(Graph *g, Node *p)
 	}
 	p->ch = -1;
 	hidenode(g, n);
-}
-
-void
-clearmeta(Graph *g)
-{
-	if(g->strnmap == nil)
-		return;
-	kh_destroy(strmap, g->strnmap);
-	g->strnmap = nil;
 }
 
 void
