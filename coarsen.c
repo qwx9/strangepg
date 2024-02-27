@@ -17,7 +17,7 @@ struct Lbuf{
 	EM *edges;
 };
 static int plaintext;
-static usize nsuper;
+static usize lastsuper, nsuper;
 
 // FIXME: fix fucking openfs semantics
 static int
@@ -38,7 +38,7 @@ reverse(Graph *g, Lbuf *lvl)
 	put64(f, nsuper);
 	put64(f, dylen(lvl));
 	noff = tellfs(f) + dylen(lvl) * Lrecsz;
-	eoff = noff + nsuper * Nrecsz;
+	eoff = noff + lastsuper * Nrecsz;
 	for(le=lvl+dylen(lvl)-1, lp=le; lp>=lvl; lp--){
 		put64(f, lp->nnodes);
 		put64(f, lp->nedges);
@@ -288,6 +288,8 @@ coarsen(Graph *g, char *uindex, char *eindex)
 		w = S;
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining nodes, %zd edges", nlvl, S0, M);
+	lastsuper = nsuper;
+	nsuper += S0 + 1;
 	emclose(edges);
 	return lvl;
 }
