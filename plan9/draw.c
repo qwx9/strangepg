@@ -329,6 +329,7 @@ drawproc(void *)
 	for(;;){
 		switch(alt(a)){
 		case Aredraw:
+			lockdisplay(display);
 			switch(req){
 			case Reqresetdraw: resetdraw(); /* wet floor */
 			case Reqresetui: resetui(1);	/* wet floor */
@@ -337,8 +338,15 @@ drawproc(void *)
 			case Reqrefresh: if(norefresh) break; rerender(1); redraw(); flushdraw(); break;
 			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
 			}
+			unlockdisplay(display);
 			break;
-		case Arefresh: renderlayout(g); redraw(); flushdraw(); break;
+		case Arefresh:
+			lockdisplay(display);
+			renderlayout(g);
+			redraw();
+			flushdraw();
+			unlockdisplay(display);
+			break;
 		}
 	}
 }
@@ -406,6 +414,8 @@ initsysdraw(void)
 
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
+	display->locking = 1;
+	unlockdisplay(display);
 	if(!haxx0rz){
 		col[Cbg] = display->white;
 		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0xdd));

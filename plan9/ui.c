@@ -65,8 +65,10 @@ evloop(void)
 	for(;;){
 		switch(alt(a)){
 		case Aresize:
+			lockdisplay(display);
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
+			unlockdisplay(display);
 			reqdraw(Reqresetdraw);
 			mold.xy = mc->xy;
 			/* wet floor */
