@@ -284,10 +284,6 @@ pushchild(Graph *g, ssize id, Node *pp, ssize idx, int w)
 
 	DPRINT(Debugcoarse, "pushchild [%zx]%zx←%zx", idx, id, pp!=nil?pp->id:-1);
 
-	//char *kk;
-	//usize vv;
-	//kh_foreach(g->strnmap, kk, vv, {warn("%s:%zx\n", kk, vv);});
-
 	n = newnode(g, id, pp != nil ? pp->id : -1, idx, w);
 	if(pp != nil){
 		hidenode(g, pp);
@@ -311,11 +307,7 @@ pushnamednode(Graph *g, char *s)
 	ssize i, id;
 	Node *n;
 	khiter_t k;
-	//char *kk;
-	//usize vv;
 
-	// FIXME: ↓
-	//kh_foreach(g->strnmap, kk, vv, {warn("%s:%zx\n", kk, vv);});
 	if((n = getnamednode(g, s)) != nil){
 		warn("duplicate node %s\n", s);
 		return n;
@@ -388,11 +380,16 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 
 	DPRINT(Debugcoarse, "pushnamededge %s,%s", eu, ev);
 	if((u = getnamednode(g, eu)) == nil
-	&& (u = pushnamednode(g, eu)) == nil)
-			warn("pushnamededge: %s\n", error());
+	&& pushnamednode(g, eu) == nil)
+		warn("pushnamededge: %s\n", error());
 	if((v = getnamednode(g, ev)) == nil
-	&& (v = pushnamednode(g, ev)) == nil)
-			warn("pushnamededge: %s\n", error());
+	&& pushnamednode(g, ev) == nil)
+		warn("pushnamededge: %s\n", error());
+	if(u == nil || v == nil){
+		u = getnamednode(g, eu);
+		v = getnamednode(g, ev);
+		assert(u != nil && v != nil);
+	}
 	e = pushedge(g, u, v, d1, d2);
 	pushcmd("e %d %d %d", e->id, e->u, e->v);
 	return e;
