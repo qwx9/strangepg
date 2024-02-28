@@ -1,6 +1,7 @@
 $1 == "n"{
 	node[$3] = $2
 	lnode[$2] = $3
+	print "new node id", $2, "name", $3
 	next
 }
 $1 == "e"{
@@ -26,6 +27,11 @@ $1 == "C"{
 	delete edge[$2,$3]
 	next
 }
+$1 == "s"{
+	print $2"["$3"] ← "$4"\t("lnode[$2]")"
+	next
+}
 {
+	print "?", $0
 	system("fortune")
 }
