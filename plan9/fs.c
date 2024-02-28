@@ -125,6 +125,7 @@ getfield(char *s)
 char *
 readline(File *f, int *len)
 {
+	int l;
 	char *s;
 	Biobuf *bf;
 
@@ -145,14 +146,16 @@ readline(File *f, int *len)
 	}
 	f->foff = Boffset(bf);
 	s = Brdline(bf, '\n');
-	*len = Blinelen(bf);
+	l = Blinelen(bf);
 	if(s == nil){
 		/* hack 2: return truncated buffer as valid */
-		if(*len != 0){
+		if(l != 0){
 			s = (char *)bf->gbuf;
 			f->trunc = 1;
 		}
-	}
+	}else if(l > 0)
+		s[l-1] = 0;
+	*len = l;
 	f->nr++;
 	return s;
 }
