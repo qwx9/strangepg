@@ -134,17 +134,18 @@ readline(File *f, int *len)
 	/* previous line unterminated, longer than size of buffer */
 	if(f->trunc){
 		f->trunc = 0;
+		/* hack 1: force Brdline to discard truncated line and
+		 * continue reading, which this bullshit should do itself */
+		bf->icount = 0;
 		for(;;){
 			if(Brdline(bf, '\n') != nil)
 				break;
 			else if(Blinelen(bf) == 0)
 				return nil;
-			/* hack 1: force Brdline to discard truncated line and
-			 * continue reading, which this bullshit should do itself */
 			bf->icount = 0;
 		}
 	}
-	f->foff = Boffset(bf);
+	f->foff = sysftell(f);
 	s = Brdline(bf, '\n');
 	l = Blinelen(bf);
 	if(s == nil){
