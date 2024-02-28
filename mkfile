@@ -15,6 +15,7 @@ OFILES=\
 	fs/gfa.$O\
 	fs/index.$O\
 	fs/load.$O\
+	fs/meta.$O\
 	graph/graph.$O\
 	graph/vertex.$O\
 	layout/conga.$O\

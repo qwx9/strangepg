@@ -93,6 +93,7 @@ struct Edge{
 };
 struct Graph{
 	int type;
+	int loading;
 	File *f;
 	Coarse *c;
 	usize nnodes;	/* gfa-wide totals */

@@ -107,6 +107,7 @@ loadgfa1(void *path)
 	g.nedges = dylen(g.nodes);
 	g.nnodes = dylen(g.edges);
 	pushgraph(g);
+	collectgfameta(&g);
 	closefs(f);
 	threadexits(nil);
 }

@@ -6,10 +6,10 @@ struct File{
 	uchar buf[IOUNIT+1];
 	int trunc;
 	int nr;
-	int err;
+	int err;	// FIXME: not here
 	/* FIXME: fix rest of File* interface */
 	char *s;
-	vlong foff;		/* file offset at *start of record* */
+	vlong foff;
 };
 
 struct Filefmt{
@@ -25,6 +25,8 @@ int	readchar(File*);
 char*	getfield(char*);
 char*	readline(File*, int*);
 void	regfs(Filefmt*);
+
+void	collectgfameta(Graph*);
 
 #define	GBIT8(p)	(((uchar*)(p))[0])
 #define	GBIT16(p)	(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8))

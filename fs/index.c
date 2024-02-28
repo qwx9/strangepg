@@ -38,7 +38,7 @@ expandnode(Graph *g, Node *pp)
 		u = get64(f);
 		v = get64(f);
 		get64(f);	/* ei */
-		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx (%zx)", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
+		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
 		assert(n != nil && m != nil);
