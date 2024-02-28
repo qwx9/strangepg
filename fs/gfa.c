@@ -21,6 +21,7 @@ gfa1seg(Graph *g, File *f, char *s)
 	if((u = pushnamednode(g, s)) == nil)
 		return -1;
 	u->metaoff = f->foff;
+	DPRINT(Debugfs, "seg %zx %s off %lld\n", u->id, s, u->metaoff);
 	return 0;
 }
 
@@ -96,17 +97,17 @@ loadgfa1(void *path)
 			f->err++;
 		}
 	}
-	closefs(f);
-	clearmeta(&g);
 	if(f->err == 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(&g);
+		closefs(f);
 		threadexits(error());
 	}
 	DPRINT(Debugfs, "done loading gfa");
-	g.nedges = nedges;
-	g.nnodes = nnodes;
+	g.nedges = dylen(g.nodes);
+	g.nnodes = dylen(g.edges);
 	pushgraph(g);
+	closefs(f);
 	threadexits(nil);
 }
 
