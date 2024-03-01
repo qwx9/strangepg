@@ -1,7 +1,8 @@
 $1 == "n"{
+	if($2 in lnode)
+		delete node[lnode[$2]]
 	node[$3] = $2
 	lnode[$2] = $3
-	print "new node id", $2, "name", $3
 	next
 }
 $1 == "e"{
@@ -27,11 +28,31 @@ $1 == "C"{
 	delete edge[$2,$3]
 	next
 }
+# FIXME: not distinguishing between node/edge? should we?
 $1 == "s"{
-	print $2"["$3"] ← "$4"\t("lnode[$2]")"
+	if($2 == "NLN"){ NLN[$3] = $4 }
+	else if($2 == "cig"){ CIG[$3] = $4 }
+	# maybe this alone is sufficient?
+	else{
+		k = $2 "\1xc" $3
+		if(!(k in sym)){
+			lhs[$2]++
+			rhs[$2] = rhs[$2] "\1xc" $3
+		}
+		sym[k] = $4
+	}
+	next
+}
+# tokenize and eval expression in the same way?
+/^node\[[^\]]+\]$/{
+	gsub("node\\[|\\]", "", $1)
+	s = lnode[$1]
+	if($1 in NLN)
+		s = s ", LN=" NLN[$1]
+	print "node", $1, s
 	next
 }
 {
-	print "?", $0
+	print "?", $0 >>"/fd/2"
 	system("fortune")
 }
