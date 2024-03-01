@@ -66,6 +66,11 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 $O.coarsen: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
+install:V:	/tmp/main.awk
+
+/tmp/main.awk: cmd/main.awk
+	cp $prereq $target
+
 CLEANFILES=$OFILES
 
 DIRS=\
