@@ -43,13 +43,27 @@ $1 == "s"{
 	}
 	next
 }
-# tokenize and eval expression in the same way?
-/^node\[[^\]]+\]$/{
-	gsub("node\\[|\\]", "", $1)
+# tokenize and eval expression in the same way? combined with
+# not distinguishing between node/edge/etc, pretty generic; in
+# the end this is going to be our repl...
+/^[ \t]*node\[[^\]]+\][ \t]*$/{
+	gsub(OFS"|node\\[|\\]", "")
 	s = lnode[$1]
 	if($1 in NLN)
 		s = s ", LN=" NLN[$1]
 	print "node", $1, s
+	next
+}
+/^[ \t]*edge\[[^\]]+\][ \t]*$/{
+	gsub(OFS"|edge\\[|\\]", "")
+	s = ledge[$1]
+	if($1 in CIG)
+		s = s ", overlap=" CIG[$1]
+	print "edge", $1, s
+	next
+}
+/^FGD135$/{
+	crm114 = 1
 	next
 }
 {
