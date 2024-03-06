@@ -1,14 +1,16 @@
 #include "strpg.h"
 #include "drw.h"
 
-Color theme1[Cend] = {
+Pal *theme;
+
+Pal theme1[Cend] = {
 	[Cbg] {0xff, 0xff, 0xff},
 	[Ctext] {0xbb, 0x11, 0x00},
 	[Cnode] {0x22, 0x22, 0xff},
 	[Cedge] {0xbb, 0xbb, 0xbb},
 	[Cemph] {0xff, 0x00, 0x00},
 };
-Color theme2[Cend] = {
+Pal theme2[Cend] = {
 	[Cbg] {0x00, 0x00, 0x00},
 	[Ctext] {0xee, 0xee, 0x00},
 	[Cnode] {0xdd, 0xdd, 0x00},
@@ -16,7 +18,7 @@ Color theme2[Cend] = {
 	[Cemph] {0xff, 0x00, 0x00},
 };
 
-Color palette[Palsz] = {
+static Pal defaultpal[Palsz] = {
 	/* 12 class paired */
 	{0x1f, 0x78, 0xb4},
 	{0x33, 0xa0, 0x2c},
@@ -55,3 +57,29 @@ Color palette[Palsz] = {
 	{0xca, 0xb2, 0xd6},
 	{0xff, 0xff, 0x99},
 };
+
+Pal *
+somecolor(Graph *g)
+{
+	warn("somecolor %#p %#x\n", g->pal, g->pal + dylen(g->nodes) % dylen(g->pal));
+	return g->pal + dylen(g->nodes) % dylen(g->pal);
+}
+
+void
+somepalette(Graph *g)
+{
+	int i;
+
+	for(i=0; i<nelem(defaultpal); i++)
+		dypush(g->pal, defaultpal[i]);
+	initcol(g);
+}
+
+void
+settheme(void)
+{
+	if(haxx0rz)
+		theme = theme1;
+	else
+		theme = theme2;
+}

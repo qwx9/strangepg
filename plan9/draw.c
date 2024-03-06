@@ -5,19 +5,19 @@
 QLock drawlock;
 int norefresh;
 
-typedef struct Pal Pal;
-struct Pal{
+struct Color{
 	u32int col;
 	Image *i;
 	Image *alt;
 };
+/* FIXME: sokol: .r .g .b, nothing else; initialize own Colorshit for
+ * theme + node colors */
+/* FIXME: hash table for colors + color names; later portable?
+ * sokol: name/value -> r/g/b struct */
 
-static Pal nodepal[nelem(palette)];
-
-static Image *col[Cend];
 static Point panmax;
 static Rectangle viewr, statr;
-static Image *viewfb, *edgesh, *selfb;
+static Image *viewfb, *selfb;
 static Channel *drawc, *ticc;
 static int ttid = -1;
 
@@ -29,6 +29,23 @@ eallocimage(Rectangle r, uint chan, int repl, uint col)
 	if((i = allocimage(display, r, chan, repl, col)) == nil)
 		sysfatal("allocimage: %r");
 	return i;
+}
+
+u32int
+p2col(Pal *p, int alpha)
+{
+	return setalpha(p->r << 24 | p->g << 16 | p->b << 8 | 0xff, alpha);
+}
+
+static Color *
+alloccolor(u32int col, ulong chan)
+{
+	Color *c;
+
+	c = emalloc(sizeof *c);
+	c->i = eallocimage(Rect(0,0,1,1), chan, 1, col);
+	c->alt = eallocimage(Rect(0,0,1,1), chan, 1, setalpha(col, 0x7f));
+	return c;
 }
 
 static Vertex
@@ -78,14 +95,14 @@ scrobj(Vertex p)
 }
 
 static Image *
-i2c(int idx)
+i2c(int idx, ulong chan)
 {
 	static Image *i;
 	union { uchar u[4]; int v; } u;
 
-	u.v = idx + 1;
+	u.v = idx;
 	if(i == nil)
-		i = eallocimage(Rect(0,0,1,1), screen->chan, 1, u.v);
+		i = eallocimage(Rect(0,0,1,1), chan, 1, u.v);
 	else
 		loadimage(i, i->r, u.u, sizeof u.u);
 	return i;
@@ -110,27 +127,26 @@ showobj(Obj *o)
 		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
 		break;
 	}
-	string(screen, statr.min, col[Ctext], ZP, font, s);
+	string(screen, statr.min, theme[Ctext].c->i, ZP, font, s);
 }
 
 int
-drawlabel(Quad, Quad, Quad q, vlong id)
+drawlabel(Node *, Quad, Quad, Quad q, vlong id, Color *c)
 {
 	char lab[128];
 
 	q = centerscalequad(q);
 	snprint(lab, sizeof lab, "%zx", id);
-	string(viewfb, v2p(q.o), col[Ctext], ZP, font, lab);
+	string(viewfb, v2p(q.o), c->i, ZP, font, lab);
 	return 0;
 }
 
 int
-drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c, int idx)
+drawquad(Quad q1, Quad q2, Quad, double, int idx, Color *cp)
 {
 	Rectangle r1, r2;
-	Pal *cp;
 
-	if(haxx0rz && (showarrows || sh))
+	if(haxx0rz && showarrows)
 		return 0;
 	q1 = centerscalequad(q1);
 	q2 = centerscalequad(q2);
@@ -138,7 +154,6 @@ drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c, int idx)
 	r2 = Rpt(v2p(q2.o), v2p(q1.v));
 	if(!rectXrect(canonrect(r1), viewfb->r) && !rectXrect(canonrect(r2), viewfb->r))
 		return 0;
-	cp = &nodepal[c % nelem(nodepal)];
 	Point p[] = {
 		r1.max,
 		r1.min,
@@ -146,39 +161,15 @@ drawquad2(Quad q1, Quad q2, Quad, double, int sh, int c, int idx)
 		r2.max,
 		r1.max,
 	};
-	if(sh)
-		polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
-	else{
-		fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
-		if(idx >= 0)
-			fillpoly(selfb, p, nelem(p), ~0, i2c(idx), ZP);
-	}
-	return 0;
-}
-
-int
-drawquad(Quad q, double, int w, int idx)
-{
-	Rectangle r;
-
-	r = centerscalerect(q);
-	if(!rectXrect(canonrect(r), viewfb->r))
-		return 0;
-	Point p[] = {
-		r.min,
-		Pt(r.max.x, r.min.y),
-		r.max,
-		Pt(r.min.x, r.max.y),
-		r.min
-	};
-	poly(viewfb, p, nelem(p), 0, 0, w, col[Cemph], ZP);
+	polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
+	fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
 	if(idx >= 0)
-		poly(selfb, p, nelem(p), 0, 0, w, i2c(idx), ZP);
+		fillpoly(selfb, p, nelem(p), ~0, i2c(idx, screen->chan), ZP);
 	return 0;
 }
 
 int
-drawbezier(Quad q, double w, int idx)
+drawbezier(Quad q, double w, int idx, Color *c)
 {
 	double θ;
 	Point p2, p3;
@@ -198,35 +189,29 @@ drawbezier(Quad q, double w, int idx)
 	else
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-		showarrows ? Endarrow : Endsquare, w, col[Cedge], ZP);
+		showarrows ? Endarrow : Endsquare, w, c->i, ZP);
 	if(idx >= 0)
 		bezier(selfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, w, i2c(idx), ZP);
+			showarrows ? Endarrow : Endsquare, w, i2c(idx, screen->chan), ZP);
 	if(!haxx0rz && view.zoom > 1.)
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, w+1, edgesh, ZP);
+			showarrows ? Endarrow : Endsquare, w+1, c->alt, ZP);
 	return 0;
 }
 
 int
-drawline(Quad q, double w, int emph, int idx)
+drawline(Quad q, double w, int emph, int idx, Color *c)
 {
 	Rectangle r;
-	Image *c;
 
 	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	switch(emph){
-	case 0: c = col[Cedge]; break;
-	case 1: c = col[Cemph]; break;
-	default: c = nodepal[emph % nelem(nodepal)].i; break;
-	}
 	line(viewfb, r.min, r.max,
-		Endsquare, showarrows||emph ? Endarrow : Endsquare, w, c, ZP);
+		Endsquare, showarrows||emph ? Endarrow : Endsquare, w, c->i, ZP);
 	if(idx >= 0)
 		line(selfb, r.min, r.max,
-			Endsquare, showarrows||emph ? Endarrow : Endsquare, w, i2c(idx), ZP);
+			Endsquare, showarrows||emph ? Endarrow : Endsquare, w, i2c(idx, screen->chan), ZP);
 	return 0;
 }
 
@@ -284,7 +269,7 @@ cleardraw(void)
 		view.dim.v = p2v(r.max);
 		resetdraw();
 	}
-	drawop(viewfb, viewr, col[Cbg], nil, ZP, S);
+	drawop(viewfb, viewr, theme[Cbg].c->i, nil, ZP, S);
 	draw(selfb, selfb->r, display->black, nil, ZP);
 	if(debug){
 		Point pl[] = {
@@ -295,15 +280,15 @@ cleardraw(void)
 			r.min
 		};
 		r = insetrect(r, 1);
-		poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, col[Ctext], ZP);
+		poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, theme[Ctext].c->i, ZP);
 		line(viewfb,
 			Pt(viewfb->r.max.x/2, 0),
 			Pt(viewfb->r.max.x/2, viewfb->r.max.y),
-			Endsquare, Endarrow, 0, col[Ctext], ZP);
+			Endsquare, Endarrow, 0, theme[Ctext].c->i, ZP);
 		line(viewfb,
 			Pt(0, viewfb->r.max.y/2),
 			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
-			Endsquare, Endarrow, 0, col[Ctext], ZP);
+			Endsquare, Endarrow, 0, theme[Ctext].c->i, ZP);
 	}
 	unlockgraphs();
 }
@@ -401,41 +386,48 @@ startdrawclock(void)
 		sysfatal("proccreate ticproc: %r");
 }
 
-u32int
-p2col(Color *c, int alpha)
+void
+initcol(Graph *g)
 {
-	return setalpha(c->r << 24 | c->g << 16 | c->b << 8 | 0xff, alpha);
+	int i;
+	Pal *p;
+	Color *c;
+	u32int v;
+
+	if(display == nil)
+		return;
+	for(p=g->pal, i=0; p<g->pal+dylen(g->pal); p++, i++){
+		v = p2col(p, haxx0rz ? 0xff : 0xbb);
+		c = alloccolor(v, haxx0rz ? screen->chan : ARGB32);
+		g->pal[i].c = c;
+		c->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? v : setalpha(v, 0x7f));
+	}
 }
 
 int
 initsysdraw(void)
 {
-	Pal *p;
+	Graph *g;
 
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
 	display->locking = 1;
 	unlockdisplay(display);
 	if(!haxx0rz){
-		col[Cbg] = display->white;
-		col[Ctext] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Ctext, 0xdd));
-		col[Cnode] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cnode, 0xdd));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0xaa));
-		edgesh = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cedge, 0x20));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), ARGB32, 1, p2col(theme1+Cemph, 0xdd));
+		theme[Cbg].c = alloccolor(DWhite, screen->chan);
+		theme[Ctext].c = alloccolor(p2col(theme+Ctext, 0xdd), ARGB32);
+		theme[Cnode].c = alloccolor(p2col(theme+Cnode, 0xdd), ARGB32);
+		theme[Cedge].c = alloccolor(p2col(theme+Cedge, 0xaa), ARGB32);
+		theme[Cemph].c = alloccolor(p2col(theme+Cemph, 0xdd), ARGB32);
 	}else{
-		col[Cbg] = display->black;
-		col[Ctext] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Ctext, 0x7f));
-		col[Cnode] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cnode, 0x7f));
-		col[Cedge] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cedge, 0x7f));
-		edgesh = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cedge, 0x0f));
-		col[Cemph] = eallocimage(Rect(0,0,1,1), screen->chan, 1, p2col(theme2+Cemph, 0xdd));
+		theme[Cbg].c = alloccolor(DBlack, screen->chan);
+		theme[Ctext].c = alloccolor(p2col(theme+Ctext, 0x7f), screen->chan);
+		theme[Cnode].c = alloccolor(p2col(theme+Cnode, 0x7f), screen->chan);
+		theme[Cedge].c = alloccolor(p2col(theme+Cedge, 0x7f), screen->chan);
+		theme[Cemph].c = alloccolor(p2col(theme+Cemph, 0xdd), screen->chan);
 	}
-	for(p=nodepal; p<nodepal+nelem(nodepal); p++){
-		p->col = p2col(&palette[p - nodepal], haxx0rz ? 0xff : 0xbb);
-		p->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, p->col);
-		p->alt = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, haxx0rz ? p->col : setalpha(p->col, 0x7f));
-	}
+	for(g=graphs; g<graphs+dylen(graphs); g++)
+		initcol(g);
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	if((drawc = chancreate(sizeof(int), 1)) == nil

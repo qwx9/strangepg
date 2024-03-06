@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "cmd.h"
 #include "em.h"
+#include "drw.h"
 
 int haxx0rz;
 
@@ -105,7 +106,7 @@ init(void)
 	initrend();
 	if(noui)
 		return;
-	initsysdraw();
+	initdrw();
 	initui();
 	resetui(1);
 }

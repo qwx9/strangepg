@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "em.h"
 #include "cmd.h"
+#include "drw.h"
 
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
@@ -228,6 +229,7 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	n.idx = idx;
 	n.weight = w;
 	n.ch = -1;
+	n.col = somecolor(g);
 	i = g->nsuper > 0 ? g->nsuper - id : dylen(g->nodes);	// FIXME: what the fuck is the point of the hashtab then
 	dyinsert(g->nodes, i, n);
 	kh_val(g->nmap, k) = i;
@@ -334,7 +336,8 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 
 	/* FIXME: won't scale; could have another pass after input parsing to remap */
 	//id = v->id * g->nsuper + u->id << 2 | udir << 1 & 1 | vdir & 1;
-	id = dylen(g->edges) << 2 | udir << 1 & 1 | vdir & 1;
+	//id = dylen(g->edges) << 2 | udir << 1 & 1 | vdir & 1;
+	id = dylen(g->edges);
 	k = kh_put(idmap, g->emap, id, &ret);
 	if(ret == 0){
 		warn("newedge: not overwriting existing edge [%zx] %zx,%zx\n", id, u->id, v->id);
@@ -471,5 +474,6 @@ initgraph(int type)
 	g.nmap = kh_init(idmap);
 	g.emap = kh_init(idmap);
 	g.strnmap = kh_init(strmap);
+	somepalette(&g);
 	return g;
 }

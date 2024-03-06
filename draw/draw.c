@@ -11,7 +11,6 @@ Vertex
 centerscalept2(Vertex v)
 {
 	return addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
-	//return mulpt2(addpt2(subpt2(v, view.pan), view.center), view.zoom);
 }
 
 Quad
@@ -26,8 +25,8 @@ centerscalequad(Quad q)
 static void
 drawguides(void)
 {
-	drawline(Qd(ZV, view.center), 0, 1, -1);
-	drawline(Qd(ZV, view.pan), 0, 2, -1);
+	drawline(Qd(ZV, view.center), 0, 1, -1, theme[Cemph].c);
+	drawline(Qd(ZV, view.pan), 0, 2, -1, theme[Ctext].c);
 }
 
 static int
@@ -60,19 +59,19 @@ drawedge(Graph *g, Quad q, double w, ssize idx)
 	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
 	i = mapvis(g, Oedge, idx);
 	q.v = subpt2(q.v, q.o);	// FIXME
-	return drawbezier(q, w, i);
+	return drawbezier(q, w, i, theme[Cedge].c);
 }
 
 static int
-drawnode(Graph *g, Quad p, Quad q, Quad u, double θ, ssize id, ssize idx)
+drawnode(Node *n, Quad p, Quad q, Quad u, double θ, ssize id, ssize idx)
 {
-	int i;
+	Color *c;
 
 	DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	i = mapvis(g, Onode, idx);
-	if(drawquad2(p, q, u, θ, 1, idx, -1) < 0
-	|| drawquad2(p, q, u, θ, 0, idx, i) < 0
-	|| drawlabel(p, q, u, id) < 0)
+	c = n->col->c;
+	if(drawquad(p, q, u, θ, idx, c) < 0
+	|| drawquad(p, q, u, θ, idx, c) < 0
+	|| drawlabel(n, p, q, u, id, theme[Ctext].c) < 0)
 		return -1;
 	return 0;
 }
@@ -81,7 +80,7 @@ static int
 drawnodevec(Quad q)
 {
 	DPRINT(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	return drawline(q, MAX(0., view.zoom/5), 1, -1);
+	return drawline(q, MAX(0., view.zoom/5), 1, -1, theme[Cemph].c);
 }
 
 static int
@@ -115,7 +114,7 @@ drawnodes(Graph *g)
 		n = g->nodes + i;
 		if(showarrows)
 			drawnodevec(n->vrect);
-		drawnode(g, n->q1, n->q2, n->shape, n->θ, n->id, n - g->nodes);
+		drawnode(n, n->q1, n->q2, n->shape, n->θ, n->id, n - g->nodes);
 	}
 	return 0;
 }
@@ -133,7 +132,7 @@ drawworld(void)
 		drawedges(g);
 		drawnodes(g);
 		if(debug)
-			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1);
+			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1, theme[Ctext].c);
 	}
 	unlockgraphs();
 	if(debug)
@@ -161,4 +160,12 @@ redraw(void)
 	drawworld();
 	coffeeover();
 	flushdraw();
+}
+
+// FIXME: linux version
+void
+initdrw(void)
+{
+	settheme();
+	initsysdraw();
 }

@@ -9,9 +9,13 @@ typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
+typedef struct Pal Pal;
+typedef struct Color Color;
 
 #pragma incomplete File
 #pragma incomplete Coarse
+#pragma incomplete Color
+#pragma incomplete Pal
 
 KHASH_MAP_INIT_STR(strmap, ssize)
 KHASH_MAP_INIT_INT64(idmap, ssize)
@@ -70,6 +74,7 @@ struct Node{
 	Quad q2;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
+	Pal *col;
 	double θ;
 	ssize prev;		/* index */
 	ssize next;		/* index */
@@ -107,6 +112,7 @@ struct Graph{
 	khash_t(idmap) *nmap;
 	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
+	Pal *pal;
 	Layouting layout;
 	Quad dim;
 	Vertex off;

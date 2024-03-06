@@ -1,11 +1,14 @@
-int	drawline(Quad, double, int, int);
-int	drawbezier(Quad, double, int);
-int	drawquad(Quad, double, int, int);
-int	drawquad2(Quad, Quad, Quad, double, int, int, int);
-int	drawlabel(Quad, Quad, Quad, vlong);
-void	cleardraw(void);
-Vertex	centerscalept2(Vertex);
-Quad	centerscalequad(Quad);
+struct Pal{
+	uchar r;
+	uchar g;
+	uchar b;
+	Color *c;
+};
+
+enum{
+	Palsz = 6+9+12+6,
+};
+extern Pal *theme;
 
 enum{
 	Cbg,
@@ -15,14 +18,16 @@ enum{
 	Cemph,
 	Cend,
 };
-typedef struct Color Color;
-struct Color{
-	int r;
-	int g;
-	int b;
-};
-extern Color theme1[Cend], theme2[Cend];
-enum{
-	Palsz = 6+9+12+6,
-};
-extern Color palette[Palsz];
+
+int	drawline(Quad, double, int, int, Color*);
+int	drawbezier(Quad, double, int, Color*);
+int	drawquad(Quad, Quad, Quad, double, int, Color*);
+int	drawlabel(Node*, Quad, Quad, Quad, vlong, Color*);
+void	cleardraw(void);
+Vertex	centerscalept2(Vertex);
+Quad	centerscalequad(Quad);
+Pal*	somecolor(Graph*);
+void	somepalette(Graph*);
+void	initcol(Graph*);
+void	settheme(void);
+void	initdrw(void);
