@@ -32,7 +32,7 @@ pushcmd(char *fmt, ...)
 			continue;
 		}
 		if((c = *f++) == 0){
-			warn("pushcmd: malformed command %s", fmt);
+			warn("pushcmd: malformed command %s\n", fmt);
 			break;
 		}
 		switch(c){
@@ -44,8 +44,12 @@ pushcmd(char *fmt, ...)
 			ai = va_arg(arg, ssize);
 			sp = seprint(sp, sb+sizeof sb-1, "%zd", ai);
 			break;
+		case 'x':
+			ai = va_arg(arg, ssize);
+			sp = seprint(sp, sb+sizeof sb-1, "%08zx", ai);
+			break;
 		default:
-			warn("pushcmd: unknown format %c", c);
+			warn("pushcmd: unknown format %c\n", c);
 			*sp++ = c;
 			break;
 		}

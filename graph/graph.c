@@ -236,8 +236,8 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	kh_val(g->nmap, k) = i;
 	np = g->nodes + i;
 	np->prev = np->next = i;
-	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);
-	pushcmd("n %d %s", id, bleh);
+	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);	// FIXME: gfa only?
+	pushcmd("n %d %s %x", id, bleh, n.col->r << 16 | n.col->g << 8 | n.col->b);
 	return np;
 }
 
