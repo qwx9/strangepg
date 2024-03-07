@@ -1,0 +1,79 @@
+diff 36478171be59721dcc5252043fe2955cb37fc9b3 uncommitted
+--- a/sys/src/cmd/awk/awk.h
++++ b/sys/src/cmd/awk/awk.h
+@@ -109,6 +109,7 @@
+ #define	FTOLOWER 13
+ #define	FFLUSH	14
+ #define	FUTF	15
++#define	FEVAL	16
+ 
+ /* Node:  parse tree is made of nodes, with Cell's at bottom */
+ 
+@@ -125,6 +126,7 @@
+ extern Node	*winner;
+ extern Node	*nullstat;
+ extern Node	*nullnode;
++extern Node	*runnerup;
+ 
+ /* ctypes */
+ #define OCELL	1
+--- a/sys/src/cmd/awk/awkgram.y
++++ b/sys/src/cmd/awk/awkgram.y
+@@ -98,8 +98,14 @@
+ %%
+ 
+ program:
+-	  pas	{ if (exitstatus==nil)
+-			winner = (Node *)stat3(PROGRAM, beginloc, $1, endloc); }
++	  pas
++	  { if (exitstatus==nil){
++			if(winner == nil)
++				winner = (Node *)stat3(PROGRAM, beginloc, $1, endloc);
++			else
++				runnerup = (Node *)stat3(PROGRAM, $1, NIL, NIL);
++		}
++	  }
+ 	| error	{ yyclearin; bracecheck(); SYNTAX("bailing out"); }
+ 	;
+ 
+--- a/sys/src/cmd/awk/lex.c
++++ b/sys/src/cmd/awk/lex.c
+@@ -57,6 +57,7 @@
+ 	{ "else",	ELSE,		ELSE },
+ 	{ "exit",	EXIT,		EXIT },
+ 	{ "exp",	FEXP,		BLTIN },
++	{ "eval",	FEVAL,		BLTIN },
+ 	{ "fflush",	FFLUSH,		BLTIN },
+ 	{ "for",	FOR,		FOR },
+ 	{ "func",	FUNC,		FUNC },
+--- a/sys/src/cmd/awk/run.c
++++ b/sys/src/cmd/awk/run.c
+@@ -33,6 +33,7 @@
+ extern	int	pairstack[];
+ 
+ Node	*winner = nil;	/* root of parse tree */
++Node	*runnerup;
+ Cell	*tmps;		/* free temporary cells for execution */
+ 
+ static Cell	truecell	={ OBOOL, BTRUE, 0, 0, 1.0, NUM };
+@@ -1544,6 +1545,7 @@
+ 	Node *nextarg;
+ 	Biobuf *fp;
+ 	void flush_all(void);
++	extern char *lexprog;
+ 
+ 	t = ptoi(a[0]);
+ 	x = execute(a[1]);
+@@ -1630,6 +1632,12 @@
+ 		x = gettemp();
+ 		setsval(x, mbc);
+ 		return x;
++	case FEVAL:
++		lexprog = getsval(x);
++		yyparse();
++		dprint(("eval expr \"%s\", program %#p root %#p\n", lexprog, runnerup, winner));
++		execute(runnerup);
++		break;
+ 	default:	/* can't happen */
+ 		FATAL("illegal function type %d", t);
+ 		break;

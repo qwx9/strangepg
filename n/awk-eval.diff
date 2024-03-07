@@ -1,0 +1,94 @@
+diff 36478171be59721dcc5252043fe2955cb37fc9b3 uncommitted
+--- a/sys/src/cmd/awk/awkgram.y
++++ b/sys/src/cmd/awk/awkgram.y
+@@ -55,7 +55,7 @@
+ %token	<i>	MATCH NOTMATCH MATCHOP
+ %token	<i>	FINAL DOT ALL CCL NCCL CHAR OR STAR QUEST PLUS
+ %token	<i>	AND BOR APPEND EQ GE GT LE LT NE IN
+-%token	<i>	ARG BLTIN BREAK CLOSE CONTINUE DELETE DO EXIT FOR FUNC 
++%token	<i>	ARG BLTIN BREAK CLOSE CONTINUE DELETE DO EXIT FOR FUNC EVAL
+ %token	<i>	SUB GSUB IF INDEX LSUBSTR MATCHFCN NEXT NEXTFILE
+ %token	<i>	ADD MINUS MULT DIVIDE MOD
+ %token	<i>	ASSIGN ASGNOP ADDEQ SUBEQ MULTEQ DIVEQ MODEQ POWEQ
+@@ -82,7 +82,7 @@
+ %left	AND
+ %left	GETLINE
+ %nonassoc APPEND EQ GE GT LE LT NE MATCHOP IN '|'
+-%left	ARG BLTIN BREAK CALL CLOSE CONTINUE DELETE DO EXIT FOR FUNC 
++%left	ARG BLTIN BREAK CALL CLOSE CONTINUE DELETE DO EXIT FOR FUNC EVAL
+ %left	GSUB IF INDEX LSUBSTR MATCHFCN NEXT NUMBER
+ %left	PRINT PRINTF RETURN SPLIT SPRINTF STRING SUB SUBSTR
+ %left	REGEXPR VAR VARNF IVAR WHILE '('
+@@ -307,6 +307,7 @@
+ 	| print prarg			{ $$ = stat3($1, $2, NIL, NIL); }
+ 	| DELETE varname '[' patlist ']' { $$ = stat2(DELETE, makearr($2), $4); }
+ 	| DELETE varname		 { $$ = stat2(DELETE, makearr($2), 0); }
++	| EVAL pattern		{ $$ = stat1(EVAL, $2); }
+ 	| pattern			{ $$ = exptostat($1); }
+ 	| error				{ yyclearin; SYNTAX("illegal statement"); }
+ 	;
+--- a/sys/src/cmd/awk/lex.c
++++ b/sys/src/cmd/awk/lex.c
+@@ -57,6 +57,7 @@
+ 	{ "else",	ELSE,		ELSE },
+ 	{ "exit",	EXIT,		EXIT },
+ 	{ "exp",	FEXP,		BLTIN },
++	{ "eval",	EVAL,		EVAL },
+ 	{ "fflush",	FFLUSH,		BLTIN },
+ 	{ "for",	FOR,		FOR },
+ 	{ "func",	FUNC,		FUNC },
+--- a/sys/src/cmd/awk/maketab.c
++++ b/sys/src/cmd/awk/maketab.c
+@@ -40,6 +40,7 @@
+ 	char *pname;
+ } proc[] = {
+ 	{ PROGRAM, "program", nil },
++	{ EVAL, "eval", "eval" },
+ 	{ BOR, "boolop", " || " },
+ 	{ AND, "boolop", " && " },
+ 	{ NOT, "boolop", " !" },
+--- a/sys/src/cmd/awk/proto.h
++++ b/sys/src/cmd/awk/proto.h
+@@ -171,6 +171,7 @@
+ extern	void	closeall(void);
+ extern	Cell	*sub(Node **, int);
+ extern	Cell	*gsub(Node **, int);
++extern	Cell	*eval(Node **, int);
+ 
+ extern	Biobuf	*popen(char *, int);
+ extern	int	pclose(Biobuf *);
+--- a/sys/src/cmd/awk/run.c
++++ b/sys/src/cmd/awk/run.c
+@@ -33,6 +33,7 @@
+ extern	int	pairstack[];
+ 
+ Node	*winner = nil;	/* root of parse tree */
++Node	*runnerup;
+ Cell	*tmps;		/* free temporary cells for execution */
+ 
+ static Cell	truecell	={ OBOOL, BTRUE, 0, 0, 1.0, NUM };
+@@ -205,6 +206,24 @@
+ 				tfree(x);
+ 	}
+   ex1:
++	return(True);
++}
++
++Cell *eval(Node **a, int)	/* evil */
++{
++	Cell *x;
++	extern char *lexprog;
++
++	x = execute(a[0]);
++	// FIXME: leaking! need function to destroy a parse tree
++	lexprog = getsval(x);
++	fprint(2, "EVAL %s\n", lexprog);
++	runnerup = winner;
++	winner = nil;
++	yyparse();
++	if(istemp(x))
++		tfree(x);
++	winner = runnerup;
+ 	return(True);
+ }
+ 
