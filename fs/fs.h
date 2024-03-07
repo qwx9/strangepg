@@ -23,6 +23,7 @@ Filefmt*	reggfa(void);
 Filefmt*	regindex(void);
 int	readchar(File*);
 char*	getfield(char*);
+char*	readfrag(File*, int*);
 char*	readline(File*, int*);
 void	regfs(Filefmt*);
 

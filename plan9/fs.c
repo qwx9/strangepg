@@ -120,10 +120,8 @@ getfield(char *s)
 	return t;
 }
 
-/* Brdline sucks but Brdstr will choke us when lines are very long;
- * so instead of removing bio, we break Brdline. */
 char *
-readline(File *f, int *len)
+readfrag(File *f, int *len)
 {
 	int l;
 	char *s;
@@ -131,21 +129,12 @@ readline(File *f, int *len)
 
 	assert(f != nil && f->path != nil && f->aux != nil);
 	bf = f->aux;
-	/* previous line unterminated, longer than size of buffer */
+	/* hack 1: force Brdline to discard truncated line and
+	 * continue reading, which this bullshit should do itself */
 	if(f->trunc){
 		f->trunc = 0;
-		/* hack 1: force Brdline to discard truncated line and
-		 * continue reading, which this bullshit should do itself */
 		bf->icount = 0;
-		for(;;){
-			if(Brdline(bf, '\n') != nil)
-				break;
-			else if(Blinelen(bf) == 0)
-				return nil;
-			bf->icount = 0;
-		}
 	}
-	f->foff = sysftell(f);
 	s = Brdline(bf, '\n');
 	l = Blinelen(bf);
 	if(s == nil){
@@ -157,6 +146,18 @@ readline(File *f, int *len)
 	}else if(l > 0)
 		s[l-1] = 0;
 	*len = l;
-	f->nr++;
 	return s;
+}
+
+/* Brdline sucks but Brdstr will choke us when lines are very long;
+ * so instead of removing bio, we break Brdline. */
+char *
+readline(File *f, int *len)
+{
+	/* previous line unterminated, longer than size of buffer */
+	while(f->trunc)
+		readfrag(f, len);
+	f->foff = sysftell(f);
+	f->nr++;
+	return readfrag(f, len);
 }
