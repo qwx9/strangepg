@@ -217,6 +217,7 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	ssize i;
 	Node n = {0}, *np;
 	khiter_t k;
+	char bleh[32];
 
 	k = kh_put(idmap, g->nmap, id, &ret);
 	if(ret == 0){
@@ -235,7 +236,8 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	kh_val(g->nmap, k) = i;
 	np = g->nodes + i;
 	np->prev = np->next = i;
-	pushcmd("n %d %d", id, id);
+	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);
+	pushcmd("n %d %s", id, bleh);
 	return np;
 }
 
