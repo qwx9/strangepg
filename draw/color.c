@@ -3,14 +3,14 @@
 
 Pal *theme;
 
-Pal theme1[Cend] = {
+static Pal theme1[Cend] = {
 	[Cbg] {0xff, 0xff, 0xff},
 	[Ctext] {0xbb, 0x11, 0x00},
 	[Cnode] {0x22, 0x22, 0xff},
 	[Cedge] {0xbb, 0xbb, 0xbb},
 	[Cemph] {0xff, 0x00, 0x00},
 };
-Pal theme2[Cend] = {
+static Pal theme2[Cend] = {
 	[Cbg] {0x00, 0x00, 0x00},
 	[Ctext] {0xee, 0xee, 0x00},
 	[Cnode] {0xdd, 0xdd, 0x00},
@@ -61,7 +61,6 @@ static Pal defaultpal[Palsz] = {
 Pal *
 somecolor(Graph *g)
 {
-	warn("somecolor %#p %#x\n", g->pal, g->pal + dylen(g->nodes) % dylen(g->pal));
 	return g->pal + dylen(g->nodes) % dylen(g->pal);
 }
 
