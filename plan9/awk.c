@@ -11,9 +11,7 @@ cproc(void *)
 	dup(epfd[0], 0);
 	dup(epfd[0], 1);
 	close(epfd[0]);
-	// FIXME: temporarily lifted safety for joking purposes
-	//procexecl(nil, "/bin/awk", "awk", "-safe", "-f", "/tmp/main.awk", nil);
-	procexecl(nil, "/bin/awk", "awk", "-f", "/tmp/main.awk", nil);
+	procexecl(nil, "/bin/awk", "awk", "-safe", "-f", "/tmp/main.awk", nil);
 	sysfatal("procexecl: %r");
 }
 

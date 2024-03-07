@@ -1,3 +1,17 @@
+BEGIN{
+	opx = "[!-#%-\\/:-<>-@\\[-\\^`\\{-~]"
+	namex = "[^0-9" opx "][^" opx "]*"
+}
+function tokenize(){
+	gsub("[ 	]", "")
+	gsub("==", " == ")
+	gsub(opx, " & ")
+	gsub("[\\(\\[\\],#]", " & ")
+	for(i=1; i<=NF; i++)
+		print "[" $i "]"
+}
+function parse(){
+}
 $1 == "n"{
 	if($2 in lnode)
 		delete node[lnode[$2]]
@@ -31,7 +45,8 @@ $1 == "C"{
 # FIXME: not distinguishing between node/edge? should we?
 $1 == "s"{
 	if($2 == "NLN"){ NLN[$3] = $4 }
-	else if($2 == "cig"){ CIG[$3] = $4 }
+	else if($2 == "cig"){ cig[$3] = $4 }
+	else if($2 == "color"){ color[$3] = $4 }
 	# maybe this alone is sufficient?
 	else{
 		k = $2 "\1xc" $3
@@ -51,14 +66,16 @@ $1 == "s"{
 	s = lnode[$1]
 	if($1 in NLN)
 		s = s ", LN=" NLN[$1]
+	if($1 in color)
+		s = s ", color=" color[$1]
 	print "node", $1, s
 	next
 }
 /^[ \t]*edge\[[^\]]+\][ \t]*$/{
 	gsub(OFS"|edge\\[|\\]", "")
 	s = ledge[$1]
-	if($1 in CIG)
-		s = s ", overlap=" CIG[$1]
+	if($1 in cig)
+		s = s ", overlap=" cig[$1]
 	print "edge", $1, s
 	next
 }
@@ -67,6 +84,6 @@ $1 == "s"{
 	next
 }
 {
-	print "?", $0 >>"/fd/2"
-	system("fortune")
+	#tokenize()
+	eval("{" $0 "}")
 }
