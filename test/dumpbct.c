@@ -8,7 +8,7 @@ threadmain(int argc, char **argv)
 {
 	int i;
 	ssize u, v, idx, par, w, ei;
-	Graph *g;
+	Graph g;
 	Level *l;
 	File *f;
 	Coarse *c;
@@ -17,13 +17,12 @@ threadmain(int argc, char **argv)
 	}ARGEND
 	if(*argv == nil)
 		sysfatal("usage: %s BCT", argv0);
-	if((g = initgraph()) == nil)
-		sysfatal("initgraph: %r");
-	if(readtree(g, argv[0]) < 0)
+	g = initgraph(FFindex);
+	if(readtree(&g, argv[0]) < 0)
 		sysfatal("load: failed to read tree %s: %s", argv[0], error());
-	print("%zd nodes %zd supers %zd edges\n", g->nnodes, g->nsuper, g->nedges);
-	c = g->c;
-	f = g->f;
+	print("%zd nodes %zd supers %zd edges\n", g.nnodes, g.nsuper, g.nedges);
+	c = g.c;
+	f = g.f;
 	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
 		print("level %zd nodes[%zd] @%zd len[%zd] @%zd\n",
 			l-c->levels, l->nnodes, l->noff, l->nedges, l->eoff);

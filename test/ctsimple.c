@@ -67,7 +67,7 @@ coarsen(Graph *g, char *index)
 			u = emr64(fedge, 2+e*2+0);
 			v = emr64(fedge, 2+e*2+1);
 			warn(">> [%03zd] EDGE %zx,%zx\n", e, u, v);
-			vvif((s = emr64(fnode, u) - 1) < 0)
+			if((s = emr64(fnode, u) - 1) < 0)
 				s = u;
 			if(s <= w){
 				s = ++S;
@@ -135,13 +135,13 @@ main(int argc, char **argv)
 
 	ARGBEGIN{
 	case 'm':
-		m = atoi(EARGF(usage()));
-		if(eminit(m) < 0)
-			sysfatal("invalid multiplier");
+		multiplier = atoi(EARGF(usage()));
 		break;
 	}ARGEND
 	if(argc < 1)
 		usage();
+	initem();
+		sysfatal("invalid multiplier");
 	if(coarsen(&g, argv[0]) < 0)
 		sysfatal("coarsen: %s", error());
 	return 0;
