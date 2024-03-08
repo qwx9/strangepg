@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "drw.h"
 
 int epfd[2] = {-1, -1};
 
@@ -8,7 +9,43 @@ int epfd[2] = {-1, -1};
 void
 parseresponse(char *s)
 {
-	warn("> %s\n", s);
+	int m;
+	ssize x;
+	char *fld[8], *p;
+	Node *n;
+	Graph *g;
+
+	switch(s[0]){
+	case 'C': break;
+	case 'E':
+		warn("parseresponse: %s\n", s+2);
+		return;
+	default:
+		warn("> %s\n", s);
+	}
+	if((m = getfields(s+2, fld, nelem(fld), 1, "\t ")) < 1)
+		goto error;
+	USED(m);
+	// FIXME: multiple graphs: one pipe per graph!
+	g = graphs;
+	switch(s[0]){
+	case 'C':
+		if((n = str2node(g, fld[0])) == nil)
+			goto error;
+		fprint(2, "%s %s\n", fld[0], fld[1]);
+		x = strtoll(fld[1], &p, 0);
+		if(p == fld[1]){
+			werrstr("invalid color %s", fld[1]);
+			goto error;
+		}
+		if(setnodecolor(g, n, x) < 0)
+			goto error;
+		reqdraw(Reqredraw);	// FIXME: rate limit, or batch parse
+		break;
+	}
+	return;
+error:
+	warn("parseresponse: %s\n", error());
 }
 
 void

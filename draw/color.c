@@ -58,6 +58,21 @@ static Pal defaultpal[Palsz] = {
 	{0xff, 0xff, 0x99},
 };
 
+/* FIXME: not the right approach; maybe define extensible palettes and
+ * only work with indices into dynamic array + hash strname -> index */
+/* FIXME: should use the same thing we do for indexed colors in the plan9
+ * code and not store Image* for every color? */
+int
+setnodecolor(Graph *g, Node *n, u32int v)
+{
+	fprint(2, "setnodecolor %08x\n", v);
+	if(n->col < g->pal || n->col >= g->pal + dylen(g->nodes))
+		freecolor(n->col);
+	if((n->col = newcolor(v)) == nil)
+		return -1;
+	return 0;
+}
+
 Pal *
 somecolor(Graph *g)
 {

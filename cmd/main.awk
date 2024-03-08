@@ -1,14 +1,26 @@
 BEGIN{
 	opx = "[!-#%-\\/:-<>-@\\[-\\^`\\{-~]"
 	namex = "[^0-9" opx "][^" opx "]*"
+	red = "0xff0000"
+	green = "0x00ff00"
+	blue = "0x0000ff"
 }
+# for now, doing everything with id's, not names
+function nodecolor(id, c){
+	print id, c
+	if(!(id in lnode)){
+		print "E no such node"
+		return
+	}
+	node[lnode[id]] = c
+	print "C", id, c
+}
+
 function tokenize(){
 	gsub("[ 	]", "")
 	gsub("==", " == ")
 	gsub(opx, " & ")
 	gsub("[\\(\\[\\],#]", " & ")
-	for(i=1; i<=NF; i++)
-		print "[" $i "]"
 }
 function parse(){
 }
@@ -17,6 +29,8 @@ $1 == "n"{
 		delete node[lnode[$2]]
 	node[$3] = $2
 	lnode[$2] = $3
+	if(NF > 3)
+		color[$2] = $4
 	next
 }
 $1 == "e"{
@@ -48,6 +62,7 @@ $1 == "s"{
 	else if($2 == "cig"){ cig[$3] = $4 }
 	else if($2 == "color"){ color[$3] = $4 }
 	# maybe this alone is sufficient?
+	# FIXME: useless if eval works
 	else{
 		k = $2 "\1xc" $3
 		if(!(k in sym)){

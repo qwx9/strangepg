@@ -26,6 +26,10 @@ int	drawlabel(Node*, Quad, Quad, Quad, vlong, Color*);
 void	cleardraw(void);
 Vertex	centerscalept2(Vertex);
 Quad	centerscalequad(Quad);
+/* FIXME: see notes in draw/color.c */
+int	setnodecolor(Graph*, Node*, u32int);
+Pal*	newcolor(u32int);
+void	freecolor(Pal*);
 Pal*	somecolor(Graph*);
 void	somepalette(Graph*);
 void	initcol(Graph*);

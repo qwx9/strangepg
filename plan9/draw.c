@@ -37,6 +37,19 @@ p2col(Pal *p, int alpha)
 	return setalpha(p->r << 24 | p->g << 16 | p->b << 8 | 0xff, alpha);
 }
 
+/* FIXME: wrong; see draw/color.c */
+void
+freecolor(Pal *p)
+{
+	Color *c;
+
+	if(p == nil || (c = p->c) == nil)
+		return;
+	free(c->i);
+	free(c->alt);
+	free(c);
+}
+
 static Color *
 alloccolor(u32int col, ulong chan)
 {
@@ -46,6 +59,19 @@ alloccolor(u32int col, ulong chan)
 	c->i = eallocimage(Rect(0,0,1,1), chan, 1, col);
 	c->alt = eallocimage(Rect(0,0,1,1), chan, 1, setalpha(col, 0x7f));
 	return c;
+}
+
+Pal *
+newcolor(u32int col)
+{
+	Pal *p;
+
+	p = emalloc(sizeof *p);
+	p->c = alloccolor(col << 8 | 0xff, screen->chan);
+	p->r = col >> 16 & 0xff;
+	p->g = col >> 8 & 0xff;
+	p->b = col & 0xff;
+	return p;
 }
 
 static Vertex
