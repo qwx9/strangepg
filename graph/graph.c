@@ -92,6 +92,20 @@ getnode(Graph *g, ssize id)
 	return g->nodes + i;
 }
 
+Node *
+str2node(Graph *g, char *s)
+{
+	ssize id;
+	char *p;
+
+	id = strtoll(s, &p, 0);
+	if(p == s){
+		werrstr("unknown node id \'%s\'", s);
+		return nil;
+	}
+	return getnode(g, id);
+}
+
 /* an inactive node is a future child and points to itself */
 Node *
 getactivenode(Graph *g, Node *n)

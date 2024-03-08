@@ -30,6 +30,7 @@ void	retractnode(Graph*, Node*);
 
 Node*	getnode(Graph*, ssize);
 Node*	getactivenode(Graph*, Node*);
+Node*	str2node(Graph*, char*);
 Edge*	getedge(Graph*, ssize);
 int	ischild(Graph*, ssize, ssize);
 Node*	touchnode(Graph*g, ssize id, ssize pid, ssize idx, int w);
