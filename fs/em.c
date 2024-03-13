@@ -69,6 +69,7 @@ static ssize mpages, memfree, memreallyfree = Poolsz / Pagesz;
 static Channel *wchan[Nwriters];
 static uvlong emtc;
 static khash_t(phash) *pmap;
+static int nproc;
 
 #define PLINK(u, v)	do{ \
 	Page *a = (u), *b = (v); \
@@ -399,6 +400,20 @@ emopen(char *path, int flags)
 			return nil;
 		}
 	}
+	if(nproc == 0){
+		pmap = kh_init(phash);
+		for(i=0; i<nelem(wchan); i++)
+			if((wchan[i] = chancreate(sizeof(Page*), 16)) == nil)	/* FIXME: tune */
+				sysfatal("chancreate: %s", error());
+		feedpages();
+		if(proccreate(lruproc, nil, mainstacksize) < 0)
+			sysfatal("proccreate: %s", error());
+		for(i=0; i<nelem(wchan); i++){
+			if(proccreate(cacheproc, (void*)i, mainstacksize) < 0)
+				sysfatal("proccreate: %s", error());
+			nproc++;
+		}
+	}
 	return em;
 }
 
@@ -415,21 +430,9 @@ cleanup(void)
 void
 initem(void)
 {
-	int i;
-
 	if(multiplier < 28 || multiplier > 63)
 		sysfatal("invalid memory size");
 	poolsz = 1ULL << multiplier;
 	memreallyfree = poolsz / Pagesz;
 	atexit(cleanup);
-	pmap = kh_init(phash);
-	for(i=0; i<nelem(wchan); i++)
-		if((wchan[i] = chancreate(sizeof(Page*), 16)) == nil)	/* FIXME: tune */
-			sysfatal("chancreate: %s", error());
-	feedpages();
-	if(proccreate(lruproc, nil, mainstacksize) < 0)
-		sysfatal("proccreate: %s", error());
-	for(i=0; i<nelem(wchan); i++)
-		if(proccreate(cacheproc, (void*)i, mainstacksize) < 0)
-			sysfatal("proccreate: %s", error());
 }
