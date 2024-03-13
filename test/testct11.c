@@ -1,21 +1,30 @@
 #include "strpg.h"
 #include "em.h"
 
+enum{
+	Nf = 1,
+	Niter = 50000000,
+};
+
 int
 main(int, char **)
 {
 	ssize i, w, f;
-	EM *em[10];
+	EM *em[Nf];
 
 	initem();
 	for(i=0; i<nelem(em); i++)
 		if((em[i] = emopen(nil, 0)) == nil)
 			sysfatal("emopen: %s", error());
-	for(i=0; i<100000000; i++){
+	for(i=0; i<Niter; i++){
+		if((i+1) % (1<<16) == 0)
+			warn("w64[%zd]\n", i);
 		f = i % nelem(em);
 		emw64(em[f], i, i);
 	}
-	for(i=0; i<100000000; i++){
+	for(i=0; i<Niter; i++){
+		if((i+1) % (1<<16) == 0)
+			warn("r64[%zd]\n", i);
 		f = i % nelem(em);
 		if((w = emr64(em[f], i)) != i){
 			warn("emr64: %zx not %zx\n", w, i);

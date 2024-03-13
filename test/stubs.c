@@ -1,9 +1,23 @@
 #include "strpg.h"
 
+/* FIXME: fuck */
+
+int epfd[2];
 int haxx0rz;
 
 void
-initcol(Graph *)
+pushcmd(char *, ...)
+{
+}
+
+Pal *
+somecolor(Graph*)
+{
+	return nil;
+}
+
+void
+somepalette(Graph*)
 {
 }
 

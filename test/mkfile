@@ -2,8 +2,6 @@
 TARG=`{ls *.c | grep -v stubs\.c | sed -n '/\.c$/s/\.c$//p'}
 
 OFILES=\
-	../cmd/cmd.$O\
-	../draw/color.$O\
 	../graph/graph.$O\
 	../fs/fs.$O\
 	../fs/em.$O\
@@ -19,7 +17,7 @@ HFILES=
 </sys/src/cmd/mkmany
 BIN=.
 
-LDFLAGS=$LDFLAGS -p
+#LDFLAGS=$LDFLAGS -p
 
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe \

@@ -9,7 +9,8 @@ main(int, char **)
 
 	initem();
 	srand(42);
-	em = emopen(nil, 0);
+	if((em = emopen(nil, 0)) == nil)
+		sysfatal("emopen: %s", error());
 	for(i=0; i<10000000; i++){
 		r = lrand() % ((1<<16)-1);
 		v = r | r<<16 | r<<32ULL | r<<48ULL;

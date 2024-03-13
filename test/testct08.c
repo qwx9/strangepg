@@ -8,6 +8,7 @@ main(int, char **)
 	EM *em;
 
 	initem();
+	srand(42);
 	if((em = emopen(nil, 0)) == nil)
 		sysfatal("emopen: %s", error());
 	for(i=0; i<10000000; i++){

@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include <thread.h>
 #include <bio.h>
 #include "fs.h"
 
