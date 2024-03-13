@@ -2,245 +2,311 @@
 #include "fs.h"
 #include "em.h"
 
-/* - currently just greedily uses up as much memory as is given,
- * but could apply some balancing heuristic to free stuff that
- * hasn't been used in a while
- * - worker(s) with their own memory limit instead of a global one
- * - defining a hierarchy of priorities (multiple lists)
- * - sync: temporarily remove chunks from the global lists, etc. */
-/* FIXME: let the abstraction follow dfc-like specs and semantics...?
- *	eg. fetch record n of type x from EM image y → calculate offset,
- *	cache, etc. ← would be external to em, this is generic enough */
-/* FIXME: don't do while loop in dygrow, compute size directly */
+/* FIXME:
+ * - stalling due to tail being heavily contended and undirtied pages nabbed
+ *	 too quickly; lruproc just keeps going ahead but those pages are not relinked
+ *	 instead, work on the tail more aggressively in lruproc and let further dirty
+ *	 pages bubble up naturally
+ * - cleanup(): interrupt threads, force free em and remove temp files
+ * - always clean up on exit: sig/notehandler
+ * - use banking again; benchmark against hashing
+ * - param tuning
+ * - bigger/smaller pages? banks?
+ * - non-64 byte accesses
+ * - macrofy PAGE again
+ * - windowing, buffering, etc.
+ * - make lruproc yield cpu sometime
+ * - prefetch, ie. readahead or other?
+ * - testct11: Nf==1, test with 10
+ * - testct13: test concurrent em with 10 procs (old: add qlock)
+ */
 
 int multiplier = 29;
-
-KHASH_MAP_INIT_INT64(pagetab, void*)
 
 enum{
 	/* must be powers of two */
 	Poolsz = 1ULL<<32,
+	Chunksz = 4096,
 	Pshift = 16,
 	Pagesz = 1<<Pshift,
 	Pmask = Pagesz - 1,
-	Bshift = 12,
-	Banksz = 1<<Bshift,
-	Bmask = Banksz - 1,
+	Idsz = 1<<10,
+	Ishift = 64 - 10,
+	Imask = Idsz-1,
+	Addrmask = (1ULL<<Ishift)-1,
+	Pelder = 128,	/* FIXME: tune */
+	Nwriters = 4,	/* FIXME: tune (also channel size) */
+	Fdirty = 1<<0,
+	Fsent = 1<<1,
+	Eclosing = 1<<0,
 };
 static uvlong poolsz = Poolsz;
 typedef struct Page Page;
 struct Page{
-	int e;
-	char dirty;
+	int em;
+	char flags;
+	vlong age;
 	usize addr;
 	uchar buf[Pagesz];
+	RWLock l;
 	Page *lleft;
 	Page *lright;
 };
 struct EM{
 	int id;
-	int flags;
-	int fd;
+	ssize ref;
+	char flags;
+	int fd[1+Nwriters];
 	int infd;
 	char *path;
-	Page ***banks;	/* banks → pages → page */
+	RWLock l;
+	Page *cur;
 };
+KHASH_MAP_INIT_INT64(phash, Page*)
 static EM **etab;
-static Page pused = {.lleft = &pused, .lright = &pused},
-	pfree = {.lleft = &pfree, .lright = &pfree};
-static ssize memfree, memreallyfree = Poolsz / Pagesz;
-#define Sucks	((Page*)0x1)	/* yes it does */
+static Page pused = {.lleft = &pused, .lright = &pused};
+static ssize mpages, memfree, memreallyfree = Poolsz / Pagesz;
+static Channel *wchan[Nwriters];
+static uvlong emtc;
+static khash_t(phash) *pmap;
 
-#define PLINK(u,v)	do{ \
+#define PLINK(u, v)	do{ \
 	Page *a = (u), *b = (v); \
-	b->lleft->lright = a->lright; \
 	a->lright->lleft = b->lleft; \
-	b->lleft = a; \
+	b->lleft->lright = a->lright; \
 	a->lright = b; \
-	}while(0)
-#define PUNLINK(u,v)	do{ \
-	Page *a = (u), *b = (v); \
-	a->lleft->lright = b->lright; \
-	b->lright->lleft = a->lleft; \
-	a->lleft = b; \
-	b->lright = a; \
-	}while(0)
-#define PRELINK(ll, p)	do{ \
-	(p)->lleft->lright = (p)->lright; \
+	b->lleft = a; \
+}while(0)
+#define PUNLINK(p)	do{ \
 	(p)->lright->lleft = (p)->lleft; \
-	(ll)->lright->lleft = (p); \
-	(p)->lleft = (ll); \
-	(p)->lright = (ll)->lright; \
-	(ll)->lright = (p); \
-	}while(0)
-#define POKE(p)	do{	\
-	PUNLINK((p), (p)); \
-	PLINK(pused.lleft, (p)); \
-	}while(0)
-#define BADDR(p)	((p) >> Pshift + Bshift)
-#define PADDR(p)	((p) >> Pshift & Bmask)
+	(p)->lleft->lright = (p)->lright; \
+	(p)->lleft = (p); \
+	(p)->lright = (p); \
+}while(0)
+#define PRELINK(ll, p)	do{ \
+	PUNLINK((p)); \
+	PLINK((ll), (p)); \
+}while(0)
+
+#define BADDR(p)	((p) & (Addrmask & ~Pmask))
 #define POFF(p)		((p) & Pmask)
+#define PADDR(p)	((p) & ~Pmask)
 #define PLEA(p, a)	((p)->buf + POFF((a)))
+#define PREAD(fd, page, off)	do{ \
+	if(pread((fd), (page)->buf, sizeof((page)->buf), BADDR((off))) < 0) \
+		warn("pread: %s\n", error()); \
+}while(0)
 
-static void
-poolcheck(void)
+/* FIXME: macro */
+/* FIXME: tune when shit gets locked/unlocked? */
+/* FIXME: reduce number of (w)locking */
+/* FIXME: remove asserts */
+/* FIXME: concurrent PAGE user access */
+static Page *
+PAGE(EM *em, ssize off)
 {
-	Page ***b, **pp, **pe, *p;
-	EM **ep, *em;
-
-	for(ep=etab; ep<etab+dylen(etab); ep++){
-		if((em = *ep) == nil)
-			continue;
-		for(b=em->banks; b<em->banks+dylen(em->banks); b++){
-			if(*b == nil)
-				continue;
-			for(pp=*b, pe=pp+Banksz; pp<pe; pp++){
-				if((p = *pp) <= Sucks)
-					continue;
-				assert(p->e == em->id);
-				assert(p->e == ep - etab);
-				assert(BADDR(p->addr) < dylen(em->banks));
-				assert(em->banks[BADDR(p->addr)] != nil);
-				assert(em->banks[BADDR(p->addr)][PADDR(p->addr)] == p);
+	int rr, ret;
+	ssize a;
+	Page *l, *r, *p;
+	khiter_t k;
+	if((off & ~Addrmask) != 0)
+		sysfatal("em: shit! access out of bounds %#llx, max %#llx", off, Addrmask);
+	a = off & ~Pmask | em->id;
+	if(em->cur == nil || (p = em->cur)->addr != a){
+		p = nil;
+		rr = 0;
+		k = kh_get(phash, pmap, a);
+		if(k != kh_end(pmap)){
+			p = kh_val(pmap, k);
+			if(p == nil)	/* on disk */
+				rr = 1;
+			else if(p->addr != a){	/* reallocated */
+				rr = 1;
+				p = nil;
 			}
+			emtc++;
 		}
+		if(p == nil){
+			(em)->cur = nil;
+			rlock(&pused.l);
+			(p) = pused.lleft;
+			rlock(&(p)->l);
+			runlock(&pused.l);
+			vlong m = 0;
+			while(((p)->flags & Fdirty) != 0 || p == &pused){
+				assert((p)->addr != a);
+				l = (p)->lleft;
+				runlock(&(p)->l);
+				rlock(&l->l);
+				(p) = l;
+				m++;
+			}
+			runlock(&(p)->l);
+			wlock(&(p)->l);
+			if((p)->addr != 0){
+				k = kh_get(phash, pmap, (p)->addr);
+				kh_val(pmap, k) = nil;
+			}
+			(p)->addr = a;
+			(p)->em = (em)->id;
+			if((p)->age == 0)
+				memfree--;
+			(p)->age = 0;
+			wunlock(&(p)->l);
+			if(m > 32)
+				warn("stalled, %lld iterations age %#llx emtc %#llx\n", m, (p)->age, emtc);
+		}
+		k = kh_put(phash, pmap, a, &ret);
+		kh_val(pmap, k) = (p);
+		(em)->cur = (p);
+		assert((p) != &pused);
+		if((p)->age == 0 || emtc - (p)->age >= Pelder){
+			l = (p)->lright;
+			r = (p)->lleft;
+			if(l == &pused){
+				l = (p)->lleft;
+				r = (p)->lright;
+			}
+			wlock(&r->l);
+			wlock(&l->l);
+			PUNLINK((p));
+			wunlock(&l->l);          
+			wunlock(&r->l);
+			l = &pused;
+			wlock(&l->l);
+			r = l->lright;
+			wlock(&r->l);
+			PLINK(l, (p));
+			wunlock(&l->l);
+			wunlock(&r->l);
+			(p)->age = emtc;
+		}
+		if(rr){
+			if((em)->fd[0] >= 0)
+				PREAD((em)->fd[0], (p), (off));
+		/* FIXME: wrong, incomplete condition */
+		}else if((em)->infd >= 0)
+			PREAD((em)->infd, (p), (off));
 	}
+	return p;
 }
 
-/* FIXME: make these unto macros as well? */
 static int
-flush(EM *em, Page *p)
+flush(EM *em, Page *p, int i)
 {
-	if(em->fd < 0){
-		if(em->path == nil)
-			em->path = sysmktmp();	/* can be stupidly expensive */
-		if((em->fd = create(em->path, ORDWR, 0640)) < 0)
-			return -1;
-	}
-	if(seek(em->fd, p->addr, 0) < 0)
-		warn("flush: seek %d: %s\n", em->fd, error());
-	if(write(em->fd, p->buf, sizeof p->buf) != sizeof p->buf)
-		warn("flush: write %d: %s\n", em->fd, error());
+	DPRINT(Debugextmem, "flush %#p:%#p:%#p\n", em, p, p->buf);
+	if(pwrite(em->fd[i], p->buf, sizeof p->buf, BADDR(p->addr)) != sizeof p->buf)
+		warn("flush: write %d: %s\n", em->fd[i], error());
 	return 0;
 }
+
 static void
-freepage(EM *em, Page *p)
+cacheproc(void *ip)
 {
-	if(p->dirty)
-		flush(em, p);
-	em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
-	PRELINK(pfree.lleft, p);
-	memfree++;
-}
-
-static Page *
-preclaim(void)
-{
-	Page *p;
+	int id;
 	EM *em;
-
-	p = pused.lright;
-	if((em = etab[p->e]) != nil){
-		if(p->dirty)
-			flush(em, p);
-		em->banks[BADDR(p->addr)][PADDR(p->addr)] = nil;
-	}
-	memset(p->buf, 0, Pagesz);
-	return p;
-}
-static Page *
-preuse(void)
-{
 	Page *p;
+	Channel *c;
 
-	p = pfree.lleft;
-	DPRINT(Debugextmem, "preuse %#p memfree %zx", p, memfree);
-	memset(p->buf, 0, Pagesz);
-	memfree--;
-	return p;
+	threadsetname("cacheproc");
+	id = (intptr)ip;
+	c = wchan[id];
+	id++;
+	for(;;){
+		if((p = recvp(c)) == nil)
+			break;
+		em = etab[p->em];
+		em->ref--;
+		rlock(&p->l);
+		if((em->flags & Eclosing) != 0)
+			emclose(em);
+		else{
+			if(em->fd[0] < 0){
+				wlock(&em->l);
+				wunlock(&em->l);
+			}
+			rlock(&em->l);
+			if(flush(em, p, id) < 0)
+				warn("flush: %s\n", error());
+			runlock(&em->l);
+		}
+		p->flags &= ~(Fdirty | Fsent);
+		runlock(&p->l);
+	}
 }
-static Page *
-new(void)
-{
-	int n;
-	Page *p, *pl, *pe;
 
-	n = memreallyfree < Banksz ? memreallyfree : Banksz;
+static void
+feedpages(void)
+{
+	ssize n;
+	Page *l, *r, *pl, *p, *pe;
+
+	n = memreallyfree < Chunksz ? memreallyfree : Chunksz;
 	pl = emalloc(n * sizeof *pl);
 	memreallyfree -= n;
-	pl->lright = pl->lleft = pl;
-	for(p=pl+1, pe=pl+n; p<pe; p++){
-		p->lright = p->lleft = p;
-		PLINK(pfree.lleft, p);
-		memfree++;
+	for(p=pl, pe=p+n; p<pe; p++){
+		p->lright = p + 1;
+		p->lleft = p - 1;
 	}
-	return pl;
+	p--;
+	r = &pused;
+	p->lright = r;
+	wlock(&r->l);
+	l = r->lleft;
+	if(l != r)
+		wlock(&l->l);
+	pl->lleft = l;
+	r->lleft = p;
+	l->lright = pl;
+	if(l != r)
+		wunlock(&l->l);
+	wunlock(&r->l);
+	mpages += n;
+	memfree += n;
 }
 
-#define PREAD(fd, page, off)	do{ \
-	if(seek((fd), 0, 2) <= (off)) \
-		break; \
-	if(seek((fd), (off) & ~Pmask, 0) < 0) \
-		warn("seek: %s\n", error()); \
-	else if(read((fd), (page)->buf, sizeof((page)->buf)) < 0) \
-		warn("read: %s\n", error()); \
-	}while(0)
-#define BALLOC()	(emalloc(Banksz * sizeof(Page**)))
-/* POKEd at the end */
-#define PALLOC(em, page, off)	do{ \
-	if(memfree > 0) \
-		(page) = preuse(); \
-	else if(memreallyfree > 0) \
-		(page) = new(); \
-	else \
-		(page) = preclaim(); \
-	(page)->e = (em)->id; \
-	(page)->addr = (off) & ~Pmask; \
-	}while(0)
-#define PAGE(em, page, off)	do{ \
-	int __n; \
-	Page **__bank, **__pp; \
-	__n = BADDR((off)); \
-	dygrow((em)->banks, __n); \
-	if(((__bank) = (em)->banks[__n]) == nil){ \
-		(em)->banks[__n] = __bank = BALLOC(); \
-		/* this SUCKS */ \
-		if((em)->infd >= 0) \
-			for(__pp=__bank; __pp<__bank+Banksz; __pp++) \
-				*__pp = Sucks; \
-	} \
-	__pp = __bank + PADDR((off)); \
-	if(((page) = *__pp) <= Sucks){ \
-		PALLOC((em), (page), (off)); \
-		if(*__pp == Sucks) \
-			PREAD((em)->infd, (page), (off)); \
-		else if((em)->fd >= 0) \
-			PREAD((em)->fd, (page), (off)); \
-		*__pp = (page); \
-	} \
-	POKE((page)); \
-	}while(0)
-
-uchar *
-emptr(EM *em, vlong off)
+static void
+lruproc(void *)
 {
-	Page *p;
+	vlong n, on;
+	uint i;
+	EM *em;
+	Page *p, *l;
 
-	PAGE(em, p, off);
-	return PLEA(p, off);
-}
-
-u64int
-emr64(EM *em, vlong off)
-{
-	uchar *u;
-	Page *p;
-
-	off *= 8;
-	PAGE(em, p, off);
-	u = PLEA(p, off);
-	DPRINT(Debugextmem, "r64 %#p:%s %llx %llx [%#p]", em, em->path, off/8, GBIT64(u), u);
-	return GBIT64(u);
+	/* FIXME: there's waiting for stuff */
+	threadsetname("lruproc");
+	for(i=on=0;;){
+		if(memfree < Chunksz/2 && memreallyfree > 0)
+			feedpages();
+		if(memfree < Chunksz/4)
+			on = 1;
+		p = pused.lleft;
+		for(n=0;; n++){
+			l = p->lleft;
+			if((p->flags & (Fdirty|Fsent)) == Fdirty && on){
+				em = etab[p->em];
+				if(em->fd[0] < 0){
+					if(em->path == nil)
+						em->path = sysmktmp();	/* can be stupidly expensive */
+					if((em->fd[0] = create(em->path, ORDWR, 0640)) < 0){
+						warn("create: %s\n", error());
+						continue;
+					}
+					/* FIXME: cleaner way? */
+					for(i=1; i<nelem(em->fd); i++)
+						if((em->fd[i] = dup(em->fd[0], -1)) < 0)
+							sysfatal("what");
+				}
+				em->ref++;
+				while(nbsendp(wchan[i++ % nelem(wchan)], p) == 0)
+					;
+				p->flags |= Fsent;
+			}
+			if(l == &pused || n >= mpages)
+				break;
+			p = l;
+		}
+	}
 }
 
 void
@@ -250,43 +316,66 @@ emw64(EM *em, vlong off, u64int v)
 	Page *p;
 
 	off *= 8;
-	PAGE(em, p, off);
+	p = PAGE(em, off);
+	//PAGE(em, off, p);
 	u = PLEA(p, off);
-	DPRINT(Debugextmem, "w64 %#p:%#p [%zx] %llx %llx [%#p]", em, em->banks[BADDR(off)], off/8, off, v, u);
 	PBIT64(u, v);
-	p->dirty = 1;
+	p->flags |= Fdirty;
+	DPRINT(Debugextmem, "w64 %#p[%#zx]:%#p[%#zx] (%#zx) → %llx", em, PADDR(off), p, POFF(off), off/8, v);
 }
 
-/* FIXME: slow as sloth taking shit */
+u64int
+emr64(EM *em, vlong off)
+{
+	uchar *u;
+	Page *p;
+
+	off *= 8;
+	p = PAGE(em, off);
+	//PAGE(em, off, p);
+	u = PLEA(p, off);
+	DPRINT(Debugextmem, "r64 %#p[%#zx]:%#p[%#zx] (%#zx) ← %llx", em, PADDR(off), p, POFF(off), off/8, GBIT64(u));
+	return GBIT64(u);
+}
+
+/* FIXME: overwrites clean pages, wasting time */
 int
 em2fs(EM *em, File *f, ssize nbytes)
 {
 	u64int u;
 	vlong off;
 
-	if(em->banks == nil)
+	if(em == nil || (em->flags & Eclosing) != 0)
 		return 0;
 	for(off=0; off<nbytes/sizeof u; off++){
 		//n = nbytes - off > Pagesz ? Pagesz : nbytes - off;
 		u = emr64(em, off);
 		put64(f, u);
 	}
+	emclose(em);
 	return 0;
 }
 
 void
 emclose(EM *em)
 {
+	int i;
+
+	if(em == nil)
+		return;
+	em->flags |= Eclosing;
+	if(em->ref > 0)
+		return;
 	if(em->infd >= 0)
 		close(em->infd);
-	if(em->fd >= 0)
-		close(em->fd);
+	if(em->fd[0] >= 0){
+		for(i=0; i<nelem(em->fd); i++)
+			close(em->fd[i]);
+	}
 	if(em->path != nil){
 		sysremove(em->path);
 		free(em->path);
 	}
-	if(em->banks != nil)
-		dyfree(em->banks);
 	etab[em->id] = nil;
 	free(em);
 }
@@ -294,13 +383,16 @@ emclose(EM *em)
 EM *
 emopen(char *path, int flags)
 {
+	int i;
 	EM *em;
 
 	em = emalloc(sizeof *em);
 	dypush(etab, em);
 	em->id = dylen(etab) - 1;
 	em->flags = flags;
-	em->infd = em->fd = -1;
+	for(i=0; i<nelem(em->fd); i++)
+		em->fd[i] = -1;
+	em->infd = -1;
 	if(path != nil){
 		if((em->infd = open(path, OREAD)) < 0){
 			free(em);
@@ -310,11 +402,34 @@ emopen(char *path, int flags)
 	return em;
 }
 
+static void
+cleanup(void)
+{
+	EM **em;
+
+	/* FIXME: interrupt all threads */
+	for(em=etab; em<etab+dylen(etab); em++)
+		emclose(*em);
+}
+
 void
 initem(void)
 {
-	if(multiplier < 16 || multiplier > 63)
+	int i;
+
+	if(multiplier < 28 || multiplier > 63)
 		sysfatal("invalid memory size");
 	poolsz = 1ULL << multiplier;
 	memreallyfree = poolsz / Pagesz;
+	atexit(cleanup);
+	pmap = kh_init(phash);
+	for(i=0; i<nelem(wchan); i++)
+		if((wchan[i] = chancreate(sizeof(Page*), 16)) == nil)	/* FIXME: tune */
+			sysfatal("chancreate: %s", error());
+	feedpages();
+	if(proccreate(lruproc, nil, mainstacksize) < 0)
+		sysfatal("proccreate: %s", error());
+	for(i=0; i<nelem(wchan); i++)
+		if(proccreate(cacheproc, (void*)i, mainstacksize) < 0)
+			sysfatal("proccreate: %s", error());
 }
