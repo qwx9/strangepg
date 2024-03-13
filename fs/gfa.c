@@ -82,7 +82,7 @@ loadgfa1(void *path)
 	g = initgraph(FFgfa);
 	memset(&f, 0, sizeof f);
 	if((f = graphopenfs(&g, (char *)path, OREAD)) == nil)
-		threadexits(error());
+		sysfatal("%s", error());
 	while((s = readline(f, &n)) != nil){
 		t = getfield(s);
 		switch(s[0]){
@@ -97,11 +97,11 @@ loadgfa1(void *path)
 			f->err++;
 		}
 	}
-	if(f->err == 10){
+	if(f->err >= 10){
 		warn("loadgfa1: too many errors\n");
 		nukegraph(&g);
 		closefs(f);
-		threadexits(error());
+		sysfatal("%s", error());
 	}
 	DPRINT(Debugfs, "done loading gfa");
 	g.nedges = dylen(g.nodes);
