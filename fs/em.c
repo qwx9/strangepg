@@ -106,7 +106,7 @@ static int nproc;
 static Page *
 PAGE(EM *em, ssize off)
 {
-	int rr, ret;
+	int rr, nr, ret;
 	ssize a;
 	Page *l, *r, *p;
 	khiter_t k;
@@ -115,7 +115,7 @@ PAGE(EM *em, ssize off)
 	a = off & ~Pmask | em->id;
 	if(em->cur == nil || (p = em->cur)->addr != a){
 		p = nil;
-		rr = 0;
+		rr = nr = 0;
 		k = kh_get(phash, pmap, a);
 		if(k != kh_end(pmap)){
 			p = kh_val(pmap, k);
@@ -126,7 +126,8 @@ PAGE(EM *em, ssize off)
 				p = nil;
 			}
 			emtc++;
-		}
+		}else
+			nr = 1;
 		if(p == nil){
 			(em)->cur = nil;
 			rlock(&pused.l);
@@ -185,8 +186,7 @@ PAGE(EM *em, ssize off)
 		if(rr){
 			if((em)->fd[0] >= 0)
 				PREAD((em)->fd[0], (p), (off));
-		/* FIXME: wrong, incomplete condition */
-		}else if((em)->infd >= 0)
+		}else if(nr && (em)->infd >= 0)
 			PREAD((em)->infd, (p), (off));
 	}
 	return p;
@@ -353,7 +353,6 @@ em2fs(EM *em, File *f, ssize nbytes)
 		u = emr64(em, off);
 		put64(f, u);
 	}
-	emclose(em);
 	return 0;
 }
 
