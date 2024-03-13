@@ -270,7 +270,7 @@ cleardraw(void)
 	Rectangle r, q;
 
 	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
-	lockgraphs();
+	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type == FFdead)
 			continue;
@@ -316,7 +316,7 @@ cleardraw(void)
 			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
 			Endsquare, Endarrow, 0, theme[Ctext].c->i, ZP);
 	}
-	unlockgraphs();
+	unlockgraphs(0);
 }
 
 static void
@@ -379,18 +379,18 @@ ticproc(void *)
 	t0 = nsec();
 	step = drawstep ? Nsec/140 : Nsec/60;
 	for(;;){
-		lockgraphs();
+		lockgraphs(0);
 		for(g=graphs, n=0; g<graphs+dylen(graphs); g++){
 			if(g->type == FFdead)
 				continue;
 			if(g->layout.tid >= 0){
 				n++;
-				unlockgraphs();
+				unlockgraphs(0);
 				sendp(ticc, g);
-				lockgraphs();
+				lockgraphs(0);
 			}
 		}
-		unlockgraphs();
+		unlockgraphs(0);
 		if(n == 0)
 			break;
 		t = nsec();

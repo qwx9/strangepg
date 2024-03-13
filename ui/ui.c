@@ -68,9 +68,9 @@ keyevent(Rune r)
 	case KBleft: if(panview(Vec2(+16,0)) >= 0) reqdraw(Reqredraw); break;
 	case KBescape: reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
-	case '+': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(); break;
-	case '-': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(); break;
-	case 'R': lockgraphs(); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(); break;
+	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
+	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
+	case 'R': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
 	case 'r': norefresh ^= 1; break;
 	default: keyprompt(r); break;

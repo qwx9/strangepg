@@ -124,7 +124,7 @@ drawworld(void)
 {
 	Graph *g;
 
-	lockgraphs();
+	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type <= FFdead || g->layout.ll == nil)
 			continue;
@@ -134,7 +134,7 @@ drawworld(void)
 		if(debug)
 			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1, theme[Ctext].c);
 	}
-	unlockgraphs();
+	unlockgraphs(0);
 	if(debug)
 		drawguides();
 }

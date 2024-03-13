@@ -32,7 +32,7 @@
  */
 
 Graph *graphs;
-QLock graphlock;
+RWLock graphlock;
 
 void
 printgraph(Graph *g)
@@ -459,23 +459,29 @@ nukegraph(Graph *g)
 void
 pushgraph(Graph g)
 {
-	lockgraphs();
+	lockgraphs(1);
 	dypush(graphs, g);
-	unlockgraphs();
+	unlockgraphs(1);
 	newlayout(graphs + dylen(graphs) - 1, -1);
 }
 
 // FIXME: need a layer for the threading shit, either sys.c or thread.c
 void
-lockgraphs(void)
+lockgraphs(int w)
 {
-	qlock(&graphlock);
+	if(w)
+		wlock(&graphlock);
+	else
+		rlock(&graphlock);
 }
 
 void
-unlockgraphs(void)
+unlockgraphs(int w)
 {
-	qunlock(&graphlock);
+	if(w)
+		wunlock(&graphlock);
+	else
+		runlock(&graphlock);
 }
 
 Graph

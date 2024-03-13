@@ -48,8 +48,8 @@ void	clearmeta(Graph*);
 void	cleargraph(Graph*);
 void	nukegraph(Graph*);
 void	pushgraph(Graph);
-void	lockgraphs(void);
-void	unlockgraphs(void);
+void	lockgraphs(int);
+void	unlockgraphs(int);
 Graph	initgraph(int);
 
 void	initlayout(void);
