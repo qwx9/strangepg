@@ -204,6 +204,12 @@ proccreate(void (*f)(void *arg), void *arg, uint)
 	return 0;
 }
 
+void
+threadexits(char *)
+{
+	pthread_exit(nil);
+}
+
 Channel *
 chancreate(int elsize, int nel)
 {

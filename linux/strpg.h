@@ -135,6 +135,7 @@ typedef pthread_rwlock_t RWLock;
 #define wlock	pthread_rwlock_wrlock
 #define wunlock	pthread_rwlock_unlock
 void	threadsetname(char*);
+void	threadexits(char*);
 
 #include "lib/khash.h"
 #include "dat.h"
