@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 /* u.h */
 //#define nil		((void*)0)
@@ -120,6 +121,21 @@ enum{
 	Vdefh = 800,
 };
 
+/* FIXME: threads.h or something; also code in os layout/rend */
+#include "lib/chan.h"
+typedef struct chan_t Channel;
+Channel*	chancreate(int, int);
+void*	recvp(Channel*);
+int	nbsendp(Channel*, void*);
+
+int	proccreate(void (*)(void*), void*, uint);
+typedef pthread_rwlock_t RWLock;
+#define rlock	pthread_rwlock_rdlock
+#define runlock	pthread_rwlock_unlock
+#define wlock	pthread_rwlock_wrlock
+#define wunlock	pthread_rwlock_unlock
+void	threadsetname(char*);
+
 #include "lib/khash.h"
 #include "dat.h"
 #include "fns.h"
@@ -136,3 +152,5 @@ extern int mainstacksize;
 // FIXME: proc/thread stuff → sys.c? thread.c? emulate thread.h?
 
 #define snprint	snprintf
+#define print	printf
+#define dup	dup2

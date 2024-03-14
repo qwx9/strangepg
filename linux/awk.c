@@ -1,7 +1,5 @@
 #include "strpg.h"
 #include "cmd.h"
-#include "chan.h"
-#include <pthread.h>
 
 chan_t *cmdc;
 int stupidfd[2];	/* children's pipes, mandrake */

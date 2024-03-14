@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include <signal.h>
-#include "lib/chan.h"
 #include "drw.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33

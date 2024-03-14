@@ -130,6 +130,7 @@ sysread(File *f, void *buf, int n)
 		return m;
 }
 
+/* FIXME: deprecated
 char *
 readrecord(File *f)
 {
@@ -154,3 +155,4 @@ readrecord(File *f)
 	f->nr++;
 	return f->s;
 }
+*/

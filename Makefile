@@ -44,8 +44,10 @@ COARSENOBJS:=\
 	coarsen.o\
 	fs/em.o\
 	fs/fs.o\
+	lib/chan.o\
 	lib/plan9/getfields.o\
 	lib/plan9/nrand.o\
+	lib/queue.o\
 	linux/fs.o\
 	linux/sys.o\
 	util/print.o\
@@ -73,7 +75,6 @@ IFLAGS?=\
 	-Ifs\
 	-Igraph\
 	-Ilayout\
-	-Ilib\
 	-Ilinux\
 	-Irend\
 	-Iui\
@@ -102,7 +103,7 @@ else
 			-Wno-ignored-qualifiers \
 			-Wno-c2x-extensions -Wno-gnu-designator \
 			-Wno-incompatible-pointer-types-discards-qualifiers \
-			-Wno-format-nonliteral
+			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast
 endif
 ifdef STATIC
 	LDFLAGS+= -static

@@ -1,7 +1,6 @@
 #include "strpg.h"
 #include <errno.h>
 #include <time.h>
-#include <pthread.h>
 #include <linux/futex.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -12,6 +11,7 @@
 int noui, debug;
 
 char *argv0;
+int mainstacksize;	/* FIXME: thread.h or w/e */
 
 static char errbuf[1024];
 static _Atomic(u32int) *fux;
@@ -185,21 +185,50 @@ coffeeover(void)
 }
 
 void
-yield(void)
+threadsetname(char *)
 {
+	/* FIXME: use pthread_setname_np */
 }
 
 // FIXME: need threadexits
 
 int
-proccreate(void *(*f)(void *arg), void *arg, uint)
+proccreate(void (*f)(void *arg), void *arg, uint)
 {
 	int r;
 	pthread_t th;
 
+	/* FIXME: incompatible function type, return void vs void* */
 	if((r = pthread_create(&th, NULL, f, arg)) != 0)
 		return -1;
 	return 0;
+}
+
+Channel *
+chancreate(int elsize, int nel)
+{
+	USED(elsize);
+	return chan_init(nel);
+}
+
+void *
+recvp(Channel *c)
+{
+	void *p;
+
+	if(chan_recv(c, &p) < 0)
+		return nil;
+	return p;
+}
+
+int
+nbsendp(Channel *c, void *p)
+{
+	int r;
+
+	if(chan_select(nil, 0, nil, &c, 1, &p) < 0)
+		return 0;
+	return 1;
 }
 
 void
