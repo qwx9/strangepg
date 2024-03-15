@@ -115,6 +115,12 @@ create(char *path, int mode, int perm)
 	return open(path, mode|O_CREAT|O_TRUNC, perm);	/* not just O_WRONLY */
 }
 
+int
+dupfd(int oldfd, int newfd)
+{
+	return newfd < 0 ? dup(oldfd) : dup2(olfd, newfd);
+}
+
 char *
 estrdup(char *s)
 {
@@ -199,7 +205,7 @@ proccreate(void (*f)(void *arg), void *arg, uint)
 	pthread_t th;
 
 	/* FIXME: incompatible function type, return void vs void* */
-	if((r = pthread_create(&th, NULL, f, arg)) != 0)
+	if((r = pthread_create(&th, NULL, (void*(*)(void*))f, arg)) != 0)
 		return -1;
 	return 0;
 }

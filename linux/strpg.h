@@ -154,4 +154,4 @@ extern int mainstacksize;
 
 #define snprint	snprintf
 #define print	printf
-#define dup	dup2
+#define	dup	dupfd
