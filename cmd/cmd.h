@@ -1,6 +1,6 @@
 extern int epfd[2];
 
-void	parseresponse(char*);
+void	readcmd(char*);
 void	sendcmd(char*);
 void	pushcmd(char*, ...);
 int	sysinitcmd(void);
