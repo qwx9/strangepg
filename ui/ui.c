@@ -51,7 +51,7 @@ keyprompt(Rune r)
 
 	if((s = enterprompt(r)) == nil)
 		return;
-	pushcmd(s);
+	pushcmd("%s", s);
 	free(s);
 }
 
