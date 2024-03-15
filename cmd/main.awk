@@ -7,12 +7,11 @@ BEGIN{
 }
 # for now, doing everything with id's, not names
 function nodecolor(id, c){
-	print id, c
 	if(!(id in lnode)){
 		print "E no such node"
 		return
 	}
-	node[lnode[id]] = c
+	color[lnode[id]] = c
 	print "C", id, c
 }
 
