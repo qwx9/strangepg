@@ -63,15 +63,17 @@ drawedge(Graph *g, Quad q, double w, ssize idx)
 }
 
 static int
-drawnode(Node *n, Quad p, Quad q, Quad u, double θ, ssize id, ssize idx)
+drawnode(Graph *g, Node *n)
 {
+	int i;
 	Color *c;
 
-	DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
+	//DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
 	c = n->col->c;
-	if(drawquad(p, q, u, θ, idx, c) < 0
-	|| drawquad(p, q, u, θ, idx, c) < 0
-	|| drawlabel(n, p, q, u, id, theme[Ctext].c) < 0)
+	i = mapvis(g, Onode, n - g->nodes);
+	if(drawquad(n->q1, n->q2, n->shape, n->θ, i, c) < 0
+	|| drawquad(n->q1, n->q2, n->shape, n->θ, i, c) < 0
+	|| drawlabel(n, n->q1, n->q2, n->shape, n->id, theme[Ctext].c) < 0)
 		return -1;
 	return 0;
 }
@@ -114,7 +116,7 @@ drawnodes(Graph *g)
 		n = g->nodes + i;
 		if(showarrows)
 			drawnodevec(n->vrect);
-		drawnode(n, n->q1, n->q2, n->shape, n->θ, n->id, n - g->nodes);
+		drawnode(g, n);
 	}
 	return 0;
 }
