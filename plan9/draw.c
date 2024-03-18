@@ -126,7 +126,7 @@ i2c(int idx)
 	static Image *i;
 	union { uchar u[4]; int v; } u;
 
-	u.v = idx;
+	u.v = idx + 1;
 	if(i == nil)
 		i = eallocimage(Rect(0,0,1,1), XRGB32, 1, u.v);
 	else
@@ -189,8 +189,10 @@ drawquad(Quad q1, Quad q2, Quad, double, int idx, Color *cp)
 	};
 	polyop(viewfb, p, nelem(p), 0, 0, 1, cp->alt, ZP, SatopD);
 	fillpoly(viewfb, p, nelem(p), ~0, cp->i, ZP);
-	if(idx >= 0)
+	if(idx >= 0){
+		poly(selfb, p, nelem(p), 0, 0, 1, i2c(idx), ZP);
 		fillpoly(selfb, p, nelem(p), ~0, i2c(idx), ZP);
+	}
 	return 0;
 }
 
@@ -216,12 +218,15 @@ drawbezier(Quad q, double w, int idx, Color *c)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, c->i, ZP);
-	if(idx >= 0)
-		bezier(selfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, w, i2c(idx), ZP);
-	if(!haxx0rz && view.zoom > 1.)
+	if(!haxx0rz && view.zoom > 1.){
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 			showarrows ? Endarrow : Endsquare, w+1, c->alt, ZP);
+		if(idx >= 0)
+			bezier(selfb, r.min, p2, p3, r.max, Endsquare,
+				showarrows ? Endarrow : Endsquare, w+1, i2c(idx), ZP);
+	}else if(idx >= 0)
+		bezier(selfb, r.min, p2, p3, r.max, Endsquare,
+			showarrows ? Endarrow : Endsquare, w, i2c(idx), ZP);
 	return 0;
 }
 
