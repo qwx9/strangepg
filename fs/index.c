@@ -13,7 +13,10 @@ expandnode(Graph *g, Node *pp)
 	Node *p, *n, *m;
 
 	f = g->f;
-	c = g->c;
+	if((c = g->c) == nil){
+		warn("expandnode: nothing to expand");
+		return;
+	}
 	l = c->levels + pp->lvl;
 	if(pp->lvl >= dylen(c->levels))
 		return;
@@ -55,6 +58,10 @@ void
 retractnode(Graph *g, Node *pp)
 {
 	DPRINT(Debugcoarse, "merge %#p node %zx level %d", g, pp->id, pp->lvl);
+	if(g->c == nil){
+		warn("expandnode: nothing to retract");
+		return;
+	}
 	poptree(g, pp);
 	printgraph(g);
 }
