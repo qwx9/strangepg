@@ -11,51 +11,56 @@ int epfd[2] = {-1, -1};
 void
 readcmd(char *s)
 {
-	int m;
+	int m, redraw;
 	ssize x;
 	char *fld[8], *p, *t;
 	Node *n;
 	Graph *g;
 
-	switch(s[0]){
-	case 'C': break;
-	case 'E':
-		warn("readcmd: %s\n", s+2);
-		return;
-	case 0:
-		warn("readcmd: empty input\n");
-		return;
-	default:
-		warn("> %s\n", s);
-	}
+	redraw = 0;
 	t = getfield(s);
-	s++;
-	while(s != nil && *s != 0){
-		if((m = getfields(s, fld, nelem(fld), 1, "\t ")) < 1)
-			goto error;
-		USED(m);
-		g = graphs;
-		switch(s[0]){
+	while(s != nil){
+		switch(*s){
+		case 0:
+			return;
+		case 'E': 
+			warn("Error:%s\n", s+1);
+			goto next;
 		case 'C':
+			break;
+		default:
+			warn("readcmd: unhandled reply <%s>\n", s);
+			goto next;
+		}
+		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
+			goto error;
+		g = graphs;	/* FIXME */
+		switch(s[0]){
+		error:
+			warn("readcmd: %s\n", error());
+			break;
+		case 'C':
+			if(m != 2){
+				werrstr("invalid C message length %d\n", m);
+				goto error;
+			}
 			if((n = str2node(g, fld[0])) == nil)
 				goto error;
-			fprint(2, "%s %s\n", fld[0], fld[1]);
 			x = strtoll(fld[1], &p, 0);
 			if(p == fld[1]){
 				werrstr("invalid color %s", fld[1]);
 				goto error;
 			}
-			if(setnodecolor(g, n, x) < 0)
-				goto error;
-			reqdraw(Reqredraw);	// FIXME: rate limit, or batch parse
+			n->col = color(x);
+			redraw = 1;
 			break;
 		}
+	next:
 		s = t;
 		t = getfield(s);
 	}
-	return;
-error:
-	warn("readcmd: %s\n", error());
+	if(redraw)
+		reqdraw(Reqredraw);
 }
 
 void
