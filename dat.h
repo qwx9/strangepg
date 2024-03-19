@@ -9,13 +9,12 @@ typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
-typedef struct Pal Pal;
 typedef struct Color Color;
 
 #pragma incomplete File
 #pragma incomplete Coarse
+#pragma incomplete Layout
 #pragma incomplete Color
-#pragma incomplete Pal
 
 KHASH_MAP_INIT_STR(strmap, ssize)
 KHASH_MAP_INIT_INT64(idmap, ssize)
@@ -41,19 +40,6 @@ enum{
 	Ptsz = 2,
 };
 
-enum{
-	LLconga,
-	LLrandom,
-	LLforce,
-	LLnil,
-};
-struct Layout{
-	char *name;
-	void (*compute)(Graph*);
-	void (*init)(Graph*);
-};
-extern int deflayout;
-
 struct Layouting{
 	int tid;
 	int armed;
@@ -74,7 +60,7 @@ struct Node{
 	Quad q2;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
-	Pal *col;
+	Color *col;
 	double θ;
 	ssize prev;		/* index */
 	ssize next;		/* index */
@@ -95,6 +81,7 @@ struct Edge{
 	ssize next;
 	ssize prev;
 	vlong metaoff;
+	Color *col;
 };
 struct Graph{
 	int type;
@@ -112,7 +99,6 @@ struct Graph{
 	khash_t(idmap) *nmap;
 	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
-	Pal *pal;
 	Layouting layout;
 	Quad dim;
 	Vertex off;
@@ -188,3 +174,4 @@ extern int noui;
 extern int norefresh;
 
 extern int mainstacksize;	// FIXME
+

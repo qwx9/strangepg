@@ -251,7 +251,7 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	np = g->nodes + i;
 	np->prev = np->next = i;
 	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);	// FIXME: gfa only?
-	pushcmd("n %d %s %x", id, bleh, n.col->r << 16 | n.col->g << 8 | n.col->b);
+	pushcmd("n %d %s \"0x%x\"", id, bleh, col2int(n.col));
 	return np;
 }
 
@@ -276,7 +276,7 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
 		m = g->nodes + i;
 		// FIXME: correct?
-		if(m->id < n->id)	/* ids in reverse order */
+		if(m->id > n->id)	/* ids in reverse order */
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
@@ -496,6 +496,5 @@ initgraph(int type)
 	g.nmap = kh_init(idmap);
 	g.emap = kh_init(idmap);
 	g.strnmap = kh_init(strmap);
-	somepalette(&g);
 	return g;
 }

@@ -1,15 +1,6 @@
-struct Pal{
-	uchar r;
-	uchar g;
-	uchar b;
-	Color *c;
-};
+KHASH_MAP_INIT_INT(cmap, Color*)
 
-enum{
-	Palsz = 6+9+12+6,
-};
-extern Pal *theme;
-
+extern khash_t(cmap) *cmap;
 enum{
 	Cbg,
 	Ctext,
@@ -18,6 +9,7 @@ enum{
 	Cemph,
 	Cend,
 };
+extern u32int *theme;
 
 int	drawline(Quad, double, int, int, Color*);
 int	drawbezier(Quad, double, int, Color*);
@@ -26,12 +18,11 @@ int	drawlabel(Node*, Quad, Quad, Quad, vlong, Color*);
 void	cleardraw(void);
 Vertex	centerscalept2(Vertex);
 Quad	centerscalequad(Quad);
-/* FIXME: see notes in draw/color.c */
 int	setnodecolor(Graph*, Node*, u32int);
-Pal*	newcolor(u32int);
-void	freecolor(Pal*);
-Pal*	somecolor(Graph*);
-void	somepalette(Graph*);
-void	initcol(Graph*);
+Color*	newcolor(u32int);
+void	freecolor(Color*);
+u32int	col2int(Color*);
+Color*	color(u32int);
+Color*	somecolor(Graph*);
 void	settheme(void);
 void	initdrw(void);

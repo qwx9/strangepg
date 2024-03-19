@@ -2,11 +2,11 @@
 #include "cmd.h"
 #include "em.h"
 #include "drw.h"
+#include "layout.h"
 
 int haxx0rz;
 
 static int intype;
-static char **filev;
 
 void
 quit(void)

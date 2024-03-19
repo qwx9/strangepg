@@ -1,92 +1,86 @@
 #include "strpg.h"
 #include "drw.h"
 
-Pal *theme;
+u32int *theme;
 
-static Pal theme1[Cend] = {
-	[Cbg] {0xff, 0xff, 0xff},
-	[Ctext] {0xbb, 0x11, 0x00},
-	[Cnode] {0x22, 0x22, 0xff},
-	[Cedge] {0xbb, 0xbb, 0xbb},
-	[Cemph] {0xff, 0x00, 0x00},
+static u32int theme1[Cend] = {
+	[Cbg]	0x000000,
+	[Ctext]	0xbb1100,
+	[Cnode]	0x2222ff,
+	[Cedge]	0xbbbbbb,
+	[Cemph]	0xff0000,
 };
-static Pal theme2[Cend] = {
-	[Cbg] {0x00, 0x00, 0x00},
-	[Ctext] {0xee, 0xee, 0x00},
-	[Cnode] {0xdd, 0xdd, 0x00},
-	[Cedge] {0x77, 0x77, 0x77},
-	[Cemph] {0xff, 0x00, 0x00},
+static u32int theme2[Cend] = {
+	[Cbg]	0xffffff,
+	[Ctext]	0xeeee00,
+	[Cnode]	0xdddd00,
+	[Cedge]	0x777777,
+	[Cemph]	0xff0000,
 };
 
-static Pal defaultpal[Palsz] = {
+static u32int colors[] = {
 	/* 12 class paired */
-	{0x1f, 0x78, 0xb4},
-	{0x33, 0xa0, 0x2c},
-	{0xe3, 0x1a, 0x1c},
-	{0xff, 0x7f, 0x00},
-	{0x6a, 0x3d, 0x9a},
-	{0xb1, 0x59, 0x28},
+	0x1f78b4,	/* light blue */
+	0xff7f00,	/* light orange */
+	0x33a02c,	/* light green */
+	0xe31a1c,	/* light red */
+	0x6a3d9a,	/* violet */
+	0xb15928,	/* light brown */
 	/* some bandage */
-	{0x80, 0x80, 0xff},
-	{0x8e, 0xc6, 0x5e},
-	{0xc7, 0x67, 0x58},
-	{0xc8, 0x93, 0xf0},
-	{0xca, 0x95, 0x60},
-	{0x7f, 0x5f, 0x67},
-	{0xb1, 0x60, 0xc9},
-	{0x5f, 0xc6, 0x9f},
-	{0xc9, 0x60, 0x88},
+	0x8080ff,	/* pale blue */
+	0x8ec65e,	/* pale green */
+	0xc76758,	/* pale red */
+	0xca9560,	/* pale orange */
+	0xc893f0,	/* pale violet */
+	0x7f5f67,	/* grey brown */
+	0xb160c9,	/* light violet */
+	0x5fc69f,	/* pale blueish green */
+	0xc96088,	/* pink violet */
 	/* 12 class set3 */
-	{0x8d, 0xd3, 0xc7},
-	{0xbe, 0xba, 0xda},
-	{0xfb, 0x80, 0x72},
-	{0x80, 0xb1, 0xd3},
-	{0xfd, 0xb4, 0x62},
-	{0xb3, 0xde, 0x69},
-	{0xfc, 0xcd, 0xe5},
-	{0xd9, 0xd9, 0xd9},
-	{0xbc, 0x80, 0xbd},
-	{0xcc, 0xeb, 0xc5},
-	{0xff, 0xed, 0x6f},
-	{0xff, 0xff, 0xb3},
+	0x8dd3c7,	/* cyan */
+	0xffffb3,	/* pale yellow */
+	0xbebada,	/* grey blue */
+	0xfb8072,	/* light orange (2) */
+	0x80b1d3,	/* light blue (2) */
+	0xfdb462,	/* light orange (2) */
+	0xb3de69,	/* light green (2) */
+	0xfccde5,	/* grey pink */
+	0xd9d9d9,	/* light grey */
+	0xbc80bd,	/* light violet */
+	0xccebc5,	/* grey green */
+	0xffed6f,	/* light yellow */
 	/* 12 class paired, pale counterparts */
-	{0xa6, 0xce, 0xe3},
-	{0xb2, 0xdf, 0x8a},
-	{0xfb, 0x9a, 0x99},
-	{0xfd, 0xbf, 0x6f},
-	{0xca, 0xb2, 0xd6},
-	{0xff, 0xff, 0x99},
+	0xa6cee3,	/* light blue (2) */
+	0xb2df8a,	/* light green (3) */
+	0xfb9a99,	/* light pink */
+	0xfdbf6f,	/* light orange (3) */
+	0xcab2d6,	/* grey violet */
+	0xffff99,	/* pale yellow */
 };
 
-/* FIXME: not the right approach; maybe define extensible palettes and
- * only work with indices into dynamic array + hash strname -> index */
-/* FIXME: should use the same thing we do for indexed colors in the plan9
- * code and not store Image* for every color? */
-int
-setnodecolor(Graph *g, Node *n, u32int v)
+khash_t(cmap) *cmap;
+
+Color *
+color(u32int v)
 {
-	fprint(2, "setnodecolor %08x\n", v);
-	if(n->col < g->pal || n->col >= g->pal + dylen(g->nodes))
-		freecolor(n->col);
-	if((n->col = newcolor(v)) == nil)
-		return -1;
-	return 0;
+	int ret;
+	khiter_t k;
+	Color *c;
+
+	k = kh_get(cmap, cmap, v);
+	if(k == kh_end(cmap)){
+		c = newcolor(v);
+		k = kh_put(cmap, cmap, v, &ret);
+		kh_val(cmap, k) = c;
+	}else
+		c = kh_val(cmap, k);
+	return c;
 }
 
-Pal *
+Color *
 somecolor(Graph *g)
 {
-	return g->pal + dylen(g->nodes) % dylen(g->pal);
-}
-
-void
-somepalette(Graph *g)
-{
-	int i;
-
-	for(i=0; i<nelem(defaultpal); i++)
-		dypush(g->pal, defaultpal[i]);
-	initcol(g);
+	return color(colors[dylen(g->nodes) % nelem(colors)]);
 }
 
 void

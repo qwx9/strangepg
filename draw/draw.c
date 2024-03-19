@@ -25,8 +25,8 @@ centerscalequad(Quad q)
 static void
 drawguides(void)
 {
-	drawline(Qd(ZV, view.center), 0, 1, -1, theme[Cemph].c);
-	drawline(Qd(ZV, view.pan), 0, 2, -1, theme[Ctext].c);
+	drawline(Qd(ZV, view.center), 0, 1, -1, color(theme[Cemph]));
+	drawline(Qd(ZV, view.pan), 0, 2, -1, color(theme[Ctext]));
 }
 
 static int
@@ -59,21 +59,19 @@ drawedge(Graph *g, Quad q, double w, ssize idx)
 	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
 	i = mapvis(g, Oedge, idx);
 	q.v = subpt2(q.v, q.o);	// FIXME
-	return drawbezier(q, w, i, theme[Cedge].c);
+	return drawbezier(q, w, i, color(theme[Cedge]));
 }
 
 static int
 drawnode(Graph *g, Node *n)
 {
 	int i;
-	Color *c;
 
 	//DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	c = n->col->c;
 	i = mapvis(g, Onode, n - g->nodes);
-	if(drawquad(n->q1, n->q2, n->shape, n->θ, i, c) < 0
-	|| drawquad(n->q1, n->q2, n->shape, n->θ, i, c) < 0
-	|| drawlabel(n, n->q1, n->q2, n->shape, n->id, theme[Ctext].c) < 0)
+	if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0
+	|| drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0
+	|| drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
 }
@@ -82,7 +80,7 @@ static int
 drawnodevec(Quad q)
 {
 	DPRINT(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	return drawline(q, MAX(0., view.zoom/5), 1, -1, theme[Cemph].c);
+	return drawline(q, MAX(0., view.zoom/5), 1, -1, color(theme[Cemph]));
 }
 
 static int
@@ -134,7 +132,7 @@ drawworld(void)
 		drawedges(g);
 		drawnodes(g);
 		if(debug)
-			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1, theme[Ctext].c);
+			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1, color(theme[Ctext]));
 	}
 	unlockgraphs(0);
 	if(debug)
@@ -169,5 +167,6 @@ void
 initdrw(void)
 {
 	settheme();
+	cmap = kh_init(cmap);
 	initsysdraw();
 }
