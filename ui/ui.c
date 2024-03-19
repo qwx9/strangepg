@@ -78,8 +78,7 @@ keyevent(Rune r)
 	return 0;
 }
 
-/* the very first mouse event will have non-sense deltas */
-// FIXME: request a change to drawer, doing it here gets us out of sync
+/* the very first mouse event will have nonsense deltas */
 int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
@@ -92,7 +91,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		// FIXME: everything should stop while this does its thing
 		coffeetime();
 		selected = mouseselect(v);
-		if(selected.type == Onode){
+		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));
 				stoplayout(o.g);
@@ -100,8 +99,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 				selected = aintnothingthere;
 				updatelayout(o.g);
 			}
-			reqdraw(Reqshallowdraw);
 		}
+		reqdraw(Reqshallowdraw);
 		coffeeover();
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
