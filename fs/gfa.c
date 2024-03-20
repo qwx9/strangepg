@@ -16,7 +16,7 @@ gfa1seg(Graph *g, File *f, char *s)
 {
 	Node *u;
 
-	getfield(s);
+	nextfield(f, s, nil);
 	DPRINT(Debugfs, "gfa pushnamednode %s", s);
 	if((u = pushnamednode(g, s)) == nil)
 		return -1;
@@ -47,7 +47,7 @@ gfa1link(Graph *g, File *f, char *s)
 			werrstr("malformed link");
 			return -1;
 		}
-		t = getfield(s);
+		t = nextfield(f, s, nil);
 		*fp = s;
 	}
 	if((d1 = todir(fld[1])) < 0 || (d2 = todir(fld[3])) < 0){
@@ -84,7 +84,7 @@ loadgfa1(void *path)
 	if((f = graphopenfs(&g, (char *)path, OREAD)) == nil)
 		sysfatal("%s", error());
 	while((s = readline(f, &n)) != nil){
-		t = getfield(s);
+		t = nextfield(f, s, nil);
 		switch(s[0]){
 		case 'H': parse = gfa1hdr; break;
 		case 'S': parse = gfa1seg; if(++nnodes % 10000 == 0) warn("loadgfa: %zd nodes...\n", nnodes); break;

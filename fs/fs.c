@@ -139,6 +139,38 @@ tellfs(File *f)
 	return sysftell(f);
 }
 
+/* FIXME: sucks */
+char *
+nextfield(File *f, char *s, int *len)
+{
+	int n;
+	char *t;
+
+	if(len != nil)
+		*len = 0;
+	if(s == nil || *s == 0)
+		return nil;
+	if((t = strchr(s, '\t')) != nil){
+		if(len != nil)
+			*len = t - s;
+		*t++ = 0;
+		return t;
+	}
+	if(len != nil)
+		*len = strlen(s);
+	while(f != nil && f->trunc){
+		s = readfrag(f, &n);
+		if((t = strchr(s, '\t')) != nil){
+			if(len != nil)
+				*len += t - s;
+			*t++ = 0;
+			break;
+		}else
+			*len += n;
+	}
+	return t;
+}
+
 int
 opentmpfs(File *f)
 {

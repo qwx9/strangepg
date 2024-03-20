@@ -65,6 +65,8 @@ sysftell(File *f)
 	return Boffset(f->aux);
 }
 
+/* FIXME: rename fsremove and use File*; sysremove should be in sys */
+/* FIXME: don't mix fs and fd logic => fs* functions, sys* functions: buffered vs unbuffered io */
 void
 sysremove(char *path)
 {
@@ -109,18 +111,6 @@ readchar(File *f)
 }
 
 char *
-getfield(char *s)
-{
-	char *t;
-
-	if(s == nil)
-		return nil;
-	if((t = strchr(s, '\t')) != nil)
-		*t++ = 0;
-	return t;
-}
-
-char *
 readfrag(File *f, int *len)
 {
 	int l;
@@ -128,6 +118,8 @@ readfrag(File *f, int *len)
 	Biobuf *bf;
 
 	assert(f != nil && f->path != nil && f->aux != nil);
+	if(len != nil)
+		*len = 0;
 	bf = f->aux;
 	/* hack 1: force Brdline to discard truncated line and
 	 * continue reading, which this bullshit should do itself */
@@ -144,8 +136,9 @@ readfrag(File *f, int *len)
 			f->trunc = 1;
 		}
 	}else if(l > 0)
-		s[l-1] = 0;
-	*len = l;
+		s[--l] = 0;
+	if(len != nil)
+		*len = l;
 	return s;
 }
 
@@ -156,7 +149,7 @@ readline(File *f, int *len)
 {
 	/* previous line unterminated, longer than size of buffer */
 	while(f->trunc)
-		readfrag(f, len);
+		readfrag(f, nil);
 	f->foff = sysftell(f);
 	f->nr++;
 	return readfrag(f, len);

@@ -18,7 +18,7 @@ readcmd(char *s)
 	Graph *g;
 
 	redraw = 0;
-	t = getfield(s);
+	t = nextfield(nil, s, nil);
 	while(s != nil){
 		switch(*s){
 		case 0:
@@ -57,7 +57,7 @@ readcmd(char *s)
 		}
 	next:
 		s = t;
-		t = getfield(s);
+		t = nextfield(nil, s, nil);
 	}
 	if(redraw)
 		reqdraw(Reqredraw);

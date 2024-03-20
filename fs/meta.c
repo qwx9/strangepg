@@ -2,42 +2,25 @@
 #include "fs.h"
 #include "cmd.h"
 
-// FIXME: this symbolically should really be just a bunch of hash tables
-//	key == variable + index -> var:i --h--> NA, cached, or loadreq
-//	functions the exact same way as EM in a way...
-//	make it so!
-//	lighter alternative for now: pass it to awk and make it parse and store
-//	all metadata
+/* FIXME:
+ * - add status messages => first cimgui stuff
+ * - toggle node/edge labels on/off
+ * - load metadata from csv/tsv
+ * - move gfa specific shit to fs/gfa.c → loadmeta function pointer
+ * - buffer commands until meta is loaded to launch meta commands
+ *	awk: save to batch buffer, then send it back
+ *	then strpg sends it back again?
+ */
 
-// so design (fawk? 0wk?):
-// hashmap of keys maps to index in registry, linking corresponding table
-//	either flat full EM-based table, or hash table, doesn't matter which
-//	(make queries transparent)
-
-// add status messages => first cimgui stuff
-
-// toggle node/edge labels on/off
-
-// compile new script with existing variables, or just hardcode known ones
-// alt: reading the script is fast, reading the data is slow -> just rerun?
-//	plays right into fawk's hands
-
-// we disallow setting/creating new variables
-//	blue would be a variable so we don't have to type "blue"
-// goal: color[NC == 3] = blue
-//	-> ?u
-// also: load from csv/...
-
-
-// FIXME: more abstractions, fp -> gfa.c
 static int
 collectgfanodes(Graph *g, File *f)
 {
 	char *s, *t;
-	int l, nerr;
+	int r, l, nerr;
 	Node *n;
 
 	for(n=g->nodes, nerr=0; n<g->nodes+dylen(g->nodes); n++){
+		r = 0;
 		seekfs(f, n->metaoff);
 		if((s = readline(f, &l)) == nil){
 			warn("collectmeta: %s\n", error());
@@ -47,22 +30,27 @@ collectgfanodes(Graph *g, File *f)
 			}
 			continue;
 		}
-		if((s = getfield(s)) == nil		/* S */
-		|| (s = getfield(s)) == nil)	/* id */
+		if((s = nextfield(f, s, nil)) == nil	/* S */
+		|| (s = nextfield(f, s, nil)) == nil)	/* id */
 			continue;
-		t = getfield(s);
-		// FIXME: truncated lines
-		l = t != nil ? t - s : strlen(s);
-		if(l > 1 || l == 1 && s[0] != '*')
-			pushcmd("s NLN %d %d", n->id, l);
-		// FIXME: don't overwrite LN from here
+		t = nextfield(f, s, &l);	/* seq */
+		if(l > 1 || s[0] != '*'){
+			pushcmd("LN[\"n\",%d] = %d", n->id, l);
+			r = 1;
+		}
 		for(s=t; s!=nil; s=t){
-			t = getfield(s);
-			l = t != nil ? t - s : strlen(s);
-			if(l < 6 || s[2] != ':' || s[4] != ':')
+			t = nextfield(f, s, &l);
+			/* ignore length if sequence was inlined */
+			if(l < 6 || s[2] != ':' || s[4] != ':'){
+				warn("invalid metadata field %s\n", s);
 				continue;
+			}
+			if(strncmp(s, "LN", 2) == 0 && r){
+				warn("node[%zx]: ignoring redundant length field\n", n->id);
+				continue;
+			}
 			s[2] = 0;
-			pushcmd("s N%s %d %s", s, n->id, s+5);
+			pushcmd("%s[\"n\",%d] = %s", s, n->id, s+5);
 		}
 		nerr = 0;
 	}
@@ -86,19 +74,19 @@ collectgfaedges(Graph *g, File *f)
 			}
 			continue;
 		}
-		if((s = getfield(s)) == nil		/* L */
-		|| (s = getfield(s)) == nil		/* u */
-		|| (s = getfield(s)) == nil		/* du */
-		|| (s = getfield(s)) == nil		/* v */
-		|| (s = getfield(s)) == nil)	/* dv */
+		if((s = nextfield(f, s, nil)) == nil	/* L */
+		|| (s = nextfield(f, s, nil)) == nil	/* u */
+		|| (s = nextfield(f, s, nil)) == nil	/* du */
+		|| (s = nextfield(f, s, nil)) == nil	/* v */
+		|| (s = nextfield(f, s, nil)) == nil)	/* dv */
 			continue;
-		t = getfield(s);
+		t = nextfield(f, s, nil);
 		// FIXME: truncated lines
 		l = t != nil ? t - s : strlen(s);
 		if(l > 1 || l == 1 && s[0] != '*')
 			pushcmd("s cig %d %s", e->id, s);
 		for(s=t; s!=nil; s=t){
-			t = getfield(s);
+			t = nextfield(f, s, nil);
 			l = t != nil ? t - s : strlen(s);
 			if(l < 6 || s[2] != ':' || s[4] != ':')
 				continue;
@@ -110,7 +98,6 @@ collectgfaedges(Graph *g, File *f)
 	return 0;
 }
 
-// FIXME: more abstractions, fp -> gfa.c (fs.c load structs)
 void
 collectgfameta(Graph *g)
 {
@@ -119,11 +106,11 @@ collectgfameta(Graph *g)
 	clearmeta(g);	/* delegated to awk */
 	g->loading = 1;
 	f = g->f;
-	// FIXME: wait until meta is loaded to launch meta commands
 	if(collectgfanodes(g, f) < 0)
 		warn("collectmeta: %s\n", error());
 	if(collectgfaedges(g, f) < 0)
 		warn("collectmeta: %s\n", error());
+	pushcmd("FGD135");
 	g->loading = 0;
 }
 
