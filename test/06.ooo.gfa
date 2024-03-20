@@ -1,0 +1,26 @@
+H	VN:Z:a.0
+S	a	ATGC
+L	a	+	i	+	0M
+S	b	ATGCATGC
+L	b	+	d	+	0M
+S	c	ATGG
+S	d	ATGA
+L	d	+	f	-	0M
+L	d	+	i	+	0M
+S	e	*
+L	e	+	h	+	0M
+L	e	+	c	+	0M
+S	f	ATGC
+L	f	-	g	+	0M
+S	g	ATAG
+L	g	+	h	+	0M
+S	h	ATAC
+L	h	+	d	+	0M
+L	h	+	e	+	0M
+L	h	+	h	+	0M
+L	h	+	h	+	0M
+S	i	CTA
+L	i	+	b	+	0M
+L	i	+	j	+	0M
+S	j	AAAAA
+L	j	+	e	+	0M
