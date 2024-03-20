@@ -1,4 +1,4 @@
-diff 36478171be59721dcc5252043fe2955cb37fc9b3 uncommitted
+diff f97cf2ac238cb993721405e5c7641f3995d8a468 uncommitted
 --- a/sys/src/cmd/awk/awk.h
 +++ b/sys/src/cmd/awk/awk.h
 @@ -109,6 +109,7 @@
@@ -38,14 +38,14 @@ diff 36478171be59721dcc5252043fe2955cb37fc9b3 uncommitted
  
 --- a/sys/src/cmd/awk/lex.c
 +++ b/sys/src/cmd/awk/lex.c
-@@ -57,6 +57,7 @@
+@@ -55,6 +55,7 @@
+ 	{ "delete",	DELETE,		DELETE },
+ 	{ "do",		DO,		DO },
  	{ "else",	ELSE,		ELSE },
++	{ "eval",	FEVAL,		BLTIN },
  	{ "exit",	EXIT,		EXIT },
  	{ "exp",	FEXP,		BLTIN },
-+	{ "eval",	FEVAL,		BLTIN },
  	{ "fflush",	FFLUSH,		BLTIN },
- 	{ "for",	FOR,		FOR },
- 	{ "func",	FUNC,		FUNC },
 --- a/sys/src/cmd/awk/lib.c
 +++ b/sys/src/cmd/awk/lib.c
 @@ -536,6 +536,7 @@
