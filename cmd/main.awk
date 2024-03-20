@@ -1,6 +1,4 @@
 BEGIN{
-	opx = "[!-#%-\\/:-<>-@\\[-\\^`\\{-~]"
-	namex = "[^0-9" opx "][^" opx "]*"
 	red = "0xff0000"
 	green = "0x00ff00"
 	blue = "0x0000ff"
@@ -53,15 +51,6 @@ function nodecolor(id, c){
 	color[lnode[id]] = c
 	print "C", id, c
 }
-
-function tokenize(){
-	gsub("[ 	]", "")
-	gsub("==", " == ")
-	gsub(opx, " & ")
-	gsub("[\\(\\[\\],#]", " & ")
-}
-function parse(){
-}
 $1 == "n"{
 	if($2 in lnode)
 		delete node[lnode[$2]]
@@ -96,8 +85,7 @@ $1 == "C"{
 }
 # FIXME: not distinguishing between node/edge? should we?
 $1 == "s"{
-	if($2 == "NLN"){ NLN[$3] = $4 }
-	else if($2 == "cig"){ cig[$3] = $4 }
+	if($2 == "cig"){ cig[$3] = $4 }
 	else if($2 == "color"){ color[$3] = $4 }
 	# maybe this alone is sufficient?
 	# FIXME: useless if eval works
@@ -137,6 +125,5 @@ $1 == "s"{
 	next
 }
 {
-	#tokenize()
 	eval("{" $0 "}")
 }
