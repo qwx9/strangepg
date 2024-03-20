@@ -50,7 +50,7 @@ collectgfanodes(Graph *g, File *f)
 				continue;
 			}
 			s[2] = 0;
-			pushcmd("%s[\"n\",%d] = %s", s, n->id, s+5);
+			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);
 		}
 		nerr = 0;
 	}
@@ -81,17 +81,14 @@ collectgfaedges(Graph *g, File *f)
 		|| (s = nextfield(f, s, nil)) == nil)	/* dv */
 			continue;
 		t = nextfield(f, s, nil);
-		// FIXME: truncated lines
-		l = t != nil ? t - s : strlen(s);
-		if(l > 1 || l == 1 && s[0] != '*')
-			pushcmd("s cig %d %s", e->id, s);
+		if(l > 0)
+			pushcmd("cigar[%d] = \"%s\"", e->id, s);
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, nil);
-			l = t != nil ? t - s : strlen(s);
 			if(l < 6 || s[2] != ':' || s[4] != ':')
 				continue;
 			s[2] = 0;
-			pushcmd("s L%s %d %s", s, e->id, s+5);
+			pushcmd("%s[\"e\",%d] = \"%s\"", s, e->id, s+5);
 		}
 		nerr = 0;
 	}
