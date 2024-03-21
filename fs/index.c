@@ -113,19 +113,22 @@ readtree(Graph *g, char *path)
 }
 
 static void
-load(void *path)
+load(void *tp)
 {
 	Graph g;
+	Thread *t;
 
+	t = tp;
+	initthread(t, "indexproc");
 	g = initgraph(FFindex);
-	if(readtree(&g, path) < 0)
-		sysfatal("load: failed to read tree %s: %s", path, error());
+	if(readtree(&g, t->arg) < 0)
+		sysfatal("load: failed to read tree %s: %s", (char *)t->arg, error());
 	// FIXME: don't rely on this number, there isn't always just one anyway
 	// instead look at the top level and make parents
 	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
 	expandnode(&g, g.nodes);
 	pushgraph(g);
-	threadexits(nil);
+	exitthread(t, nil);
 }
 
 static int

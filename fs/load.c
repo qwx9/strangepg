@@ -3,6 +3,7 @@
 
 static Filefmt *fftab[FFnil];
 
+// FIXME: stupid; fix fs interface
 File *
 graphopenfs(Graph *g, char *path, int mode)
 {
@@ -28,8 +29,10 @@ loadfs(char *path, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	if(proccreate(ff->load, path, mainstacksize) < 0)
+	if(newthread(ff->load, path, mainstacksize) == nil){
+		werrstr("newthread: failed to create thread");
 		return -1;
+	}
 	return 0;
 }
 

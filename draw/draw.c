@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "drw.h"
+#include "threads.h"
 
 View view;
 int showarrows, drawstep;
@@ -150,15 +151,16 @@ drawui(void)
 	showobj(&selected);
 }
 
+// FIXME: threading?
 void
 redraw(void)
 {
 	DPRINT(Debugdraw, "redraw");
-	coffeetime();
+	rlock(&renderlock);
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
-	coffeeover();
+	runlock(&renderlock);
 	flushdraw();
 }
 

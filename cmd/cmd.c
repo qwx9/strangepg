@@ -3,8 +3,6 @@
 #include "drw.h"
 #include "fs.h"
 
-int epfd[2] = {-1, -1};
-
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
  * how do we dispatch user queries? would be useful to do queries
  * on multiple ones! */
@@ -71,10 +69,6 @@ pushcmd(char *fmt, ...)
 	va_list arg;
 
 	DPRINT(Debugcmd, "pushcmd %c", fmt[0]);
-	if(epfd[1] < 0){
-		warn("pushcmd: pipe closed\n");
-		return;
-	}
 	va_start(arg, fmt);
 	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
 		if((c = *f++) == 0)
@@ -111,4 +105,12 @@ pushcmd(char *fmt, ...)
 		*sp++ = '\n';
 	*sp = 0;
 	sendcmd(sb);
+}
+
+int
+initcmd(void)
+{
+	if(initrepl() < 0)
+		sysfatal("initcmd: %s", error());
+	return 0;
 }

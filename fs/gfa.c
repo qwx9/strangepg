@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
+#include "threads.h"
 
 /* assumptions:
  * - required field separator is \t
@@ -68,23 +69,26 @@ gfa1path(Graph *, File *, char *)
 }
 
 // FIXME: actually handle bad input
-static void
-loadgfa1(void *path)
+static thret_t
+loadgfa1(void *tp)
 {
 	int n, (*parse)(Graph*, File*, char*);
-	char *s, *t;
+	char *s, *p;
 	ssize nnodes, nedges;
 	Graph g;
 	File *f;
+	Thread *t;
 
+	t = tp;
+	initthread(t, "gfaproc");
 	nnodes = nedges = 0;
-	DPRINT(Debugfs, "loadgfa1 %s", (char *)path);
+	DPRINT(Debugfs, "loadgfa1 %s", (char *)t->arg);
 	g = initgraph(FFgfa);
 	memset(&f, 0, sizeof f);
-	if((f = graphopenfs(&g, (char *)path, OREAD)) == nil)
+	if((f = graphopenfs(&g, t->arg, OREAD)) == nil)
 		sysfatal("%s", error());
 	while((s = readline(f, &n)) != nil){
-		t = nextfield(f, s, nil);
+		p = nextfield(f, s, nil);
 		switch(s[0]){
 		case 'H': parse = gfa1hdr; break;
 		case 'S': parse = gfa1seg; if(++nnodes % 10000 == 0) warn("loadgfa: %zd nodes...\n", nnodes); break;
@@ -92,7 +96,7 @@ loadgfa1(void *path)
 		case 'P': parse = gfa1path; break;
 		default: werrstr("line %d: unknown record type %c", f->nr, s[0]); continue;
 		}
-		if(parse(&g, f, t) < 0){
+		if(parse(&g, f, p) < 0){
 			warn("loadgfa1: line %d: %s\n", f->nr, error());
 			f->err++;
 		}
@@ -109,7 +113,7 @@ loadgfa1(void *path)
 	pushgraph(g);
 	collectgfameta(&g);
 	closefs(f);
-	threadexits(nil);
+	exitthread(t, nil);
 }
 
 static int

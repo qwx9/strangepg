@@ -150,7 +150,7 @@ rerender(int force)
 	r = 0;
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++)
-		if(g->type != FFdead && (force || g->layout.tid >= 0)){
+		if(g->type != FFdead && force){
 			renderlayout(g);
 			r = 1;
 		}

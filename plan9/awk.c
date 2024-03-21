@@ -1,8 +1,11 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "threads.h"
 #include <bio.h>
 
 Channel *cmdc;
+
+static int epfd[2] = {-1, -1};
 
 static void
 cproc(void *)
@@ -48,6 +51,10 @@ sendcmd(char *cmd)
 {
 	int n;
 
+	if(epfd[1] < 0){
+		warn("pushcmd: pipe closed\n");
+		return;
+	}
 	n = strlen(cmd);
 	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
 	if(epfd[1] < 0)
@@ -57,8 +64,10 @@ sendcmd(char *cmd)
 }
 
 int
-startengine(void)
+initrepl(void)
 {
+	if(pipe(epfd) < 0)
+		return -1;
 	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
 		return -1;
 	if(procrfork(cproc, nil, mainstacksize, RFNAMEG|RFENVG|RFFDG|RFNOMNT) < 0

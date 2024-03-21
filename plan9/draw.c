@@ -1,8 +1,9 @@
 #include "strpg.h"
 #include "drw.h"
+#include "threads.h"
 #include <draw.h>
 
-QLock drawlock;
+RWLock drawlock;
 int norefresh;
 
 struct Color{
@@ -376,6 +377,7 @@ reqdraw(int r)
 	nbsend(drawc, &r);
 }
 
+/* FIXME: portable code */
 static void
 ticproc(void *)
 {
@@ -391,12 +393,10 @@ ticproc(void *)
 		for(g=graphs, n=0; g<graphs+dylen(graphs); g++){
 			if(g->type == FFdead)
 				continue;
-			if(g->layout.tid >= 0){
-				n++;
-				unlockgraphs(0);
-				sendp(ticc, g);
-				lockgraphs(0);
-			}
+			n++;
+			unlockgraphs(0);
+			sendp(ticc, g);
+			lockgraphs(0);
 		}
 		unlockgraphs(0);
 		if(n == 0)
@@ -409,6 +409,13 @@ ticproc(void *)
 	}
 	ttid = -1;
 	threadexits(nil);
+}
+
+void
+stopdrawclock(void)
+{
+	threadkill(ttid);
+	ttid = -1;
 }
 
 void

@@ -11,10 +11,8 @@
 int noui, debug;
 
 char *argv0;
-int mainstacksize;	/* FIXME: thread.h or w/e */
 
 static char errbuf[1024];
-static _Atomic(u32int) *fux;
 
 void
 sysquit(void)
@@ -157,97 +155,8 @@ emalloc(usize n)
 	return p;
 }
 
-/* futex(2) */
-static int
-futex(_Atomic(u32int) *addr, int op, uint32_t val)
-{
-	return syscall(SYS_futex, addr, op, val, NULL, NULL, 0);
-}
-
-void
-coffeetime(void)
-{
-	u32int one;
-
-	one = 1;
-	for(;;){
-		if(atomic_compare_exchange_strong(fux, &one, 0))
-			break;
-		if(futex(fux, FUTEX_WAIT, 0) < 0 && errno != EAGAIN)
-			sysfatal("waitcoffeetime: futex wait");
-	}
-}
-
-void
-coffeeover(void)
-{
-	u32int zilch;
-
-	zilch = 0;
-	if(atomic_compare_exchange_strong(fux, &zilch, 1)){
-		if(futex(fux, FUTEX_WAKE, 1) < 0)
-			sysfatal("coffeeover: futex wake");
-	}
-}
-
-void
-threadsetname(char *)
-{
-	/* FIXME: use pthread_setname_np */
-}
-
-// FIXME: need threadexits
-
-int
-proccreate(void (*f)(void *arg), void *arg, uint)
-{
-	int r;
-	pthread_t th;
-
-	/* FIXME: incompatible function type, return void vs void* */
-	if((r = pthread_create(&th, NULL, (void*(*)(void*))f, arg)) != 0)
-		return -1;
-	return 0;
-}
-
-void
-threadexits(char *)
-{
-	pthread_exit(nil);
-}
-
-Channel *
-chancreate(int elsize, int nel)
-{
-	USED(elsize);
-	return chan_init(nel);
-}
-
-void *
-recvp(Channel *c)
-{
-	void *p;
-
-	if(chan_recv(c, &p) < 0)
-		return nil;
-	return p;
-}
-
-int
-nbsendp(Channel *c, void *p)
-{
-	int r;
-
-	if(chan_select(nil, 0, nil, &c, 1, &p) < 0)
-		return 0;
-	return 1;
-}
-
 void
 sysinit(void)
 {
-	if((fux = mmap(NULL, sizeof(*fux), PROT_READ|PROT_WRITE,
-		MAP_ANONYMOUS|MAP_SHARED, -1, 0)) == MAP_FAILED)
-			sysfatal("sysinit: mmap wake");
-	*fux = 1;
+	initthread();
 }

@@ -1,9 +1,8 @@
 #include "strpg.h"
+#include "threads.h"
 #include <pool.h>
 
 int noui, debug;
-
-static QLock renderlock;
 
 void
 sysquit(void)
@@ -90,17 +89,7 @@ emalloc(usize n)
 	return p;
 }
 
-void
-coffeetime(void)
-{
-	qlock(&renderlock);
-}
-
-void
-coffeeover(void)
-{
-	qunlock(&renderlock);
-}
+/* FIXME: em: make sure we don't run into wrappers too much */
 
 void
 sysinit(void)

@@ -16,11 +16,10 @@ OBJS:=\
 	lib/plan9/strecpy.o\
 	linux/awk.o\
 	linux/fs.o\
-	linux/layout.o\
 	linux/sys.o\
+	linux/threads.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
-	cmd/awk.o\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\

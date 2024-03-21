@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <math.h>
 #include <time.h>
-#include <pthread.h>
 
 /* u.h */
 //#define nil		((void*)0)
@@ -31,6 +30,8 @@ typedef uint8_t u8int;
 typedef uint16_t u16int;
 typedef uint32_t u32int;
 typedef uint64_t u64int;
+
+typedef	void*	thret_t;
 
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
@@ -121,22 +122,6 @@ enum{
 	Vdefh = 800,
 };
 
-/* FIXME: threads.h or something; also code in os layout/rend */
-#include "lib/chan.h"
-typedef struct chan_t Channel;
-Channel*	chancreate(int, int);
-void*	recvp(Channel*);
-int	nbsendp(Channel*, void*);
-
-int	proccreate(void (*)(void*), void*, uint);
-typedef pthread_rwlock_t RWLock;
-#define rlock	pthread_rwlock_rdlock
-#define runlock	pthread_rwlock_unlock
-#define wlock	pthread_rwlock_wrlock
-#define wunlock	pthread_rwlock_unlock
-void	threadsetname(char*);
-void	threadexits(char*);
-
 #include "lib/khash.h"
 #include "dat.h"
 #include "fns.h"
@@ -148,9 +133,6 @@ void	sysfatal(char*, ...);
 void	lsleep(vlong);
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);
-
-extern int mainstacksize;
-// FIXME: proc/thread stuff → sys.c? thread.c? emulate thread.h?
 
 #define snprint	snprintf
 #define print	printf

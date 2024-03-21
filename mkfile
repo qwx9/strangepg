@@ -7,7 +7,6 @@ TARG=\
 OFILES=\
 	strpg.$O\
 	cmd/cmd.$O\
-	cmd/awk.$O\
 	draw/color.$O\
 	draw/draw.$O\
 	fs/em.$O\
@@ -26,8 +25,8 @@ OFILES=\
 	plan9/awk.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
-	plan9/layout.$O\
 	plan9/sys.$O\
+	plan9/threads.$O\
 	plan9/ui.$O\
 	ui/ui.$O\
 	util/print.$O\
@@ -38,6 +37,7 @@ OCOARSEN=\
 	fs/fs.$O\
 	plan9/fs.$O\
 	plan9/sys.$O\
+	plan9/threads.$O\
 	util/print.$O\
 
 HFILES=\
@@ -50,6 +50,7 @@ HFILES=\
 	layout/layout.h\
 	lib/khash.h\
 	plan9/strpg.h\
+	plan9/threads.h\
 	util/dynar.h\
 
 </sys/src/cmd/mkmany

@@ -2,6 +2,7 @@
 #include "em.h"
 #include "cmd.h"
 #include "drw.h"
+#include "threads.h"
 
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
@@ -275,7 +276,6 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	n = touchnode(g, id, pid, idx, w);
 	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
 		m = g->nodes + i;
-		// FIXME: correct?
 		if(m->id > n->id)	/* ids in reverse order */
 			break;
 	}
@@ -450,9 +450,9 @@ nukegraph(Graph *g)
 {
 	if(g->type <= FFdead)
 		return;
+	killthread(g->layout.t);
 	cleargraph(g);
 	freefs(g->f);	// FIXME: probably not necessary to have in the first place
-	free(g->layout.aux);
 	memset(g, 0, sizeof *g);
 }
 
@@ -465,7 +465,6 @@ pushgraph(Graph g)
 	newlayout(graphs + dylen(graphs) - 1, -1);
 }
 
-// FIXME: need a layer for the threading shit, either sys.c or thread.c
 void
 lockgraphs(int w)
 {
@@ -490,7 +489,6 @@ initgraph(int type)
 	Graph g = {0};
 
 	g.type = type;
-	g.layout.tid = -1;
 	g.node0.next = g.node0.prev = -1;
 	g.edge0.next = g.edge0.prev = -1;
 	g.nmap = kh_init(idmap);

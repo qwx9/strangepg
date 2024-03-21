@@ -10,6 +10,7 @@ typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Color Color;
+typedef struct Thread Thread;
 
 #pragma incomplete File
 #pragma incomplete Coarse
@@ -41,10 +42,9 @@ enum{
 };
 
 struct Layouting{
-	int tid;
 	int armed;
-	void *aux;
 	Layout *ll;
+	Thread *t;
 };
 
 struct Node{
@@ -118,8 +118,6 @@ struct Obj{
 extern Obj selected;	// FIXME: only one
 extern Obj aintnothingthere;
 
-#define Bupkis 0xdeadbeefcafebabeULL	/* NA */
-
 enum{
 	FFdead,	/* deallocated */
 	FFgfa,
@@ -169,9 +167,14 @@ enum{
 	KBescape,
 };
 
+struct Thread{
+	int pid;
+	void *arg;
+	void *aux;
+};
+
 extern int debug;
 extern int noui;
 extern int norefresh;
 
 extern int mainstacksize;	// FIXME
-

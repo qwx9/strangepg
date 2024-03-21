@@ -65,10 +65,15 @@ void	initfs(void);
 void	freefs(File*);
 int	loadfs(char*, int);
 
-void	coffeetime(void);
-void	coffeeover(void);
 void	sysinit(void);
 void	sysquit(void);
+
+Thread*	newthread(thret_t (*)(void*), void*, uint);
+void	initthread(Thread*, char*);
+void	killthread(Thread*);
+void	exitthread(Thread*, char*);
+void	stopdrawclock(void);
+void	startdrawclock(void);
 
 int	initsysdraw(void);
 void	drawui(void);
