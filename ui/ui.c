@@ -1,8 +1,10 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "threads.h"
 
 Obj selected;
 
+static char *prompt;
 static Vertex panmax;
 
 int
@@ -44,15 +46,12 @@ zoomview(Vector v)
 	return 0;
 }
 
-void
+static void
 keyprompt(Rune r)
 {
-	char *s;
-
-	if((s = enterprompt(r)) == nil)
+	if((prompt = enterprompt(r, prompt)) == nil)
 		return;
-	pushcmd("%s", s);
-	free(s);
+	pushcmd("%s", prompt);
 }
 
 int
@@ -66,7 +65,8 @@ keyevent(Rune r)
 	case KBdown: if(panview(Vec2(0,-16)) >= 0) reqdraw(Reqredraw); break;
 	case KBright: if(panview(Vec2(-16,0)) >= 0) reqdraw(Reqredraw); break;
 	case KBleft: if(panview(Vec2(+16,0)) >= 0) reqdraw(Reqredraw); break;
-	case KBescape: reqdraw(Reqresetui); break;
+	case KBescape: free(prompt); prompt = nil; reqdraw(Reqresetui); break;
+	case '\n': keyprompt(0);  reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
@@ -89,7 +89,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		// FIXME: drag → move (in draw fsm)
 		o = selected;
 		// FIXME: everything should stop while this does its thing
-		coffeetime();
+		rlock(&drawlock);
 		selected = mouseselect(v);
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
@@ -101,7 +101,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 			}
 		}
 		reqdraw(Reqshallowdraw);
-		coffeeover();
+		runlock(&drawlock);
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
 	}else if((b & 7) == Mrmb){

@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "threads.h"
 #include <draw.h>
 #include <mouse.h>
 #include <keyboard.h>
@@ -23,13 +24,25 @@ k2e(Rune r)
 }
 
 char *
-enterprompt(Rune r)
+enterprompt(Rune r, char *old)
 {
 	int n;
-	char buf[256] = {0};
+	char buf[512], *p;
 
-	runetochar(buf, &r);
-	if((n = enter("Cmd: ", buf, sizeof(buf)-UTFmax, mc, kc, nil)) < 0){
+	if(old != nil){
+		p = strecpy(buf, buf+sizeof buf, old);
+		free(old);
+	}else
+		p = buf;
+	n = p - buf;
+	if(r != 0 && sizeof buf - n > runelen(r) + 1){
+		p += runetochar(p, &r);
+		*p = 0;
+	}
+	lockdisplay(display);
+	n = enter("cmd:", buf, sizeof buf - UTFmax, mc, kc, _screen);
+	unlockdisplay(display);
+	if(n < 0){
 		warn("enterprompt: %r\n");
 		return nil;
 	}else if(n > 0)
