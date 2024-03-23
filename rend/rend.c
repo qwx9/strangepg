@@ -150,7 +150,7 @@ rerender(int force)
 	r = 0;
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->type == FFdead)
+		if(g->type == FFdead || (g->layout.f & LFarmed) == 0)
 			continue;
 		if((g->layout.f & LFonline) != 0 || force){
 			renderlayout(g);
