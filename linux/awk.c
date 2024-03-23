@@ -9,12 +9,10 @@ static int ttid, epfd[2], fucker[2];	/* children's pipes, mandrake */
 static void
 cproc(void *)
 {
-	close(epfd[0]);
-	close(fucker[1]);
+	close(epfd[1]);
+	close(fucker[0]);
 	dup(epfd[0], STDIN_FILENO);
 	dup(fucker[1], STDOUT_FILENO);
-	close(epfd[0]);
-	close(fucker[1]);
 	//execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", "-f", "-", NULL);
 	execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", nil);
 }
@@ -25,12 +23,17 @@ sendcmd(char *cmd)
 {
 	int n;
 
+return;
 	n = strlen(cmd);
 	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
 	if(epfd[1] < 0)
 		warn("sendcmd: closed pipe\n");
-	else if(write(epfd[1], cmd, n) != n)
-		sysfatal("sendcmd: %s", error());
+	else if(write(epfd[1], cmd, n) != n){
+		warn("sendcmd: %s", error());
+		epfd[1] = -1;
+		close(fucker[0]);
+		fucker[0] = -1;
+	}
 }
 
 static thret_t
@@ -79,12 +82,11 @@ initrepl(void)
 	case -1: return -1;
 	case 0: cproc(nil); sysfatal("execl: %s", error());
 	default:
-		close(epfd[1]);
-		close(fucker[0]);
-		dup(epfd[1], STDIN_FILENO);
-		dup(fucker[0], STDOUT_FILENO);
-		close(epfd[1]);
-		close(fucker[0]);
+		close(epfd[0]);
+		close(fucker[1]);
+		if(dup(epfd[1], STDOUT_FILENO) < 0
+		|| dup(fucker[0], STDIN_FILENO) < 0)
+			sysfatal("dup: %s", error());
 		break;
 	}
 	return 0;
