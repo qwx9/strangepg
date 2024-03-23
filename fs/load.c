@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "threads.h"
 #include "fs.h"
 
 static Filefmt *fftab[FFnil];
@@ -29,10 +30,7 @@ loadfs(char *path, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	if(newthread(ff->load, path, mainstacksize) == nil){
-		werrstr("newthread: failed to create thread");
-		return -1;
-	}
+	newthread(ff->load, estrdup(path), mainstacksize);
 	return 0;
 }
 

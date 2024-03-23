@@ -7,6 +7,8 @@ Channel *cmdc;
 
 static int epfd[2] = {-1, -1};
 
+/* FIXME: portable(ish) version? */
+
 static void
 cproc(void *)
 {

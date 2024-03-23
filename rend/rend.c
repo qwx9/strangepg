@@ -1,5 +1,5 @@
 #include "strpg.h"
-#include "draw.h"
+#include "threads.h"
 
 static double
 faceyourfears(Graph *g, Node *u, ssize *ep, double *res, int rev)
@@ -149,11 +149,14 @@ rerender(int force)
 
 	r = 0;
 	lockgraphs(0);
-	for(g=graphs; g<graphs+dylen(graphs); g++)
-		if(g->type != FFdead && force){
+	for(g=graphs; g<graphs+dylen(graphs); g++){
+		if(g->type == FFdead)
+			continue;
+		if((g->layout.f & LFonline) != 0 || force){
 			renderlayout(g);
 			r = 1;
 		}
+	}
 	unlockgraphs(0);
 	return r;
 }

@@ -10,7 +10,6 @@ typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Color Color;
-typedef struct Thread Thread;
 
 #pragma incomplete File
 #pragma incomplete Coarse
@@ -41,10 +40,14 @@ enum{
 	Ptsz = 2,
 };
 
+enum{
+	LFarmed = 1<<0,
+	LFonline = 1<<1,
+};
 struct Layouting{
-	int armed;
+	int f;
 	Layout *ll;
-	Thread *t;
+	void *thread;
 };
 
 struct Node{
@@ -126,11 +129,12 @@ enum{
 };
 
 enum{
-	Reqresetdraw,
-	Reqredraw,
-	Reqshallowdraw,
-	Reqresetui,
-	Reqrefresh,
+	Reqresetdraw = 1<<0,
+	Reqredraw = 1<<1,
+	Reqshallowdraw = 1<<2,
+	Reqresetui = 1<<3,
+	Reqrefresh = 1<<4,
+	Reqrender = 1<<5,
 };
 
 struct View{
@@ -165,12 +169,6 @@ enum{
 	KBup,
 	KBdown,
 	KBescape,
-};
-
-struct Thread{
-	int pid;
-	void *arg;
-	void *aux;
 };
 
 extern int debug;

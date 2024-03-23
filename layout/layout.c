@@ -1,9 +1,50 @@
 #include "strpg.h"
 #include "layout.h"
+#include "threads.h"
 
 int deflayout = LLforce;
 
 static Layout *lltab[LLnil];
+
+static thret_t
+layproc(void *th)
+{
+	Graph *g;
+	Layout *ll;
+
+	namethread(th, "layproc");
+	g = ((Thread *)th)->arg;
+	ll = g->layout.ll;
+	DPRINT(Debuglayout, "new job layout %s g %#p", ll->name, g);
+	ll->compute(g);
+	g->layout.f &= ~LFonline;
+	reqdraw(Reqrender);
+	exitthread(th, nil);
+}
+
+void
+stoplayout(Graph *g)
+{
+	if((g->layout.f & LFonline) == 0)
+		return;
+	g->layout.f &= ~LFonline;
+	killthread(g->layout.thread);
+	g->layout.thread = nil;
+}
+
+void
+runlayout(Graph *g)
+{
+	if((g->layout.f & LFarmed) == 0){
+		warn("runlayout: %#p layout unarmed\n", g);
+		return;
+	}
+	stoplayout(g);
+	g->layout.f |= LFonline;
+	g->layout.thread = newthread(layproc, g, mainstacksize);
+	if(!noui)
+		startdrawclock();
+}
 
 // FIXME: kill it
 void
@@ -18,10 +59,6 @@ int
 updatelayout(Graph *g)
 {
 	stoplayout(g);
-	if(g->layout.tid >= 0){
-		werrstr("updatelayout: already running");
-		return -1;
-	}
 	// FIXME: actually implement update
 	runlayout(g);
 	return 0;
@@ -32,7 +69,6 @@ resetlayout(Graph *g)
 {
 	stoplayout(g);
 	g->layout.ll->init(g);
-	g->layout.armed = 1;
 	runlayout(g);
 	return 0;
 }
@@ -61,7 +97,7 @@ newlayout(Graph *g, int type)
 		return -1;
 	}
 	ll->init(g);
-	g->layout.armed = 1;
+	g->layout.f |= LFarmed;
 	runlayout(g);
 	return 0;
 }

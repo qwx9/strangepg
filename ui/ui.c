@@ -89,7 +89,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		// FIXME: drag → move (in draw fsm)
 		o = selected;
 		// FIXME: everything should stop while this does its thing
-		rlock(&drawlock);
+		//rlock(&drawlock);
 		selected = mouseselect(v);
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
@@ -101,7 +101,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 			}
 		}
 		reqdraw(Reqshallowdraw);
-		runlock(&drawlock);
+		//runlock(&drawlock);
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
 	}else if((b & 7) == Mrmb){

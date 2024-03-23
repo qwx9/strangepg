@@ -68,20 +68,15 @@ int	loadfs(char*, int);
 void	sysinit(void);
 void	sysquit(void);
 
-Thread*	newthread(thret_t (*)(void*), void*, uint);
-void	initthread(Thread*, char*);
-void	killthread(Thread*);
-void	exitthread(Thread*, char*);
-void	stopdrawclock(void);
-void	startdrawclock(void);
-
-int	initsysdraw(void);
+void	initsysdraw(void);
 void	drawui(void);
 void	redraw(void);
 void	flushdraw(void);
 void	reqdraw(int);
 int	scrobj(Vertex);
 void	showobj(Obj*);
+void	stopdrawclock(void);
+void	startdrawclock(void);
 
 void	initrend(void);
 int	renderlayout(Graph*);

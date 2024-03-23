@@ -14,7 +14,7 @@ struct File{
 
 struct Filefmt{
 	char *name;
-	void	(*load)(void *);
+	thret_t	(*load)(void *);
 	int (*save)(Graph*);
 	void (*nuke)(Graph*);
 };

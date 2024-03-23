@@ -1,23 +1,23 @@
 #include "strpg.h"
 #include "threads.h"
 
-RWLock renderlock, drawlock;
-
+/* fuck you pthreads */
 Thread *
 newthread(thret_t (*fp)(void*), void *arg, uint stacksize)
 {
+	int tid;
 	Thread *t;
 
 	t = emalloc(sizeof *t);
 	t->arg = arg;
-	// FIXME: don't always use mainstacksize in calls
-	if((t->pid = proccreate(fp, t, stacksize)) < 0)
+	if((tid = proccreate(fp, t, stacksize)) < 0)
 		sysfatal("newthread: %r");
+	t->tid = tid;
 	return t;
 }
 
 void
-initthread(Thread *, char *s)
+namethread(Thread *, char *s)
 {
 	threadsetname(s);
 }
@@ -27,18 +27,7 @@ killthread(Thread *t)
 {
 	if(t == nil)
 		return;
-	threadkill(t->pid);
-	//waitpid(t->aux, NULL, 0);
-	free(t->aux);
+	threadkill(t->tid);
+	waitpid();
 	free(t);
-}
-
-void
-exitthread(Thread *t, char *err)
-{
-	if(err)
-		warn("thread %d: %s\n", t->pid, err);
-	free(t->aux);
-	free(t);
-	threadexits(err);
 }

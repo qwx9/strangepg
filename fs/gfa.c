@@ -70,23 +70,23 @@ gfa1path(Graph *, File *, char *)
 
 // FIXME: actually handle bad input
 static thret_t
-loadgfa1(void *tp)
+loadgfa1(void *th)
 {
 	int n, (*parse)(Graph*, File*, char*);
-	char *s, *p;
+	char *s, *p, *path;
 	ssize nnodes, nedges;
 	Graph g;
 	File *f;
-	Thread *t;
 
-	t = tp;
-	initthread(t, "gfaproc");
+	namethread(th, "gfaproc");
+	path = ((Thread *)th)->arg;
 	nnodes = nedges = 0;
-	DPRINT(Debugfs, "loadgfa1 %s", (char *)t->arg);
+	DPRINT(Debugfs, "loadgfa1 %s", path);
 	g = initgraph(FFgfa);
 	memset(&f, 0, sizeof f);
-	if((f = graphopenfs(&g, t->arg, OREAD)) == nil)
+	if((f = graphopenfs(&g, path, OREAD)) == nil)
 		sysfatal("%s", error());
+	free(path);
 	while((s = readline(f, &n)) != nil){
 		p = nextfield(f, s, nil);
 		switch(s[0]){
@@ -113,7 +113,7 @@ loadgfa1(void *tp)
 	pushgraph(g);
 	collectgfameta(&g);
 	closefs(f);
-	exitthread(t, nil);
+	exitthread(th, nil);
 }
 
 static int

@@ -4,6 +4,7 @@
 
 View view;
 int showarrows, drawstep;
+int norefresh;
 
 Obj aintnothingthere = {nil, Onil, -1};
 static Obj *visobj;
@@ -70,9 +71,11 @@ drawnode(Graph *g, Node *n)
 
 	//DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
 	i = mapvis(g, Onode, n - g->nodes);
-	if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0
-	|| drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0
-	|| drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
+	if(!haxx0rz || !showarrows){
+		if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0)
+			return -1;
+	}
+	if(drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
 }
@@ -156,11 +159,9 @@ void
 redraw(void)
 {
 	DPRINT(Debugdraw, "redraw");
-	rlock(&renderlock);
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
-	runlock(&renderlock);
 	flushdraw();
 }
 

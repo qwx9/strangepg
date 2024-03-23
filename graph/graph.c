@@ -450,7 +450,7 @@ nukegraph(Graph *g)
 {
 	if(g->type <= FFdead)
 		return;
-	killthread(g->layout.t);
+	stoplayout(g);
 	cleargraph(g);
 	freefs(g->f);	// FIXME: probably not necessary to have in the first place
 	memset(g, 0, sizeof *g);

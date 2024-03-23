@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
+#include "threads.h"
 #include "em.h"
 #include "index.h"
 
@@ -112,23 +113,24 @@ readtree(Graph *g, char *path)
 	return 0;
 }
 
-static void
-load(void *tp)
+static thret_t
+load(void *th)
 {
+	char *path;
 	Graph g;
-	Thread *t;
 
-	t = tp;
-	initthread(t, "indexproc");
+	path = ((Thread *)th)->arg;
+	namethread(th, "indexproc");
 	g = initgraph(FFindex);
-	if(readtree(&g, t->arg) < 0)
-		sysfatal("load: failed to read tree %s: %s", (char *)t->arg, error());
+	if(readtree(&g, path) < 0)
+		sysfatal("load: failed to read tree %s: %s", path, error());
+	free(path);
 	// FIXME: don't rely on this number, there isn't always just one anyway
 	// instead look at the top level and make parents
 	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
 	expandnode(&g, g.nodes);
 	pushgraph(g);
-	exitthread(t, nil);
+	exitthread(th, nil);
 }
 
 static int

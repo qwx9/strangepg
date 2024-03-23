@@ -2,10 +2,10 @@
 #include <libc.h>
 #include <geometry.h>
 
-typedef intptr ssize;
+typedef intptr	ssize;
 typedef	void	thret_t;
 
-#define const
+#define	const
 #include "lib/khash.h"
 #include "dat.h"
 #include "fns.h"

@@ -1,5 +1,16 @@
 #include <thread.h>
 
 typedef	void	thret_t;
+typedef	struct Thread Thread;
+struct Thread{
+	int tid;
+	void *arg;
+};
 
-extern RWLock renderlock, drawlock;
+Thread*	newthread(thret_t (*)(void*), void*, uint);
+void	namethread(Thread*, char*);
+void	killthread(Thread*);
+
+#define	exitthread(t, s)	do{ \
+	threadexits((s)); \
+}while(0)

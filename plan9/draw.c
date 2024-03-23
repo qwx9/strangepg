@@ -3,9 +3,6 @@
 #include "threads.h"
 #include <draw.h>
 
-RWLock drawlock;
-int norefresh;
-
 struct Color{
 	u32int col;
 	Image *i;
@@ -15,8 +12,8 @@ struct Color{
 static Point panmax;
 static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
-static Channel *drawc, *ticc;
-static int ttid = -1;
+static Channel *drawc;
+static Thread *ticker;
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -26,13 +23,6 @@ eallocimage(Rectangle r, uint chan, int repl, uint col)
 	if((i = allocimage(display, r, chan, repl, col)) == nil)
 		sysfatal("allocimage: %r");
 	return i;
-}
-
-// FIXME
-u32int
-p2col(Color *c, int alpha)
-{
-	return setalpha(c->col << 8 | 0xff, alpha);
 }
 
 void
@@ -176,8 +166,6 @@ drawquad(Quad q1, Quad q2, Quad, double, int idx, Color *c)
 {
 	Rectangle r1, r2;
 
-	if(haxx0rz && showarrows)
-		return 0;
 	q1 = centerscalequad(q1);
 	q2 = centerscalequad(q2);
 	r1 = Rpt(v2p(q1.o), v2p(q2.v));
@@ -222,6 +210,7 @@ drawbezier(Quad q, double w, int idx, Color *c)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, c->i, ZP);
+	// FIXME: haxx0rz check doesn't belong here?
 	if(!haxx0rz && view.zoom > 1.){
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 			showarrows ? Endarrow : Endsquare, w+1, c->shad, ZP);
@@ -329,105 +318,83 @@ cleardraw(void)
 }
 
 static void
-drawproc(void *)
+drawproc(void *th)
 {
-	int req;
-	Graph *g;
+	ulong req;
 
-	threadsetname("drawproc");
-	enum{
-		Aredraw,
-		Arefresh,
-		Aend,
-	};
-	Alt a[] = {
-		[Aredraw] {drawc, &req, CHANRCV},
-		[Arefresh] {ticc, &g, CHANRCV},
-		[Aend] {nil, nil, CHANEND},
-	};
+	namethread(th, "drawproc");
 	resetdraw();
 	for(;;){
-		switch(alt(a)){
-		case Aredraw:
-			lockdisplay(display);
-			switch(req){
-			case Reqresetdraw: resetdraw(); /* wet floor */
-			case Reqresetui: resetui(1);	/* wet floor */
-			case Reqredraw: redraw(); flushdraw(); break;
-			case Reqshallowdraw: flushdraw(); break;
-			case Reqrefresh: if(norefresh) break; rerender(1); redraw(); flushdraw(); break;
-			default: sysfatal("drawproc: unknown redraw cmd %d\n", req);
-			}
-			unlockdisplay(display);
+		if((req = recvul(drawc)) == 0)
 			break;
-		case Arefresh:
+		if((req & Reqresetdraw) != 0){
 			lockdisplay(display);
-			renderlayout(g);
-			redraw();
-			flushdraw();
+			resetdraw();
 			unlockdisplay(display);
-			break;
 		}
+		if((req & Reqresetui) != 0)
+			resetui(1);
+		if((req & Reqrefresh) != 0 && !norefresh || (req & Reqrender) != 0){
+			if(!rerender(req & Reqrender))
+				stopdrawclock();
+		}
+		lockdisplay(display);
+		if(req != Reqshallowdraw)
+			redraw();
+		flushdraw();
+		unlockdisplay(display);
 	}
+	exitthread(th, error());
 }
 
+/* throttling of draw requests happens here */
 void
 reqdraw(int r)
 {
-	nbsend(drawc, &r);
+	static ulong f;
+
+	f |= r;
+	if(nbsendul(drawc, f) != 0)
+		f = 0;
 }
 
 /* FIXME: portable code */
 static void
-ticproc(void *)
+ticproc(void *th)
 {
-	int n;
-	vlong t, t0, Δt, step;
-	Graph *g;
+	double t0, step;
+	vlong t, Δt;
 
-	threadsetname("ticproc");
+	namethread(th, "ticproc");
 	t0 = nsec();
-	step = drawstep ? Nsec/140 : Nsec/60;
+	step = drawstep ? Nsec/140. : Nsec/60.;
 	for(;;){
-		lockgraphs(0);
-		for(g=graphs, n=0; g<graphs+dylen(graphs); g++){
-			if(g->type == FFdead)
-				continue;
-			n++;
-			unlockgraphs(0);
-			sendp(ticc, g);
-			lockgraphs(0);
-		}
-		unlockgraphs(0);
-		if(n == 0)
-			break;
 		t = nsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);
 		if(Δt < step)
-			sleep((step - Δt) / 1000000);
+			sleep((step - Δt) / Nmsec);
+		reqdraw(Reqrefresh);
 	}
-	ttid = -1;
-	threadexits(nil);
 }
 
 void
 stopdrawclock(void)
 {
-	threadkill(ttid);
-	ttid = -1;
+	killthread(ticker);
+	ticker = nil;
 }
 
 void
 startdrawclock(void)
 {
-	if(ttid >= 0)
+	if(ticker != nil)
 		return;
-	if((ttid = proccreate(ticproc, nil, mainstacksize)) < 0)
-		sysfatal("proccreate ticproc: %r");
+	ticker = newthread(ticproc, nil, mainstacksize);
 }
 
-int
+// FIXME: portable code
+void
 initsysdraw(void)
 {
 	if(initdraw(nil, nil, "strpg") < 0)
@@ -436,10 +403,7 @@ initsysdraw(void)
 	unlockdisplay(display);
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	if((drawc = chancreate(sizeof(int), 1)) == nil
-	|| (ticc = chancreate(sizeof(Graph*), 0)) == nil)
+	if((drawc = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");
-	if(proccreate(drawproc, nil, mainstacksize) < 0)
-		sysfatal("proccreate drawproc: %r");
-	return 0;
+	newthread(drawproc, nil, mainstacksize);
 }
