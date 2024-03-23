@@ -239,7 +239,7 @@ drawline(Quad q, double w, int emph, int idx, Color *c)
 	return 0;
 }
 
-void
+static void
 flushdraw(void)
 {
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
