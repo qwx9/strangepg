@@ -154,7 +154,6 @@ drawui(void)
 	showobj(&selected);
 }
 
-// FIXME: threading?
 void
 redraw(void)
 {
@@ -162,10 +161,8 @@ redraw(void)
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
-	flushdraw();
 }
 
-// FIXME: linux version
 void
 initdrw(void)
 {
