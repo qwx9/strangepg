@@ -61,9 +61,9 @@ sysfatal(char *fmt, ...)
 {
 	va_list arg;
 
-	perror("fatal");
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
+	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
 }
 
