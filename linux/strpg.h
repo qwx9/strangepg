@@ -133,6 +133,7 @@ void	sysfatal(char*, ...);
 void	lsleep(vlong);
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);
+int	dupfd(int, int);
 
 #define snprint	snprintf
 #define print	printf

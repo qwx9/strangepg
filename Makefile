@@ -20,6 +20,7 @@ OBJS:=\
 	linux/threads.o\
 	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
+	sokol/ui.o\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
@@ -28,6 +29,7 @@ OBJS:=\
 	fs/gfa.o\
 	fs/index.o\
 	fs/load.o\
+	fs/meta.o\
 	graph/graph.o\
 	graph/vertex.o\
 	layout/conga.o\
@@ -49,6 +51,7 @@ COARSENOBJS:=\
 	lib/queue.o\
 	linux/fs.o\
 	linux/sys.o\
+	linux/threads.o\
 	util/print.o\
 
 ALLOBJS:=\
@@ -120,7 +123,10 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-all:	$(ALLTARGETS)
+all:	$(ALLTARGETS) /tmp/main.awk
+
+/tmp/main.awk: cmd/main.awk
+	cp -x $^ $@
 
 $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)

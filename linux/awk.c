@@ -1,9 +1,25 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "threads.h"
 
-chan_t *cmdc;
-int stupidfd[2];	/* children's pipes, mandrake */
+Channel *cmdc;
 
+static int ttid, epfd[2], fucker[2];	/* children's pipes, mandrake */
+
+static void
+cproc(void *)
+{
+	close(epfd[0]);
+	close(fucker[1]);
+	dup(epfd[0], STDIN_FILENO);
+	dup(fucker[1], STDOUT_FILENO);
+	close(epfd[0]);
+	close(fucker[1]);
+	//execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", "-f", "-", NULL);
+	execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", nil);
+}
+
+// FIXME: portable code
 void
 sendcmd(char *cmd)
 {
@@ -17,13 +33,14 @@ sendcmd(char *cmd)
 		sysfatal("sendcmd: %s", error());
 }
 
-static void *
-readcproc(void *)
+static thret_t
+readcproc(void *th)
 {
 	int n, fd;
 	char buf[8192], *p, *s;
 
-	fd = stupidfd[0];
+	namethread(th, "cmdproc");
+	fd = fucker[0];
 	for(;;){
 		if((n = read(fd, buf, sizeof buf)) <= 0)
 			break;
@@ -36,45 +53,39 @@ readcproc(void *)
 				break;
 			/* reader must free */
 			*p = 0;
-			chan_send_buf(cmdc, estrdup(s), strlen(s));
+			sendp(cmdc, estrdup(s));
 		}
 		if(s < buf + n)
-			chan_send_buf(cmdc, estrdup(s), strlen(s));
+			sendp(cmdc, estrdup(s));
 	}
 	close(fd);
 	if(n < 0)
 		warn("readcproc: %s", error());
-	return NULL;
+	exitthread(th, nil);
 }
 
 int
-startengine(void)
+initrepl(void)
 {
 	int r;
-	static pthread_t th;	// FIXME
 
-	if(pipe(stupidfd) < 0)
-		sysfatal("pipe: %s", error());
-	if((cmdc = chan_init(16*sizeof(void*))) == nil)
-		sysfatal("startengine: cmdcreate");
+	if(pipe(epfd) < 0 || pipe(fucker) < 0)
+		return -1;
+	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
+		return -1;
+	newthread(readcproc, nil, mainstacksize);
 	r = fork();
 	switch(r){
-	case -1: sysfatal("fork: %s", error());
-	case 0:
-		close(epfd[1]);
-		close(stupidfd[0]);
-		dup2(epfd[0], STDIN_FILENO);
-		dup2(stupidfd[1], STDOUT_FILENO);
-		close(epfd[0]);
-		close(stupidfd[1]);
-		execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", "-f", "-", NULL);
-		sysfatal("execl: %s", error());
+	case -1: return -1;
+	case 0: cproc(nil); sysfatal("execl: %s", error());
 	default:
-		close(epfd[0]);
-		close(stupidfd[1]);
+		close(epfd[1]);
+		close(fucker[0]);
+		dup(epfd[1], STDIN_FILENO);
+		dup(fucker[0], STDOUT_FILENO);
+		close(epfd[1]);
+		close(fucker[0]);
 		break;
 	}
-	if((r = pthread_create(&th, NULL, readcproc, NULL)) != 0)
-		sysfatal("startengine: pthread_create failed with err=%d", r);
 	return 0;
 }

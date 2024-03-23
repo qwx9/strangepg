@@ -105,6 +105,7 @@ sysmktmp(void)
 	char s[64];
 
 	snprintf(s, sizeof s, ".strpg.%d.%06x", getpid(), rand());
+	//snprintf(s, sizeof s, ".strpg.%d.XXXXXX", getpid());
 	return estrdup(s);
 }
 
@@ -128,6 +129,42 @@ sysread(File *f, void *buf, int n)
 		return -1;
 	else
 		return m;
+}
+
+/* this sucks in plan9 and in sucks in posix and linux: we can't use
+ * getline(2) because it reads the entire line and reallocs the read
+ * buffer, which defeats our purpose;  we have to use fgets(2)
+ * instead, which doesn't handle NULs in input and doesn't give read
+ * length information */
+char *
+readfrag(File *f, int *len)
+{
+	int n, m;
+	char *s;
+
+	assert(f != nil && f->path != nil && f->aux != nil);
+	if(len != nil)
+		*len = 0;
+	if(f->trunc)
+		f->trunc = 0;
+	s = (char *)f->buf;
+	if(fgets(s, sizeof f->buf, f->aux) == NULL)
+		return nil;
+	n = strlen(s);
+	/* handle NULs in input */
+	while(n < sizeof f->buf - 1 && (n < 1 || s[n-1] != '\n')){
+		s[n] = '\x15';	/* nak */
+		m = strlen(s + n);
+		assert(m > 0);
+		n += m;
+	}
+	if(s[n-1] == '\n')
+		s[--n] = 0;
+	else
+		f->trunc = 1;
+	if(len != nil)
+		*len = n;
+	return s;
 }
 
 /* FIXME: deprecated

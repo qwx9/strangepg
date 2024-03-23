@@ -1,12 +1,10 @@
 #include "strpg.h"
 #include <errno.h>
 #include <time.h>
-#include <linux/futex.h>
-#include <stdatomic.h>
 #include <stdint.h>
-#include <sys/mman.h>
-#include <sys/syscall.h>
 #include <sys/time.h>
+
+#undef dup
 
 int noui, debug;
 
@@ -17,7 +15,7 @@ static char errbuf[1024];
 void
 sysquit(void)
 {
-	pthread_exit(NULL);
+	exit(0);
 }
 
 int
@@ -116,7 +114,7 @@ create(char *path, int mode, int perm)
 int
 dupfd(int oldfd, int newfd)
 {
-	return newfd < 0 ? dup(oldfd) : dup2(olfd, newfd);
+	return newfd < 0 ? dup(oldfd) : dup2(oldfd, newfd);
 }
 
 char *
@@ -158,5 +156,4 @@ emalloc(usize n)
 void
 sysinit(void)
 {
-	initthread();
 }
