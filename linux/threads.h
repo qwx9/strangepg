@@ -7,6 +7,8 @@ typedef struct chan_t Channel;
 Channel*	chancreate(int, int);
 void*	recvp(Channel*);
 int	nbsendp(Channel*, void*);
+int	nbsendul(Channel*, ulong);
+ulong	nbrecvul(Channel*);
 #define	sendul	chan_send_int32
 #define	sendp	chan_send
 

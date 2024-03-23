@@ -75,9 +75,25 @@ recvp(Channel *c)
 int
 nbsendp(Channel *c, void *p)
 {
-	int r;
-
 	if(chan_select(nil, 0, nil, &c, 1, &p) < 0)
 		return 0;
 	return 1;
+}
+
+int
+nbsendul(Channel *c, ulong n)
+{
+	if(chan_select(nil, 0, nil, &c, 1, (void**)&n) < 0)
+		return 0;
+	return 1;
+}
+
+ulong
+nbrecvul(Channel *c)
+{
+	ulong n;
+
+	if(chan_select(&c, 1, (void **)&n, nil, 0, nil) < 0)
+		return 0;
+	return n;
 }
