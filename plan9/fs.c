@@ -110,6 +110,9 @@ readchar(File *f)
 	return c;
 }
 
+/* FIXME: handle NULs in input? */
+/* Brdline sucks but Brdstr will choke us when lines are very long;
+ * so instead of removing bio, we break Brdline. */
 char *
 readfrag(File *f, int *len)
 {
@@ -140,17 +143,4 @@ readfrag(File *f, int *len)
 	if(len != nil)
 		*len = l;
 	return s;
-}
-
-/* Brdline sucks but Brdstr will choke us when lines are very long;
- * so instead of removing bio, we break Brdline. */
-char *
-readline(File *f, int *len)
-{
-	/* previous line unterminated, longer than size of buffer */
-	while(f->trunc)
-		readfrag(f, nil);
-	f->foff = sysftell(f);
-	f->nr++;
-	return readfrag(f, len);
 }

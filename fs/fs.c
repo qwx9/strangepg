@@ -171,6 +171,17 @@ nextfield(File *f, char *s, int *len)
 	return t;
 }
 
+char *
+readline(File *f, int *len)
+{
+	/* previous line unterminated, longer than size of buffer */
+	while(f->trunc)
+		readfrag(f, nil);
+	f->foff = sysftell(f);
+	f->nr++;
+	return readfrag(f, len);
+}
+
 int
 opentmpfs(File *f)
 {
