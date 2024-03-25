@@ -40,9 +40,9 @@ vadebug(char *type, char *fmt, va_list arg)
 }
 
 vlong
-msec(void)
+μsec(void)
 {
-	return nsec() / Nmsec;
+	return nsec() / 1000;
 }
 
 char *

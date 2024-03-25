@@ -7,6 +7,7 @@ char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
 #define panic(x) {warn((x)); abort();}
+vlong	μsec(void);
 
 Quad	Qd(Vertex, Vector);
 double	qΔx(Quad);
@@ -71,7 +72,6 @@ void	sysquit(void);
 void	initsysdraw(void);
 void	drawui(void);
 void	redraw(void);
-void	flushdraw(void);
 void	reqdraw(int);
 int	scrobj(Vertex);
 void	showobj(Obj*);
