@@ -7,7 +7,7 @@ Channel *cmdc;
 static int ttid, epfd[2], fucker[2];	/* children's pipes, mandrake */
 
 static void
-cproc(void *)
+cproc(void)
 {
 	close(epfd[1]);
 	close(fucker[0]);
@@ -30,6 +30,7 @@ return;
 		warn("sendcmd: closed pipe\n");
 	else if(write(epfd[1], cmd, n) != n){
 		warn("sendcmd: %s", error());
+		close(epfd[1]);
 		epfd[1] = -1;
 		close(fucker[0]);
 		fucker[0] = -1;
@@ -76,18 +77,15 @@ initrepl(void)
 		return -1;
 	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
 		return -1;
-	newthread(readcproc, nil, mainstacksize);
 	r = fork();
 	switch(r){
 	case -1: return -1;
-	case 0: cproc(nil); sysfatal("execl: %s", error());
+	case 0: cproc(); sysfatal("execl: %s", error());
 	default:
 		close(epfd[0]);
 		close(fucker[1]);
-		if(dup(epfd[1], STDOUT_FILENO) < 0
-		|| dup(fucker[0], STDIN_FILENO) < 0)
-			sysfatal("dup: %s", error());
 		break;
 	}
+	newthread(readcproc, nil, mainstacksize);
 	return 0;
 }
