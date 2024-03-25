@@ -62,6 +62,8 @@ parseargs(int argc, char **argv)
 			debug |= Debugcoarse;
 		else if(strcmp(s, "extmem") == 0)
 			debug |= Debugextmem;
+		else if(strcmp(s, "perf") == 0)
+			debug |= Debugperf;
 		else if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
 		else{

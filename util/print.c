@@ -24,6 +24,7 @@ dprint(int flags, char *fmt, ...)
 	case Debugfs: type = "fs"; break;
 	case Debugcoarse: type = "coarse"; break;
 	case Debugextmem: type = "extmem"; break;
+	case Debugperf: type = "perf"; break;
 	default: type = "dafuq"; break;
 	}
 	va_start(arg, fmt);

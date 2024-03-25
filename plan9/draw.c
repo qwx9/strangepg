@@ -320,6 +320,7 @@ cleardraw(void)
 static void
 drawproc(void *th)
 {
+	vlong t;
 	ulong req;
 
 	namethread(th, "drawproc");
@@ -341,7 +342,9 @@ drawproc(void *th)
 		lockdisplay(display);
 		if(req != Reqshallowdraw)
 			redraw();
+		t = (debug & Debugperf) != 0 ? μsec() : 0;
 		flushdraw();
+		DPRINT(Debugperf, "flushdraw: %lld μs", μsec() - t);
 		unlockdisplay(display);
 	}
 	exitthread(th, error());

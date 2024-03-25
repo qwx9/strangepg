@@ -41,8 +41,8 @@ enum{
 };
 
 enum{
-	LFarmed = 1<<0,
-	LFonline = 1<<1,
+	LFarmed = 1<<0,		/* initialized */
+	LFonline = 1<<1,	/* working */
 };
 struct Layouting{
 	int f;
@@ -95,10 +95,10 @@ struct Graph{
 	usize nedges;
 	usize nsuper;
 	int nlevels;
-	Node *nodes;
-	Edge *edges;
-	Node node0;
-	Edge edge0;
+	Node *nodes;	/* dynamic array */
+	Edge *edges;	/* dynamic array */
+	Node node0;		/* list */
+	Edge edge0;		/* list */
 	khash_t(idmap) *nmap;
 	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
@@ -129,12 +129,12 @@ enum{
 };
 
 enum{
-	Reqresetdraw = 1<<0,
-	Reqredraw = 1<<1,
-	Reqshallowdraw = 1<<2,
-	Reqresetui = 1<<3,
-	Reqrefresh = 1<<4,
-	Reqrender = 1<<5,
+	Reqresetdraw = 1<<0,	/* reset and redo everything */
+	Reqresetui = 1<<1,		/* reset view position, etc., redraw */
+	Reqrefresh = 1<<2,		/* render and redraw: while layouting */
+	Reqrender = 1<<3,		/* force refresh: layout end */
+	Reqredraw = 1<<4,		/* paint and flush canvas */
+	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 };
 
 struct View{
@@ -161,6 +161,7 @@ enum{
 	Debugcoarse = 1<<4,
 	Debugextmem = 1<<5,
 	Debugcmd = 1<<6,
+	Debugperf = 1<<7,
 	Debugtheworld = 0xffffffff,
 
 	/* unicode arrows, children's compilers, mandrake */

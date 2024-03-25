@@ -145,9 +145,11 @@ int
 rerender(int force)
 {
 	int r;
+	vlong t;
 	Graph *g;
 
 	r = 0;
+	t = (debug & Debugperf) != 0 ? μsec() : 0;
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type == FFdead || (g->layout.f & LFarmed) == 0)
@@ -158,6 +160,7 @@ rerender(int force)
 		}
 	}
 	unlockgraphs(0);
+	DPRINT(Debugperf, "render: %lld μs", μsec() - t);
 	return r;
 }
 

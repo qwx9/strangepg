@@ -157,10 +157,14 @@ drawui(void)
 void
 redraw(void)
 {
+	vlong t;
+
+	t = (debug & Debugperf) != 0 ? μsec() : 0;
 	DPRINT(Debugdraw, "redraw");
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
+	DPRINT(Debugperf, "redraw: %lld μs", μsec() - t);
 }
 
 void

@@ -9,6 +9,7 @@ static Layout *lltab[LLnil];
 static thret_t
 layproc(void *th)
 {
+	vlong t;
 	Graph *g;
 	Layout *ll;
 
@@ -16,7 +17,9 @@ layproc(void *th)
 	g = ((Thread *)th)->arg;
 	ll = g->layout.ll;
 	DPRINT(Debuglayout, "new job layout %s g %#p", ll->name, g);
+	t = (debug & Debugperf) != 0 ? μsec() : 0;
 	ll->compute(g);
+	DPRINT(Debugperf, "layout: %lld μs", μsec() - t);
 	g->layout.f &= ~LFonline;
 	reqdraw(Reqrender);
 	exitthread(th, nil);
