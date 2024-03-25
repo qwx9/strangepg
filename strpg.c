@@ -101,8 +101,8 @@ parseargs(int argc, char **argv)
 static void
 init(void)
 {
+	initcmd();	/* fork repl before starting other threads */
 	initem();
-	initcmd();
 	initfs();
 	initlayout();
 	initrend();
