@@ -2,6 +2,7 @@
 #include <signal.h>
 #include "drw.h"
 #include "threads.h"
+#include "flextgl/flextGL.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #define SOKOL_DEBUG
@@ -12,6 +13,11 @@
 #include "GLFW/glfw3.h"
 
 GLFWwindow *glw;
+
+enum{
+	GLsamples = 4,
+	GLdepth = 1,
+};
 
 struct Color{
 	u32int col;
@@ -29,9 +35,9 @@ newcolor(u32int v)
 
 	c = emalloc(sizeof *c);
 	c->col = v;
-	c->r = (v >> 16) / 255.f;
-	c->g = (v >> 8) / 255.f;
-	c->b = v / 255.f;
+	c->r = (v >> 16 & 0xff) / 255.f;
+	c->g = (v >> 8 & 0xff) / 255.f;
+	c->b = (v & 0xff) / 255.f;
 	return c;
 }
 
@@ -53,12 +59,12 @@ showobj(Obj *)
 }
 
 void
-flushdraw(void)
+startdrawclock(void)
 {
 }
 
 void
-startdrawclock(void)
+stopdrawclock(void)
 {
 }
 
@@ -146,52 +152,79 @@ quitdraw(void)
 void
 evloop(void)
 {
-	int r;
-	sg_pass_action pass_action = {0};
+	int req, w, h;
+	vlong t;
+	sg_pass sgp = {
+		.swapchain = {
+			.sample_count = GLsamples,
+			.color_format = SG_PIXELFORMAT_RGBA8,
+			.depth_format = GLdepth ? SG_PIXELFORMAT_DEPTH_STENCIL : SG_PIXELFORMAT_NONE,
+			.gl = {
+				/* assumption, GL framebuffer always 0 */
+				.framebuffer = 0,
+			},
+		},
+	};
 
-	glfwMakeContextCurrent(glw);
-	glfwSwapInterval(1);
-	while(!glfwWindowShouldClose(glw)){
-		sgp_begin(view.dim.v.x, view.dim.v.y);
-		sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
-		redraw();
-		sgp_set_blend_mode(SGP_BLENDMODE_NONE);
-		sg_begin_default_pass(&pass_action, view.dim.v.x, view.dim.v.y);
-		sgp_flush();
-		sgp_end();
-		sg_end_pass();
-		sg_commit();
-		glfwSwapBuffers(glw);
-		glfwWaitEvents();
-		while(chan_size(drawc) > 0){
-			r = -1;
-			if(chan_recv_int32(drawc, &r) < 0)
-				sysfatal("chan_recv");	// FIXME: errno/errstr
-			switch(r){
-			case Reqresetdraw: /* wet floor */
-			case Reqresetui: resetui(1); /* wet floor */
-			case Reqredraw: /* wet floor */
-			case Reqshallowdraw: break;
-			case Reqrefresh: rerender(1); break;
-			default: warn("reqdraw: unknown req %d", r); return;
+	/* FIXME: theming */
+	/* FIXME: unimplemented functions above */
+	/* FIXME: if we want the plan9 lilu dallas mooltithreading, this needs
+	 *	a different design; on plan9 input and drawing are decoupled,
+	 *	whereas here the same thread processes both; either figure out a
+	 *	way to decouple them again (ticker, multithread glfw, locks) or
+	 *	do it the old fashion way (poll for events, process, sleep); the
+	 *	latter sucks because slow redraw throttles input, and we don't want
+	 *	that */
+	req = 0;
+	while (!glfwWindowShouldClose(glw)) {
+		if((req = nbrecvul(drawc)) != 0){
+			/* Reqresetdraw for resizing: handled by callback */
+			if((req & Reqresetui) != 0)
+				resetui(1);
+			w = view.dim.v.x;
+			h = view.dim.v.y;
+			if((req & Reqrefresh) != 0 && !norefresh || (req & Reqrender) != 0){
+				if(!rerender(req & Reqrender))
+					stopdrawclock();
+			}
+			if(req != Reqshallowdraw){
+				sgp_begin(w, h);
+				sgp_viewport(0, 0, w, h);
+				sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
+				redraw();
+				//sgp_set_blend_mode(SGP_BLENDMODE_NONE);
+				t = (debug & Debugperf) != 0 ? μsec() : 0;
+				sgp.swapchain.width = w;
+				sgp.swapchain.height = h;
+				sg_begin_pass(&sgp);
+				sgp_flush();
+				sgp_end();
+				sg_end_pass();
+				sg_commit();
+				glfwSwapBuffers(glw);
+				DPRINT(Debugperf, "flushdraw: %lld μs", μsec() - t);
 			}
 		}
-		if(drawstep && rerender(0))
-			glfwPostEmptyEvent();
+		reqdraw(Reqrefresh);	/* FIXME */
+		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
 	}
 	quitdraw();
 }
 
 void
-reqdraw(int32_t r)
+reqdraw(int r)
 {
-	if(sendul(drawc, r) < 0)
-		sysfatal("sendul: %s", error());
-	glfwPostEmptyEvent();
+	static ulong f;
+
+	f |= r;
+	if(nbsendul(drawc, f) != 0){
+		glfwPostEmptyEvent();
+		f = 0;
+	}
 }
 
 static void
-resizeev(GLFWwindow *glw, int w, int h)
+glresize(GLFWwindow *, int w, int h)
 {
 	view.dim.v = Vec2(w, h);
 	resetui(1);
@@ -207,26 +240,35 @@ glerr(int err, const char *desc)
 static void
 initgl(void)
 {
-	int w, h;
-	sg_desc desc = {
-		.logger.func = slog_func,
-	};
-	sgp_desc sgpdesc = { 0 };
-
 	if(!glfwInit())
 		sysfatal("glfwInit");
 	glfwSetErrorCallback(glerr);
+	glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, 0);
+	glfwWindowHint(GLFW_SAMPLES, GLsamples == 1 ? 0 : GLsamples);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	if((glw = glfwCreateWindow(view.dim.v.x, view.dim.v.y, "strpg", NULL, NULL)) == nil)
-		sysfatal("glfwCreateWindow");
+		sysfatal("glfwCreateWindow failed: %s", error());
 	glfwMakeContextCurrent(glw);
-	sg_setup(&desc);
+	glfwSwapInterval(1);
+	if(!flextInit(glw))
+		sysfatal("flextGL: failed to initialize: %s", error());
+	sg_setup(&(sg_desc){
+		.environment = {
+			.defaults = {
+				.color_format = SG_PIXELFORMAT_RGBA8,
+				.depth_format = GLdepth ? SG_PIXELFORMAT_DEPTH_STENCIL : SG_PIXELFORMAT_NONE,
+				.sample_count = GLsamples,
+			},
+		},
+		.logger.func = slog_func,
+	});
 	assert(sg_isvalid());
-	sgp_setup(&sgpdesc);
+	sgp_setup(&(sgp_desc){0});
 	assert(sgp_is_valid());
 }
-
-// FIXME: use Channel and similar typedefs
-// FIXME: use error strings in sokol/linux code
 
 /* FIXME: error handling */
 void
@@ -235,8 +277,10 @@ initsysdraw(void)
 	view.dim.o = ZV;	/* FIXME: horrible */
 	view.dim.v = Vec2(Vdefw, Vdefh);
 	initgl();
-	glfwSetFramebufferSizeCallback(glw, resizeev);
-	if((drawc = chancreate(sizeof(int), 166)) == nil)	// FIXME: 166??
+	glfwSetFramebufferSizeCallback(glw, glresize);
+	/* FIXME: the reason why this can't be 0 is because of the fucking
+	 * input handling being synchronous */
+	if((drawc = chancreate(sizeof(ulong), 64)) == nil)
 		sysfatal("initsysdraw: chancreate");
 	//atexit(quitdraw);
 }
