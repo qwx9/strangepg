@@ -157,14 +157,14 @@ drawui(void)
 void
 redraw(void)
 {
-	vlong t;
+	static Clk clk = {.lab = "redraw"};
 
-	t = (debug & Debugperf) != 0 ? μsec() : 0;
+	CLK0(clk);
 	DPRINT(Debugdraw, "redraw");
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
-	DPRINT(Debugperf, "redraw: %lld μs", μsec() - t);
+	CLK1(clk);
 }
 
 void

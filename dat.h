@@ -10,6 +10,7 @@ typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Color Color;
+typedef struct Clk Clk;
 
 #pragma incomplete File
 #pragma incomplete Coarse
@@ -71,11 +72,6 @@ struct Node{
 };
 enum{
 	Sbit = 1ULL<<63,
-};
-// FIXME
-enum{
-	Edgesense = 0<<0,
-	Edgeantisense = 1<<0,
 };
 struct Edge{
 	ssize id;
@@ -170,6 +166,16 @@ enum{
 	KBup,
 	KBdown,
 	KBescape,
+
+	PerfΔt = 1000000,
+};
+
+struct Clk{
+	char *lab;
+	vlong t;
+	vlong t0;
+	vlong Δt;
+	int nsamp;
 };
 
 extern int debug;

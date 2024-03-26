@@ -153,7 +153,6 @@ void
 evloop(void)
 {
 	int req, w, h;
-	vlong t;
 	sg_pass sgp = {
 		.swapchain = {
 			.sample_count = GLsamples,
@@ -165,6 +164,7 @@ evloop(void)
 			},
 		},
 	};
+	static Clk clk = {.lab = "flush"};
 
 	/* FIXME: theming */
 	/* FIXME: unimplemented functions above */
@@ -192,8 +192,8 @@ evloop(void)
 				sgp_viewport(0, 0, w, h);
 				sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
 				redraw();
+				CLK1(clk);
 				//sgp_set_blend_mode(SGP_BLENDMODE_NONE);
-				t = (debug & Debugperf) != 0 ? μsec() : 0;
 				sgp.swapchain.width = w;
 				sgp.swapchain.height = h;
 				sg_begin_pass(&sgp);
@@ -202,8 +202,7 @@ evloop(void)
 				sg_end_pass();
 				sg_commit();
 				glfwSwapBuffers(glw);
-				DPRINT(Debugperf, "flushdraw: %lld μs", μsec() - t);
-			}
+				CLK1(clk);
 		}
 		reqdraw(Reqrefresh);	/* FIXME */
 		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
@@ -243,6 +242,7 @@ initgl(void)
 	if(!glfwInit())
 		sysfatal("glfwInit");
 	glfwSetErrorCallback(glerr);
+	/* swiped from glfw_glue in sokol-samples */
 	glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, 0);
 	glfwWindowHint(GLFW_SAMPLES, GLsamples == 1 ? 0 : GLsamples);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);

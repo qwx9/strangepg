@@ -320,8 +320,8 @@ cleardraw(void)
 static void
 drawproc(void *th)
 {
-	vlong t;
 	ulong req;
+	static Clk clk = {.lab = "flush"};
 
 	namethread(th, "drawproc");
 	resetdraw();
@@ -342,9 +342,9 @@ drawproc(void *th)
 		lockdisplay(display);
 		if(req != Reqshallowdraw)
 			redraw();
-		t = (debug & Debugperf) != 0 ? μsec() : 0;
+		CLK0(clk);
 		flushdraw();
-		DPRINT(Debugperf, "flushdraw: %lld μs", μsec() - t);
+		CLK1(clk);
 		unlockdisplay(display);
 	}
 	exitthread(th, error());
@@ -369,10 +369,10 @@ ticproc(void *th)
 	vlong t, Δt;
 
 	namethread(th, "ticproc");
-	t0 = nsec();
+	t0 = μsec();
 	step = drawstep ? Nsec/140. : Nsec/60.;
 	for(;;){
-		t = nsec();
+		t = μsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);
 		if(Δt < step)
