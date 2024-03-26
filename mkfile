@@ -25,6 +25,7 @@ OFILES=\
 	plan9/awk.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
+	plan9/nanosec.$O\
 	plan9/sys.$O\
 	plan9/threads.$O\
 	plan9/ui.$O\
@@ -36,6 +37,7 @@ OCOARSEN=\
 	fs/em.$O\
 	fs/fs.$O\
 	plan9/fs.$O\
+	plan9/nanosec.$O\
 	plan9/sys.$O\
 	plan9/threads.$O\
 	util/print.$O\

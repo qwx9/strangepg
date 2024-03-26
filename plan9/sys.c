@@ -42,7 +42,7 @@ vadebug(char *type, char *fmt, va_list arg)
 vlong
 μsec(void)
 {
-	return nsec() / 1000;
+	return nanosec() / 1000;
 }
 
 char *
