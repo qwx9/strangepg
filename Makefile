@@ -59,14 +59,13 @@ ALLOBJS:=\
 	$(COARSENOBJS)\
 
 CC= clang
-OFLAGS?= -O3 -pipe -march=native -fomit-frame-pointer
+OFLAGS?= -O3 -pipe -march=native
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
 CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 # _XOPEN_SOURCE: M_PI et al
 # _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
-# _DEFAULT_SOURCE: futex
-CFLAGS+= -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=500
+CFLAGS+= -D_XOPEN_SOURCE=500
 CFLAGS+= -pthread
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
