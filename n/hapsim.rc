@@ -18,7 +18,7 @@ if(! ~ $#* 0){
 	shift
 }
 
-bioawk \
+awk \
 	-v 'N='^$N \
 	-v 'pd='^$pd \
 	-v 'pi='^$pi \

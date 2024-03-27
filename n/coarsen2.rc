@@ -1,4 +1,4 @@
-#!/bin/bioawk -f
+#!/bin/awk -f
 # plaintext coarsening tree for debugging and testing
 # input: plaintext index.sh output
 # NOTE:
