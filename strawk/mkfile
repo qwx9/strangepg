@@ -1,0 +1,45 @@
+</$objtype/mkfile
+TARG=strawk
+BIN=/$objtype/bin
+
+YFILES=awkgram.y
+OFILES=\
+	awkgram.$O\
+	b.$O\
+	lex.$O\
+	lib.$O\
+	main.$O\
+	mt19937-64.$O\
+	parse.$O\
+	plan9.$O\
+	proctab.$O\
+	run.$O\
+	tran.$O\
+
+HFILES=\
+	awk.h\
+	mt19937-64.h\
+	plan9.h\
+	proto.h\
+
+default:V: all
+
+</sys/src/cmd/mkone
+
+YFLAGS=$YFLAGS -S -s awkgram
+CC=pcc
+CFLAGS=-c -p -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE
+CLEANFILES=awkgram.c awkgram.tab.h $objtype.maketab maketab.$O
+
+awkgram.tab.h awkgram.c:	$YFILES
+	$YACC -o awkgram.c $YFLAGS $prereq
+
+proctab.c:	$cputype.maketab
+	./$cputype.maketab awkgram.tab.h >proctab.c
+
+$cputype.maketab:	awkgram.tab.h maketab.c
+	objtype=$cputype mk maketab.$cputype
+
+maketab.$objtype:V:
+	$CC $CFLAGS maketab.c
+	$LD $LDFLAGS -o $objtype.maketab maketab.$O
