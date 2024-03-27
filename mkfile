@@ -4,6 +4,9 @@ TARG=\
 	strpg\
 	coarsen\
 
+DIRS=\
+	strawk\
+
 OFILES=\
 	strpg.$O\
 	cmd/cmd.$O\
@@ -76,12 +79,31 @@ install:V:	/tmp/main.awk
 
 CLEANFILES=$OFILES
 
-DIRS=\
-	test\
+all:V:	dirall
+install:V:	dirinstall
 
-clean:V:
-	for(i in $DIRS) @{
+dirinstall:V:
+	for (i in $DIRS) @{
+		cd $i
+		mk install
+	}
+
+dirall:V:
+	for (i in $DIRS) @{
+		cd $i
+		mk all
+	}
+
+clean:
+	for(i in $DIRS test) @{
 		cd $i
 		mk clean
 	}
-	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* $TARG $CLEANFILES
+	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].* $TARG $CLEANFILES
+
+nuke:
+	for(i in $DIRS test) @{
+		cd $i
+		mk nuke
+	}
+	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].* $TARG $CLEANFILES
