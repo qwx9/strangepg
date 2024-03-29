@@ -85,20 +85,22 @@ tar:
 names:
 	@echo $(LISTING)
 
-INSTALLPREFIX:= /usr/local
+INSTALLPREFIX:= $(HOME)
 BINDIR:= $(INSTALLPREFIX)/bin
 
-install:
-	install -d -m644 $(BINDIR)
-	install -m755 $(ALLTARGETS) $(BINDIR)
+install: $(ALLTARGETS)
+	test -d $(BINDIR) || install -d -m755 $(BINDIR)
+	for i in $(ALLTARGETS); do \
+		install -m755 $$i $(BINDIR); \
+	done
 
 uninstall:
 	for i in $(ALLTARGETS); do \
-		rm $(BINDIR)/$$i; \
+		rm -f $(BINDIR)/$$i; \
 	done
 
 clean:
-	rm -f $(BINTARGET) a.out *.o *.obj maketab maketab.exe *.bb *.bbg *.da *.gcov *.gcno *.gcda # proctab.c
+	rm -f $(BINTARGET) a.out *.o *.obj maketab maketab.exe *.bb *.bbg *.da *.gcov *.gcno *.gcda
 
 nuke:
 	rm -f $(BINTARGET) a.out *.o *.obj maketab maketab.exe *.bb *.bbg *.da *.gcov *.gcno *.gcda proctab.c awkgram.tab.*

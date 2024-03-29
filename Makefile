@@ -1,9 +1,14 @@
 PROGRAM:= strpg
 BINTARGET:= $(PROGRAM)
-ALLTARGETS:= $(BINTARGET)\
+ALLTARGETS:=\
+	$(BINTARGET)\
 	coarsen\
 
-INSTALLPREFIX:= /usr/local
+DIRS:=\
+	strawk\
+
+#INSTALLPREFIX:= /usr/local
+INSTALLPREFIX:= $(HOME)
 BINDIR:= $(INSTALLPREFIX)/bin
 
 OBJS:=\
@@ -87,12 +92,12 @@ LDLIBS?= -lGL -lglfw -lm
 
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
-	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual                \
+	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual \
 			 -Wdisabled-optimization -Wfloat-equal -Winit-self -Winline \
-			 -Winvalid-pch -Wunsafe-loop-optimizations                  \
+			 -Winvalid-pch -Wunsafe-loop-optimizations \
 			 -Wmissing-format-attribute -Wmissing-include-dirs -Wpacked \
-			 -Wredundant-decls -Wshadow -Wstack-protector               \
-			 -Wsuggest-attribute=const -Wswitch-default -Wunused        \
+			 -Wredundant-decls -Wshadow -Wstack-protector \
+			 -Wsuggest-attribute=const -Wswitch-default -Wunused \
 			 -Wvariadic-macros
 	CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
 else
@@ -122,7 +127,7 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-all:	$(ALLTARGETS) /tmp/main.awk
+all:	$(ALLTARGETS) dirall /tmp/main.awk
 
 /tmp/main.awk: cmd/main.awk
 	cp -x $^ $@
@@ -133,14 +138,40 @@ $(BINTARGET):	$(OBJS)
 coarsen:	$(COARSENOBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
-install:
-	install -d -m755 $(BINDIR)
-	install -m755 $(ALLTARGETS) $(BINDIR)
-
-uninstall:
+install: $(ALLTARGETS) dirinstall
+	test -d $(BINDIR) || install -d -m755 $(BINDIR)
 	for i in $(ALLTARGETS); do \
-		rm $(BINDIR)/$$i; \
+		install -m755 $$i $(BINDIR); \
+	done
+
+uninstall: $(ALLTARGETS)
+	for i in $(ALLTARGETS); do \
+		rm -f $(BINDIR)/$$i; \
+	done
+	for i in $(DIRS); do \
+		cd $$i; \
+		make uninstall; \
+		cd ..; \
+	done
+
+dirall:
+	for i in $(DIRS); do \
+		cd $$i; \
+		make all; \
+		cd ..; \
+	done
+
+dirinstall:
+	for i in $(DIRS); do \
+		cd $$i; \
+		make install; \
+		cd ..; \
 	done
 
 clean:
 	rm -f $(ALLOBJS) $(ALLTARGETS)
+	for i in $(DIRS); do \
+		cd $$i; \
+		make clean; \
+		cd ..; \
+	done
