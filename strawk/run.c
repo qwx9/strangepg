@@ -92,8 +92,6 @@ static Cell	contcell	={ OJUMP, JCONT, 0, 0, 0.0, NUM, NULL, NULL };
 Cell	*jcont	= &contcell;
 static Cell	nextcell	={ OJUMP, JNEXT, 0, 0, 0.0, NUM, NULL, NULL };
 Cell	*jnext	= &nextcell;
-static Cell	nextfilecell	={ OJUMP, JNEXTFILE, 0, 0, 0.0, NUM, NULL, NULL };
-Cell	*jnextfile	= &nextfilecell;
 static Cell	exitcell	={ OJUMP, JEXIT, 0, 0, 0.0, NUM, NULL, NULL };
 Cell	*jexit	= &exitcell;
 static Cell	retcell		={ OJUMP, JRET, 0, 0, 0.0, NUM, NULL, NULL };
@@ -194,6 +192,7 @@ Cell *program(Node **a, int n)	/* execute an awk program */
 		if (isjump(x))
 			FATAL("illegal break, continue, next or nextfile from BEGIN");
 		tempfree(x);
+		fflush(stdout);
 	}
 	if (a[1] || a[2])
 		while (getrec(&record, &recsize, true) > 0) {
@@ -386,6 +385,8 @@ Cell *jump(Node **a, int n)	/* break, continue, next, nextfile, return */
 			tempfree(y);
 		}
 		return(jret);
+	case NEXT:
+		return(jnext);
 	case BREAK:
 		return(jbreak);
 	case CONTINUE:
@@ -1359,6 +1360,7 @@ Cell *awkprintf(Node **a, int n)		/* printf */
 	fwrite(buf, len, 1, stdout);
 	if (ferror(stdout))
 		FATAL("write error on stdout");
+	//fflush(stdout);
 	free(buf);
 	return(True);
 }
@@ -1422,11 +1424,11 @@ Cell *arith(Node **a, int n)	/* a[0] + a[1], etc.  also -a[0], `a[0] */
 		break;
 	case LSHIFT:
 		//i <<= j;
-		i = (uint64_t)i << (int)j;
+		i = (uint64_t)i << (uint64_t)j;
 		break;
 	case RSHIFT:
 		//i >>= j;
-		i = (uint64_t)i >> (int)j;
+		i = (uint64_t)i >> (uint64_t)j;
 		break;
 	case POWER:
 		if (j >= 0 && modf(j, &v) == 0.0)	/* pos integer exponent */
@@ -2102,6 +2104,7 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 			execute(runnerup);
 		// FIXME: no cleanup!
 		runnerup = NULL;
+		fflush(stdout);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
@@ -2136,6 +2139,7 @@ Cell *printstat(Node **a, int n)	/* print a[0] */
 		else
 			fputs(getsval(ofsloc), fp);
 	}
+	//fflush(fp);
 	if (ferror(fp))
 		FATAL("write error");
 	return(True);

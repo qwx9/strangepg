@@ -198,7 +198,6 @@ extern Node *runnerup;
 #define	JBREAK	23
 #define	JCONT	24
 #define	JRET	25
-#define	JNEXTFILE	26
 
 /* node types */
 #define NVALUE	1
@@ -215,7 +214,7 @@ extern	int	pairstack[], paircnt;
 #define isexit(n)	((n)->csub == JEXIT)
 #define	isbreak(n)	((n)->csub == JBREAK)
 #define	iscont(n)	((n)->csub == JCONT)
-#define	isnext(n)	((n)->csub == JNEXT || (n)->csub == JNEXTFILE)
+#define	isnext(n)	((n)->csub == JNEXT)
 #define	isret(n)	((n)->csub == JRET)
 #define isrec(n)	((n)->tval & REC)
 #define isfld(n)	((n)->tval & FLD)

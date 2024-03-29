@@ -29,7 +29,7 @@ default:V: all
 YFLAGS=$YFLAGS -S -s awkgram
 CC=pcc
 CFLAGS=-c -p -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE
-CLEANFILES=awkgram.c awkgram.tab.h $objtype.maketab maketab.$O
+CLEANFILES=awkgram.c awkgram.tab.h proctab.c $objtype.maketab maketab.$O
 
 awkgram.tab.h awkgram.c:	$YFILES
 	$YACC -o awkgram.c $YFLAGS $prereq

@@ -103,6 +103,7 @@ struct xx
 	{ FOR, "forstat", "for(" },
 	{ DO, "dostat", "do" },
 	{ IN, "instat", "instat" },
+	{ NEXT, "jump", "next" },
 	{ EXIT, "jump", "exit" },
 	{ BREAK, "jump", "break" },
 	{ CONTINUE, "jump", "continue" },

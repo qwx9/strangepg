@@ -68,6 +68,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "length",	FLENGTH,	BLTIN },
 	{ "log",	FLOG,		BLTIN },
 	{ "match",	MATCHFCN,	MATCHFCN },
+	{ "next",	NEXT,		NEXT },
 	{ "print",	PRINT,		PRINT },
 	{ "printf",	PRINTF,		PRINTF },
 	{ "rand",	FRAND,		BLTIN },

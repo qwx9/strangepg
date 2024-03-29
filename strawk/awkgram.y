@@ -54,7 +54,7 @@ Node	*arglist = 0;	/* list of args for current function */
 %token	<i>	FINAL DOT ALL CCL NCCL CHAR OR STAR QUEST PLUS EMPTYRE ZERO
 %token	<i>	LAND LOR EQ GE GT LE LT NE IN
 %token	<i>	ARG BLTIN BREAK CONTINUE DELETE DO EXIT FOR FUNC
-%token	<i>	SUB GSUB IF INDEX LSUBSTR MATCHFCN
+%token	<i>	SUB GSUB IF INDEX LSUBSTR MATCHFCN NEXT
 %token	<i>	ADD MINUS MULT DIVIDE MOD
 %token	<i>	LSHIFT RSHIFT XOR BAND BOR COMPL
 %token	<i>	ASSIGN ASGNOP ADDEQ SUBEQ MULTEQ DIVEQ MODEQ POWEQ
@@ -83,7 +83,7 @@ Node	*arglist = 0;	/* list of args for current function */
 %left	LAND
 %nonassoc EQ GE GT LE LT NE MATCHOP IN
 %left	ARG BLTIN BREAK CALL CONTINUE DELETE DO EXIT FOR FUNC
-%left	GSUB IF INDEX LSUBSTR MATCHFCN NUMBER
+%left	GSUB IF INDEX LSUBSTR MATCHFCN NEXT NUMBER
 %left	PRINT PRINTF RETURN SPLIT SPRINTF STRING SUB SUBSTR
 %left	REGEXPR VAR VARNF IVAR WHILE '('
 %left	CAT
@@ -326,6 +326,9 @@ stmt:
 	| if stmt else stmt	{ $$ = stat3(IF, $1, $2, $4); }
 	| if stmt		{ $$ = stat3(IF, $1, $2, NIL); }
 	| lbrace stmtlist rbrace { $$ = $2; }
+	| NEXT st	{ if (infunc)
+				SYNTAX("next is illegal inside a function");
+			  $$ = stat1(NEXT, NIL); }
 	| RETURN pattern st	{ $$ = stat1(RETURN, $2); }
 	| RETURN st		{ $$ = stat1(RETURN, NIL); }
 	| simple_stmt st
@@ -357,8 +360,8 @@ term:
 	| term '^' term			{ $$ = op2(XOR, $1, $3); }
 	| term '|' term			{ $$ = op2(BOR, $1, $3); }
 	| term '&' term			{ $$ = op2(BAND, $1, $3); }
-	| CMPL term %prec UMINUS	{ $$ = op1(CMPL, $2); }
 	| term POWER term		{ $$ = op2(POWER, $1, $3); }
+	| CMPL term %prec UMINUS	{ $$ = op1(CMPL, $2); }
 	| '-' term %prec UMINUS		{ $$ = op1(UMINUS, $2); }
 	| '+' term %prec UMINUS		{ $$ = op1(UPLUS, $2); }
 	| NOT term %prec UMINUS		{ $$ = op1(NOT, notnull($2)); }
