@@ -203,7 +203,9 @@ evloop(void)
 				sg_commit();
 				glfwSwapBuffers(glw);
 				CLK1(clk);
+			}
 		}
+		//if(drawstep)...?
 		reqdraw(Reqrefresh);	/* FIXME */
 		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
 	}
