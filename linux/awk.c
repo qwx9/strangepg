@@ -13,8 +13,7 @@ cproc(void)
 	close(fucker[0]);
 	dup(epfd[0], STDIN_FILENO);
 	dup(fucker[1], STDOUT_FILENO);
-	//execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", "-f", "-", NULL);
-	execl("/usr/bin/env", "env", "-S", "awk", "-S", "-f", "/tmp/main.awk", nil);
+	execl("/usr/bin/env", "env", "-S", "strawk", "-f", "/tmp/main.awk", nil);
 }
 
 // FIXME: portable code

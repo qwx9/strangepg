@@ -16,7 +16,7 @@ cproc(void *)
 	dup(epfd[0], 0);
 	dup(epfd[0], 1);
 	close(epfd[0]);
-	procexecl(nil, "/bin/awk", "awk", "-safe", "-f", "/tmp/main.awk", nil);
+	procexecl(nil, "/bin/strawk", "strawk", "-f", "/tmp/main.awk", nil);
 	sysfatal("procexecl: %r");
 }
 
@@ -44,6 +44,7 @@ readcproc(void *)
 			sendp(cmdc, estrdup(s));
 	}
 	close(epfd[1]);
+	epfd[1] = -1;
 	if(n < 0)
 		warn("readcproc: %r");
 }
