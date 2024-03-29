@@ -8,6 +8,9 @@
 #define SOKOL_DEBUG
 #include "sokol_gfx.h"
 #include "sokol_log.h"
+//#define	SGP_BATCH_OPTIMIZER_DEPTH	8
+//#define	SGP_UNIFORM_CONTENT_SLOTS	4
+//#define	SGP_TEXTURE_SLOTS	4
 #include "sokol_gp.h"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
@@ -192,7 +195,7 @@ evloop(void)
 				sgp_viewport(0, 0, w, h);
 				sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
 				redraw();
-				CLK1(clk);
+				CLK0(clk);
 				//sgp_set_blend_mode(SGP_BLENDMODE_NONE);
 				sgp.swapchain.width = w;
 				sgp.swapchain.height = h;
