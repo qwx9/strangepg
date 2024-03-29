@@ -20,6 +20,14 @@ GLFWwindow *glw;
 enum{
 	GLsamples = 4,
 	GLdepth = 1,
+	/* FIXME: once sokol_gp static buffer limits are reached, all drawing
+	 * and flushes are dropped; there are obvious deficiencies in our
+	 * drawing: no partial damage, no custom shaders even though we're
+	 * doing the same 3-4 things over and over, no sorting by area or
+	 * depth, no occlusion, etc.; so for now, just drop draw calls;
+	 * otherwise, to save a partial render and draw on top, we need to
+	 * draw into a texture first */
+	Drawlimit = 32*1024,
 };
 
 struct Color{
@@ -30,6 +38,7 @@ struct Color{
 };
 
 static Channel *drawc;
+static int ncalls;
 
 Color *
 newcolor(u32int v)
@@ -61,6 +70,40 @@ showobj(Obj *)
 {
 }
 
+static void
+flush(void)
+{
+	sg_begin_pass(&(sg_pass){
+		.swapchain = {
+			.width = view.dim.v.x,
+			.height = view.dim.v.y,
+			.sample_count = GLsamples,
+			.color_format = SG_PIXELFORMAT_RGBA8,
+			.depth_format = GLdepth ? SG_PIXELFORMAT_DEPTH_STENCIL : SG_PIXELFORMAT_NONE,
+			.gl = {
+				/* assumption, GL framebuffer always 0 */
+				.framebuffer = 0,
+			},
+		},
+	});
+	sgp_flush();
+	sgp_end();
+	sg_end_pass();
+	sg_commit();
+}
+
+/* FIXME: nope */
+static void
+checkdrawlimit(void)
+{
+	if(++ncalls > Drawlimit){
+		ncalls = 0;
+		flush();
+		glfwSwapBuffers(glw);
+		sgp_begin(view.dim.v.x, view.dim.v.y);
+	}
+}
+
 void
 startdrawclock(void)
 {
@@ -80,15 +123,16 @@ drawlabel(Node *, Quad, Quad, Quad, vlong, Color *)
 int
 drawline(Quad q, double w, int emph, int idx, Color *c)
 {
+	checkdrawlimit();
 	USED(idx);
 	sgp_push_transform();
 	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
 	sgp_scale(view.zoom, view.zoom);
 	sgp_set_color(c->r, c->g, c->b, 0.8f);
+    sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
 	sgp_draw_line(q.o.x, q.o.y, q.o.x+q.v.x, q.o.y+q.v.y);
-	sgp_reset_color();
+    sgp_set_blend_mode(SGP_BLENDMODE_NONE);
 	sgp_pop_transform();
-	sgp_reset_color();
 	return 0;
 }
 
@@ -106,20 +150,20 @@ drawbezier(Quad q, double w, int idx, Color *c)
 int
 drawquad(Quad q1, Quad q2, Quad q, double θ, int idx, Color *c)
 {
+	checkdrawlimit();
 	sgp_push_transform();
 	sgp_translate(view.center.x - view.pan.x, view.center.y - view.pan.y);
 	sgp_scale(view.zoom, view.zoom);
-	sgp_set_color(c->r, c->g, c->b, 0.8f);
-	// FIXME: systematic "error"s in rend.c
 	sgp_rotate_at(θ+PI/4, q.o.x, q.o.y);
 	q.o = subpt2(q.o, Vec2(0, Nodesz/8));	// FIXME: layer violation
+	sgp_set_color(c->r, c->g, c->b, 1.0f);
 	sgp_draw_filled_rect(q.o.x, q.o.y, q.v.x, q.v.y);
-	sgp_reset_color();
 	sgp_pop_transform();
+	/*
 	if(debug){
-		sgp_set_color(0.0f, 1.0f, 0.0f, 0.8f);
+		sgp_set_color(0.0f, 1.0f, 0.0f, 1.0f);
 		sgp_draw_filled_rect(q1.o.x, q1.o.y, 1, 1);
-		sgp_set_color(1.0f, 1.0f, 0.0f, 0.8f);
+		sgp_set_color(1.0f, 1.0f, 0.0f, 1.0f);
 		sgp_draw_filled_rect(q1.o.x+q1.v.x, q1.o.y+q1.v.y, 1, 1);
 		q1 = centerscalequad(q1);
 		q2 = centerscalequad(q2);
@@ -127,8 +171,8 @@ drawquad(Quad q1, Quad q2, Quad q, double θ, int idx, Color *c)
 		sgp_draw_line(q1.o.x, q1.o.y, q1.v.x, q1.v.y);
 		sgp_set_color(0.8f, 0.8f, 0.8f, 1.0f);
 		sgp_draw_line(q2.o.x, q2.o.y, q2.v.x, q2.v.y);
-		sgp_reset_color();
 	}
+	*/
 	return 0;
 }
 
@@ -155,18 +199,7 @@ quitdraw(void)
 void
 evloop(void)
 {
-	int req, w, h;
-	sg_pass sgp = {
-		.swapchain = {
-			.sample_count = GLsamples,
-			.color_format = SG_PIXELFORMAT_RGBA8,
-			.depth_format = GLdepth ? SG_PIXELFORMAT_DEPTH_STENCIL : SG_PIXELFORMAT_NONE,
-			.gl = {
-				/* assumption, GL framebuffer always 0 */
-				.framebuffer = 0,
-			},
-		},
-	};
+	int req;
 	static Clk clk = {.lab = "flush"};
 
 	/* FIXME: theming */
@@ -181,29 +214,20 @@ evloop(void)
 	req = 0;
 	while (!glfwWindowShouldClose(glw)) {
 		if((req = nbrecvul(drawc)) != 0){
+			ncalls = 0;
 			/* Reqresetdraw for resizing: handled by callback */
 			if((req & Reqresetui) != 0)
 				resetui(1);
-			w = view.dim.v.x;
-			h = view.dim.v.y;
 			if((req & Reqrefresh) != 0 && !norefresh || (req & Reqrender) != 0){
 				if(!rerender(req & Reqrender))
 					stopdrawclock();
 			}
+			// FIXME: actually implement shallow redraw: requires texture
 			if(req != Reqshallowdraw){
-				sgp_begin(w, h);
-				sgp_viewport(0, 0, w, h);
-				sgp_set_blend_mode(SGP_BLENDMODE_BLEND);
+				sgp_begin(view.dim.v.x, view.dim.v.y);
 				redraw();
 				CLK0(clk);
-				//sgp_set_blend_mode(SGP_BLENDMODE_NONE);
-				sgp.swapchain.width = w;
-				sgp.swapchain.height = h;
-				sg_begin_pass(&sgp);
-				sgp_flush();
-				sgp_end();
-				sg_end_pass();
-				sg_commit();
+				flush();
 				glfwSwapBuffers(glw);
 				CLK1(clk);
 			}
@@ -271,7 +295,11 @@ initgl(void)
 		.logger.func = slog_func,
 	});
 	assert(sg_isvalid());
-	sgp_setup(&(sgp_desc){0});
+	sgp_setup(&(sgp_desc){
+		/* FIXME: see above wrt. draw limits */
+		.max_vertices = _SGP_DEFAULT_MAX_VERTICES * 4,
+		//.max_commands = _SGP_DEFAULT_MAX_COMMANDS * 2,
+	});
 	assert(sgp_is_valid());
 }
 
