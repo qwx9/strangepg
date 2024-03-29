@@ -22,7 +22,6 @@ sendcmd(char *cmd)
 {
 	int n;
 
-return;
 	n = strlen(cmd);
 	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
 	if(epfd[1] < 0)
