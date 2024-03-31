@@ -5,12 +5,18 @@
 int epfd[2];
 int haxx0rz;
 
+u32int
+col2int(Color *)
+{
+	return -1ULL;
+}
+
 void
 pushcmd(char *, ...)
 {
 }
 
-Pal *
+Color *
 somecolor(Graph*)
 {
 	return nil;
@@ -18,6 +24,11 @@ somecolor(Graph*)
 
 void
 somepalette(Graph*)
+{
+}
+
+void
+stoplayout(Graph*)
 {
 }
 

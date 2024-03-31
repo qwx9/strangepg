@@ -9,7 +9,9 @@ OFILES=\
 	../fs/meta.$O\
 	../plan9/awk.$O\
 	../plan9/fs.$O\
+	../plan9/nanosec.$O\
 	../plan9/sys.$O\
+	../plan9/threads.$O\
 	../util/print.$O\
 	stubs.$O\
 
