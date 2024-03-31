@@ -100,23 +100,24 @@ void	quit(void);
 		dprint((x), __VA_ARGS__); \
 }while(0)
 
+/* FIXME: get something better */
 #define	CLK0(c)	if((debug & Debugperf) != 0){ \
 	if((c).t0 == 0) \
 		(c).t0 = (c).t = μsec(); \
 	else \
 		(c).t = μsec(); \
 }
-
 #define	CLK1(c)	if((debug & Debugperf) != 0){ \
 	vlong _t = μsec(); \
 	(c).Δt += _t - (c).t; \
 	(c).nsamp++; \
-	if(_t - (c).t0 > PerfΔt){ \
-		(c).Δt /= (c).nsamp; \
-		warn("[perf] %s: avg %lld μs n %d Δt %d s\n", \
-			(c).lab, (c).Δt, (c).nsamp, PerfΔt/1000000); \
+	_t -= (c).t0; \
+	if(_t >= PerfΔt){ \
+		_t = (double)(c).Δt / ((c).nsamp * _t) * 1000000; \
+		warn("[perf] %s: normavg %lld μs n %d\n", \
+			(c).lab, _t, (c).nsamp); \
 		(c).nsamp = 0; \
 		(c).Δt = 0; \
-		(c).t0 = _t; \
+		(c).t0 += PerfΔt; \
 	} \
 }
