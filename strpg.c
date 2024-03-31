@@ -83,6 +83,8 @@ parseargs(int argc, char **argv)
 			deflayout = LLconga;
 		else if(strcmp(s, "force") == 0)
 			deflayout = LLforce;
+		else if(strcmp(s, "fr") == 0)
+			deflayout = LLfr;
 		else
 			sysfatal("unknown layout type");
 		break;

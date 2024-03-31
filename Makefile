@@ -39,6 +39,7 @@ OBJS:=\
 	graph/vertex.o\
 	layout/conga.o\
 	layout/force.o\
+	layout/fr.o\
 	layout/layout.o\
 	layout/random.o\
 	rend/rend.o\
