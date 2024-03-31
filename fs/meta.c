@@ -101,14 +101,14 @@ collectgfameta(Graph *g)
 	File *f;
 
 	clearmeta(g);	/* delegated to awk */
-	g->loading = 1;
+	g->flags |= FGloading;
 	f = g->f;
 	if(collectgfanodes(g, f) < 0)
 		warn("collectmeta: %s\n", error());
 	if(collectgfaedges(g, f) < 0)
 		warn("collectmeta: %s\n", error());
 	pushcmd("FGD135");
-	g->loading = 0;
+	g->flags &= ~FGloading;
 }
 
 void

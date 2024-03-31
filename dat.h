@@ -42,41 +42,52 @@ enum{
 };
 
 enum{
-	LFarmed = 1<<0,		/* initialized */
-	LFonline = 1<<1,	/* working */
+	LFonline = 1<<0,
+	LFarmed = 1<<1,
+	LFbusy = 1<<2,
 };
 struct Layouting{
 	int f;
 	Layout *ll;
 	void *thread;
+	void *aux;
 };
 
+enum{
+	FNfixed = 1<<0,
+
+	FEfixed = 1<<0,
+	Sbit = 1ULL<<63,
+
+	FGloading = 1<<0,
+};
 struct Node{
 	ssize id;		/* key */
 	ssize idx;		/* index (leaf) */
 	ssize pid;		/* key */
+	ssize layid;	/* index */
 	int lvl;
 	ssize *in;		/* dynamic array (edge indices) */
 	ssize *out;		/* dynamic array (edge indices) */
 	vlong metaoff;
 	int weight;
+	/* FIXME: fix this mess */
 	Quad q1;		/* bounding polygon */
 	Quad q2;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	Color *col;
 	double θ;
+	u32int flags;
 	ssize prev;		/* index */
 	ssize next;		/* index */
 	ssize ch;		/* index */
-};
-enum{
-	Sbit = 1ULL<<63,
 };
 struct Edge{
 	ssize id;
 	ssize u;
 	ssize v;
+	u32int flags;
 	ssize next;
 	ssize prev;
 	vlong metaoff;
@@ -84,7 +95,7 @@ struct Edge{
 };
 struct Graph{
 	int type;
-	int loading;
+	u32int flags;
 	File *f;
 	Coarse *c;
 	usize nnodes;	/* gfa-wide totals */

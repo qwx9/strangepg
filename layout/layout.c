@@ -2,7 +2,7 @@
 #include "layout.h"
 #include "threads.h"
 
-int deflayout = LLforce;
+int deflayout = LLfr;
 
 static Layout *lltab[LLnil];
 
@@ -20,7 +20,7 @@ layproc(void *th)
 	t = (debug & Debugperf) != 0 ? μsec() : 0;
 	ll->compute(g);
 	DPRINT(Debugperf, "layout: %lld μs", μsec() - t);
-	g->layout.f &= ~LFonline;
+	g->layout.f &= ~LFbusy;
 	reqdraw(Reqrender);
 	exitthread(th, nil);
 }
@@ -28,9 +28,9 @@ layproc(void *th)
 void
 stoplayout(Graph *g)
 {
-	if((g->layout.f & LFonline) == 0)
+	if((g->layout.f & LFbusy) == 0)
 		return;
-	g->layout.f &= ~LFonline;
+	g->layout.f &= ~LFbusy;
 	killthread(g->layout.thread);
 	g->layout.thread = nil;
 }
@@ -38,12 +38,12 @@ stoplayout(Graph *g)
 void
 runlayout(Graph *g)
 {
-	if((g->layout.f & LFarmed) == 0){
+	if((g->layout.f & LFonline) == 0){
 		warn("runlayout: %#p layout unarmed\n", g);
 		return;
 	}
 	stoplayout(g);
-	g->layout.f |= LFonline;
+	g->layout.f |= LFbusy;
 	g->layout.thread = newthread(layproc, g, mainstacksize);
 	if(!noui)
 		startdrawclock();
@@ -57,12 +57,10 @@ putnode(Node *u, int x, int y)
 	u->vrect.v = ZV;
 }
 
-// FIXME: restrict update to selection
 int
 updatelayout(Graph *g)
 {
 	stoplayout(g);
-	// FIXME: actually implement update
 	runlayout(g);
 	return 0;
 }
@@ -71,7 +69,11 @@ int
 resetlayout(Graph *g)
 {
 	stoplayout(g);
-	g->layout.ll->init(g);
+	g->layout.f &= ~LFarmed;
+	if(g->layout.aux != nil){
+		free(g->layout.aux);
+		g->layout.aux = nil;
+	}
 	runlayout(g);
 	return 0;
 }
@@ -99,8 +101,9 @@ newlayout(Graph *g, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	ll->init(g);
-	g->layout.f |= LFarmed;
+	if(ll->init != nil)
+		ll->init(g);
+	g->layout.f |= LFonline;
 	runlayout(g);
 	return 0;
 }
@@ -111,4 +114,5 @@ initlayout(void)
 	lltab[LLconga] = regconga();
 	lltab[LLforce] = regforce();
 	lltab[LLrandom] = regrandom();
+	lltab[LLfr] = regfr();
 }

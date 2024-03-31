@@ -22,6 +22,7 @@ OFILES=\
 	graph/vertex.$O\
 	layout/conga.$O\
 	layout/force.$O\
+	layout/fr.$O\
 	layout/layout.$O\
 	layout/random.$O\
 	rend/rend.$O\
