@@ -74,6 +74,7 @@ struct Node{
 	/* FIXME: fix this mess */
 	Quad q1;		/* bounding polygon */
 	Quad q2;
+	Vertex fixed;
 	Quad shape;
 	Quad vrect;		/* direction/length vector */
 	Color *col;
