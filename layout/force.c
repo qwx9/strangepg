@@ -11,16 +11,8 @@ enum{
 #define	ΔT	(1.0 - 1.0 / Nrep)		/* eg. δ *= 0.999 at every step */
 
 static void
-init(Graph *g)
+init(Graph *)
 {
-	ssize ui;
-	Node *u;
-
-	/* initial random placement, but in same scale as springs */
-	for(ui=g->node0.next; ui>=0; ui=u->next){
-		u = g->nodes + ui;
-		putnode(u, nrand(Length), nrand(Length));
-	}
 }
 
 static double
@@ -51,6 +43,14 @@ compute(Graph *g)
 	Node *u, *from, *v;
 	Edge *e;
 
+	if((g->layout.f & LFarmed) == 0){
+		/* initial random placement, but in same scale as springs */
+		for(ui=g->node0.next; ui>=0; ui=u->next){
+			u = g->nodes + ui;
+			putnode(u, nrand(Length), nrand(Length));
+		}
+		g->layout.f |= LFarmed;
+	}
 	if(dylen(g->edges) < 1){
 		warn("no links to hand\n");
 		// FIXME: error exit

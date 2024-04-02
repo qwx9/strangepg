@@ -3,6 +3,7 @@ enum{
 	LLrandom,
 	LLforce,
 	LLfr,
+	LLlinear,
 	LLnil,
 };
 struct Layout{
@@ -14,6 +15,7 @@ extern int deflayout;
 
 Layout*	regconga(void);
 Layout*	regforce(void);
+Layout*	reglinear(void);
 Layout*	regfr(void);
 Layout*	regrandom(void);
 void	putnode(Node*, int, int);

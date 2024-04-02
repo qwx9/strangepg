@@ -43,7 +43,12 @@ scan(Graph *g, int new)
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		p.i = i;
-		if(new){
+		if((u->flags & FNfixed) != 0){
+			u->vrect.o = u->fixed;
+			p.x = u->fixed.x;
+			p.y = u->fixed.y;
+			p.i = -1;
+		}else if(new){
 			p.x = -W/8 + nrand(W/4);
 			p.y = -L/8 + nrand(L/4);
 		}else{
@@ -78,14 +83,14 @@ compute(Graph *g)
 		return;
 	}
 	k = 1 * ceil(sqrt((double)Area / dylen(g->nodes)));
-//	t = 0.1 * MIN(W, L);
-//	for(n=0; n<Nrep; n++){
 	t = 1.0;
 	for(;;){
 		//sleep(10);
 		Δr = 0;
 		for(u=ρ; u<ρ+dylen(ρ); u++){
 			Δx = Δy = 0;
+			if(u->i < 0)
+				continue;
 			for(v=ρ; v<ρ+dylen(ρ); v++){
 				if(u == v)
 					continue;
@@ -120,6 +125,8 @@ compute(Graph *g)
 			v->Δy += ry;
 		}
 		for(u=ρ; u<ρ+dylen(ρ); u++){
+			if(u->i < 0)
+				continue;
 			δx = u->Δx;
 			δy = u->Δy;
 			δ = Δ(δx, δy);
@@ -142,13 +149,13 @@ compute(Graph *g)
 }
 
 static Layout ll = {
-	.name = "fr",
+	.name = "linear",
 	.init = init,
 	.compute = compute,
 };
 
 Layout *
-regfr(void)
+reglinear(void)
 {
 	return &ll;
 }

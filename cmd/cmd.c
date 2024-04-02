@@ -10,7 +10,7 @@ void
 readcmd(char *s)
 {
 	int m, redraw;
-	ssize x;
+	ssize x, y;
 	char *fld[8], *p, *t;
 	Node *n;
 	Graph *g;
@@ -24,6 +24,7 @@ readcmd(char *s)
 		case 'E': 
 			warn("Error:%s\n", s+1);
 			goto next;
+		case 'x':
 		case 'C':
 			break;
 		default:
@@ -36,6 +37,27 @@ readcmd(char *s)
 		switch(s[0]){
 		error:
 			warn("readcmd: %s\n", error());
+			break;
+		case 'x':
+			if(m != 3){
+				werrstr("invalid x message length %d\n", m);
+				goto error;
+			}
+			if((n = str2node(g, fld[0])) == nil)
+				goto error;
+			x = strtoll(fld[1], &p, 0);
+			if(p == fld[1]){
+				werrstr("invalid coordinate %s", fld[1]);
+				goto error;
+			}
+			y = strtoll(fld[2], &p, 0);
+			if(p == fld[2]){
+				werrstr("invalid coordinate %s", fld[2]);
+				goto error;
+			}
+			n->flags |= FNfixed;
+			n->fixed.x = x;
+			n->fixed.y = y;
 			break;
 		case 'C':
 			if(m != 2){

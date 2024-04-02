@@ -48,6 +48,13 @@ collectgfanodes(Graph *g, File *f)
 			if(strncmp(s, "LN", 2) == 0 && r){
 				warn("node[%zx]: ignoring redundant length field\n", n->id);
 				continue;
+			/* FIXME: no error checking */
+			}else if(strncmp(s, "fx", 2) == 0){
+				n->flags |= FNfixed;
+				n->fixed.x = atoi(s+5);
+			}else if(strncmp(s, "fy", 2) == 0){
+				n->flags |= FNfixed;
+				n->fixed.y = atoi(s+5);
 			}
 			s[2] = 0;
 			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);

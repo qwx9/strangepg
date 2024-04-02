@@ -115,4 +115,5 @@ initlayout(void)
 	lltab[LLforce] = regforce();
 	lltab[LLrandom] = regrandom();
 	lltab[LLfr] = regfr();
+	lltab[LLlinear] = reglinear();
 }

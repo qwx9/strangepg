@@ -24,6 +24,7 @@ OFILES=\
 	layout/force.$O\
 	layout/fr.$O\
 	layout/layout.$O\
+	layout/linear.$O\
 	layout/random.$O\
 	rend/rend.$O\
 	plan9/awk.$O\

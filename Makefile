@@ -41,6 +41,7 @@ OBJS:=\
 	layout/force.o\
 	layout/fr.o\
 	layout/layout.o\
+	layout/linear.o\
 	layout/random.o\
 	rend/rend.o\
 	ui/ui.o\

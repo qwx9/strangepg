@@ -51,6 +51,17 @@ function nodecolor(id, c){
 	color[lnode[id]] = c
 	print "C", id, c
 }
+function fix(id, x, y){
+	if(y == "")
+		y = 0
+	fx[id] = x
+	fy[id] = y
+	print "x", id, x, y
+}
+# FIXME: we're now in between awk and fawk; these could become all
+# functions and avoid having to match against every pattern, but we
+# also don't want to quote strings unless necessary, etc.;  figure
+# this out later
 $1 == "n"{
 	if($2 in lnode)
 		delete node[lnode[$2]]

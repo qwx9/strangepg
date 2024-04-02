@@ -83,6 +83,8 @@ parseargs(int argc, char **argv)
 			deflayout = LLconga;
 		else if(strcmp(s, "force") == 0)
 			deflayout = LLforce;
+		else if(strcmp(s, "linear") == 0)
+			deflayout = LLlinear;
 		else if(strcmp(s, "fr") == 0)
 			deflayout = LLfr;
 		else
