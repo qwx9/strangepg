@@ -12,5 +12,6 @@ void	namethread(Thread*, char*);
 void	killthread(Thread*);
 
 #define	exitthread(t, s)	do{ \
+	free((t)); \
 	threadexits((s)); \
 }while(0)

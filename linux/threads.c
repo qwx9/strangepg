@@ -31,13 +31,6 @@ newthread(thret_t (*fp)(void*), void *arg, uint stacksize)
 	return t;
 }
 
-void
-cleanthread(Thread *t)
-{
-	free(t->arg);
-	free(t);
-}
-
 /* pthread_setname_np is non-portable gnushit */
 void
 namethread(Thread *, char *)
@@ -53,7 +46,7 @@ killthread(Thread *t)
 		return;
 	pthread_cancel(t->p);
 	//waitpid(t->aux, NULL, 0);
-	cleanthread(t);
+	free(t);
 }
 
 Channel *

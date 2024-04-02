@@ -31,11 +31,10 @@ struct Thread{
 			warn("exitthread: %s\n", (s)); \
 	} \
 	pthread_exit(nil); \
-	cleanthread((t)); \
+	free(t); \
 	return nil; \
 }while(0)
 
 Thread*	newthread(thret_t (*)(void*), void*, uint);
-void	cleanthread(Thread*);
 void	namethread(Thread*, char*);
 void	killthread(Thread*);
