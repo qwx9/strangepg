@@ -115,9 +115,9 @@ newlevel(Lbuf *lvl)
 		print("========\n");
 		return nil;
 	}
-	if((l.nodes = emopen(nil, 0)) == nil)
+	if((l.nodes = emopen(nil)) == nil)
 		sysfatal("newlevel: %s", error());
-	if((l.edges = emopen(nil, 0)) == nil)
+	if((l.edges = emopen(nil)) == nil)
 		sysfatal("newlevel: %s", error());
 	dypush(lvl, l);
 	return lvl;
@@ -153,9 +153,9 @@ coarsen(Graph *g, char *uindex, char *eindex)
 	khash_t(meh) *h;
 	khash_t(ugh) *visited;
 
-	if((edges0 = emopen(eindex, 0)) == nil)
+	if((edges0 = emopen(eindex)) == nil)
 		sysfatal("coarsen: %s", error());
-	if((nodes = emopen(uindex, 0)) == nil)
+	if((nodes = emopen(uindex)) == nil)
 		sysfatal("coarsen: %s", error());
 	g->nnodes = emr64(nodes, 0);
 	g->nedges = emr64(edges0, 0);
@@ -175,7 +175,7 @@ coarsen(Graph *g, char *uindex, char *eindex)
 	u0 = 0;
 	u = -1;
 	eoff = -1;
-	if((edges = emopen(nil, 0)) == nil)
+	if((edges = emopen(nil)) == nil)
 		sysfatal("coarsen: %s", error());
 	while(S0 > Minnodes){
 		h = kh_init(meh);
@@ -289,7 +289,7 @@ coarsen(Graph *g, char *uindex, char *eindex)
 	}
 	DPRINT(Debugcoarse, "coarsen: ended at level %d, %zd remaining nodes, %zd edges", nlvl, S0, M);
 	lastsuper = nsuper;
-	nsuper += S0 + 1;
+	nsuper += S0 + 1;	// FIXME: not in the actual file
 	emclose(edges);
 	return lvl;
 }
@@ -311,13 +311,7 @@ main(int argc, char **argv)
 	ARGBEGIN{
 	case 'D':
 		s = EARGF(usage());
-		if(strcmp(s, "draw") == 0)
-			debug |= Debugdraw;
-		else if(strcmp(s, "render") == 0)
-			debug |= Debugrender;
-		else if(strcmp(s, "layout") == 0)
-			debug |= Debuglayout;
-		else if(strcmp(s, "fs") == 0)
+		if(strcmp(s, "fs") == 0)
 			debug |= Debugfs;
 		else if(strcmp(s, "coarse") == 0)
 			debug |= Debugcoarse;

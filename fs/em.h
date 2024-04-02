@@ -9,5 +9,5 @@ uchar*	emptr(EM*, vlong);
 usize	emr64(EM*, vlong);
 void	emw64(EM*, vlong, u64int);
 void	emclose(EM*);
-EM*	emopen(char*, int);
+EM*	emopen(char*);
 void	initem(void);

@@ -19,9 +19,8 @@ touch(usize n)
 {
 	int fd;
 	uchar u[1];
-	static char *path;
+	static char *path = "_strpg.test04";
 
-	path = sysmktmp();
 	if((fd = create(path, OWRITE, 0644)) < 0)
 		sysfatal("create: %s", error());
 	if(seek(fd, n-1, 0) < 0)
@@ -40,7 +39,7 @@ main(int, char **)
 
 	initem();
 	path = touch(Addr);
-	if((em = emopen(path, 0)) == nil)
+	if((em = emopen(path)) == nil)
 		sysfatal("emopen: %s", error());
 	emw64(em, Addr, 0xdeadbeefcafebabeULL);
 	if(emr64(em, Addr) != 0xdeadbeefcafebabeULL)

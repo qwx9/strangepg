@@ -3,8 +3,8 @@
 #include "em.h"
 #include "index.h"
 
-void
-threadmain(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	int i;
 	ssize u, v, idx, par, w, ei;

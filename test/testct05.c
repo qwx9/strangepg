@@ -11,7 +11,7 @@ main(int, char **)
 	EM *em;
 
 	initem();
-	if((em = emopen(nil, 0)) == nil)
+	if((em = emopen(nil)) == nil)
 		sysfatal("emopen: %s", error());
 	for(i=0; i<nelem(u); i++)
 		if(emr64(em, i) != 0)

@@ -43,13 +43,13 @@ coarsen(Graph *g, char *index)
 	EM *fedge, *fnode, *fweight, *fshit;
 	khash_t(meh) *h;
 
-	if((fedge = emopen(index, 0)) == nil)
+	if((fedge = emopen(index)) == nil)
 		sysfatal("coarsen: %s", error());
 	g->nnodes = emr64(fedge, 0);
 	g->nedges = emr64(fedge, 1);
 	assert(g->nedges > 0);
-	fnode = emopen(nil, 0);
-	fweight = emopen(nil, 0);
+	fnode = emopen(nil);
+	fweight = emopen(nil);
 	M = g->nedges;
 	S = g->nnodes - 1;
 	w = S;
@@ -58,7 +58,7 @@ coarsen(Graph *g, char *index)
 	lvl = 0;
 	while(M > 0){
 		h = kh_init(meh);
-		fshit = emopen(nil, 0);
+		fshit = emopen(nil);
 		warn("===== level %d\n", lvl++);
 		m = M;
 		M = 0;

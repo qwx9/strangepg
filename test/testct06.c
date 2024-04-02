@@ -20,9 +20,8 @@ touch(void)
 	int fd;
 	u64int v;
 	uchar *p;
-	static char *path;
+	static char *path = "_strpg.test06";
 
-	path = sysmktmp();
 	if((fd = create(path, OWRITE, 0644)) < 0)
 		sysfatal("create: %s", error());
 	for(p=buf, v=0; p<buf+sizeof buf; v++, p+=8)
@@ -42,7 +41,7 @@ main(int, char **)
 
 	initem();
 	path = touch();
-	if((em = emopen(path, 0)) == nil)
+	if((em = emopen(path)) == nil)
 		sysfatal("emopen: %s", error());
 	if((w = emr64(em, 0)) != 0)
 		sysfatal("got %llux instead of %llux", w, 0ULL);
@@ -52,7 +51,6 @@ main(int, char **)
 	}
 	emclose(em);
 	remove(path);
-	free(path);
 	sysquit();
 	return 0;
 }

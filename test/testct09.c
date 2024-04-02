@@ -8,7 +8,7 @@ main(int, char **)
 	EM *em;
 
 	initem();
-	if((em = emopen(nil, 0)) == nil)
+	if((em = emopen(nil)) == nil)
 		sysfatal("emopen: %s", error());
 	for(i=0; i<10000000; i++){
 		r = lrand() % (((1ULL<<32)-1)/4);

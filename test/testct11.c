@@ -2,8 +2,8 @@
 #include "em.h"
 
 enum{
-	Nf = 1,
-	Niter = 50000000,
+	Nf = 10,
+	Niter = 5000,
 };
 
 int
@@ -14,7 +14,7 @@ main(int, char **)
 
 	initem();
 	for(i=0; i<nelem(em); i++)
-		if((em[i] = emopen(nil, 0)) == nil)
+		if((em[i] = emopen(nil)) == nil)
 			sysfatal("emopen: %s", error());
 	for(i=0; i<Niter; i++){
 		if((i+1) % (1<<16) == 0)

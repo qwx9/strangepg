@@ -19,9 +19,8 @@ touch(uint n)
 {
 	int fd;
 	uchar u[1];
-	static char *path;
+	static char *path = "_strpg.test02";
 
-	path = sysmktmp();
 	if((fd = create(path, OWRITE, 0644)) < 0)
 		sysfatal("create: %s", error());
 	if(seek(fd, n-1, 0) < 0)	// next tests: non-aligned
@@ -40,7 +39,7 @@ main(int, char **)
 
 	initem();
 	path = touch(Pagesz);	// next test: maxgreed then beyond
-	if((em = emopen(path, 0)) == nil)
+	if((em = emopen(path)) == nil)
 		sysfatal("emopen: %s", error());
 	emw64(em, Pagesz/8, 0xdeadbeefcafebabeULL);
 	if(emr64(em, Pagesz/8) != 0xdeadbeefcafebabeULL)

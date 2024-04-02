@@ -9,7 +9,7 @@ main(int, char **)
 
 	initem();
 	for(i=0; i<nelem(em); i++)
-		if((em[i] = emopen(nil, 0)) == nil)
+		if((em[i] = emopen(nil)) == nil)
 			sysfatal("emopen: %s", error());
 	for(i=0; i<10000000; i++){
 		f = nrand(nelem(em));

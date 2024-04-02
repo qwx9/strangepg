@@ -3,7 +3,7 @@
 
 enum{
 	Niter = 10000,
-	M = 29,
+	M = 31,
 	R = 30,
 };
 
@@ -16,7 +16,7 @@ main(int, char **)
 	//debug |= Debugextmem;
 	multiplier = M;
 	initem();
-	if((em = emopen(nil, 0)) == nil)
+	if((em = emopen(nil)) == nil)
 		sysfatal("emopen: %s", error());
 	srand(42);
 		vlong t = nsec();
