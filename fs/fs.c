@@ -183,19 +183,6 @@ readline(File *f, int *len)
 }
 
 int
-opentmpfs(File *f)
-{
-	char *path;
-
-	if((path = sysmktmp()) == nil){
-		warn("sysmktmp: %s\n", error());
-		return -1;
-	}
-	f->path = path;
-	return sysopen(f, OWRITE);
-}
-
-int
 openfs(File *f, char *path, int mode)
 {
 	assert(f->aux == nil && f->path == nil);

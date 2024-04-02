@@ -74,16 +74,15 @@ sysremove(char *path)
 		warn("remove: %r\n");
 }
 
-char *
+int
 sysmktmp(void)
 {
-	char s[64];
+	char s[] = "_strpg.XXXXXXXXXXX";
 
-	snprint(s, sizeof s, ".strpg.XXXXXXXXXXX");
 	mktemp(s);
 	if(strncmp(s, "/", sizeof s) == 0)
-		return nil;
-	return estrdup(s);
+		return -1;
+	return create(s, ORDWR|ORCLOSE, 0600);
 }
 
 int

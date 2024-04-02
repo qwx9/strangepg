@@ -98,15 +98,11 @@ sysremove(char *path)
 		warn("remove %s: %s\n", path, error());
 }
 
-char *
+int
 sysmktmp(void)
 {
-	int fd;
-	char s[64];
-
-	snprintf(s, sizeof s, ".strpg.%d.%06x", getpid(), rand());
-	//snprintf(s, sizeof s, ".strpg.%d.XXXXXX", getpid());
-	return estrdup(s);
+	/* avoid hidden files, especially on error */
+	return mkstemp("_strpg.XXXXXX");
 }
 
 int
