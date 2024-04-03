@@ -12,6 +12,7 @@ main(int, char **)
 	ssize i, w, f;
 	EM *em[Nf];
 
+	multiplier = 29;
 	initem();
 	for(i=0; i<nelem(em); i++)
 		if((em[i] = emopen(nil)) == nil)

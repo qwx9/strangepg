@@ -3,14 +3,14 @@
 
 enum{
 	Niter = 10000,
-	M = 31,
+	M = 29,
 	R = 30,
 };
 
 int
 main(int, char **)
 {
-	ssize r, i, v, w;
+	ssize r, i, v, w, s;
 	EM *em;
 
 	//debug |= Debugextmem;
@@ -18,6 +18,7 @@ main(int, char **)
 	initem();
 	if((em = emopen(nil)) == nil)
 		sysfatal("emopen: %s", error());
+	s = time(nil);
 	srand(42);
 		vlong t = nsec();
 	for(i=0; i<Niter; i++){
