@@ -27,7 +27,6 @@ sysclose(File *f)
 int
 sysopen(File *f, int omode)
 {
-	int fd;
 	char *mode;
 	FILE *bf;
 
@@ -98,11 +97,18 @@ sysremove(char *path)
 		warn("remove %s: %s\n", path, error());
 }
 
+/* avoid hidden files, especially on error */
 int
 sysmktmp(void)
 {
-	/* avoid hidden files, especially on error */
-	return mkstemp("_strpg.XXXXXX");
+	int fd;
+	char tmp[] = "_strpg.XXXXXX";
+
+	if((fd = mkstemp(tmp)) < 0)
+		return -1;
+	if(unlink(tmp) < 0)
+		warn("sysmktmp: %s\n", error());
+	return fd;
 }
 
 int

@@ -4,7 +4,7 @@
 
 Channel *cmdc;
 
-static int ttid, epfd[2], fucker[2];	/* children's pipes, mandrake */
+static int epfd[2], fucker[2];	/* children's pipes, mandrake */
 
 static void
 cproc(void)
