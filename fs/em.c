@@ -189,7 +189,6 @@ GETPAGE(EM *em, ssize off)
 			warn("stalled, %lld iterations age %#llx emtc %#llx\n",
 				m, p->age, emtc);
 relink:
-		
 		assert(p != &pused);
 		em->cur = p;
 		if(p->age == 0 || emtc - p->age >= Pelder){
@@ -268,7 +267,7 @@ feedpages(void)
 static thret_t
 lruproc(void *th)
 {
-	vlong n, on;
+	vlong n;
 	uint i;
 	int j;
 	EM *em;
@@ -278,11 +277,11 @@ lruproc(void *th)
 	t = th;
 	namethread(t, "lruproc");
 	atexit(cleanup);
-	for(on=0;;){
-		if(memfree < poolsz/4)
-			on = 1;
+	for(;;){
 		p = pused.lleft;
-		for(n=0, i=0, j=0; on; n++){
+		/* this doesn't do any locking so scanning is just optimistic
+		 * but in practice it's faster to do this and go wherever */
+		for(n=0, i=0, j=0;; n++){
 			l = p->lleft;
 			if(p->bank == nil)
 				goto skip;
@@ -308,7 +307,7 @@ lruproc(void *th)
 		if(j < nelem(wchan))
 			sleep(10);
 	}
-	//exitthread(t, nil);	/* relying on killthread */
+	exitthread(t, nil);	/* unreachable, relying on killthread */
 }
 
 void
