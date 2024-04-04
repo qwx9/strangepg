@@ -16,7 +16,6 @@ OBJS:=\
 	lib/queue.o\
 	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
-	lib/plan9/nrand.o\
 	lib/plan9/seprint.o\
 	lib/plan9/strecpy.o\
 	linux/awk.o\
@@ -54,7 +53,6 @@ COARSENOBJS:=\
 	fs/fs.o\
 	lib/chan.o\
 	lib/plan9/getfields.o\
-	lib/plan9/nrand.o\
 	lib/queue.o\
 	linux/fs.o\
 	linux/sys.o\

@@ -153,6 +153,19 @@ emalloc(usize n)
 	return p;
 }
 
+/* return random number ∈ [0,RAND_MAX[ */
+int
+nrand(int n)
+{
+	return 0 + rand() / (RAND_MAX / (n - 0 + 1) + 1);
+}
+
+int
+lrand(void)
+{
+	return random();
+}
+
 void
 sysinit(void)
 {
