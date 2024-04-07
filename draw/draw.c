@@ -5,6 +5,7 @@
 View view;
 int showarrows, drawstep;
 int norefresh;
+int drawlabels;
 
 Obj aintnothingthere = {nil, Onil, -1};
 static Obj *visobj;
@@ -75,7 +76,7 @@ drawnode(Graph *g, Node *n)
 		if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0)
 			return -1;
 	}
-	if(drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
+	if(drawlabels && drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
 }

@@ -11,6 +11,8 @@ enum{
 };
 extern u32int *theme;
 
+extern int drawlabels;
+
 int	drawline(Quad, double, int, int, Color*);
 int	drawbezier(Quad, double, int, Color*);
 int	drawquad(Quad, Quad, Quad, double, int, Color*);

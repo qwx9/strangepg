@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "drw.h"
 #include "threads.h"
 
 Obj selected;
@@ -37,7 +38,7 @@ zoomview(Vector v)
 	/* scalar projection of v onto (1,1); so, view.zoom in when dragging ↘ */
 	Δ = 0.01 * -(v.x + v.y) / 2;
 	DPRINT(Debugdraw, "view.zoomview %.1f,%.1f → Δ %.2f: ", v.x, v.y, Δ);
-	if(view.zoom + Δ < 0.1 || view.zoom + Δ > 10){
+	if(view.zoom + Δ < 0.01 || view.zoom + Δ > 1024){
 		DPRINT(Debugdraw, "nope");
 		return -1;
 	}
@@ -73,6 +74,7 @@ keyevent(Rune r)
 	case 'R': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
 	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
 	case 'r': norefresh ^= 1; break;
+	case 'l': drawlabels ^= 1; break;
 	default: keyprompt(r); break;
 	}
 	return 0;
