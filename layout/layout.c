@@ -6,47 +6,51 @@ int deflayout = LLfr;
 
 static Layout *lltab[LLnil];
 
-static thret_t
-layproc(void *th)
+static void
+layproc(void *arg)
 {
 	vlong t;
 	Graph *g;
 	Layout *ll;
 
-	namethread(th, "layproc");
-	g = ((Thread *)th)->arg;
+	g = arg;
 	ll = g->layout.ll;
 	DPRINT(Debuglayout, "new job layout %s g %#p", ll->name, g);
 	t = (debug & Debugperf) != 0 ? μsec() : 0;
 	ll->compute(g);
+	g->layout.th = nil;
 	DPRINT(Debugperf, "layout: %lld μs", μsec() - t);
 	g->layout.f &= ~LFbusy;
 	reqdraw(Reqrender);
-	exitthread(th, nil);
+}
+
+static void
+runlayout(Graph *g)
+{
+	Layouting *l;
+
+	l = &g->layout;
+	if((l->f & LFonline) == 0){
+		warn("runlayout: %#p layout unarmed\n", g);
+		return;
+	}
+	l->f |= LFbusy;
+	l->th = newthread(layproc, l->ll->cleanup, g, nil, l->ll->name, mainstacksize);
+	if(!noui)
+		startdrawclock();
 }
 
 void
 stoplayout(Graph *g)
 {
-	if((g->layout.f & LFbusy) == 0)
-		return;
-	g->layout.f &= ~LFbusy;
-	killthread(g->layout.thread);
-	g->layout.thread = nil;
-}
+	Layouting *l;
 
-void
-runlayout(Graph *g)
-{
-	if((g->layout.f & LFonline) == 0){
-		warn("runlayout: %#p layout unarmed\n", g);
+	l = &g->layout;
+	if((l->f & LFbusy) == 0)
 		return;
-	}
-	stoplayout(g);
-	g->layout.f |= LFbusy;
-	g->layout.thread = newthread(layproc, g, mainstacksize);
-	if(!noui)
-		startdrawclock();
+	l->f &= ~LFbusy;
+	killthread(l->th);
+	l->th = nil;	/* FIXME: potential race */
 }
 
 // FIXME: kill it
@@ -68,12 +72,11 @@ updatelayout(Graph *g)
 int
 resetlayout(Graph *g)
 {
+	Layouting *l;
+
 	stoplayout(g);
-	g->layout.f &= ~LFarmed;
-	if(g->layout.aux != nil){
-		free(g->layout.aux);
-		g->layout.aux = nil;
-	}
+	l = &g->layout;
+	l->f &= ~LFarmed;
 	runlayout(g);
 	return 0;
 }
@@ -116,4 +119,5 @@ initlayout(void)
 	lltab[LLrandom] = regrandom();
 	lltab[LLfr] = regfr();
 	lltab[LLlinear] = reglinear();
+	lltab[LLpfr] = regpfr();
 }

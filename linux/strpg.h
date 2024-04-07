@@ -32,8 +32,6 @@ typedef uint16_t u16int;
 typedef uint32_t u32int;
 typedef uint64_t u64int;
 
-typedef	void*	thret_t;
-
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
 #define USED(x) (void)(x)
@@ -68,6 +66,7 @@ extern char *argv0;
 #define	ARGC()		_argc
 
 int nrand(int);
+int	lrand(void);
 int	getfields(char*, char**, int, int, char*);
 char*	seprint(char*, char*, char*, ...);
 char*	strecpy(char*, char*, char*);

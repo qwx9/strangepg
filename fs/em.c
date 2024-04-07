@@ -109,7 +109,7 @@ static uvlong emtc;
 }while(0)
 
 static void
-cleanup(void)
+cleanup(void *)
 {
 	int i;
 	EM **em;
@@ -205,18 +205,15 @@ relink:
 	return p;
 }
 
-static thret_t
-cacheproc(void *th)
+static void
+cacheproc(void *arg)
 {
 	EM *em;
 	Bank *bank;
 	Page *p;
 	Channel *c;
-	Thread *t;
 
-	t = th;
-	c = t->arg;
-	namethread(t, "cacheproc");
+	c = arg;
 	for(;;){
 		if((p = recvp(c)) == nil)
 			break;
@@ -237,7 +234,6 @@ cacheproc(void *th)
 			emclose(em);
 		p->flags &= ~(Fdirty | Fsent);
 	}
-	exitthread(t, nil);
 }
 
 static void
@@ -264,19 +260,15 @@ feedpages(void)
 	memfree += n;
 }
 
-static thret_t
-lruproc(void *th)
+static void
+lruproc(void *)
 {
 	vlong n;
 	uint i;
 	int j;
 	EM *em;
 	Page *p, *l;
-	Thread *t;
 
-	t = th;
-	namethread(t, "lruproc");
-	atexit(cleanup);
 	for(;;){
 		p = pused.lleft;
 		/* this doesn't do any locking so scanning is just optimistic
@@ -307,7 +299,6 @@ lruproc(void *th)
 		if(j < nelem(wchan))
 			sleep(10);
 	}
-	exitthread(t, nil);	/* unreachable, relying on killthread */
 }
 
 void
@@ -389,10 +380,11 @@ emopen(char *path)
 			if((wchan[i] = chancreate(sizeof(Page*), Chansz)) == nil)
 				sysfatal("chancreate: %s", error());
 		feedpages();
-		t = newthread(lruproc, nil, mainstacksize);
+		/* FIXME: proper cleanup: cleanfn + reclaim used: kill when empty */
+		t = newthread(lruproc, cleanup, nil, nil, "lru", mainstacksize);
 		dypush(proctab, t);
 		for(i=0; i<nelem(wchan); i++){
-			t = newthread(cacheproc, wchan[i], mainstacksize);
+			t = newthread(cacheproc, nil, wchan[i], nil, "cache", mainstacksize);
 			dypush(proctab, t);
 		}
 	}

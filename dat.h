@@ -11,11 +11,13 @@ typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Color Color;
 typedef struct Clk Clk;
+typedef struct Thread Thread;
 
 #pragma incomplete File
 #pragma incomplete Coarse
 #pragma incomplete Layout
 #pragma incomplete Color
+#pragma incomplete Thread
 
 KHASH_MAP_INIT_STR(strmap, ssize)
 KHASH_MAP_INIT_INT64(idmap, ssize)
@@ -49,8 +51,7 @@ enum{
 struct Layouting{
 	int f;
 	Layout *ll;
-	void *thread;
-	void *aux;
+	Thread *th;
 };
 
 enum{

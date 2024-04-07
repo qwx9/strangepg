@@ -1,33 +1,87 @@
 #include "strpg.h"
 #include "threads.h"
 
-/* fuck you pthreads */
+struct Thread{
+	int tid;
+	int pid;
+	void *arg;
+	void *data;
+	char *name;
+	void (*fn)(void*);
+	void (*cleanfn)(void*);
+};
+
+static void
+wipe(void)
+{
+	Thread *th;
+
+	warn("wipe %#p\n", *procdata());
+	if((th = *procdata()) == nil)
+		return;
+	if(th->cleanfn != nil)
+		th->cleanfn(th->data);
+	free(th);
+}
+
+static void
+_thread(void *tp)
+{
+	Thread *th;
+
+	th = tp;
+	*procdata() = th;
+	atexit(wipe);
+	if(th->name != nil)
+		threadsetname(th->name);
+	th->pid = getpid();
+	threadsetgrp(th->pid);
+	th->fn(th->arg);
+	exits(nil);
+}
+
 Thread *
-newthread(thret_t (*fp)(void*), void *arg, uint stacksize)
+newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *name, uint stacksize)
 {
 	int tid;
-	Thread *t;
+	Thread *th;
 
-	t = emalloc(sizeof *t);
-	t->arg = arg;
-	if((tid = proccreate(fp, t, stacksize)) < 0)
+	th = emalloc(sizeof *th);
+	th->fn = fn;
+	th->cleanfn = cleanfn;
+	th->arg = arg;
+	th->data = data;
+	th->name = name;
+	if((tid = procrfork(_thread, th, stacksize, RFNOTEG)) < 0)
 		sysfatal("newthread: %r");
-	t->tid = tid;
-	return t;
+	th->tid = tid;
+	return th;
 }
 
-void
-namethread(Thread *, char *s)
+void *
+threadstore(void *p)
 {
-	threadsetname(s);
+	Thread *th;
+
+	if((th = *procdata()) == nil)
+		return nil;
+	if(p == nil)
+		return th->data;
+	else
+		return th->data = p;
 }
 
+/* FIXME: if the thread doesn't yield in time, we're fucked */
 void
-killthread(Thread *t)
+killthread(Thread *th)
 {
-	if(t == nil)
+	warn("kill %#p %s\n", th, th!=nil?th->name:"");
+	if(th == nil)
 		return;
-	threadkill(t->tid);
-	waitpid();
-	free(t);
+	/* FIXME */
+	threadkill(th->tid);
+	postnote(PNGROUP, threadpid(th->tid), "die yankee pigdog");
+	threadkillgrp(th->pid);
+	if(th->cleanfn != nil)
+		th->cleanfn(th->data);
 }

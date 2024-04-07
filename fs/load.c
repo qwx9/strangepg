@@ -30,7 +30,7 @@ loadfs(char *path, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	newthread(ff->load, estrdup(path), mainstacksize);
+	newthread(ff->load, nil, estrdup(path), nil, ff->name, mainstacksize);
 	return 0;
 }
 

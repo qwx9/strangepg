@@ -92,7 +92,7 @@ for l in of:
 	nse += 1
 	# sorted by u, v, o
 	f.write(pack("n", int(s[0])))	# i		u int id
-	f.write(pack("n", int(s[1])))	# j		v int id	
+	f.write(pack("n", int(s[1])))	# j		v int id
 	f.write(pack("n", int(s[2])))	# dir	orientation (should be B)
 	f.write(pack("n", int(s[3])))	# off	off/len in gfa
 	f.write(pack("n", int(s[4])))	# len	(should be L)

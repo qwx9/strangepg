@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
+#include "threads.h"
 
 /* fruchterman and reingold 91, with small modifications */
 
@@ -35,11 +36,10 @@ scan(Graph *g, int new)
 	ssize i;
 	Node *u;
 	Layouting *l;
-	P *ρ, p = {0};
+	P *ptab, p = {0};
 
-	ρ = nil;
+	ptab = nil;
 	l = &g->layout;
-	free(l->aux);
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		p.i = i;
@@ -55,29 +55,35 @@ scan(Graph *g, int new)
 			p.x = u->vrect.o.x;
 			p.y = u->vrect.o.y;
 		}
-		u->layid = dylen(ρ);
-		dypush(ρ, p);
+		u->layid = dylen(ptab);
+		dypush(ptab, p);
 	}
-	l->aux = dyhdr(ρ);	/* ouch */
+	if(threadstore(ptab) == nil)
+		sysfatal("threadstore: %s", error());
 	l->f |= LFarmed;
-	return ρ;
+	return ptab;
 }
 
-// FIXME: fixed point? fast fixed point square root?
-// FIXME: fp errors here and in rend; still a double free or so
+static void
+cleanup(void *p)
+{
+	dyfree(p);
+	USED(p);
+}
 
 static void
 compute(Graph *g)
 {
 	ssize i;
 	double k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
-	P *ρ, *u, *v;
+	P *ptab, *u, *v;
 	Node *nu, *nv;
 	Edge *e;
 	Layouting *l;
 
 	l = &g->layout;
-	ρ = scan(g, (l->f & LFarmed) == 0);
+	if((ptab = scan(g, (l->f & LFarmed) == 0)) == nil)
+		sysfatal("scan: %s", error());
 	if(dylen(g->edges) < 1){
 		warn("no links to hand\n");
 		return;
@@ -85,13 +91,12 @@ compute(Graph *g)
 	k = 1 * ceil(sqrt((double)Area / dylen(g->nodes)));
 	t = 1.0;
 	for(;;){
-		//sleep(10);
 		Δr = 0;
-		for(u=ρ; u<ρ+dylen(ρ); u++){
+		for(u=ptab; u<ptab+dylen(ptab); u++){
 			Δx = Δy = 0;
 			if(u->i < 0)
 				continue;
-			for(v=ρ; v<ρ+dylen(ρ); v++){
+			for(v=ptab; v<ptab+dylen(ptab); v++){
 				if(u == v)
 					continue;
 				δx = u->x - v->x;
@@ -104,6 +109,7 @@ compute(Graph *g)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
+		yield();
 		for(i=g->edge0.next; i>=0; i=e->next){
 			e = g->edges + i;
 			nu = getnode(g, e->u >> 1);
@@ -111,8 +117,8 @@ compute(Graph *g)
 			if(nu == nv)
 				continue;
 			assert(nu != nil && nv != nil);
-			u = ρ + nu->layid;
-			v = ρ + nv->layid;
+			u = ptab + nu->layid;
+			v = ptab + nv->layid;
 			δx = u->x - v->x;
 			δy = u->y - v->y;
 			δ = Δ(δx, δy);
@@ -124,7 +130,8 @@ compute(Graph *g)
 			v->Δx += rx;
 			v->Δy += ry;
 		}
-		for(u=ρ; u<ρ+dylen(ρ); u++){
+		yield();
+		for(u=ptab; u<ptab+dylen(ptab); u++){
 			if(u->i < 0)
 				continue;
 			δx = u->Δx;
@@ -143,15 +150,15 @@ compute(Graph *g)
 		t = cool(t);
 		if(Δr < 1)
 			break;
+		yield();
 	}
-	free(l->aux);
-	l->aux = nil;
 }
 
 static Layout ll = {
 	.name = "linear",
 	.init = init,
 	.compute = compute,
+	.cleanup = cleanup,
 };
 
 Layout *

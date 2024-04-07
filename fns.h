@@ -57,7 +57,6 @@ void	initlayout(void);
 int	newlayout(Graph*, int);
 int	resetlayout(Graph*);
 void	stoplayout(Graph*);
-void	runlayout(Graph*);
 int	updatelayout(Graph*);
 
 int	initcmd(void);
@@ -93,6 +92,10 @@ void	resetui(int);
 int	mouseevent(Vertex, Vertex, int);
 int	keyevent(Rune);
 void	quit(void);
+
+Thread*	newthread(void (*)(void*), void (*)(void*), void*, void*, char*, uint);
+void*	threadstore(void*);
+void	killthread(Thread*);
 
 /* you gotta wonder what will come next */
 #define DPRINT(x,...)	do{ \

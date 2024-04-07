@@ -3,7 +3,6 @@
 #include <geometry.h>
 
 typedef intptr	ssize;
-typedef	void	thret_t;
 
 #define	const
 #include "lib/khash.h"

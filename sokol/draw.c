@@ -27,7 +27,7 @@ enum{
 	 * depth, no occlusion, etc.; so for now, just drop draw calls;
 	 * otherwise, to save a partial render and draw on top, we need to
 	 * draw into a texture first */
-	Drawlimit = 32*1024,
+	Drawlimit = 32*1024,	// _SGP_DEFAULT_MAX_VERTICES * 2
 };
 
 struct Color{

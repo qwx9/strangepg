@@ -35,13 +35,12 @@ sendcmd(char *cmd)
 	}
 }
 
-static thret_t
-readcproc(void *th)
+static void
+readcproc(void *)
 {
 	int n, fd;
 	char buf[8192], *p, *s;
 
-	namethread(th, "cmdproc");
 	fd = fucker[0];
 	for(;;){
 		if((n = read(fd, buf, sizeof buf)) <= 0)
@@ -63,7 +62,6 @@ readcproc(void *th)
 	close(fd);
 	if(n < 0)
 		warn("readcproc: %s", error());
-	exitthread(th, nil);
 }
 
 int
@@ -84,6 +82,6 @@ initrepl(void)
 		close(fucker[1]);
 		break;
 	}
-	newthread(readcproc, nil, mainstacksize);
+	newthread(readcproc, nil, nil, nil, "cmd", mainstacksize);
 	return 0;
 }

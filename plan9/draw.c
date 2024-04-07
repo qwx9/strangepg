@@ -318,12 +318,11 @@ cleardraw(void)
 }
 
 static void
-drawproc(void *th)
+drawproc(void *)
 {
 	ulong req;
 	static Clk clk = {.lab = "flush"};
 
-	namethread(th, "drawproc");
 	resetdraw();
 	for(;;){
 		if((req = recvul(drawc)) == 0)
@@ -347,7 +346,6 @@ drawproc(void *th)
 		CLK1(clk);
 		unlockdisplay(display);
 	}
-	exitthread(th, error());
 }
 
 /* throttling of draw requests happens here */
@@ -363,12 +361,11 @@ reqdraw(int r)
 
 /* FIXME: portable code */
 static void
-ticproc(void *th)
+ticproc(void *)
 {
 	double t0, step;
 	vlong t, Δt;
 
-	namethread(th, "ticproc");
 	t0 = μsec();
 	step = drawstep ? Nsec/140. : Nsec/60.;
 	for(;;){
@@ -393,7 +390,7 @@ startdrawclock(void)
 {
 	if(ticker != nil)
 		return;
-	ticker = newthread(ticproc, nil, mainstacksize);
+	ticker = newthread(ticproc, nil, nil, nil, "tic", mainstacksize);
 }
 
 // FIXME: portable code
@@ -408,5 +405,5 @@ initsysdraw(void)
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
 	if((drawc = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");
-	newthread(drawproc, nil, mainstacksize);
+	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
 }

@@ -23,21 +23,25 @@ expandnode(Graph *g, Node *pp)
 		return;
 	printgraph(g);
 	DPRINT(Debugcoarse, "split %#p node %zx level %d idx %zx", g, pp->id, pp->lvl, pp->idx);
+	warn("pp %#p %zx\n", pp, pp->id);
 	seekfs(f, l->noff);
 	for(i=0, p=nil; i<l->nnodes; i++){
 		u = get64(f);
 		idx = get64(f);
 		par = get64(f);
 		w = get64(f);
-		DPRINT(Debugcoarse, "expanding node [%zx]%zx←%zx", idx, u, par);
+		warn("pp %#p %zx\n", pp, pp->id);
+		DPRINT(Debugcoarse, "check %zx %zx %zx against %zx", u, idx, par, pp->id);
 		// FIXME: better way?
 		if(par != pp->id){
 			touchnode(g, u, par, idx, w);
 			continue;
 		}
+		DPRINT(Debugcoarse, "expanding node [%zx]%zx←%zx par=%zx", idx, u, par, pp->id);
 		p = p == nil ? pushchild(g, u, pp, idx, w) : pushsibling(g, u, p, idx, w);
 	}
 	seekfs(f, l->eoff);
+	warn("pp %#p %zx\n", pp, pp->id);
 	for(i=0; i<l->nedges; i++){
 		u = get64(f);
 		v = get64(f);
@@ -45,9 +49,12 @@ expandnode(Graph *g, Node *pp)
 		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
+		warn("pp %#p %zx\n", pp, pp->id);
 		assert(n != nil && m != nil);
-		if(n->pid != pp->id && m->pid != pp->id)
+		if(n->pid != pp->id && m->pid != pp->id){
+			DPRINT(Debugcoarse, "skip foreign child (%zx,%zx) not %zx's", n->pid, m->pid, pp->id);
 			continue;
+		}
 		n = getactivenode(g, n);
 		m = getactivenode(g, m);
 		pushedge(g, n, m, u&1, v&1);
@@ -113,14 +120,13 @@ readtree(Graph *g, char *path)
 	return 0;
 }
 
-static thret_t
-load(void *th)
+static void
+load(void *arg)
 {
 	char *path;
 	Graph g;
 
-	path = ((Thread *)th)->arg;
-	namethread(th, "indexproc");
+	path = arg;
 	g = initgraph(FFindex);
 	if(readtree(&g, path) < 0)
 		sysfatal("load: failed to read tree %s: %s", path, error());
@@ -130,7 +136,6 @@ load(void *th)
 	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
 	expandnode(&g, g.nodes);
 	pushgraph(g);
-	exitthread(th, nil);
 }
 
 static int
