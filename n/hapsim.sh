@@ -1,26 +1,29 @@
 #!/bin/bash
-pd=0.3
-pi=0.2
+N=10	# N nodes
+pd=0.1	# duplication ratio
+pi=0.05	# inversion ratio
+frag=1	# M connected components of N nodes (linked by single edge)
 usage(){
-	echo usage: "$0 [-d %DUP] [-i %INV] NNODES" 1>&2
+	echo usage: "$0 [-f NCOMP] [-d %DUP] [-i %INV] [NNODES]" 1>&2
 	exit 1
 }
 while [[ $# -gt 1 ]]; do
 	case $1 in
 	-d) shift; pd=$1;;
+	-f) shift; frag=$1;;
 	-i) shift; pi=$1;;
 	*) usage;;
 	esac
 	shift
 done
-if [[ $# -ne 1 ]]; then
-	usage
+if [[ $# -eq 1 ]]; then
+	N=$1
 fi
-N=$1
 awk \
 	-v "N=$N" \
 	-v "pd=$pd" \
 	-v "pi=$pi" \
+	-v "frag=$frag" \
 '
 function nrand(n){
 	return 1 + int((n-1) * rand() + 0.5)
@@ -28,9 +31,15 @@ function nrand(n){
 function wrhdr(){
 	print "H", "VN:Z:1.0"
 }
-function wrsegs(	i){
-	for(i=1; i<=N; i++)
-		print "S", i, "*"
+function wrsegs(	i, m, t){
+	i = 1
+	for(m=1; m<=frag; m++){
+		t = "fx:f:" i
+		for(i=i; i<=m*N; i++){
+			print "S", i, "*", t
+			t = ""
+		}
+	}
 }
 function wrlink(u, v, i, j){
 	print "L", u, i, v, j, "0M"
@@ -49,12 +58,16 @@ BEGIN{
 	wrsegs()
 	u = 1
 	i = "+"
-	for(n=2; n<=N-1; n++){
-		done = 0;
-		while(rand() < pd)
-			newlink(nrand(N-1))
+	n = 2
+	k = frag * N
+	for(m=1; m<=frag; m++){
+		k = N * m
 		newlink(n)
+		for(n=n; n<=k; n++){
+			while(rand() < pd)
+				newlink((m-1)*N + nrand(N-1))
+			newlink(n)
+		}
 	}
-	newlink(N)
 }
 '
