@@ -44,7 +44,7 @@ printgraph(Graph *g)
 
 	if((debug & Debugcoarse) == 0)
 		return;
-	warn("graph %#p nn %zd ne %zd ns %zd\n", g, g->nnodes, g->nedges, g->nsuper);
+	warn("graph %#p nn %zd ne %zd ns %zd: actual nn %zd ne %zd\n", g, g->nnodes, g->nedges, g->nsuper, dylen(g->nodes), dylen(g->edges));
 	for(i=g->edge0.next; i>=0; i=e->next){
 		e = g->edges + i;
 		warn("e[%04zx] %#p %zx %zx,%zx\n", i, e, e->id, e->u >> 1, e->v >> 1);
@@ -276,7 +276,7 @@ pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	n = touchnode(g, id, pid, idx, w);
 	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
 		m = g->nodes + i;
-		if(m->id > n->id)	/* ids in reverse order */
+		if(m->id < n->id)	/* ids in reverse order */
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
@@ -311,7 +311,7 @@ pushchild(Graph *g, ssize id, Node *pp, ssize idx, int w)
 		n->lvl = 0;
 	for(i=g->node0.prev, m=&g->node0; i>=0; i=m->prev){
 		m = g->nodes + i;
-		if(m->id < n->id)	/* ids in reverse order */
+		if(m->id > n->id)	/* ids in reverse order */
 			break;
 	}
 	LINK(g->nodes, &g->node0, m, n);
@@ -354,6 +354,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	//id = v->id * g->nsuper + u->id << 2 | udir << 1 & 1 | vdir & 1;
 	//id = dylen(g->edges) << 2 | udir << 1 & 1 | vdir & 1;
 	id = dylen(g->edges);
+	DPRINT(Debugcoarse, "newedge %c%zd,%c%zd id=%zd", udir?'<':'>', u->id, vdir?'<':'>', v->id, id);
 	k = kh_put(idmap, g->emap, id, &ret);
 	if(ret == 0){
 		warn("newedge: not overwriting existing edge [%zx] %zx,%zx\n", id, u->id, v->id);
