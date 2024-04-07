@@ -18,6 +18,7 @@ OFILES=\
 
 HFILES=\
 	awk.h\
+	awkgram.tab.h\
 	mt19937-64.h\
 	plan9.h\
 	proto.h\
@@ -28,8 +29,8 @@ default:V: all
 
 YFLAGS=$YFLAGS -S -s awkgram
 CC=pcc
-CFLAGS=-c -p -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE
-CLEANFILES=awkgram.c awkgram.tab.h proctab.c $objtype.maketab maketab.$O
+CFLAGS=-c -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE
+CLEANFILES=awkgram.c awkgram.tab.h proctab.c $cputype.maketab maketab.$O
 
 awkgram.tab.h awkgram.c:	$YFILES
 	$YACC -o awkgram.c $YFLAGS $prereq
@@ -40,6 +41,6 @@ proctab.c:	$cputype.maketab
 $cputype.maketab:	awkgram.tab.h maketab.c
 	objtype=$cputype mk maketab.$cputype
 
-maketab.$objtype:V:
+maketab.$cputype:V:
 	$CC $CFLAGS maketab.c
-	$LD $LDFLAGS -o $objtype.maketab maketab.$O
+	$LD $LDFLAGS -o $cputype.maketab maketab.$O
