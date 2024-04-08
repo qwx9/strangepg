@@ -62,10 +62,10 @@ keyevent(Rune r)
 
 	DPRINT(Debugdraw, "keyevent %d", r);
 	switch(r){
-	case KBup: if(panview(Vec2(0,+16)) >= 0) reqdraw(Reqredraw); break;
-	case KBdown: if(panview(Vec2(0,-16)) >= 0) reqdraw(Reqredraw); break;
-	case KBright: if(panview(Vec2(-16,0)) >= 0) reqdraw(Reqredraw); break;
-	case KBleft: if(panview(Vec2(+16,0)) >= 0) reqdraw(Reqredraw); break;
+	case KBup: if(panview(Vec2(0,-view.dim.v.y/2)) >= 0) reqdraw(Reqredraw); break;
+	case KBdown: if(panview(Vec2(0,+view.dim.v.y/2)) >= 0) reqdraw(Reqredraw); break;
+	case KBright: if(panview(Vec2(+view.dim.v.x/2,0)) >= 0) reqdraw(Reqredraw); break;
+	case KBleft: if(panview(Vec2(-view.dim.v.x/2,0)) >= 0) reqdraw(Reqredraw); break;
 	case KBescape: free(prompt); prompt = nil; reqdraw(Reqresetui); break;
 	case '\n': keyprompt(0);  reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
@@ -121,7 +121,8 @@ resetui(int all)
 {
 	view.center = divpt2(view.dim.v, 2);
 	DPRINT(Debugdraw, "resetui center %.1f,%.1f", view.center.x, view.center.y);
-	panmax = view.dim.v;
+	panmax.x = view.dim.v.x * Nodesz;
+	panmax.y = view.dim.v.y * Nodesz;
 	if(all){
 		view.pan = ZV;
 		view.zoom = 1.0;
