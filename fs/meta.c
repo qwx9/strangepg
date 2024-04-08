@@ -40,21 +40,21 @@ collectgfanodes(Graph *g, File *f)
 		}
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, &l);
-			/* ignore length if sequence was inlined */
-			if(l < 6 || s[2] != ':' || s[4] != ':'){
-				warn("invalid metadata field %s\n", s);
+			if(l < 5 || s[2] != ':' || s[4] != ':'){
+				warn("line %zd: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
 				continue;
 			}
+			/* ignore length if sequence was inlined */
 			if(strncmp(s, "LN", 2) == 0 && r){
 				warn("node[%zx]: ignoring redundant length field\n", n->id);
 				continue;
 			/* FIXME: no error checking */
 			}else if(strncmp(s, "fx", 2) == 0){
 				n->flags |= FNfixed;
-				n->fixed.x = atoi(s+5);
+				n->fixed.x = atof(s+5);
 			}else if(strncmp(s, "fy", 2) == 0){
 				n->flags |= FNfixed;
-				n->fixed.y = atoi(s+5);
+				n->fixed.y = atof(s+5);
 			}
 			s[2] = 0;
 			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);
