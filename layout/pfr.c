@@ -218,6 +218,9 @@ compute(Graph *g)
 		warn("no links to hand\n");
 		return;
 	}
+	/* what takes the most time (O(n²)) is the all-to-all node repulsion loop,
+	 * the rest is fast, but to avoid waiting, just do all three steps in each
+	 * worker */
 	for(i=0; i<nelem(d->th); i++){
 		if((d->th[i] = newthread(werks, nil, (void *)i, d, "swine", mainstacksize)) == nil)
 			sysfatal("newthread: %s", error());
