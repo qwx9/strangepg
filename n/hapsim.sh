@@ -16,7 +16,7 @@ while [[ $# -gt 1 ]]; do
 	esac
 	shift
 done
-if [[ $# -eq 1 ]]; then
+if [[ $# -ne 0 ]]; then
 	N=$1
 fi
 awk \
@@ -34,9 +34,9 @@ function wrhdr(){
 function wrsegs(	i, m, t){
 	i = 1
 	for(m=1; m<=frag; m++){
-		t = "fx:f:" i
+		t = "\tfx:f:" i*8*N
 		for(i=i; i<=m*N; i++){
-			print "S", i, "*", t
+			print "S", i, "*" t
 			t = ""
 		}
 	}
@@ -59,9 +59,8 @@ BEGIN{
 	u = 1
 	i = "+"
 	n = 2
-	k = frag * N
 	for(m=1; m<=frag; m++){
-		k = N * m
+		k += N
 		newlink(n)
 		for(n=n; n<=k; n++){
 			while(rand() < pd)
