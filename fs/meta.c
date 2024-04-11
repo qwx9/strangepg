@@ -30,6 +30,7 @@ collectgfanodes(Graph *g, File *f)
 			}
 			continue;
 		}
+		DPRINT(Debugmeta, "collectgfanodes node[%zd]: %d %s", n-g->nodes, f->trunc, s);
 		if((s = nextfield(f, s, nil)) == nil	/* S */
 		|| (s = nextfield(f, s, nil)) == nil)	/* id */
 			continue;
@@ -41,12 +42,13 @@ collectgfanodes(Graph *g, File *f)
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, &l);
 			if(l < 5 || s[2] != ':' || s[4] != ':'){
-				warn("line %zd: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
+				warn("node[%zd]: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
 				continue;
 			}
+			/* FIXME: don't assume two letter tags? */
 			/* ignore length if sequence was inlined */
 			if(strncmp(s, "LN", 2) == 0 && r){
-				warn("node[%zx]: ignoring redundant length field\n", n->id);
+				DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", n->id);
 				continue;
 			/* FIXME: no error checking */
 			}else if(strncmp(s, "fx", 2) == 0){
@@ -55,6 +57,9 @@ collectgfanodes(Graph *g, File *f)
 			}else if(strncmp(s, "fy", 2) == 0){
 				n->flags |= FNfixed;
 				n->fixed.y = atof(s+5);
+			}else if(strncmp(s, "mv", 2) == 0){
+				n->flags |= FNinitpos;	/* FIXME */
+				n->fixed.x = atof(s+5);
 			}
 			s[2] = 0;
 			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);
@@ -81,6 +86,7 @@ collectgfaedges(Graph *g, File *f)
 			}
 			continue;
 		}
+		DPRINT(Debugmeta, "collectgfaedges edges[%zd]: %d %s", e-g->edges, f->trunc, s);
 		if((s = nextfield(f, s, nil)) == nil	/* L */
 		|| (s = nextfield(f, s, nil)) == nil	/* u */
 		|| (s = nextfield(f, s, nil)) == nil	/* du */
@@ -108,14 +114,13 @@ collectgfameta(Graph *g)
 	File *f;
 
 	clearmeta(g);	/* delegated to awk */
-	g->flags |= FGloading;
 	f = g->f;
 	if(collectgfanodes(g, f) < 0)
 		warn("collectmeta: %s\n", error());
 	if(collectgfaedges(g, f) < 0)
 		warn("collectmeta: %s\n", error());
+	g->flags |= FGarmed;
 	pushcmd("FGD135");
-	g->flags &= ~FGloading;
 }
 
 void

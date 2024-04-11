@@ -62,7 +62,6 @@ scan(Graph *g, int new)
 static void
 cleanup(void *p)
 {
-	warn("cleanup %#p\n", p);
 	dyfree(p);
 	USED(p);
 }
@@ -76,7 +75,6 @@ compute(Graph *g)
 	Node *nu, *nv;
 	Edge *e;
 	Layouting *l;
-	vlong τ, τ1;
 
 	l = &g->layout;
 	if((ptab = scan(g, (l->f & LFarmed) == 0)) == nil)
@@ -88,7 +86,6 @@ compute(Graph *g)
 	k = 1 * ceil(sqrt((double)Area / dylen(g->nodes)));
 	t = 1.0;
 	for(;;){
-		τ = μsec();
 		Δr = 0;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
 			Δx = Δy = 0;
@@ -105,9 +102,6 @@ compute(Graph *g)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		τ1 = μsec();
-		//warn("0 %lld μs\n", τ1 - τ);
-		τ = τ1;
 		yield();
 		for(i=g->edge0.next; i>=0; i=e->next){
 			e = g->edges + i;
@@ -129,9 +123,6 @@ compute(Graph *g)
 			v->Δx += rx;
 			v->Δy += ry;
 		}
-		τ1 = μsec();
-		//warn("1 %lld μs\n", τ1 - τ);
-		τ = τ1;
 		yield();
 		for(u=ptab; u<ptab+dylen(ptab); u++){
 			δx = u->Δx;
@@ -148,8 +139,6 @@ compute(Graph *g)
 				Δr = δ;
 		}
 		t = cool(t);
-		τ1 = μsec();
-		//warn("2 %lld μs\n", τ1 - τ);
 		if(Δr < 1)
 			break;
 		yield();

@@ -38,9 +38,10 @@ struct Quad{
 	Vector v;	/* dimensions and orientation */
 };
 
+/* FIXME: drawshit etc */
 enum{
 	Nodesz = 8,
-	Ptsz = 2,
+	Ptsz = 2,	// FIXME: mostly unused
 };
 
 enum{
@@ -56,11 +57,12 @@ struct Layouting{
 
 enum{
 	FNfixed = 1<<0,
+	FNinitpos = 1<<1,
 
 	FEfixed = 1<<0,
 	Sbit = 1ULL<<63,
 
-	FGloading = 1<<0,
+	FGarmed = 1<<0,
 };
 struct Node{
 	ssize id;		/* key */
@@ -157,6 +159,7 @@ extern int showarrows, drawstep;
 extern int haxx0rz;
 
 enum{
+	/* FIXME: ui shit */
 	Mlmb = 1<<0,
 	Mmmb = 1<<1,
 	Mrmb = 1<<2,
@@ -171,6 +174,7 @@ enum{
 	Debugextmem = 1<<5,
 	Debugcmd = 1<<6,
 	Debugperf = 1<<7,
+	Debugmeta = 1<<8,
 	Debugtheworld = 0xffffffff,
 
 	/* unicode arrows, children's compilers, mandrake */

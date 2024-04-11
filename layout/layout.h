@@ -5,6 +5,7 @@ enum{
 	LLfr,
 	LLlinear,
 	LLpfr,
+	LLpline,
 	LLnil,
 };
 struct Layout{
@@ -20,5 +21,6 @@ Layout*	regforce(void);
 Layout*	reglinear(void);
 Layout*	regfr(void);
 Layout*	regpfr(void);
+Layout*	regpline(void);
 Layout*	regrandom(void);
 void	putnode(Node*, int, int);

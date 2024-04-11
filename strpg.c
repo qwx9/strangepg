@@ -64,6 +64,8 @@ parseargs(int argc, char **argv)
 			debug |= Debugextmem;
 		else if(strcmp(s, "perf") == 0)
 			debug |= Debugperf;
+		else if(strcmp(s, "meta") == 0)
+			debug |= Debugmeta;
 		else if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
 		else{
@@ -89,6 +91,8 @@ parseargs(int argc, char **argv)
 			deflayout = LLfr;
 		else if(strcmp(s, "pfr") == 0)
 			deflayout = LLpfr;
+		else if(strcmp(s, "pline") == 0)
+			deflayout = LLpline;
 		else
 			sysfatal("unknown layout type");
 		break;

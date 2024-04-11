@@ -9,12 +9,13 @@ enum{
 	W = 256,
 	L = 256,
 	Area = W * L,
-	Nthread = 4,
+	Nthread = 8,
 };
 
 typedef struct P P;
 typedef struct D D;
 struct P{
+	uchar fixed;
 	double x;
 	double y;
 	double *nx;
@@ -59,9 +60,15 @@ scan(Graph *g, int new)
 		p.i = i;
 		p.nx = &u->vrect.o.x;
 		p.ny = &u->vrect.o.y;
-		if(new){
-			p.x = -W/4 + nrand(W/2);
-			p.y = -L/4 + nrand(L/2);
+		/* FIXME */
+		if((u->flags & (FNfixed|FNinitpos)) != 0){
+			p.x = u->fixed.x;
+			p.y = u->fixed.y;
+			if(u->flags & FNinitpos)
+				warn("%zd\n", u->id);
+		}else if(new){
+			p.x = g->nnodes / 2;
+			p.y = -32 + nrand(64);
 		}
 		*p.nx = p.x;
 		*p.ny = p.y;
@@ -70,6 +77,10 @@ scan(Graph *g, int new)
 	}
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
+		if((u->flags & FNfixed) != 0){
+			pp->i = -1;
+			continue;
+		}
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
 			v = getnode(g, g->edges[*e].v >> 1);
@@ -127,6 +138,8 @@ werks(void *arg)
 			x = u->x;
 			y = u->y;
 			Δx = Δy = 0;
+			if(u->i < 0)
+				continue;
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
@@ -160,6 +173,8 @@ werks(void *arg)
 				Δx += rx;
 				Δy += ry;
 			}
+			if(u->i < 0)
+				continue;
 			δx = Δx;
 			δy = Δy;
 			δ = Δ(δx, δy);
@@ -221,20 +236,18 @@ compute(Graph *g)
 	}
 	for(;;){
 		sleep(100);
-		//d->t = cool(d->t);
-		//yield();
 	}
 }
 
 static Layout ll = {
-	.name = "pfr",
+	.name = "pline",
 	.init = init,
 	.compute = compute,
 	.cleanup = cleanup,
 };
 
 Layout *
-regpfr(void)
+regpline(void)
 {
 	return &ll;
 }

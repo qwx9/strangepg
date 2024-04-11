@@ -23,8 +23,7 @@ struct P{
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
-//#define	cool(t)	((t) * ((Nrep - 1.0) / Nrep))
-#define	cool(t)	((t) > 0 ? (t) - 1.0 / Nrep : 0)
+#define	cool(t)	((t) > 0 ? (t) - 0.001 : 0)
 
 static void
 init(Graph *)
@@ -35,7 +34,6 @@ static P *
 scan(Graph *g, int new)
 {
 	ssize i;
-	double x, y;
 	Node *u;
 	Layouting *l;
 	P *ptab, p = {0};
@@ -45,16 +43,15 @@ scan(Graph *g, int new)
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		p.i = i;
-		if((u->flags & FNfixed) != 0){
+		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			u->vrect.o = u->fixed;
-			x = p.x = u->fixed.x;
-			y = p.y = u->fixed.y;
-			p.i = -1;
+			p.x = u->fixed.x;
+			p.y = u->fixed.y;
+			if((u->flags & FNfixed) != 0)
+				p.i = -1;
 		}else if(new){
-			//p.x = -W/8 + nrand(W/4);
-			//p.y = -L/8 + nrand(L/4);
-			p.x = x - Nodesz + nrand(2 * Nodesz);
-			p.y = y - Nodesz * Nodesz + nrand(2 * Nodesz * Nodesz);
+			p.x = g->nnodes / 2;
+			p.y = -32 + nrand(64);
 		}else{
 			p.x = u->vrect.o.x;
 			p.y = u->vrect.o.y;

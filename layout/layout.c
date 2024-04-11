@@ -120,4 +120,5 @@ initlayout(void)
 	lltab[LLfr] = regfr();
 	lltab[LLlinear] = reglinear();
 	lltab[LLpfr] = regpfr();
+	lltab[LLpline] = regpline();
 }
