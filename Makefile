@@ -3,6 +3,7 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 	coarsen\
+	/tmp/main.awk\
 
 DIRS:=\
 	strawk\
@@ -23,6 +24,7 @@ OBJS:=\
 	linux/sys.o\
 	linux/threads.o\
 	sokol/flextgl/flextGL.o\
+	sokol/glfw_glue.o\
 	sokol/draw.o\
 	sokol/ui.o\
 	cmd/cmd.o\
@@ -42,6 +44,7 @@ OBJS:=\
 	layout/layout.o\
 	layout/linear.o\
 	layout/pfr.o\
+	layout/pline.o\
 	layout/random.o\
 	rend/rend.o\
 	ui/ui.o\
@@ -128,7 +131,7 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-all:	$(ALLTARGETS) dirall /tmp/main.awk
+all:	$(ALLTARGETS) dirall
 
 /tmp/main.awk: cmd/main.awk
 	cp -x $^ $@
