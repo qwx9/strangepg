@@ -28,6 +28,7 @@ struct Dyhdr{
 #define dypush(a,v)	do{Dyhdr*__h = dyhdr(a); (a) = dychecksz((a),__h,__h->len); (a)[dyhdr(a)->len++] = v;}while(0)
 #define dypop(a)	do{assert((a) != nil && dyhdr(a)->len > 0); --dyhdr(a)->len;}while(0)
 #define dyclear(a)	do{if((a) != nil){ memset((a), 0, dyhdr(a)->len * sizeof(*(a))); dyhdr(a)->len = 0;}}while(0)
+#define dyreset(a)	do{if((a) != nil){ dyhdr(a)->len = 0;}}while(0)
 #define dyprealloc(a,n)	do{Dyhdr*__h; (a) = dynew((a),__h,(n)); dyhdr(a)->len = (n); }while(0)
 
 /* FIXME: starting to suck big time */
