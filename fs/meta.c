@@ -119,7 +119,7 @@ collectgfameta(Graph *g)
 		warn("collectmeta: %s\n", error());
 	if(collectgfaedges(g, f) < 0)
 		warn("collectmeta: %s\n", error());
-	g->flags |= FGarmed;
+	g->flags |= GFarmed;
 	pushcmd("FGD135");
 }
 

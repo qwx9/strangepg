@@ -13,6 +13,7 @@ enum{
 
 typedef struct P P;
 struct P{
+	Graph *g;
 	double x;
 	double y;
 	double Δx;
@@ -24,38 +25,25 @@ struct P{
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
 #define	cool(t)	((t) * ((Nrep - 1.0) / Nrep))
+//#define	cool(t)	((t) - 0.001f > 0.0f ? (t) - 0.001f : 0.0f)
 
-static void
-init(Graph *)
-{
-}
-
-static P *
-scan(Graph *g, int new)
+static void *
+new(Graph *g)
 {
 	ssize i;
 	Node *u;
-	Layouting *l;
 	P *ptab, p = {0};
 
 	ptab = nil;
-	l = &g->layout;
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		p.i = i;
-		if(new){
-			p.x = -W/4 + nrand(W/2);
-			p.y = -L/4 + nrand(L/2);
-		}else{
-			p.x = u->vrect.o.x;
-			p.y = u->vrect.o.y;
-		}
+		p.x = -W/4 + nrand(W/2);
+		p.y = -L/4 + nrand(L/2);
 		u->layid = dylen(ptab);
 		dypush(ptab, p);
 	}
-	if(threadstore(ptab) == nil)
-		sysfatal("threadstore: %s", error());
-	l->f |= LFarmed;
+	ptab->g = g;
 	return ptab;
 }
 
@@ -63,31 +51,30 @@ static void
 cleanup(void *p)
 {
 	dyfree(p);
-	USED(p);
+	USED(p);	/* shut compiler up */
 }
 
-static void
-compute(Graph *g)
+static int
+compute(void *arg, volatile int *stat, int idx)
 {
 	ssize i;
 	double k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
 	Edge *e;
-	Layouting *l;
+	Graph *g;
 
-	l = &g->layout;
-	if((ptab = scan(g, (l->f & LFarmed) == 0)) == nil)
-		sysfatal("scan: %s", error());
-	if(dylen(g->edges) < 1){
-		warn("no links to hand\n");
-		return;
-	}
-	k = 1 * ceil(sqrt((double)Area / dylen(g->nodes)));
+	if(idx > 0)	/* single thread */
+		return 0;
+	ptab = arg;
+	g = ptab->g;
+	k = 1 * sqrt((double)Area / dylen(ptab));
 	t = 1.0;
 	for(;;){
 		Δr = 0;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
+			if((*stat & LFstop) != 0)
+				return 0;
 			Δx = Δy = 0;
 			for(v=ptab; v<ptab+dylen(ptab); v++){
 				if(u == v)
@@ -102,7 +89,6 @@ compute(Graph *g)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		yield();
 		for(i=g->edge0.next; i>=0; i=e->next){
 			e = g->edges + i;
 			nu = getnode(g, e->u >> 1);
@@ -123,7 +109,8 @@ compute(Graph *g)
 			v->Δx += rx;
 			v->Δy += ry;
 		}
-		yield();
+		if((*stat & LFstop) != 0)
+			break;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
 			δx = u->Δx;
 			δy = u->Δy;
@@ -141,18 +128,18 @@ compute(Graph *g)
 		t = cool(t);
 		if(Δr < 1)
 			break;
-		yield();
 	}
+	return 0;
 }
 
-static Layout ll = {
+static Shitkicker ll = {
 	.name = "fr",
-	.init = init,
-	.compute = compute,
+	.new = new,
 	.cleanup = cleanup,
+	.compute = compute,
 };
 
-Layout *
+Shitkicker *
 regfr(void)
 {
 	return &ll;

@@ -1,26 +1,38 @@
 enum{
-	LLconga,
+	LFstop = 1<<0,
+};
+
+typedef struct Shitkicker Shitkicker;
+enum{
 	LLrandom,
-	LLforce,
+	LLconga,
 	LLfr,
-	LLlinear,
 	LLpfr,
+	LLlinear,
 	LLpline,
 	LLnil,
 };
-struct Layout{
+struct Shitkicker{
 	char *name;
-	void (*compute)(Graph*);
-	void (*init)(Graph*);
+	void* (*new)(Graph*);
+	void (*update)(Graph*, void*);
 	void (*cleanup)(void*);
+	/* FIXME: ??????????????? clang needs volatile or it optimizes
+	 * the access away or something */
+	int (*compute)(void*, volatile int*, int);
 };
 extern int deflayout;
+extern int nlaythreads;
 
-Layout*	regconga(void);
-Layout*	regforce(void);
-Layout*	reglinear(void);
-Layout*	regfr(void);
-Layout*	regpfr(void);
-Layout*	regpline(void);
-Layout*	regrandom(void);
-void	putnode(Node*, int, int);
+Shitkicker*	regrandom(void);
+Shitkicker*	regconga(void);
+Shitkicker*	regfr(void);
+Shitkicker*	regpfr(void);
+Shitkicker*	reglinear(void);
+Shitkicker*	regpline(void);
+
+void	initlayout(void);
+int	runlayout(Graph*, int);
+int	resetlayout(Graph*);
+int	stoplayout(Graph*);
+int	updatelayout(Graph*);

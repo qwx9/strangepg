@@ -2,6 +2,10 @@
 #include "layout.h"
 #include "threads.h"
 
+/* FIXME: NOTE: returning stuff by copy to feed graphs etc means pointers
+ * will be invalidated as soon as those arrays are resized, so just malloc
+ * each or keep indices... */
+
 /* fruchterman and reingold 91, with small modifications */
 
 enum{
@@ -13,6 +17,7 @@ enum{
 
 typedef struct P P;
 struct P{
+	Graph *g;
 	double x;
 	double y;
 	double Δx;
@@ -25,21 +30,14 @@ struct P{
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
 #define	cool(t)	((t) > 0 ? (t) - 0.001 : 0)
 
-static void
-init(Graph *)
-{
-}
-
-static P *
-scan(Graph *g, int new)
+static void *
+new(Graph *g)
 {
 	ssize i;
 	Node *u;
-	Layouting *l;
 	P *ptab, p = {0};
 
 	ptab = nil;
-	l = &g->layout;
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
 		p.i = i;
@@ -49,19 +47,14 @@ scan(Graph *g, int new)
 			p.y = u->fixed.y;
 			if((u->flags & FNfixed) != 0)
 				p.i = -1;
-		}else if(new){
+		}else{
 			p.x = g->nnodes / 2;
 			p.y = -32 + nrand(64);
-		}else{
-			p.x = u->vrect.o.x;
-			p.y = u->vrect.o.y;
 		}
 		u->layid = dylen(ptab);
 		dypush(ptab, p);
 	}
-	if(threadstore(ptab) == nil)
-		sysfatal("threadstore: %s", error());
-	l->f |= LFarmed;
+	ptab->g = g;
 	return ptab;
 }
 
@@ -69,31 +62,30 @@ static void
 cleanup(void *p)
 {
 	dyfree(p);
-	USED(p);
+	USED(p);	/* shut compiler up */
 }
 
-static void
-compute(Graph *g)
+static int
+compute(void *arg, volatile int *stat, int idx)
 {
 	ssize i;
 	double k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
 	Edge *e;
-	Layouting *l;
+	Graph *g;
 
-	l = &g->layout;
-	if((ptab = scan(g, (l->f & LFarmed) == 0)) == nil)
-		sysfatal("scan: %s", error());
-	if(dylen(g->edges) < 1){
-		warn("no links to hand\n");
-		return;
-	}
-	k = 1 * ceil(sqrt((double)Area / dylen(g->nodes)));	// FIXME
+	if(idx > 0)	/* single thread */
+		return 0;
+	ptab = arg;
+	g = ptab->g;
+	k = 1 * sqrt((double)Area / dylen(g->nodes));
 	t = 1.0;
 	for(;;){
 		Δr = 0;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
+			if((*stat & LFstop) != 0)
+				return 0;
 			Δx = Δy = 0;
 			if(u->i < 0)
 				continue;
@@ -110,7 +102,6 @@ compute(Graph *g)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		yield();
 		for(i=g->edge0.next; i>=0; i=e->next){
 			e = g->edges + i;
 			nu = getnode(g, e->u >> 1);
@@ -131,7 +122,8 @@ compute(Graph *g)
 			v->Δx += rx;
 			v->Δy += ry;
 		}
-		yield();
+		if((*stat & LFstop) != 0)
+			break;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
 			if(u->i < 0)
 				continue;
@@ -151,18 +143,18 @@ compute(Graph *g)
 		t = cool(t);
 		if(Δr < 1)
 			break;
-		yield();
 	}
+	return 0;
 }
 
-static Layout ll = {
+static Shitkicker ll = {
 	.name = "linear",
-	.init = init,
-	.compute = compute,
+	.new = new,
 	.cleanup = cleanup,
+	.compute = compute,
 };
 
-Layout *
+Shitkicker *
 reglinear(void)
 {
 	return &ll;

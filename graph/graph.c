@@ -2,7 +2,19 @@
 #include "em.h"
 #include "cmd.h"
 #include "drw.h"
+#include "layout.h"
 #include "threads.h"
+
+/* FIXME: think about an alternate, easier, em-backed representation: just a tree
+ *	expanded nodes are marked expanded, otherwise a traversal ends on that,
+ *	shit like that; em makes our life considerably easier here, why not just
+ *	do that? benchmark to see what the performance hit would be, if any
+ *	same for layouting; use em there as well
+ * still, reconsider if the below is fine or not, perhaps use it in coarsen
+ * BEST: indices == bct indices, always, no renaming -> easier edge management, etc;
+ *	avoid long traversals by keeping a current pointer/index to sibling/child/edge,
+ *	etc; describe the ds, ask for opinions, measure performance; cache lines
+ */
 
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
@@ -451,19 +463,26 @@ nukegraph(Graph *g)
 {
 	if(g->type <= FFdead)
 		return;
-	stoplayout(g);
+	if(stoplayout(g) < 0)
+		warn("nukegraph: %s\n", error());
 	cleargraph(g);
 	freefs(g->f);	// FIXME: probably not necessary to have in the first place
 	memset(g, 0, sizeof *g);
 }
 
+/* FIXME: avoid pointless pass by value */
+/* FIXME: since graphs[] can change, for mooltigraph we need again to use indices,
+ *	or an array of pointers; same for nodes and edges maybe? avoiding the node0
+ *	and edge0 dance? */
 void
 pushgraph(Graph g)
 {
 	lockgraphs(1);
 	dypush(graphs, g);
 	unlockgraphs(1);
-	newlayout(graphs + dylen(graphs) - 1, -1);
+	/* FIXME: selectable type */
+	if(runlayout(graphs + dylen(graphs) - 1, -1) < 0)
+		warn("pushgraph: %s\n", error());
 }
 
 void

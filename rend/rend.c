@@ -130,7 +130,7 @@ int
 renderlayout(Graph *g)
 {
 	DPRINT(Debugrender, "renderlayout %#p", g);
-	if(g->layout.ll == nil){
+	if(g->layout == nil){
 		werrstr("renderlayout: no layout");
 		return -1;
 	}
@@ -152,9 +152,9 @@ rerender(int force)
 	CLK0(clk);
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->type == FFdead || (g->layout.f & LFarmed) == 0)
+		if(g->type == FFdead || (g->flags & GFlayme) == 0)
 			continue;
-		if((g->layout.f & LFbusy) != 0 || force){
+		if((g->flags & GFdrawme) != 0 || force){
 			renderlayout(g);
 			r = 1;
 		}

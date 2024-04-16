@@ -36,7 +36,7 @@ run(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [FILE]\n", argv0);
+	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [-t 1-128] [FILE]\n", argv0);
 }
 
 static char **
@@ -44,6 +44,9 @@ parseargs(int argc, char **argv)
 {
 	char *s;
 
+	/* FIXME: remove intype and -i, add an optional format specifier in filename:
+	 *	strpg ass.gfa; strpg i~ass.bct */
+	/* FIXME: we won't try to guess format, but we should validate it */
 	intype = FFgfa;
 	ARGBEGIN{
 	case 'D':
@@ -83,8 +86,6 @@ parseargs(int argc, char **argv)
 			deflayout = LLrandom;
 		else if(strcmp(s, "conga") == 0)
 			deflayout = LLconga;
-		else if(strcmp(s, "force") == 0)
-			deflayout = LLforce;
 		else if(strcmp(s, "linear") == 0)
 			deflayout = LLlinear;
 		else if(strcmp(s, "fr") == 0)
@@ -101,6 +102,13 @@ parseargs(int argc, char **argv)
 		break;
 	case 'n': noui = 1; break;
 	case 's': drawstep = 1; break;
+	case 't':
+		nlaythreads = atoi(EARGF(usage()));
+		if(nlaythreads <= 0 || nlaythreads > 128){
+			warn("invalid number of threads %d ∉ [1,128]\n", nlaythreads);
+			usage();
+		}
+		break;
 	default: usage();
 	}ARGEND
 	if(argv == nil)

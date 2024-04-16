@@ -3,7 +3,7 @@
 
 struct Thread{
 	int tid;
-	int pid;
+	int closing;
 	void *arg;
 	void *data;
 	char *name;
@@ -16,11 +16,15 @@ wipe(void)
 {
 	Thread *th;
 
-	warn("wipe %#p\n", *procdata());
 	if((th = *procdata()) == nil)
 		return;
-	if(th->cleanfn != nil)
+	th->closing++;
+	if(th->closing != 1)
+		return;
+	if(th->cleanfn != nil){
 		th->cleanfn(th->data);
+		th->data = nil;
+	}
 	free(th);
 }
 
@@ -31,16 +35,15 @@ _thread(void *tp)
 
 	th = tp;
 	*procdata() = th;
-	atexit(wipe);
 	if(th->name != nil)
 		threadsetname(th->name);
-	th->pid = getpid();
-	threadsetgrp(th->pid);
 	th->fn(th->arg);
-	exits(nil);
+	wipe();
+	threadexits(nil);
 }
 
-Thread *
+/* any error here is severe and treated as unrecoverable */
+void
 newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *name, uint stacksize)
 {
 	int tid;
@@ -52,10 +55,9 @@ newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char
 	th->arg = arg;
 	th->data = data;
 	th->name = name;
-	if((tid = procrfork(_thread, th, stacksize, RFNOTEG)) < 0)
+	if((tid = proccreate(_thread, th, stacksize)) < 0)
 		sysfatal("newthread: %r");
 	th->tid = tid;
-	return th;
 }
 
 void *
@@ -69,19 +71,4 @@ threadstore(void *p)
 		return th->data;
 	else
 		return th->data = p;
-}
-
-/* FIXME: if the thread doesn't yield in time, we're fucked */
-void
-killthread(Thread *th)
-{
-	warn("kill %#p %s\n", th, th!=nil?th->name:"");
-	if(th == nil)
-		return;
-	/* FIXME */
-	threadkill(th->tid);
-	postnote(PNGROUP, threadpid(th->tid), "die yankee pigdog");
-	threadkillgrp(th->pid);
-	if(th->cleanfn != nil)
-		th->cleanfn(th->data);
 }

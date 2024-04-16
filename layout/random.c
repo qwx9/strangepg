@@ -1,35 +1,28 @@
 #include "strpg.h"
 #include "layout.h"
 
-static void
-init(Graph *)
+static void *
+new(Graph *g)
 {
-}
-
-static void
-compute(Graph *g)
-{
+	int x, y;
 	ssize i;
 	Node *u;
-	Layouting *l;
 
-	l = &g->layout;
-	if((l->f & LFarmed) == 0){
-		for(i=g->node0.next; i>=0; i=u->next){
-			u = g->nodes + i;
-			putnode(u, nrand(view.dim.v.x), nrand(view.dim.v.y));
-		}
-		l->f |= LFarmed;
+	for(i=g->node0.next; i>=0; i=u->next){
+		u = g->nodes + i;
+		x = -view.dim.v.x / 2 + nrand(view.dim.v.x);
+		y = -view.dim.v.y / 2 + nrand(view.dim.v.y);
+		u->vrect = Qd(Vec2(x, y), ZV);
 	}
+	return nil;
 }
 
-static Layout ll = {
+static Shitkicker ll = {
 	.name = "random",
-	.init = init,
-	.compute = compute,
+	.new = new,
 };
 
-Layout *
+Shitkicker *
 regrandom(void)
 {
 	return &ll;

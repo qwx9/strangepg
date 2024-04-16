@@ -131,7 +131,7 @@ drawworld(void)
 
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->type <= FFdead || g->layout.ll == nil)
+		if(g->type <= FFdead || g->layout == nil)
 			continue;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);

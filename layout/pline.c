@@ -1,23 +1,22 @@
 #include "strpg.h"
 #include "layout.h"
-#include "threads.h"
 
-/* lilu dallas moolti modified fruchterman and reingold */
+/* FIXME: just set constant link length between fixed and movable? */
+/* FIXME: chrona/other layout */
 
 enum{
 	//Nrep = 100,
 	W = 256,
 	L = 256,
 	Area = W * L,
-	Nthread = 8,
 };
 
 typedef struct P P;
 typedef struct D D;
 struct P{
 	uchar fixed;
-	double x;
-	double y;
+	float x;
+	float y;
 	double *nx;
 	double *ny;
 	ssize i;
@@ -28,45 +27,41 @@ struct P{
 struct D{
 	P *ptab;
 	ssize *etab;
-	double t;
-	double k;
-	double Δr;
-	Thread *th[Nthread];
+	float k;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
-#define	cool(t)	((t) > 0 ? (t) - 0.001 : 0)
+#define	cool(t)	((t) > 0 ? (t) - 0.0001 : 0)
 
-static void
-init(Graph *)
+static void *
+new(Graph *g)
 {
-}
-
-static D *
-scan(Graph *g, int new)
-{
-	ssize i, *e, *ee, *etab;
+	ssize nf, maxx, i, *e, *ee, *etab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
-	D *data;
+	D *aux;
 
 	ptab = nil;
 	etab = nil;
-	for(i=g->node0.next; i>=0; i=u->next){
+	for(i=g->node0.next, nf=maxx=0; i>=0; i=u->next){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
 		p.nx = &u->vrect.o.x;
 		p.ny = &u->vrect.o.y;
-		/* FIXME */
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			p.x = u->fixed.x;
 			p.y = u->fixed.y;
-			if(u->flags & FNinitpos)
-				warn("%zd\n", u->id);
-		}else if(new){
+			if((u->flags & FNfixed) != 0){
+				nf++;
+				if(maxx < p.x)
+					maxx = p.x;
+			}else{
+				p.y = -128 + nrand(256);
+			}
+		}else{
 			p.x = g->nnodes / 2;
 			p.y = -32 + nrand(64);
 		}
@@ -79,6 +74,8 @@ scan(Graph *g, int new)
 		u = g->nodes + pp->i;
 		if((u->flags & FNfixed) != 0){
 			pp->i = -1;
+			pp->x -= maxx / 2;
+			*pp->nx = pp->x;
 			continue;
 		}
 		pp->e = dylen(etab);
@@ -97,34 +94,38 @@ scan(Graph *g, int new)
 		}
 		pp->nin = i;
 	}
-	data = emalloc(sizeof *data);
-	data->ptab = ptab;
-	data->etab = etab;
-	//data->k = 1 * ceil(sqrt((double)Area / dylen(ptab)));
-	data->k = 1 * sqrt((double)Area / dylen(ptab));
-	data->t = 1.0;
-	data->Δr = 1.0;
-	if(threadstore(data) == nil)
-		sysfatal("threadstore: %s", error());
-	g->layout.f |= LFarmed;
-	return data;
+	aux = emalloc(sizeof *aux);
+	aux->ptab = ptab;
+	aux->etab = etab;
+	aux->k = 1 * sqrt((float)Area / dylen(ptab));
+	return aux;
 }
 
 static void
-werks(void *arg)
+cleanup(void *p)
+{
+	D *aux;
+
+	aux = p;
+	dyfree(aux->ptab);
+	dyfree(aux->etab);
+	free(aux);
+}
+
+/* FIXME: compensate for the fact that movable nodes move towards fixed ones,
+ * rather than both toward each other */
+static int
+compute(void *arg, volatile int *stat, int i)
 {
 	P *pp, *p0, *p1, *u, *v;
-	double k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize i, *e, *ee;
+	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	ssize *e, *ee;
 	D *d;
 
-	i = (intptr)arg;
-	if((d = threadstore(nil)) == nil){
-		warn("werker: no data\n");
-		return;
-	}
+	d = arg;
 	pp = d->ptab;
 	k = d->k;
+	t = 1.0;
 	p0 = pp + i;
 	p1 = pp + dylen(pp);
 	if(p1 > pp + dylen(pp))
@@ -134,7 +135,9 @@ werks(void *arg)
 		/* not the best way to do this, but skipping through the array
 		 * approximately gives a view over the entire graph, not just
 		 * a slice, for eg. termination */
-		for(u=p0; u<p1; u+=nelem(d->th)){
+		for(u=p0; u<p1; u+=nlaythreads){
+			if((*stat & LFstop) != 0)
+				return 0;
 			x = u->x;
 			y = u->y;
 			Δx = Δy = 0;
@@ -150,6 +153,8 @@ werks(void *arg)
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
 			}
+			if((*stat & LFstop) != 0)
+				return 0;
 			e = d->etab + u->e;
 			for(ee=e+u->nout; e<ee; e++){
 				v = pp + *e;
@@ -173,80 +178,33 @@ werks(void *arg)
 				Δx += rx;
 				Δy += ry;
 			}
-			if(u->i < 0)
-				continue;
 			δx = Δx;
 			δy = Δy;
 			δ = Δ(δx, δy);
-			x += d->t * δx / δ;
-			y += d->t * δy / δ;
+			x += t * δx / δ;
+			y += t * δy / δ;
 			*u->nx = x;
 			*u->ny = y;
 			u->x = x;
 			u->y = y;
 			if(Δr < δ)
 				Δr = δ;
-			yield();
 		}
-		if(Δr > d->Δr)
-			d->Δr = Δr;
 		if(Δr < 1.0)
 			break;
-		d->t = cool(d->t);
+		t = cool(t);
 	}
-	d->th[i] = nil;
+	return 0;
 }
 
-static void
-cleanup(void *pdata)
-{
-	D *d;
-	Thread **th, **te;
-
-	warn("cleanup %#p\n", pdata);
-	d = pdata;
-	for(th=d->th, te=th+nelem(d->th); th<te; th++)
-		if(*th != nil)
-			killthread(*th);
-	dyfree(d->ptab);
-	dyfree(d->etab);
-	free(d);
-}
-
-static void
-compute(Graph *g)
-{
-	ssize i;
-	Layouting *l;
-	D *d;
-
-	l = &g->layout;
-	if((d = scan(g, (l->f & LFarmed) == 0)) == nil)
-		sysfatal("scan: %s", error());
-	if(dylen(g->edges) < 1){
-		warn("no links to hand\n");
-		return;
-	}
-	/* what takes the most time (O(n²)) is the all-to-all node repulsion loop,
-	 * the rest is fast, but to avoid waiting, just do all three steps in each
-	 * worker */
-	for(i=0; i<nelem(d->th); i++){
-		if((d->th[i] = newthread(werks, nil, (void *)i, d, "swine", mainstacksize)) == nil)
-			sysfatal("newthread: %s", error());
-	}
-	for(;;){
-		sleep(100);
-	}
-}
-
-static Layout ll = {
+static Shitkicker ll = {
 	.name = "pline",
-	.init = init,
-	.compute = compute,
+	.new = new,
 	.cleanup = cleanup,
+	.compute = compute,
 };
 
-Layout *
+Shitkicker *
 regpline(void)
 {
 	return &ll;

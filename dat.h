@@ -5,7 +5,6 @@ typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
 typedef struct Layout Layout;
-typedef struct Layouting Layouting;
 typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
@@ -45,24 +44,8 @@ enum{
 };
 
 enum{
-	LFonline = 1<<0,
-	LFarmed = 1<<1,
-	LFbusy = 1<<2,
-};
-struct Layouting{
-	int f;
-	Layout *ll;
-	Thread *th;
-};
-
-enum{
 	FNfixed = 1<<0,
 	FNinitpos = 1<<1,
-
-	FEfixed = 1<<0,
-	Sbit = 1ULL<<63,
-
-	FGarmed = 1<<0,
 };
 struct Node{
 	ssize id;		/* key */
@@ -87,6 +70,9 @@ struct Node{
 	ssize next;		/* index */
 	ssize ch;		/* index */
 };
+enum{
+	FEfixed = 1<<0,
+};
 struct Edge{
 	ssize id;
 	ssize u;
@@ -96,6 +82,11 @@ struct Edge{
 	ssize prev;
 	vlong metaoff;
 	Color *col;
+};
+enum{
+	GFlayme = 1<<0,
+	GFdrawme = 1<<1,
+	GFarmed = 1<<2,
 };
 struct Graph{
 	int type;
@@ -113,7 +104,7 @@ struct Graph{
 	khash_t(idmap) *nmap;
 	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
-	Layouting layout;
+	Layout *layout;
 	Quad dim;
 	Vertex off;
 };
@@ -188,7 +179,7 @@ enum{
 };
 
 struct Clk{
-	char *lab;
+	char lab[32];
 	vlong t;
 	vlong t0;
 	vlong Δt;

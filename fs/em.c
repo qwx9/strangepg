@@ -75,7 +75,6 @@ static Page pused = {.lleft = &pused, .lright = &pused};
 static uvlong poolsz = Poolsz;
 static ssize mpages, memfree, memreallyfree = Poolsz / Pagesz;
 static Channel *wchan[Nwriters];
-static Thread **proctab;
 static uvlong emtc;
 
 #define PLINK(u, v)	do{ \
@@ -108,6 +107,7 @@ static uvlong emtc;
 		warn("pread: %s\n", error()); \
 }while(0)
 
+/* FIXME
 static void
 cleanup(void *)
 {
@@ -119,10 +119,6 @@ cleanup(void *)
 	wlock(&elock);
 	close(swapfd);
 	swapfd = -1;
-	for(i=dylen(proctab)-1; i>=0; i--){
-		killthread(proctab[i]);
-		dypop(proctab);
-	}
 	for(em=etab; em<etab+dylen(etab); em++){
 		(*em)->ref = 0;
 		emclose(*em);
@@ -131,6 +127,7 @@ cleanup(void *)
 	dyfree(etab);
 	wunlock(&elock);
 }
+*/
 
 /* FIXME: UGHHHHHH */
 static Page *
@@ -260,6 +257,8 @@ feedpages(void)
 	memfree += n;
 }
 
+/* FIXME: check if the slowdowns on linux we've seen are because of the
+ * sleep amount; this function over all just sucks, we need better */
 static void
 lruproc(void *)
 {
@@ -364,7 +363,6 @@ emopen(char *path)
 {
 	int i;
 	EM *em;
-	Thread *t;
 
 	em = emalloc(sizeof *em);
 	dypush(etab, em);
@@ -373,20 +371,17 @@ emopen(char *path)
 		free(em);
 		return nil;
 	}
-	if(swapfd < 0 && (swapfd = sysmktmp()) < 0)
-		sysfatal("emopen: %s", error());
-	if(dylen(proctab) == 0){
+	if(swapfd < 0){
+		if((swapfd = sysmktmp()) < 0)
+			sysfatal("emopen: %s", error());
 		for(i=0; i<nelem(wchan); i++)
 			if((wchan[i] = chancreate(sizeof(Page*), Chansz)) == nil)
 				sysfatal("chancreate: %s", error());
 		feedpages();
 		/* FIXME: proper cleanup: cleanfn + reclaim used: kill when empty */
-		t = newthread(lruproc, cleanup, nil, nil, "lru", mainstacksize);
-		dypush(proctab, t);
-		for(i=0; i<nelem(wchan); i++){
-			t = newthread(cacheproc, nil, wchan[i], nil, "cache", mainstacksize);
-			dypush(proctab, t);
-		}
+		newthread(lruproc, nil, nil, nil, "lru", mainstacksize);
+		for(i=0; i<nelem(wchan); i++)
+			newthread(cacheproc, nil, wchan[i], nil, "cache", mainstacksize);
 	}
 	return em;
 }

@@ -12,8 +12,8 @@ struct Color{
 static Point panmax;
 static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
-static Channel *drawc;
-static Thread *ticker;
+static Channel *drawc, *ticc;
+static QLock ticker;
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -363,12 +363,27 @@ reqdraw(int r)
 static void
 ticproc(void *)
 {
+	ulong stop;
 	double t0, step;
 	vlong t, Δt;
 
 	t0 = μsec();
 	step = drawstep ? Nsec/140. : Nsec/60.;
+	Alt a[] = {
+		{ticc, &stop, CHANRCV},
+		{nil, nil, CHANEND},
+	};
 	for(;;){
+		switch(alt(a)){
+		case -1: return;
+		case 0:
+			if(stop){
+				a[1].op = CHANEND;
+				continue;
+			}
+			a[1].op = CHANNOBLK;
+			break;
+		}
 		t = μsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);
@@ -381,16 +396,14 @@ ticproc(void *)
 void
 stopdrawclock(void)
 {
-	killthread(ticker);
-	ticker = nil;
+	sendul(ticc, 1);
 }
 
 void
 startdrawclock(void)
 {
-	if(ticker != nil)
-		return;
-	ticker = newthread(ticproc, nil, nil, nil, "tic", mainstacksize);
+	if(!noui)
+		sendul(ticc, 0);
 }
 
 // FIXME: portable code
@@ -403,7 +416,9 @@ initsysdraw(void)
 	unlockdisplay(display);
 	view.dim.o = ZV;
 	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
-	if((drawc = chancreate(sizeof(ulong), 0)) == nil)
+	if((drawc = chancreate(sizeof(ulong), 0)) == nil
+	|| (ticc = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");
+	newthread(ticproc, nil, nil, nil, "tic", mainstacksize);
 	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
 }

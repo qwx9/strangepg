@@ -6,6 +6,7 @@ extern int mainstacksize;
 typedef struct chan_t Channel;
 Channel*	chancreate(int, int);
 void*	recvp(Channel*);
+ulong	recvul(Channel*);
 int	nbsendp(Channel*, void*);
 int	nbsendul(Channel*, ulong);
 ulong	nbrecvul(Channel*);
@@ -17,5 +18,3 @@ typedef pthread_rwlock_t RWLock;
 #define runlock	pthread_rwlock_unlock
 #define wlock	pthread_rwlock_wrlock
 #define wunlock	pthread_rwlock_unlock
-
-#define	yield()

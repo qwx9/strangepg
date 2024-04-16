@@ -26,6 +26,7 @@ readcproc(void *)
 	int n;
 	char buf[8192], *p, *s;
 
+	threadsetname("cproc");
 	for(;;){
 		if((n = read(epfd[1], buf, sizeof buf)) <= 0)
 			break;

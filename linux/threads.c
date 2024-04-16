@@ -13,7 +13,7 @@ struct Thread{
 };
 
 /* couldn't figure out a better way */
-static __thread Thread *thread;
+static __thread pthread_key_t pkey;
 
 static void
 wipe(void *tp)
@@ -22,7 +22,6 @@ wipe(void *tp)
 
 	if((th = tp) == NULL)
 		return;
-	warn("wipe %#p\n", th);
 	if(th->cleanfn != nil)
 		th->cleanfn(th->data);
 	free(th);
@@ -35,24 +34,19 @@ _thread(void *tp)
 	Thread *th;
 
 	th = tp;
-	thread = th;
+	pkey = th->key;
+	if(pthread_setspecific(pkey, th) != 0)
+		sysfatal("newthread: pthread_setspecific: %s", error());
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-	//pthread_cleanup_push(th->cleanfn, th->data);
 	pthread_cleanup_push(wipe, th);
-	/*
-	if(pthread_key_create(&th->key, wipe) != 0)
-		sysfatal("newthread: pthread_key_create: %s", error());
-	if(pthread_setspecific(th->key, th) != 0)
-		sysfatal("newthread: pthread_setspecific: %s", error());
-	*/
 	th->fn(th->arg);
 	pthread_cleanup_pop(1);
 	pthread_exit(NULL);
 	return NULL;
 }
 
-Thread *
+void
 newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *, uint stacksize)
 {
 	usize st;
@@ -75,6 +69,8 @@ newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char
 		if(pthread_attr_setstacksize(&a, st) != 0)
 			sysfatal("newthread: pthread_attr_setstacksize: %s", error());
 	}
+	if(pthread_key_create(&th->key, NULL) != 0)
+		sysfatal("newthread: pthread_key_create: %s", error());
 	if(pthread_create(p, &a, _thread, th) != 0)
 		sysfatal("newthread: pthread_create: %s", error());
 	if(pthread_attr_destroy(&a) != 0)
@@ -82,7 +78,6 @@ newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char
 	/* pthread_*_np is non-portable gnushit */
 	/*if(pthread_setname_np(p, name) != 0)
 		sysfatal("pthread_setname_np: %s", error());*/
-	return th;
 }
 
 void *
@@ -90,26 +85,20 @@ threadstore(void *p)
 {
 	Thread *th;
 
-	if((th = thread) == nil)
-		return nil;
-	if(p == nil)
+	if((th = pthread_getspecific(pkey)) == NULL)
+		sysfatal("newthread: pthread_getspecific: %s", error());
+	if(p == NULL)
 		return th->data;
 	else
 		return th->data = p;
-	return p;
 }
 
-/* FIXME: this implementation allows for borrowing the Thread* from
- * newthread then accessing it again after it was freed here; we should
- * instead have a different, *simple* and opaque way to do this (thread
- * groups?); ie. never kill a thread that is about to exit on its own */
 void
 killthread(Thread *th)
 {
 	if(th == nil)
 		return;
 	pthread_cancel(th->p);
-	//waitpid(th->aux, NULL, 0);
 }
 
 Channel *
@@ -126,6 +115,16 @@ recvp(Channel *c)
 	if(chan_recv(c, &p) < 0)
 		return nil;
 	return p;
+}
+
+ulong
+recvul(Channel *c)
+{
+	s32int v;
+
+	if(chan_recv_int32(c, &v) < 0)
+		return 0;
+	return v;
 }
 
 int
