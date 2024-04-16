@@ -21,7 +21,6 @@ OFILES=\
 	graph/graph.$O\
 	graph/vertex.$O\
 	layout/conga.$O\
-	layout/force.$O\
 	layout/fr.$O\
 	layout/layout.$O\
 	layout/linear.$O\

@@ -39,7 +39,6 @@ OBJS:=\
 	graph/graph.o\
 	graph/vertex.o\
 	layout/conga.o\
-	layout/force.o\
 	layout/fr.o\
 	layout/layout.o\
 	layout/linear.o\
@@ -67,7 +66,7 @@ ALLOBJS:=\
 	$(OBJS)\
 	$(COARSENOBJS)\
 
-CC= clang
+CC?= clang
 OFLAGS?= -O3 -pipe -march=native
 CFLAGS?= $(OFLAGS)
 # doesn't even work, what bullshit
