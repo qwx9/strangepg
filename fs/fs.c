@@ -14,6 +14,8 @@ vlong
 seekfs(File *f, vlong off)
 {
 	assert(f->aux != nil);
+	// FIXME: test this
+	f->trunc = 0;
 	f->foff = off;
 	return sysseek(f, off);
 }
@@ -159,7 +161,8 @@ nextfield(File *f, char *s, int *len)
 	if(len != nil)
 		*len = strlen(s);
 	while(f != nil && f->trunc){
-		s = readfrag(f, &n);
+		if((s = readfrag(f, &n)) == nil)
+			return nil;
 		if((t = strchr(s, '\t')) != nil){
 			if(len != nil)
 				*len += t - s;
