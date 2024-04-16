@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include "fs.h"
-#include "threads.h"
 
 /* assumptions:
  * - required field separator is \t
@@ -107,8 +106,8 @@ loadgfa1(void *arg)
 		sysfatal("%s", error());
 	}
 	DPRINT(Debugfs, "done loading gfa");
-	g.nedges = dylen(g.nodes);
-	g.nnodes = dylen(g.edges);
+	g.nnodes = dylen(g.nodes);
+	g.nedges = dylen(g.edges);
 	pushgraph(g);
 	collectgfameta(&g);
 	closefs(f);
