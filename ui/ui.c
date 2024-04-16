@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "cmd.h"
 #include "drw.h"
+#include "layout.h"
 #include "threads.h"
 
 Obj selected;
@@ -35,10 +36,10 @@ zoomview(Vector v)
 {
 	double Δ;
 
-	/* scalar projection of v onto (1,1); so, view.zoom in when dragging ↘ */
+	/* scalar projection of v onto (1,1); so, zoom in when dragging ↘ */
 	Δ = 0.01 * -(v.x + v.y) / 2;
 	DPRINT(Debugdraw, "view.zoomview %.1f,%.1f → Δ %.2f: ", v.x, v.y, Δ);
-	if(view.zoom + Δ < 0.01 || view.zoom + Δ > 1024){
+	if(view.zoom + Δ < 0.0001 || view.zoom + Δ > 1024){
 		DPRINT(Debugdraw, "nope");
 		return -1;
 	}
@@ -96,7 +97,8 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));
-				stoplayout(o.g);
+				if(stoplayout(o.g) < 0)
+					warn("mouseevent: %s\n", error());
 				expandnode(o.g, o.g->nodes + o.idx);
 				selected = aintnothingthere;
 				updatelayout(o.g);
@@ -119,7 +121,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 void
 resetui(int all)
 {
-	view.center = divpt2(view.dim.v, 2);
+	view.center = ZV;
 	DPRINT(Debugdraw, "resetui center %.1f,%.1f", view.center.x, view.center.y);
 	panmax.x = view.dim.v.x * Nodesz;
 	panmax.y = view.dim.v.y * Nodesz;

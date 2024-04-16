@@ -1851,7 +1851,7 @@ typedef enum sg_image_type {
     is compatible with what the shader expects. Apart from the sokol-gfx
     validation layer, WebGPU is the only backend API which actually requires
     matching texture and sampler type to be provided upfront for validation
-    (after 3D APIs treat texture/sampler type mismatches as undefined behaviour).
+    (other 3D APIs treat texture/sampler type mismatches as undefined behaviour).
 
     NOTE that the following texture pixel formats require the use
     of SG_IMAGESAMPLETYPE_UNFILTERABLE_FLOAT, combined with a sampler
@@ -4756,7 +4756,7 @@ _SOKOL_PRIVATE int _sg_slot_index(uint32_t id);
 
 // constants
 enum {
-    _SG_STRING_SIZE = 16,
+    _SG_STRING_SIZE = 32,
     _SG_SLOT_SHIFT = 16,
     _SG_SLOT_MASK = (1<<_SG_SLOT_SHIFT)-1,
     _SG_MAX_POOL_SIZE = (1<<_SG_SLOT_SHIFT),
@@ -9222,6 +9222,29 @@ _SOKOL_PRIVATE void _sg_gl_update_image(_sg_image_t* img, const sg_image_data* d
 #define _sg_d3d11_Release(self) (self)->lpVtbl->Release(self)
 #endif
 
+// NOTE: This needs to be a macro since we can't use the polymorphism in C. It's called on many kinds of resources.
+// NOTE: Based on microsoft docs, it's fine to call this with pData=NULL if DataSize is also zero.
+#if defined(__cplusplus)
+#define _sg_d3d11_SetPrivateData(self, guid, DataSize, pData) (self)->SetPrivateData(guid, DataSize, pData)
+#else
+#define _sg_d3d11_SetPrivateData(self, guid, DataSize, pData) (self)->lpVtbl->SetPrivateData(self, guid, DataSize, pData)
+#endif
+
+#if defined(__cplusplus)
+#define _sg_win32_refguid(guid) guid
+#else
+#define _sg_win32_refguid(guid) &guid
+#endif
+
+static const GUID _sg_d3d11_WKPDID_D3DDebugObjectName = { 0x429b8c22,0x9188,0x4b0c, {0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00} };
+
+#if defined(SOKOL_DEBUG)
+#define _sg_d3d11_setlabel(self, label) _sg_d3d11_SetPrivateData(self, _sg_win32_refguid(_sg_d3d11_WKPDID_D3DDebugObjectName), label ? (UINT)strlen(label) : 0, label)
+#else
+#define _sg_d3d11_setlabel(self, label)
+#endif
+
+
 //-- D3D11 C/C++ wrappers ------------------------------------------------------
 static inline HRESULT _sg_d3d11_CheckFormatSupport(ID3D11Device* self, DXGI_FORMAT Format, UINT* pFormatSupport) {
     #if defined(__cplusplus)
@@ -9991,6 +10014,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_buffer(_sg_buffer_t* buf, cons
             _SG_ERROR(D3D11_CREATE_BUFFER_FAILED);
             return SG_RESOURCESTATE_FAILED;
         }
+        _sg_d3d11_setlabel(buf->d3d11.buf, desc->label);
     }
     return SG_RESOURCESTATE_VALID;
 }
@@ -10097,6 +10121,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_image(_sg_image_t* img, const 
                 _SG_ERROR(D3D11_CREATE_2D_TEXTURE_FAILED);
                 return SG_RESOURCESTATE_FAILED;
             }
+            _sg_d3d11_setlabel(img->d3d11.tex2d, desc->label);
 
             // create shader-resource-view for 2D texture
             // FIXME: currently we don't support setting MSAA texture as shader resource
@@ -10126,6 +10151,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_image(_sg_image_t* img, const 
                     _SG_ERROR(D3D11_CREATE_2D_SRV_FAILED);
                     return SG_RESOURCESTATE_FAILED;
                 }
+                _sg_d3d11_setlabel(img->d3d11.srv, desc->label);
             }
         }
         SOKOL_ASSERT(img->d3d11.tex2d);
@@ -10167,6 +10193,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_image(_sg_image_t* img, const 
                 _SG_ERROR(D3D11_CREATE_3D_TEXTURE_FAILED);
                 return SG_RESOURCESTATE_FAILED;
             }
+            _sg_d3d11_setlabel(img->d3d11.tex3d, desc->label);
 
             // create shader-resource-view for 3D texture
             if (!msaa) {
@@ -10180,6 +10207,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_image(_sg_image_t* img, const 
                     _SG_ERROR(D3D11_CREATE_3D_SRV_FAILED);
                     return SG_RESOURCESTATE_FAILED;
                 }
+                _sg_d3d11_setlabel(img->d3d11.srv, desc->label);
             }
         }
         SOKOL_ASSERT(img->d3d11.tex3d);
@@ -10243,6 +10271,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_sampler(_sg_sampler_t* smp, co
             _SG_ERROR(D3D11_CREATE_SAMPLER_STATE_FAILED);
             return SG_RESOURCESTATE_FAILED;
         }
+        _sg_d3d11_setlabel(smp->d3d11.smp, desc->label);
     }
     return SG_RESOURCESTATE_VALID;
 }
@@ -10337,6 +10366,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_shader(_sg_shader_t* shd, cons
                 _SG_ERROR(D3D11_CREATE_CONSTANT_BUFFER_FAILED);
                 return SG_RESOURCESTATE_FAILED;
             }
+            _sg_d3d11_setlabel(d3d11_stage->cbufs[ub_index], desc->label);
         }
     }
 
@@ -10375,6 +10405,8 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_shader(_sg_shader_t* shd, cons
             SOKOL_ASSERT(shd->d3d11.vs_blob);
             memcpy(shd->d3d11.vs_blob, vs_ptr, vs_length);
             result = SG_RESOURCESTATE_VALID;
+            _sg_d3d11_setlabel(shd->d3d11.vs, desc->label);
+            _sg_d3d11_setlabel(shd->d3d11.fs, desc->label);
         }
     }
     if (vs_blob) {
@@ -10466,6 +10498,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_pipeline(_sg_pipeline_t* pip, 
         _SG_ERROR(D3D11_CREATE_INPUT_LAYOUT_FAILED);
         return SG_RESOURCESTATE_FAILED;
     }
+    _sg_d3d11_setlabel(pip->d3d11.il, desc->label);
 
     // create rasterizer state
     D3D11_RASTERIZER_DESC rs_desc;
@@ -10485,6 +10518,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_pipeline(_sg_pipeline_t* pip, 
         _SG_ERROR(D3D11_CREATE_RASTERIZER_STATE_FAILED);
         return SG_RESOURCESTATE_FAILED;
     }
+    _sg_d3d11_setlabel(pip->d3d11.rs, desc->label);
 
     // create depth-stencil state
     D3D11_DEPTH_STENCIL_DESC dss_desc;
@@ -10510,6 +10544,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_pipeline(_sg_pipeline_t* pip, 
         _SG_ERROR(D3D11_CREATE_DEPTH_STENCIL_STATE_FAILED);
         return SG_RESOURCESTATE_FAILED;
     }
+    _sg_d3d11_setlabel(pip->d3d11.dss, desc->label);
 
     // create blend state
     D3D11_BLEND_DESC bs_desc;
@@ -10544,6 +10579,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_pipeline(_sg_pipeline_t* pip, 
         _SG_ERROR(D3D11_CREATE_BLEND_STATE_FAILED);
         return SG_RESOURCESTATE_FAILED;
     }
+    _sg_d3d11_setlabel(pip->d3d11.bs, desc->label);
     return SG_RESOURCESTATE_VALID;
 }
 
@@ -10639,6 +10675,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_attachments(_sg_attachments_t*
             _SG_ERROR(D3D11_CREATE_RTV_FAILED);
             return SG_RESOURCESTATE_FAILED;
         }
+        _sg_d3d11_setlabel(atts->d3d11.colors[i].view.rtv, desc->label);
     }
     SOKOL_ASSERT(0 == atts->d3d11.depth_stencil.view.dsv);
     if (ds_desc->image.id != SG_INVALID_ID) {
@@ -10673,6 +10710,7 @@ _SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_attachments(_sg_attachments_t*
             _SG_ERROR(D3D11_CREATE_DSV_FAILED);
             return SG_RESOURCESTATE_FAILED;
         }
+        _sg_d3d11_setlabel(atts->d3d11.depth_stencil.view.dsv, desc->label);
     }
     return SG_RESOURCESTATE_VALID;
 }
@@ -10755,7 +10793,7 @@ _SOKOL_PRIVATE void _sg_d3d11_begin_pass(const sg_pass* pass) {
     // perform clear action
     for (int i = 0; i < num_rtvs; i++) {
         if (action->colors[i].load_action == SG_LOADACTION_CLEAR) {
-            _sg_d3d11_ClearRenderTargetView(_sg.d3d11.ctx, rtvs[i], &action->colors[i].clear_value.r);
+            _sg_d3d11_ClearRenderTargetView(_sg.d3d11.ctx, rtvs[i], (float*)&action->colors[i].clear_value);
             _sg_stats_add(d3d11.pass.num_clear_render_target_view, 1);
         }
     }
@@ -10872,7 +10910,7 @@ _SOKOL_PRIVATE void _sg_d3d11_apply_pipeline(_sg_pipeline_t* pip) {
 
     _sg_d3d11_RSSetState(_sg.d3d11.ctx, pip->d3d11.rs);
     _sg_d3d11_OMSetDepthStencilState(_sg.d3d11.ctx, pip->d3d11.dss, pip->d3d11.stencil_ref);
-    _sg_d3d11_OMSetBlendState(_sg.d3d11.ctx, pip->d3d11.bs, &pip->cmn.blend_color.r, 0xFFFFFFFF);
+    _sg_d3d11_OMSetBlendState(_sg.d3d11.ctx, pip->d3d11.bs, (float*)&pip->cmn.blend_color, 0xFFFFFFFF);
     _sg_d3d11_IASetPrimitiveTopology(_sg.d3d11.ctx, pip->d3d11.topology);
     _sg_d3d11_IASetInputLayout(_sg.d3d11.ctx, pip->d3d11.il);
     _sg_d3d11_VSSetShader(_sg.d3d11.ctx, pip->shader->d3d11.vs, NULL, 0);

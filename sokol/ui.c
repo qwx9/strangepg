@@ -2,9 +2,9 @@
 #include "cmd.h"
 #include "threads.h"
 #define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
-extern GLFWwindow *glw;
+GLFWwindow* glfw_window(void);
 
 typedef struct Mouse Mouse;
 struct Mouse{
@@ -70,7 +70,7 @@ ukeyev(GLFWwindow *, unsigned int u)
 	Rune r;
 
 	switch(u){
-	case 'q': glfwSetWindowShouldClose(glw, GLFW_TRUE); return;
+	case 'q': glfwSetWindowShouldClose(glfw_window(), GLFW_TRUE); return;
 	case '-': r = '-'; break;
 	case '+': r = '+'; break;
 	case 'R': r = 'R'; break;
@@ -92,7 +92,7 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 	r = 0;
 	switch(k){
 	case GLFW_KEY_DELETE: /* wet floor */
-	case GLFW_KEY_Q: glfwSetWindowShouldClose(glw, GLFW_TRUE); return;
+	case GLFW_KEY_Q: glfwSetWindowShouldClose(glfw_window(), GLFW_TRUE); return;
 	case GLFW_KEY_UP: r = KBup; break;
 	case GLFW_KEY_DOWN: r = KBdown; break;
 	case GLFW_KEY_LEFT: r = KBleft; break;
@@ -111,8 +111,8 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 void
 initsysui(void)
 {
-	//glfwSetCharCallback(glw, ukeyev);
-	glfwSetKeyCallback(glw, keyev);
-	glfwSetMouseButtonCallback(glw, mousebutev);
-	glfwSetCursorPosCallback(glw, mouseposev);
+	//glfwSetCharCallback(glfw_window(), ukeyev);
+	glfwSetKeyCallback(glfw_window(), keyev);
+	glfwSetMouseButtonCallback(glfw_window(), mousebutev);
+	glfwSetCursorPosCallback(glfw_window(), mouseposev);
 }

@@ -14,6 +14,7 @@ BINDIR:= $(INSTALLPREFIX)/bin
 
 OBJS:=\
 	lib/chan.o\
+	lib/glfw_glue.o\
 	lib/queue.o\
 	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
@@ -24,7 +25,6 @@ OBJS:=\
 	linux/sys.o\
 	linux/threads.o\
 	sokol/flextgl/flextGL.o\
-	sokol/glfw_glue.o\
 	sokol/draw.o\
 	sokol/ui.o\
 	cmd/cmd.o\
