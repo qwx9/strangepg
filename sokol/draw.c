@@ -20,17 +20,29 @@ struct Color{
 	float b;
 };
 
-/* FIXME: todo:
- * - edge pipeline and shader
- * - line drawing; see sgl-lines-sapp, primtypes-sapp; draw straight lines
- */
-
 /* FIXME: blackjack and hookers:
+ * - debug node rotation
+ * - debug mvp and scaling
+ * - mouse picking; see sokol_gfx_ext.h from sokol_gp + inject-glfw.c
+ * - make quads thick lines? generalize to edges? maybe that way we can shape
+ *	algorithmically nodes and edges both
+ * - we want 60fps → draw, render and flush together must be below 16.67ms
+ * - shader benchmarking? flush is fast but what happens on the gpu side? why
+ *	is it not smooth even though flush is fast? because of rend stalling mouse
+ *	events? is it even on the same thread? lockgraphs?
+ *	=> draw thread calls draw, then rerender, then flushes; both draw and rerender
+ *	become expensive; improvements: pass by ref, don't use geom, use floats, hmm
+ *	simplify rend; make sure it doesn't modify state that others use and maybe
+ *	move to its own thread as well, it should really only set angle...
+ * - bezier shaders + GLEdge improvements
+ * - basic cimgui
+ * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
+ *	redraw only, not re-render etc
+ * - extreme zoom out: make sure stuff is still visible (as 1px dots or lines?)
+ * - benchmark: w/ rotate through hmm; no transparency
  * - compiled shaders: better performance? just push source and compiled
  *   ones to the repo, use sokol-tools
  * - pragma once?
- * - skip offscreen rendering for onscreen buffer? can we draw simultaneously to
- *   display and offscreen?
  * - bonus for navigation: rotate in (any?) axis, experiment with ui
  * - refactor rend, draw to use the vertex buffers, mvp and transfo matrices (ofc plan9
  *   would render quads directly instead of triangles, etc.)
@@ -42,10 +54,11 @@ struct Color{
  *	fixed size buffer and call it a day
  * - use mvp for zoom in/zoom out (eye z coord) AND panning (center or xy coords) AND rotation (up vector)
  * - don't output stuff that falls outside view area wrt mvp?
- * - mouse picking; see inject-glfw.c
  * - decouple input from rendering
  * - draw labels, arrows
  * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
+ *	unnecessary for drawing, gl can do it on its own via the depth buffer
+ *	SO: geometry + compute shaders for layouting
  * - use cimgui (see https://github.com/peko/cimgui-c-example for cimgui+glfw) and glfw/imgui-glfw.cc
  * - beziers, thickness: https://thebookofshaders.com/05/
  * - get rid of unnecessary glue code (that isn't even updated)
@@ -68,26 +81,27 @@ struct hjdicks Params{
 struct hjdicks GLNode{
 	HMM_Vec2 pos;
 	HMM_Vec3 col;
+	float θ;
 	/* no SG_VERTEXFORMAT_INT yet */
 	union {
-		int i;
-		float f;
+		u32int i;
+		uchar u[4];
 	} idx;
-	float θ;
 };
 struct hjdicks GLEdge{
-	HMM_Vec2 pos[2];
+	HMM_Vec2 pos1;
+	HMM_Vec2 pos2;
 	HMM_Vec3 col;
 	/* no SG_VERTEXFORMAT_INT yet */
 	union {
-		int i;
-		float f;
+		u32int i;
+		uchar u[4];
 	} idx;
 };
 static GLNode *nodev;
 static GLEdge *edgev;
 
-static sg_pass_action offscreen_pass_action;
+static sg_pass_action offscreen_pass_action, offscreen_pass_action2;
 static sg_pass_action default_pass_action;
 static sg_attachments offscreen_attachments;
 static sg_pipeline nodepip;
@@ -137,25 +151,23 @@ drawlabel(Node *, Quad, Quad, Quad, vlong, Color *)
 }
 
 int
-drawline(Quad q, double w, int emph, int idx, Color *c)
+drawline(Quad q, double w, int emph, s32int idx, Color *c)
 {
 	GLEdge e = {
-		.pos = {
-			[0] {
-				.X = q.o.x,
-				.Y = q.o.y,
-			},
-			[1] {
-				.X = q.o.x + q.v.x,
-				.Y = q.o.y + q.v.y,
-			},
+		.pos1 = {
+			.X = q.o.x,
+			.Y = q.o.y,
+		},
+		.pos2 = {
+			.X = q.o.x + q.v.x,
+			.Y = q.o.y + q.v.y,
 		},
 		.col = {
 			.X = c->r,
 			.Y = c->g,
 			.Z = c->b,
 		},
-		.idx.i = idx,
+		.idx.i = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(edgev, e);
@@ -163,16 +175,17 @@ drawline(Quad q, double w, int emph, int idx, Color *c)
 }
 
 int
-drawbezier(Quad q, double w, int idx, Color *c)
+drawbezier(Quad q, double w, s32int idx, Color *c)
 {
 	// FIXME
 	return drawline(q, w, 0, idx, c);
 }
 
+/* FIXME: plan9: don't use geom or pass by value; refactor draw, rend; use hmm */
 /* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
 /* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
-drawquad(Quad q1, Quad q2, Quad q, double θ, int idx, Color *c)
+drawquad(Quad q1, Quad q2, Quad q, double θ, s32int idx, Color *c)
 {
 	GLNode v = {
 		.pos = {
@@ -185,7 +198,7 @@ drawquad(Quad q1, Quad q2, Quad q, double θ, int idx, Color *c)
 			.Z = c->b,
 		},
 		.θ = θ + PI/4,	// FIXME
-		.idx.i = idx,
+		.idx.i = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(nodev, v);
@@ -207,14 +220,15 @@ quitdraw(void)
 	glfwTerminate();
 }
 
-static 
-void flush(void)
+static void
+flush(void)
 {
 	ssize n;
 	float w, h;
 	Params p;
 	HMM_Mat4 proj, vw;
 	HMM_Vec2 pan;
+	sg_buffer_desc d;
 
 	w = view.dim.v.x;
 	h = view.dim.v.y;
@@ -226,8 +240,32 @@ void flush(void)
 		.mvp = HMM_MulM4(proj, vw),
 		.scale = HMM_V2(FNodesz, FNodesz),
 	};
+
+	n = dylen(edgev);
+	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
+	if(d.size / sizeof *edgev < n){
+		sg_destroy_buffer(edgebind.vertex_buffers[1]);
+		edgebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+			.size = n * sizeof *edgev,
+			.usage = SG_USAGE_STREAM,
+		});
+	}
+	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
+		.ptr = edgev,
+		.size = n * sizeof *edgev,
+	});
+	sg_begin_pass(&(sg_pass){
+		.action = offscreen_pass_action,
+		.attachments = offscreen_attachments,
+	});
+	sg_apply_pipeline(edgepip);
+	sg_apply_bindings(&edgebind);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
+	sg_draw(0, 2, n);
+	sg_end_pass();
+
 	n = dylen(nodev);
-	sg_buffer_desc d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
+	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *nodev < n){
 		sg_destroy_buffer(nodebind.vertex_buffers[1]);
 		nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
@@ -240,7 +278,7 @@ void flush(void)
 		.size = n * sizeof *nodev,
 	});
 	sg_begin_pass(&(sg_pass){
-		.action = offscreen_pass_action,
+		.action = offscreen_pass_action2,
 		.attachments = offscreen_attachments,
 	});
 	sg_apply_pipeline(nodepip);
@@ -248,6 +286,7 @@ void flush(void)
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
 	sg_draw(0, 6, n);
 	sg_end_pass();
+
 	sg_begin_pass(&(sg_pass){
 		.action = default_pass_action,
 		.swapchain = glfw_swapchain(),
@@ -274,7 +313,7 @@ void
 evloop(void)
 {
 	int req;
-	static Clk clk = {.lab = "flush"};
+	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
 
 	/* FIXME: if we want the plan9 lilu dallas mooltithreading, this needs
 	 *	a different design; on plan9 input and drawing are decoupled,
@@ -286,6 +325,7 @@ evloop(void)
 	req = 0;
 	while (!glfwWindowShouldClose(glfw_window())) {
 		if((req = nbrecvul(drawc)) != 0){
+			CLK0(fclk);
 			/* Reqresetdraw for resizing: handled by callback */
 			if((req & Reqresetui) != 0)
 				resetui(1);
@@ -302,6 +342,7 @@ evloop(void)
 				flush();
 				CLK1(clk);
 			}
+			CLK1(fclk);
 		}
 		//if(drawstep)...?
 		reqdraw(Reqrefresh);	/* FIXME */
@@ -356,27 +397,27 @@ initgl(void)
 	});
 	assert(sg_isvalid());
 
-	/* GEOMETRY */
-	float vertices[] = {
+	/* geometry */
+	float nodevert[] = {
 		-FNodesz/2.0f, +Nodethiccc/2.0f,
 		+FNodesz/2.0f, +Nodethiccc/2.0f,
 		+FNodesz/2.0f, -Nodethiccc/2.0f,
 		-FNodesz/2.0f, -Nodethiccc/2.0f,
 	};
-	u16int indices[] = {
+	u16int nodeidx[] = {
 		0, 1, 2,	// first triangle
 		0, 2, 3,	// second triangle
 	};
+	float edgevert[] = { -FNodesz/2.0f, 0, +FNodesz/2.0f, 0 };
+	u16int edgeidx[] = { 0, 1 };
 
-	/* INSTANCING */
-	// resource bindings for offscreen rendering
-	// note how the instance-data buffer goes into vertex buffer slot 1
+	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
+	 * is used for instance data */
 	nodebind = (sg_bindings){
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){
-				.data = SG_RANGE(vertices),
+				.data = SG_RANGE(nodevert),
 			}),
-			// empty, dynamic instance-data vertex buffer (goes into vertex buffer bind slot 1)
 			[1] = sg_make_buffer(&(sg_buffer_desc){
 				.size = 1024 * sizeof(GLNode),
 				.usage = SG_USAGE_STREAM,
@@ -384,11 +425,70 @@ initgl(void)
 		},
 		.index_buffer = sg_make_buffer(&(sg_buffer_desc){
 			.type = SG_BUFFERTYPE_INDEXBUFFER,
-			.data = SG_RANGE(indices),
+			.data = SG_RANGE(nodeidx),
 		}),
 	};
-	// create a shader
+	edgebind = (sg_bindings){
+		.vertex_buffers = {
+			[0] = sg_make_buffer(&(sg_buffer_desc){
+				.data = SG_RANGE(edgevert),
+			}),
+			[1] = sg_make_buffer(&(sg_buffer_desc){
+				.size = 1024 * sizeof(GLEdge),
+				.usage = SG_USAGE_STREAM,
+			}),
+		},
+		.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+			.type = SG_BUFFERTYPE_INDEXBUFFER,
+			.data = SG_RANGE(edgeidx),
+		}),
+	};
 	sg_shader nodesh = sg_make_shader(&(sg_shader_desc){
+		.vs.uniform_blocks[0] = {
+			.size = sizeof(Params),
+			.uniforms = {
+				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
+			},
+		},
+		/* FIXME: mvp and s: redundancy, s should be part of mvp or w/e */
+		.vs.source =
+			"#version 330\n"
+			"//precision mediump float;\n"
+			"precision lowp float;\n"
+			"uniform mat4 mvp;\n"
+			"uniform vec2 s;\n"
+			"layout(location=0) in vec2 geom;\n"
+			"layout(location=1) in vec2 pos;\n"
+			"layout(location=2) in vec3 col0;\n"
+			"layout(location=3) in float theta;\n"
+			"layout(location=4) in int idx0;\n"
+			"out vec3 col;\n"
+			"flat out int idx;\n"
+			"vec2 rotatez(vec2 v, float angle){\n"
+			"  float s = sin(angle);\n"
+			"  float c = cos(angle);\n"
+			"  //return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) * v;\n"
+			"  return mat2(c, -s, s, c) * v;\n"
+			"}\n"
+			"void main() {\n"
+			"  float z = gl_InstanceID * 0.000001;\n"
+			"  gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
+			"  col = col0;\n"
+			"  idx = idx0;\n"
+			"}\n",
+		.fs.source =
+			"#version 330\n"
+			"in vec3 col;\n"
+			"flat in int idx;\n"
+			"layout(location=0) out vec4 c0;\n"
+			"layout(location=1) out int c1;\n"
+			"void main() {\n"
+			"  c0 = vec4(col, 0.8);\n"
+			"  c1 = idx;\n"
+			"}\n",
+	});
+	sg_shader edgesh = sg_make_shader(&(sg_shader_desc){
 		.vs.uniform_blocks[0] = {
 			.size = sizeof(Params),
 			.uniforms = {
@@ -399,46 +499,36 @@ initgl(void)
 		.vs.source =
 			"#version 330\n"
 			"//precision mediump float;\n"
-			"//precision lowp float;\n"
+			"precision lowp float;\n"
 			"uniform mat4 mvp;\n"
 			"uniform vec2 s;\n"
-			"layout(location=0) in vec2 geom;\n"
-			"layout(location=1) in vec2 pos;\n"
-			"layout(location=2) in vec3 col0;\n"
-			"layout(location=3) in float idx0;\n"
-			"layout(location=4) in float theta;\n"
+			"layout(location=0) in vec2 v;\n"
+			"layout(location=1) in vec2 p1;\n"
+			"layout(location=2) in vec2 p2;\n"
+			"layout(location=3) in vec3 col0;\n"
+			"layout(location=4) in int idx0;\n"
 			"out vec3 col;\n"
 			"flat out int idx;\n"
-			"vec2 rotatez(vec2 v, float angle){\n"
-			"  float s = sin(angle);\n"
-			"  float c = cos(angle);\n"
-			"  //return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) * v;\n"
-			"  return mat2(c, -s, s, c) * v;\n"
-			"}\n"
 			"void main() {\n"
-			"  //float i = gl_InstanceID;\n"
-			"  gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, 0.0, 1.0);\n"
-			"  //gl_Position = mvp * vec4((geom + pos) / s, 0.0, 1.0);\n"
+			"  vec2 p = gl_VertexID == 0 ? p1 : p2;\n"
+			"  float z = gl_InstanceID * -0.000001;\n"
+			"  gl_Position = mvp * vec4(p / s, z, 1.0);\n"
 			"  col = col0;\n"
-			"  idx = int(idx0);\n"
+			"  idx = idx0;\n"
 			"}\n",
 		.fs.source =
 			"#version 330\n"
 			"in vec3 col;\n"
 			"flat in int idx;\n"
 			"layout(location=0) out vec4 c0;\n"
-			"//layout(location=1) out int c1;\n"
-			"layout(location=1) out vec4 c1;\n"
+			"layout(location=1) out int c1;\n"
 			"void main() {\n"
-			"  c0 = vec4(col, 0.8);\n"
-			"  c1 = vec4(col, 1.0);\n"
-			"  //c1 = int(idx);\n"
+			"  c0 = vec4(col, 0.25);\n"
+			"  c1 = idx;\n"
 			"}\n",
 	});
 
-/* FIXME: is depth image/stencil and sampler always required? */
-	/* OFFSCREEN MULTI TARGET RENDERING (no msaa) */
-	const int msaa_samples = 1;
+	/* multi-target rendering targets, without multisampling */
 	fb = sg_make_image(&(sg_image_desc){
 		.render_target = true,
 		.width = glfw_width(),
@@ -449,7 +539,7 @@ initgl(void)
 		.render_target = true,
 		.width = glfw_width(),
 		.height = glfw_height(),
-		//.pixel_format = SG_PIXELFORMAT_R32UI,
+		.pixel_format = SG_PIXELFORMAT_R32UI,
 		.sample_count = 1,
 	});
 	zfb = sg_make_image(&(sg_image_desc){
@@ -466,23 +556,36 @@ initgl(void)
 		},
 		.depth_stencil.image = zfb,
 	});
-	// a matching pass action with clear colors
 	c = color(theme[Cbg]);
+	/* clear colors on the first pass, don't do anything on the second */
 	offscreen_pass_action = (sg_pass_action){
 		.colors = {
 			[0] {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
-				.clear_value = { c->r, c->g, c->b, 1.0f }
+				.clear_value = { c->r, c->g, c->b, 0.0f },
 			},
 			[1] {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
-				.clear_value = { 0.0f, 0.0f, 0.0f, 1.0f }
+				.clear_value = { 0 },
 			},
-		}
+		},
 	};
-	// pipeline state object, note the vertex layout definition
+	offscreen_pass_action2 = (sg_pass_action){
+		.colors = {
+			[0] {
+				.load_action = SG_LOADACTION_DONTCARE,
+				.store_action = SG_STOREACTION_DONTCARE,
+			},
+			[1] {
+				.load_action = SG_LOADACTION_DONTCARE,
+				.store_action = SG_STOREACTION_DONTCARE,
+			},
+		},
+		.depth.load_action = SG_LOADACTION_DONTCARE,
+		.stencil.load_action = SG_LOADACTION_DONTCARE,
+	};
 	nodepip = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
@@ -511,13 +614,13 @@ initgl(void)
 					.buffer_index = 1,
 				},
 				[3] {
-					.offset = offsetof(GLNode, idx),
+					.offset = offsetof(GLNode, θ),
 					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 1,
 				},
 				[4] {
-					.offset = offsetof(GLNode, θ),
-					.format = SG_VERTEXFORMAT_FLOAT,
+					.offset = offsetof(GLNode, idx),
+					.format = SG_VERTEXFORMAT_BYTE4,
 					.buffer_index = 1,
 				},
 			}
@@ -529,13 +632,94 @@ initgl(void)
 			.compare = SG_COMPAREFUNC_LESS_EQUAL,
 			.write_enabled = true
 		},
-		.cull_mode = SG_CULLMODE_BACK,
 		.color_count = 2,
-		.sample_count = msaa_samples
+		/* NOTE: per-attachment blend state may not be supported */
+		.colors = {
+			[0] {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+			[1] {
+				.pixel_format = SG_PIXELFORMAT_R32UI,
+			},
+		},
+		.sample_count = 1,
+	});
+	edgepip = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.buffers = {
+				[0] {
+					.stride = 2 * sizeof(float),
+				},
+				[1] {
+					.stride = sizeof(GLEdge),
+					.step_func = SG_VERTEXSTEP_PER_INSTANCE
+				},
+			},
+			.attrs = {
+				[0] {
+					.offset = 0,
+					.format = SG_VERTEXFORMAT_FLOAT2,
+					.buffer_index = 0,
+				},
+				[1] {
+					.offset = offsetof(GLEdge, pos1),
+					.format = SG_VERTEXFORMAT_FLOAT2,
+					.buffer_index = 1,
+				},
+				[2] {
+					.offset = offsetof(GLEdge, pos2),
+					.format = SG_VERTEXFORMAT_FLOAT2,
+					.buffer_index = 1,
+				},
+				[3] {
+					.offset = offsetof(GLEdge, col),
+					.format = SG_VERTEXFORMAT_FLOAT3,
+					.buffer_index = 1,
+				},
+				[4] {
+					.offset = offsetof(GLEdge, idx),
+					.format = SG_VERTEXFORMAT_BYTE4,
+					.buffer_index = 1,
+				},
+			}
+		},
+		.shader = edgesh,
+		.primitive_type = SG_PRIMITIVETYPE_LINES,
+		.index_type = SG_INDEXTYPE_UINT16,
+		.depth = {
+			.pixel_format = SG_PIXELFORMAT_DEPTH,
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true,
+		},
+		.color_count = 2,
+		.colors = {
+			[0] {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+			[1] {
+				.pixel_format = SG_PIXELFORMAT_R32UI,
+			},
+		},
+		.sample_count = 1,
 	});
 
-	/* DISPLAY RENDERING */
-	// a vertex buffer to render a fullscreen rectangle
+	/* drawing to display */
 	float quad_vertices[] = {
 		0.0f, 0.0f, 
 		1.0f, 0.0f,
@@ -545,20 +729,17 @@ initgl(void)
 	sg_buffer quad_vbuf = sg_make_buffer(&(sg_buffer_desc){
 		.data = SG_RANGE(quad_vertices)
 	});
-	// a sampler with linear filtering and clamp-to-edge
 	sg_sampler smp = sg_make_sampler(&(sg_sampler_desc){
 		.min_filter = SG_FILTER_LINEAR,
 		.mag_filter = SG_FILTER_LINEAR,
 		.wrap_u = SG_WRAP_CLAMP_TO_EDGE,
 		.wrap_v = SG_WRAP_CLAMP_TO_EDGE,
 	});
-	// resource bindings to render the fullscreen quad
 	fsq_bind = (sg_bindings){
 		.vertex_buffers[0] = quad_vbuf,
 		.fs.images[0] = fb,
 		.fs.samplers[0] = smp,
 	};
-	// a shader to render a fullscreen rectangle
 	sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
 		.vs = {
 			.source =
@@ -594,7 +775,6 @@ initgl(void)
 				"}\n"
 		}
 	});
-	// the pipeline object for the fullscreen rectangle
 	fsq_pip = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.attrs[0].format=SG_VERTEXFORMAT_FLOAT2
@@ -602,7 +782,7 @@ initgl(void)
 		.shader = fsq_shd,
 		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
 	});
-	// default pass action, no clear needed, since whole screen is overwritten
+	/* no clear needed, since whole screen is overwritten */
 	default_pass_action = (sg_pass_action){
 		.colors[0].load_action = SG_LOADACTION_DONTCARE,
 		.depth.load_action = SG_LOADACTION_DONTCARE,

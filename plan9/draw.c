@@ -115,12 +115,12 @@ scrobj(Vertex p)
 }
 
 static Image *
-i2c(int idx)
+i2c(s32int idx)
 {
 	static Image *i;
-	union { uchar u[4]; int v; } u;
+	union { uchar u[4]; u32int v; } u;
 
-	u.v = idx + 1;
+	u.v = (u32int)idx + 1;
 	if(i == nil)
 		i = eallocimage(Rect(0,0,1,1), XRGB32, 1, u.v);
 	else
@@ -162,7 +162,7 @@ drawlabel(Node *, Quad, Quad, Quad q, vlong id, Color *c)
 }
 
 int
-drawquad(Quad q1, Quad q2, Quad, double, int idx, Color *c)
+drawquad(Quad q1, Quad q2, Quad, double, s32int idx, Color *c)
 {
 	Rectangle r1, r2;
 
@@ -189,7 +189,7 @@ drawquad(Quad q1, Quad q2, Quad, double, int idx, Color *c)
 }
 
 int
-drawbezier(Quad q, double w, int idx, Color *c)
+drawbezier(Quad q, double w, s32int idx, Color *c)
 {
 	double θ;
 	Point p2, p3;
@@ -210,6 +210,7 @@ drawbezier(Quad q, double w, int idx, Color *c)
 		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
 	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
 		showarrows ? Endarrow : Endsquare, w, c->i, ZP);
+	// FIXME: remove haxx0rz and zoom check altogether?
 	// FIXME: haxx0rz check doesn't belong here?
 	if(!haxx0rz && view.zoom > 1.){
 		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
@@ -224,7 +225,7 @@ drawbezier(Quad q, double w, int idx, Color *c)
 }
 
 int
-drawline(Quad q, double w, int emph, int idx, Color *c)
+drawline(Quad q, double w, int emph, s32int idx, Color *c)
 {
 	Rectangle r;
 
