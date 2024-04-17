@@ -13,9 +13,9 @@ extern u32int *theme;
 
 extern int drawlabels;
 
-int	drawline(Quad, double, int, int, Color*);
-int	drawbezier(Quad, double, int, Color*);
-int	drawquad(Quad, Quad, Quad, double, int, Color*);
+int	drawline(Quad, double, int, s32int, Color*);
+int	drawbezier(Quad, double, s32int, Color*);
+int	drawquad(Quad, Quad, Quad, double, s32int, Color*);
 int	drawlabel(Node*, Quad, Quad, Quad, vlong, Color*);
 void	cleardraw(void);
 Vertex	centerscalept2(Vertex);

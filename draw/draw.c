@@ -32,8 +32,8 @@ drawguides(void)
 	drawline(Qd(ZV, view.pan), 0, 2, -1, color(theme[Ctext]));
 }
 
-static int
-mapvis(Graph *g, int type, int idx)
+static u32int
+mapvis(Graph *g, int type, ssize idx)
 {
 	Obj o;
 
@@ -57,7 +57,7 @@ mouseselect(Vertex v)
 static int
 drawedge(Graph *g, Quad q, double w, ssize idx)
 {
-	int i;
+	u32int i;
 
 	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
 	i = mapvis(g, Oedge, idx);
@@ -68,7 +68,7 @@ drawedge(Graph *g, Quad q, double w, ssize idx)
 static int
 drawnode(Graph *g, Node *n)
 {
-	int i;
+	u32int i;
 
 	//DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
 	i = mapvis(g, Onode, n - g->nodes);
