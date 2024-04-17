@@ -41,6 +41,7 @@ workproc(void *arg)
 		sk = l->sk;
 		assert(sk != nil);
 		if(sk->compute != nil){
+			/* FIXME: no sampling == useless */
 			CLK0(clk);
 			sk->compute(l->scratch, &l->flags, i-1);
 			CLK1(clk);
@@ -104,6 +105,7 @@ layproc(void *arg)
 			}
 			l->sk = sk;
 			if((new || sk != oldsk) && sk->new != nil){
+				/* FIXME: no sampling == useless */
 				CLK0(clk);
 				l->scratch = sk->new(g);
 				CLK1(clk);

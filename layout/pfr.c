@@ -3,9 +3,7 @@
 
 enum{
 	//Nrep = 100,
-	W = 256,
-	L = 256,
-	Area = W * L,
+	Length = 200,
 };
 
 typedef struct P P;
@@ -29,12 +27,13 @@ struct D{
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
-//#define	cool(t)	((t) - 0.0001f > 0.0f ? (t) - 0.0001f : 0.0f)
-#define	cool(t,n)	((t) * ((n - 1.0) / n))
+#define	cool(t)	((t) - 0.0001f > 0.0001f ? (t) - 0.0001f : (t))
+//#define	cool(t,n)	((t) * ((n - 1.0) / n))
 
 static void *
 new(Graph *g)
 {
+	float n;
 	ssize i, *e, *ee, *etab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
@@ -42,20 +41,20 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
-	for(i=g->node0.next; i>=0; i=u->next){
+	for(i=g->node0.next, n=0.0; i>=0; i=u->next){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
 		p.nx = &u->vrect.o.x;
 		p.ny = &u->vrect.o.y;
-		p.x = -W/4 + nrand(W/2);
-		p.y = -L/4 + nrand(L/2);
-		*p.nx = p.x;
-		*p.ny = p.y;
 		u->vrect.v = ZV;
 		dypush(ptab, p);
+		n += 1.0;
 	}
+	n = Nodesz * log(n);
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
+		*pp->nx = pp->x = -n + nrand(2*n);
+		*pp->ny = pp->y = -n + nrand(2*n);
 		u = g->nodes + pp->i;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
@@ -76,7 +75,7 @@ new(Graph *g)
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->etab = etab;
-	aux->k = 1 * sqrt((float)Area / dylen(ptab));
+	aux->k = 1 * sqrt((float)(Length * Length) / dylen(ptab));
 	return aux;
 }
 
@@ -99,7 +98,7 @@ compute(void *arg, volatile int *stat, int i)
 {
 	P *pp, *p0, *p1, *u, *v;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize n, *e, *ee;
+	ssize *e, *ee;
 	D *d;
 
 	d = arg;
@@ -110,7 +109,6 @@ compute(void *arg, volatile int *stat, int i)
 	p1 = pp + dylen(pp);
 	if(p1 > pp + dylen(pp))
 		p1 = pp + dylen(pp);
-	n = 100 * dylen(pp) / nlaythreads;
 	for(;;){
 		Δr = 0;
 		/* not the best way to do this, but skipping through the array
@@ -175,7 +173,7 @@ compute(void *arg, volatile int *stat, int i)
 			warn("fuck %f\n", Δr);
 			return 0;
 		}
-		t = cool(t, n);
+		t = cool(t);
 	}
 }
 
