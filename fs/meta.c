@@ -126,8 +126,14 @@ collectgfameta(Graph *g)
 void
 clearmeta(Graph *g)
 {
+	ssize id;
+	char *k;
+
 	if(g->strnmap == nil)
 		return;
+	kh_foreach(g->strnmap, k, id,
+		{free(k); USED(id);}
+	);
 	kh_destroy(strmap, g->strnmap);
 	g->strnmap = nil;
 }
