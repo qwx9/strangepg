@@ -93,7 +93,7 @@ rendernode(Graph *g, Node *u)
 	u->q2.o.y -= ry;
 	u->q2.v.x = u->q2.v.x - sx;
 	u->q2.v.y = u->q2.v.y - sy;
-	u->shape.o = u->vrect.o;
+	u->shape.o = u->vrect.o;	// FIXME: redundant??
 	// FIXME: both dimensions are erroneous
 	u->shape.v = Vec2(Nodesz+PI, Nodesz/4);	// FIXME: systematic error above
 	return 0;

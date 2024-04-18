@@ -68,6 +68,16 @@ col2int(Color *c)
 	return c->col >> 8;
 }
 
+void
+zoomdraw(float)
+{
+}
+
+void
+pandraw(float, float)
+{
+}
+
 static Vertex
 p2v(Point p)
 {

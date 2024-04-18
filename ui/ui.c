@@ -7,45 +7,38 @@
 Obj selected;
 
 static char *prompt;
-static Vertex panmax;
 
-int
-panview(Vector v)
+static void
+pan(float Δx, float Δy)
 {
-	DPRINT(Debugdraw, "panview to %.2f,%.2f", v.x, v.y);
-	//v = floorpt2(addpt2(divpt2(v, view.zoom), view.pan));
-	v = floorpt2(addpt2(v, view.pan));
-	/* FIXME
-	if(p.x < -panmax.x / 2)
-		p.x = -panmax.x / 2;
-	else if(p.x > panmax.x / 2)
-		p.x = panmax.x / 2;
-	if(p.y < 0)
-		p.y = 0;
-	else if(p.y > panmax.y)
-		p.y = panmax.y;
-	*/
+	Vertex v;
+
+	/* FIXME */
+	v = (Vertex){Δx, Δy, 0.0f};
+	v = addpt2(v, view.pan);
 	if(eqpt2(v, view.pan))
-		return -1;
+		return;
 	view.pan = v;
-	return 0;
+	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", v.x, v.y, view.pan.x, view.pan.y);
+	pandraw(Δx, Δy);
+	reqdraw(Reqredraw);
 }
 
-int
-zoomview(Vector v)
+static void
+zoom(float Δx, float Δy)
 {
-	double Δ;
+	float Δ;
 
-	/* scalar projection of v onto (1,1); so, zoom in when dragging ↘ */
-	Δ = 0.01 * -(v.x + v.y) / 2;
-	DPRINT(Debugdraw, "view.zoomview %.1f,%.1f → Δ %.2f: ", v.x, v.y, Δ);
-	if(view.zoom + Δ < 0.0001 || view.zoom + Δ > 1024){
-		DPRINT(Debugdraw, "nope");
-		return -1;
-	}
+	/* scalar projection of v onto (1,1) unit vector; this way,
+	 * zoom in when dragging ↘; also scale to reasonable
+	 * increment */
+	Δ = 0.01 * -(Δx + Δy) / 2;
+	if(view.zoom + Δ == view.zoom)
+		return;
 	view.zoom += Δ;
-	DPRINT(Debugdraw, "%.1f", view.zoom);
-	return 0;
+	DPRINT(Debugdraw, "zoom %.1f,%.1f → Δ %.2f → %.2f ", Δx, Δy, Δ, view.zoom);
+	zoomdraw(Δ);
+	reqdraw(Reqredraw);
 }
 
 static void
@@ -63,10 +56,10 @@ keyevent(Rune r)
 
 	DPRINT(Debugdraw, "keyevent %d", r);
 	switch(r){
-	case KBup: if(panview(Vec2(0,-view.dim.v.y/2)) >= 0) reqdraw(Reqredraw); break;
-	case KBdown: if(panview(Vec2(0,+view.dim.v.y/2)) >= 0) reqdraw(Reqredraw); break;
-	case KBright: if(panview(Vec2(+view.dim.v.x/2,0)) >= 0) reqdraw(Reqredraw); break;
-	case KBleft: if(panview(Vec2(-view.dim.v.x/2,0)) >= 0) reqdraw(Reqredraw); break;
+	case KBup: pan(0.0f, -view.dim.v.y / 2.0f); break;
+	case KBdown: pan(0.0f, +view.dim.v.y / 2.0f); break;
+	case KBright: pan(+view.dim.v.x / 2.0f, 0.0f); break;
+	case KBleft: pan(-view.dim.v.x / 2.0f, 0.0f); break;
 	case KBescape: free(prompt); prompt = nil; reqdraw(Reqresetui); break;
 	case '\n': keyprompt(0);  reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
@@ -108,13 +101,10 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		//runlock(&drawlock);
 	}else if((b & 7) == Mmmb){
 		// FIXME: menu
-	}else if((b & 7) == Mrmb){
-		if(panview(subpt2(ZV, Δ)) >= 0)
-			reqdraw(Reqredraw);
-	}else if((b & 7) == (Mlmb | Mrmb)){
-		if(zoomview(subpt2(ZV, Δ)) >= 0)
-			reqdraw(Reqredraw);
-	}
+	}else if((b & 7) == Mrmb)
+		pan(-Δ.x, -Δ.y);
+	else if((b & 7) == (Mlmb | Mrmb))
+		zoom(-Δ.x, -Δ.y);
 	return 0;
 }
 
@@ -123,8 +113,6 @@ resetui(int all)
 {
 	view.center = ZV;
 	DPRINT(Debugdraw, "resetui center %.1f,%.1f", view.center.x, view.center.y);
-	panmax.x = view.dim.v.x * Nodesz;
-	panmax.y = view.dim.v.y * Nodesz;
 	if(all){
 		view.pan = ZV;
 		view.zoom = 1.0;

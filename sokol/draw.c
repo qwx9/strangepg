@@ -21,9 +21,18 @@ struct Color{
 };
 
 /* FIXME: blackjack and hookers:
- * - debug node rotation
- * - debug mvp and scaling
+ * - debug node rotation → requires refactoring rend/draw
+ *	using the scale param is also wrong anyway
+ *	rend angle calculation is just wrong
+ * - refactor rend and draw
+ *	and geom; use macros ± inline shit like handmade math and also hmm; and view
+ * - debug scaling
  * - mouse picking; see sokol_gfx_ext.h from sokol_gp + inject-glfw.c
+ */
+/* FIXME: blackjack and hookers:
+ * - resize: resize images etc as well, otherwise it just stretches shit; push up
+ *	default window size + clamp to screen size, or always set to screen size, or
+ *	add a flag, etc.
  * - make quads thick lines? generalize to edges? maybe that way we can shape
  *	algorithmically nodes and edges both
  * - we want 60fps → draw, render and flush together must be below 16.67ms
@@ -48,12 +57,6 @@ struct Color{
  *   would render quads directly instead of triangles, etc.)
  *   use floats, etc.
  *	 draw/, plan9/: remove all the geom.c bullshit, huge slowdown
- * - free and realloc attachments on resize? (since we're using the screen size)
- *	would be nice to avoid, but for now just do it always or never
- *  doesn't really change that much either; perhaps we could just instead render onto
- *	fixed size buffer and call it a day
- * - use mvp for zoom in/zoom out (eye z coord) AND panning (center or xy coords) AND rotation (up vector)
- * - don't output stuff that falls outside view area wrt mvp?
  * - decouple input from rendering
  * - draw labels, arrows
  * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
@@ -64,11 +67,15 @@ struct Color{
  * - get rid of unnecessary glue code (that isn't even updated)
  * - extend for 3d vis and navigation, later port to plan9
  * - 3d layout algo on top of this, would be nice to have by may
+ *	zoom will just become z-panning
+ *	depth tricks would be employed only in non-3d layouts
  */
 
 #define FNodesz	((float)Nodesz)
 #define Nodethiccc	(FNodesz/Ptsz)
+#define	FOV	60.0f
 
+typedef struct Camera Camera;
 typedef struct Params Params;
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
@@ -100,6 +107,17 @@ struct hjdicks GLEdge{
 };
 static GLNode *nodev;
 static GLEdge *edgev;
+
+/* FIXME: sokol/ui? */
+struct Camera{
+	float ar;
+	HMM_Vec3 eye;
+	HMM_Vec3 center;
+	HMM_Vec3 Δeye;
+	HMM_Vec3 up;
+	HMM_Mat4 mvp;
+};
+static Camera cam;
 
 static sg_pass_action offscreen_pass_action, offscreen_pass_action2;
 static sg_pass_action default_pass_action;
@@ -189,15 +207,15 @@ drawquad(Quad q1, Quad q2, Quad q, double θ, s32int idx, Color *c)
 {
 	GLNode v = {
 		.pos = {
-			.X = q.o.x,
-			.Y = q.o.y,
+			.X = q.o.x+q.v.x,
+			.Y = q.o.y+q.v.y,
 		},
 		.col = {
 			.X = c->r,
 			.Y = c->g,
 			.Z = c->b,
 		},
-		.θ = θ + PI/4,	// FIXME
+		.θ = θ,
 		.idx.i = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
@@ -220,27 +238,58 @@ quitdraw(void)
 	glfwTerminate();
 }
 
+/*
+	p2w(x,y) = HMM_V2((((x)+0.5f)/w) * 2.0f - 1.0f, 1.0f - (((y)+0.5f)/h) * 2.0f)
+	w2p(x,y) = HMM_V2(w * ((x)+1.0f) / 2.0f - 0.5f, -h * ((y)-1.0f) - 0.5f)
+*/
+
+static void
+updatecam(void)
+{
+	HMM_Mat4 vw, proj;
+
+	cam.Δeye = HMM_SubV3(cam.eye, cam.center);
+	cam.ar = view.dim.v.x / view.dim.v.y;
+	proj = HMM_Perspective_RH_NO(60.0f, cam.ar, 0.01f, 1000.0f);
+	vw = HMM_LookAt_RH(cam.eye, cam.center, cam.up);
+	cam.mvp = HMM_MulM4(proj, vw);
+	warn("sokol: dim %.1f,%.1f Δeye %.2f,%.2f,%.2f ar %.3f eye %.2f,%.2f,%.2f center %.2f,%.2f,%.2f\n", view.dim.v.x, view.dim.v.y, cam.Δeye.X, cam.Δeye.Y, cam.Δeye.Z, cam.ar, cam.eye.X, cam.eye.Y, cam.eye.Z, cam.center.X, cam.center.Y, cam.center.Z);
+}
+
+void
+zoomdraw(float Δ)
+{
+	cam.eye = HMM_SubV3(cam.eye, HMM_MulV3F(cam.Δeye, Δ));
+	updatecam();
+}
+
+void
+pandraw(float Δx, float Δy)
+{
+	float len;
+	HMM_Vec3 dy, dx, c;
+
+	Δx /= view.dim.v.x;
+	Δy /= view.dim.v.y;
+	cam.center.X += Δx * 2.0f * cam.Δeye.Z * cam.ar * tan(FOV / 2.0f);
+	cam.center.Y -= Δy * 2.0f * cam.Δeye.Z * tan(FOV / 2.0f);
+	cam.eye.X = cam.center.X;
+	cam.eye.Y = cam.center.Y;
+	warn("sokol: pan %.2f,%.2f dx %.2f,%.2f,%.2f dy %.2f,%.2f,%.2f c %.2f,%.2f,%.2f\n", Δx, Δy, dx.X, dx.Y, dx.Z, dy.X, dy.Y, dy.Z, c.X, c.Y, c.Z);
+	updatecam();
+}
+
 static void
 flush(void)
 {
 	ssize n;
-	float w, h;
 	Params p;
-	HMM_Mat4 proj, vw;
-	HMM_Vec2 pan;
 	sg_buffer_desc d;
 
-	w = view.dim.v.x;
-	h = view.dim.v.y;
-	// FIXME: not quite correct, pan coords are in pixel space, not using this right
-	pan = HMM_V2(-(float)view.pan.x / w, (float)view.pan.y / h);
-	proj = HMM_Perspective_RH_NO(60.0f, w/h, 0.1f, 100.0f);
-	vw = HMM_LookAt_RH(HMM_V3(pan.X, pan.Y, 10/view.zoom), HMM_V3(pan.X, pan.Y, 0.0f), HMM_V3(0.0f, 1.0f, 0.0f));
 	p = (Params){
-		.mvp = HMM_MulM4(proj, vw),
+		.mvp = cam.mvp,
 		.scale = HMM_V2(FNodesz, FNodesz),
 	};
-
 	n = dylen(edgev);
 	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
 	if(d.size / sizeof *edgev < n){
@@ -366,6 +415,8 @@ reqdraw(int r)
 static void
 glresize(GLFWwindow *, int w, int h)
 {
+	/* FIXME: if initial window is too small this will be triggered */
+	/* FIXME: unhandled */
 	view.dim.v = Vec2(w, h);
 	resetui(1);
 }
@@ -802,5 +853,9 @@ initsysdraw(void)
 	 * input handling being synchronous */
 	if((drawc = chancreate(sizeof(ulong), 64)) == nil)
 		sysfatal("initsysdraw: chancreate");
+	cam.eye = HMM_V3(0.0f, 0.0f, 10.0f);
+	cam.center = HMM_V3(0.0f, 0.0f, 0.0f);
+	cam.up = HMM_V3(0.0f, 1.0f, 0.0f);
+	updatecam();
 	//atexit(quitdraw);
 }

@@ -20,6 +20,8 @@ int	drawlabel(Node*, Quad, Quad, Quad, vlong, Color*);
 void	cleardraw(void);
 Vertex	centerscalept2(Vertex);
 Quad	centerscalequad(Quad);
+void	zoomdraw(float);
+void	pandraw(float, float);
 int	setnodecolor(Graph*, Node*, u32int);
 Color*	newcolor(u32int);
 void	freecolor(Color*);
