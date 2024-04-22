@@ -86,7 +86,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		o = selected;
 		// FIXME: everything should stop while this does its thing
 		//rlock(&drawlock);
-		selected = mouseselect(v);
+		selected = mouseselect(v.x, v.y);
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));

@@ -110,18 +110,18 @@ centerscalerect(Quad q)
 	return Rpt(v2p(q.o), v2p(q.v));
 }
 
-int
-scrobj(Vertex p)
+u32int
+scrobj(int x, int y)
 {
 	Rectangle r;
-	union { uchar u[4]; int v; } u;
+	union { uchar u[4]; u32int v; } u;
 
 	if(selfb == nil)
-		return -1;
-	r = Rpt(Pt(p.x,p.y), Pt(p.x+1, p.y+1));
+		return 0;
+	r = Rpt(Pt(x, y), Pt(x+1, y+1));
 	r = rectsubpt(r, screen->r.min);
 	unloadimage(selfb, r, u.u, 4);
-	return u.v - 1;
+	return u.v;
 }
 
 static Image *

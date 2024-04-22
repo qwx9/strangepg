@@ -43,13 +43,15 @@ mapvis(Graph *g, int type, ssize idx)
 }
 
 Obj
-mouseselect(Vertex v)
+mouseselect(int x, int y)
 {
-	int i;
+	u32int i;
 
-	if((i = scrobj(v)) < 0 || i >= dylen(visobj))
+	if(x < 0 || y < 0 || x >= view.dim.v.x || y >= view.dim.v.y)
 		return aintnothingthere;
-	return visobj[i];
+	if((i = scrobj(x, y)) == 0 || i-1 >= dylen(visobj))
+		return aintnothingthere;
+	return visobj[i-1];
 }
 
 /* FIXME: the interfaces here need refactoring, too cumbersome and

@@ -66,7 +66,7 @@ void	initsysdraw(void);
 void	drawui(void);
 void	redraw(void);
 void	reqdraw(int);
-int	scrobj(Vertex);
+u32int	scrobj(int, int);
 void	showobj(Obj*);
 void	stopdrawclock(void);
 void	startdrawclock(void);
@@ -75,7 +75,7 @@ void	initrend(void);
 int	renderlayout(Graph*);
 int	rerender(int);
 
-Obj	mouseselect(Vertex);
+Obj	mouseselect(int, int);
 int	panview(Vector);
 int	zoomview(Vector);
 void	initsysui(void);

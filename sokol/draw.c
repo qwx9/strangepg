@@ -11,6 +11,7 @@
 //#define SOKOL_DEBUG
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
+#include "sokol_gfx_ext.h"
 #include "lib/glfw_glue.h"
 
 struct Color{
@@ -20,14 +21,13 @@ struct Color{
 	float b;
 };
 
-/* FIXME: blackjack and hookers:
+/* FIXME:
+ * - refactor rend and draw
+ *	and geom; use macros ± inline shit like handmade math and also hmm; and view
  * - debug node rotation → requires refactoring rend/draw
  *	using the scale param is also wrong anyway
  *	rend angle calculation is just wrong
- * - refactor rend and draw
- *	and geom; use macros ± inline shit like handmade math and also hmm; and view
  * - debug scaling
- * - mouse picking; see sokol_gfx_ext.h from sokol_gp + inject-glfw.c
  */
 /* FIXME: blackjack and hookers:
  * - resize: resize images etc as well, otherwise it just stretches shit; push up
@@ -89,21 +89,13 @@ struct hjdicks GLNode{
 	HMM_Vec2 pos;
 	HMM_Vec3 col;
 	float θ;
-	/* no SG_VERTEXFORMAT_INT yet */
-	union {
-		u32int i;
-		uchar u[4];
-	} idx;
+	u32int idx;
 };
 struct hjdicks GLEdge{
 	HMM_Vec2 pos1;
 	HMM_Vec2 pos2;
 	HMM_Vec3 col;
-	/* no SG_VERTEXFORMAT_INT yet */
-	union {
-		u32int i;
-		uchar u[4];
-	} idx;
+	u32int idx;
 };
 static GLNode *nodev;
 static GLEdge *edgev;
@@ -151,10 +143,10 @@ col2int(Color *c)
 	return c->col;
 }
 
-int
-scrobj(Vertex)
+u32int
+scrobj(int x, int y)
 {
-	return -1;
+	return sg_query_image_pixel(x, y, pickfb);
 }
 
 void
@@ -185,7 +177,7 @@ drawline(Quad q, double w, int emph, s32int idx, Color *c)
 			.Y = c->g,
 			.Z = c->b,
 		},
-		.idx.i = idx < 0 ? 0 : (u32int)idx + 1,
+		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(edgev, e);
@@ -216,7 +208,7 @@ drawquad(Quad q1, Quad q2, Quad q, double θ, s32int idx, Color *c)
 			.Z = c->b,
 		},
 		.θ = θ,
-		.idx.i = idx < 0 ? 0 : (u32int)idx + 1,
+		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(nodev, v);
@@ -238,11 +230,6 @@ quitdraw(void)
 	glfwTerminate();
 }
 
-/*
-	p2w(x,y) = HMM_V2((((x)+0.5f)/w) * 2.0f - 1.0f, 1.0f - (((y)+0.5f)/h) * 2.0f)
-	w2p(x,y) = HMM_V2(w * ((x)+1.0f) / 2.0f - 0.5f, -h * ((y)-1.0f) - 0.5f)
-*/
-
 static void
 updatecam(void)
 {
@@ -253,7 +240,6 @@ updatecam(void)
 	proj = HMM_Perspective_RH_NO(60.0f, cam.ar, 0.01f, 1000.0f);
 	vw = HMM_LookAt_RH(cam.eye, cam.center, cam.up);
 	cam.mvp = HMM_MulM4(proj, vw);
-	warn("sokol: dim %.1f,%.1f Δeye %.2f,%.2f,%.2f ar %.3f eye %.2f,%.2f,%.2f center %.2f,%.2f,%.2f\n", view.dim.v.x, view.dim.v.y, cam.Δeye.X, cam.Δeye.Y, cam.Δeye.Z, cam.ar, cam.eye.X, cam.eye.Y, cam.eye.Z, cam.center.X, cam.center.Y, cam.center.Z);
 }
 
 void
@@ -275,7 +261,6 @@ pandraw(float Δx, float Δy)
 	cam.center.Y -= Δy * 2.0f * cam.Δeye.Z * tan(FOV / 2.0f);
 	cam.eye.X = cam.center.X;
 	cam.eye.Y = cam.center.Y;
-	warn("sokol: pan %.2f,%.2f dx %.2f,%.2f,%.2f dy %.2f,%.2f,%.2f c %.2f,%.2f,%.2f\n", Δx, Δy, dx.X, dx.Y, dx.Z, dy.X, dy.Y, dy.Z, c.X, c.Y, c.Z);
 	updatecam();
 }
 
@@ -290,6 +275,7 @@ flush(void)
 		.mvp = cam.mvp,
 		.scale = HMM_V2(FNodesz, FNodesz),
 	};
+
 	n = dylen(edgev);
 	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
 	if(d.size / sizeof *edgev < n){
@@ -513,9 +499,9 @@ initgl(void)
 			"layout(location=1) in vec2 pos;\n"
 			"layout(location=2) in vec3 col0;\n"
 			"layout(location=3) in float theta;\n"
-			"layout(location=4) in int idx0;\n"
+			"layout(location=4) in uint idx0;\n"
 			"out vec3 col;\n"
-			"flat out int idx;\n"
+			"flat out uint idx;\n"
 			"vec2 rotatez(vec2 v, float angle){\n"
 			"  float s = sin(angle);\n"
 			"  float c = cos(angle);\n"
@@ -527,13 +513,14 @@ initgl(void)
 			"  gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
 			"  col = col0;\n"
 			"  idx = idx0;\n"
+			"  //idx = uint(gl_InstanceID);\n"
 			"}\n",
 		.fs.source =
 			"#version 330\n"
 			"in vec3 col;\n"
-			"flat in int idx;\n"
+			"flat in uint idx;\n"
 			"layout(location=0) out vec4 c0;\n"
-			"layout(location=1) out int c1;\n"
+			"layout(location=1) out uint c1;\n"
 			"void main() {\n"
 			"  c0 = vec4(col, 0.8);\n"
 			"  c1 = idx;\n"
@@ -557,9 +544,9 @@ initgl(void)
 			"layout(location=1) in vec2 p1;\n"
 			"layout(location=2) in vec2 p2;\n"
 			"layout(location=3) in vec3 col0;\n"
-			"layout(location=4) in int idx0;\n"
+			"layout(location=4) in uint idx0;\n"
 			"out vec3 col;\n"
-			"flat out int idx;\n"
+			"flat out uint idx;\n"
 			"void main() {\n"
 			"  vec2 p = gl_VertexID == 0 ? p1 : p2;\n"
 			"  float z = gl_InstanceID * -0.000001;\n"
@@ -570,9 +557,9 @@ initgl(void)
 		.fs.source =
 			"#version 330\n"
 			"in vec3 col;\n"
-			"flat in int idx;\n"
+			"flat in uint idx;\n"
 			"layout(location=0) out vec4 c0;\n"
-			"layout(location=1) out int c1;\n"
+			"layout(location=1) out uint c1;\n"
 			"void main() {\n"
 			"  c0 = vec4(col, 0.25);\n"
 			"  c1 = idx;\n"
@@ -671,7 +658,7 @@ initgl(void)
 				},
 				[4] {
 					.offset = offsetof(GLNode, idx),
-					.format = SG_VERTEXFORMAT_BYTE4,
+					.format = SG_VERTEXFORMAT_UINT,
 					.buffer_index = 1,
 				},
 			}
@@ -737,7 +724,7 @@ initgl(void)
 				},
 				[4] {
 					.offset = offsetof(GLEdge, idx),
-					.format = SG_VERTEXFORMAT_BYTE4,
+					.format = SG_VERTEXFORMAT_UINT,
 					.buffer_index = 1,
 				},
 			}
@@ -828,7 +815,7 @@ initgl(void)
 	});
 	fsq_pip = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
-			.attrs[0].format=SG_VERTEXFORMAT_FLOAT2
+			.attrs[0].format = SG_VERTEXFORMAT_FLOAT2
 		},
 		.shader = fsq_shd,
 		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
