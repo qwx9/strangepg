@@ -1,6 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
-#include "threads.h"
+#include "graph.h"
 
 /* fruchterman and reingold 91, with small modifications */
 
@@ -14,10 +14,10 @@ enum{
 typedef struct P P;
 struct P{
 	Graph *g;
-	double x;
-	double y;
-	double Δx;
-	double Δy;
+	float x;
+	float y;
+	float Δx;
+	float Δy;
 	ssize i;
 };
 
@@ -58,7 +58,7 @@ static int
 compute(void *arg, volatile int *stat, int idx)
 {
 	ssize i;
-	double k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
+	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
 	Edge *e;
@@ -68,7 +68,7 @@ compute(void *arg, volatile int *stat, int idx)
 		return 0;
 	ptab = arg;
 	g = ptab->g;
-	k = 1 * sqrt((double)Area / dylen(ptab));
+	k = 1 * sqrt((float)Area / dylen(ptab));
 	t = 1.0;
 	for(;;){
 		Δr = 0;
@@ -120,8 +120,8 @@ compute(void *arg, volatile int *stat, int idx)
 			u->x = x;
 			u->y = y;
 			nu = g->nodes + u->i;
-			nu->vrect.o.x = x;
-			nu->vrect.o.y = y;
+			nu->pos.x = x;
+			nu->pos.y = y;
 			if(Δr < δ)
 				Δr = δ;
 		}

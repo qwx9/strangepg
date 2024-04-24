@@ -71,48 +71,6 @@ int	getfields(char*, char**, int, int, char*);
 char*	seprint(char*, char*, char*, ...);
 char*	strecpy(char*, char*, char*);
 
-/* /sys/include/geometry.h */
-typedef struct Point2 Point2;
-typedef struct Point3 Point3;
-
-struct Point2 {
-	double x, y, w;
-};
-
-struct Point3 {
-	double x, y, z, w;
-};
-
-/* utils */
-double flerp(double, double, double);
-double fclamp(double, double, double);
-
-/* Point2 */
-Point2 Pt2(double, double, double);
-Point2 Vec2(double, double);
-Point2 addpt2(Point2, Point2);
-Point2 subpt2(Point2, Point2);
-Point2 mulpt2(Point2, double);
-Point2 divpt2(Point2, double);
-Point2 lerp2(Point2, Point2, double);
-double dotvec2(Point2, Point2);
-double vec2len(Point2);
-Point2 normvec2(Point2);
-int edgeptcmp(Point2, Point2, Point2);
-int ptinpoly(Point2, Point2*, uint);
-/* Point3 */
-Point3 Pt3(double, double, double, double);
-Point3 Vec3(double, double, double);
-Point3 addpt3(Point3, Point3);
-Point3 subpt3(Point3, Point3);
-Point3 mulpt3(Point3, double);
-Point3 divpt3(Point3, double);
-Point3 lerp3(Point3, Point3, double);
-double dotvec3(Point3, Point3);
-Point3 crossvec3(Point3, Point3);
-double vec3len(Point3);
-Point3 normvec3(Point3);
-
 //#define const
 #define nil NULL	// better for them to be interchangeable here
 

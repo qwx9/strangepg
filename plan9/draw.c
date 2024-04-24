@@ -47,7 +47,7 @@ alloccolor(u32int col)
 
 	c = emalloc(sizeof *c);
 	c->col = col;
-	c->i = eallocimage(Rect(0,0,1,1), haxx0rz ? screen->chan : ARGB32, 1, col);
+	c->i = eallocimage(Rect(0,0,1,1), (view.flags & VFhaxx0rz) != 0 ? screen->chan : ARGB32, 1, col);
 	c->shad = eallocimage(Rect(0,0,1,1), XRGB32, 1, setalpha(col, 0x7f));
 	return c;
 }
@@ -68,6 +68,8 @@ col2int(Color *c)
 	return c->col >> 8;
 }
 
+#define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.pan), view.center)
+
 void
 zoomdraw(float)
 {
@@ -78,31 +80,83 @@ pandraw(float, float)
 {
 }
 
-static Vertex
-p2v(Point p)
+FIXME
+#define	v2p(v)	Pt((v).x, (v).y)
+/* FIXME: don't even think about it */
+/*
+Quad
+centerscalequad(Quad q)
 {
-	return Vec2(p.x, p.y);
+	q.v = addpt2(q.o, q.v);
+	q.o = centerscalev(q.o);
+	q.v = centerscalev(q.v);
+	return q;
+}
+*/
+/* FIXME:
+Vertex ZV;
+Quad ZQ;
+
+Quad
+Qd(Vertex o, Vector v)
+{
+	return (Quad){o, v};
 }
 
-static Point
-v2p(Vertex v)
+double
+qΔx(Quad q)
 {
-	return Pt(v.x, v.y);
+	return q.v.x - q.o.x;
 }
 
-static Point
-s2p(Vertex v)
+double
+qΔy(Quad q)
 {
-	Point p;
-
-	p = subpt(v2p(v), screen->r.min);
-	p = subpt(p, Pt(1,1));
-	p = addpt(p, v2p(view.dim.o));
-	if(!ptinrect(p, viewr))
-		return Pt(-1,-1);
-	return p;
+	return q.v.y - q.o.y;
 }
 
+int
+ptinquad(Vertex v, Quad q)
+{
+	return v.x >= q.o.x && v.x < q.o.x + q.v.x
+		&& v.y >= q.o.y && v.y < q.o.y + q.v.y;
+}
+
+Quad
+insetquad(Quad q, int Δ)
+{
+	return (Quad){
+		Vec2(q.o.x - Δ, q.o.y - Δ),
+		Vec2(q.v.x + Δ, q.v.y + Δ)
+	};
+}
+
+Quad
+quadaddpt2(Quad q, Vector v)
+{
+	return (Quad){addpt2(q.o, v), addpt2(q.v, v)};
+}
+
+Quad
+quadsubpt2(Quad q, Vector v)
+{
+	return (Quad){addpt2(q.o, v), subpt2(q.v, v)};
+}
+
+Vertex
+floorpt2(Vertex v)
+{
+	return Vec2(floor(v.x), floor(v.y));
+}
+
+int
+eqpt2(Point2 a, Point2 b)
+{
+	return a.x == b.x && a.y == b.y && a.w == b.w;
+}
+*/
+
+FIXME
 static Rectangle
 centerscalerect(Quad q)
 {
@@ -160,19 +214,63 @@ showobj(Obj *o)
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
 }
 
-int
-drawlabel(Node *, Quad, Quad, Quad q, vlong id, Color *c)
+static void
+rotatenode(Graph *g, Node *u)
 {
+	double θ, vx, vy, rx, ry, sx, sy;
+
+	u->θ = makenicerkindof(g, u);
+	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
+	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
+	u->vrect.v = Vec2(vx, vy);
+	u->q1 = u->vrect;
+	u->q2 = u->vrect;
+	θ = u->θ;
+	if(fabs(u->θ) >= PI/2)
+		θ += PI/2;
+	else
+		θ -= PI/2;
+	rx = Nodesz/8 * (cos(θ) - sin(θ));
+	ry = Nodesz/8 * (sin(θ) + cos(θ));
+	if(fabs(u->θ) >= PI/2)
+		θ -= PI;
+	else
+		θ += PI;
+	sx = Nodesz/4 * (cos(θ) - sin(θ));
+	sy = Nodesz/4 * (sin(θ) + cos(θ));
+	u->q1.o.x += rx;
+	u->q1.o.y += ry;
+	u->q1.v.x = u->q1.v.x + sx;
+	u->q1.v.y = u->q1.v.y + sy;
+	u->q2.o.x -= rx;
+	u->q2.o.y -= ry;
+	u->q2.v.x = u->q2.v.x - sx;
+	u->q2.v.y = u->q2.v.y - sy;
+	u->shape.o = u->vrect.o;	// FIXME: redundant??
+	// FIXME: both dimensions are erroneous
+	u->shape.v = Vec2(Nodesz+PI, Nodesz/4);	// FIXME: systematic error above
+}
+
+int
+drawlabel(Node *n, Color *c)
+{
+	Vertex v;
+	Point p;
 	char lab[128];
 
-	q = centerscalequad(q);
-	snprint(lab, sizeof lab, "%zx", id);
-	string(viewfb, v2p(q.o), c->i, ZP, font, lab);
+	/* FIXME: note: maybe treat em allocations like strings like dy; have
+	 * an emstr allocator with its own bank, etc. or selectable banks like
+	 * doom */
+	/* FIXME: just keep label in em/memory, what's the point */
+	v = centerscalev(n->pos);
+	p = Pt(v.x + Ptsz, v.y + Ptsz);
+	snprint(lab, sizeof lab, "%zx", n->id);
+	string(viewfb, p, c->i, ZP, font, lab);
 	return 0;
 }
 
 int
-drawquad(Quad q1, Quad q2, Quad, double, s32int idx, Color *c)
+drawquad(Vertex pos, float θ, s32int idx, Color *c)
 {
 	Rectangle r1, r2;
 
@@ -199,12 +297,13 @@ drawquad(Quad q1, Quad q2, Quad, double, s32int idx, Color *c)
 }
 
 int
-drawbezier(Quad q, double w, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, double w, s32int idx, Color *c)
 {
 	double θ;
 	Point p2, p3;
 	Rectangle r;
 
+	q.v = subpt2(q.v, q.o);	// FIXME (re-added by centerscalerect)
 	r = centerscalerect(q);
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
@@ -235,7 +334,7 @@ drawbezier(Quad q, double w, s32int idx, Color *c)
 }
 
 int
-drawline(Quad q, double w, int emph, s32int idx, Color *c)
+drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 {
 	Rectangle r;
 
@@ -261,12 +360,13 @@ flushdraw(void)
 static void
 resetdraw(void)
 {
-	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	view.w = Dx(screen->r);
+	view.h = Dy(screen->r);
 	viewr = rectsubpt(screen->r, screen->r.min);
 	DPRINT(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
 	freeimage(selfb);
-	viewfb = eallocimage(viewr, haxx0rz ? screen->chan : XRGB32, 0, DNofill);
+	viewfb = eallocimage(viewr, (view.flags & VFhaxx0rz) != 0 ? screen->chan : XRGB32, 0, DNofill);
 	selfb = eallocimage(viewr, XRGB32, 0, DBlack);
 	statr.min = addpt(screen->r.min, Pt(0, viewr.max.y - font->height));
 	statr.max = viewr.max;
@@ -275,59 +375,11 @@ resetdraw(void)
 void
 cleardraw(void)
 {
-	Graph *g;
-	Rectangle r, q;
-
-	r = Rpt(ZP, v2p(addpt2(addpt2(view.dim.v, view.center), view.pan)));
-	lockgraphs(0);
-	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->type == FFdead)
-			continue;
-		g->off = ZV;
-		DPRINT(Debugdraw, "cleardraw: graph %#p dim %.1f,%.1f", g, g->dim.v.x, g->dim.v.y);
-		q = Rpt(v2p(g->dim.o), v2p(addpt2(g->dim.o, g->dim.v)));
-		if(qΔx(g->dim) + Nodesz > Dx(r))
-			r.max.x = qΔx(g->dim) + Nodesz + 1;
-		if(qΔy(g->dim) + Nodesz > Dy(r))
-			r.max.y = qΔy(g->dim) + Nodesz + 1;
-		if(q.min.x < 0)
-			g->off.x = -q.min.x + Nodesz;
-		else if(q.min.x > 0)
-			g->off.x = -q.min.x;
-		if(q.min.y < 0)
-			g->off.y = -q.min.y + Nodesz;
-		else if(q.min.y > 0)
-			g->off.y = -q.min.y;
-	}
-	// FIXME: ???
-	if(!eqrect(r, viewfb->r)){
-		view.dim.v = p2v(r.max);
-		resetdraw();
-	}
 	drawop(viewfb, viewr, color(theme[Cbg])->i, nil, ZP, S);
 	draw(selfb, selfb->r, display->black, nil, ZP);
-	if(debug){
-		Point pl[] = {
-			r.min,
-			Pt(r.max.x, r.min.y),
-			r.max,
-			Pt(r.min.x, r.max.y),
-			r.min
-		};
-		r = insetrect(r, 1);
-		poly(viewfb, pl, nelem(pl), Endsquare, Endsquare, 0, color(theme[Ctext])->i, ZP);
-		line(viewfb,
-			Pt(viewfb->r.max.x/2, 0),
-			Pt(viewfb->r.max.x/2, viewfb->r.max.y),
-			Endsquare, Endarrow, 0, color(theme[Ctext])->i, ZP);
-		line(viewfb,
-			Pt(0, viewfb->r.max.y/2),
-			Pt(viewfb->r.max.x,viewfb->r.max.y/2),
-			Endsquare, Endarrow, 0, color(theme[Ctext])->i, ZP);
-	}
-	unlockgraphs(0);
 }
 
+// FIXME: → merge with evloop in generic draw code as frame() or sth
 static void
 drawproc(void *)
 {
@@ -345,17 +397,23 @@ drawproc(void *)
 		}
 		if((req & Reqresetui) != 0)
 			resetui(1);
-		if((req & Reqrefresh) != 0 && !norefresh || (req & Reqrender) != 0){
-			if(!rerender(req & Reqrender))
+		if((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0){
+			if(!redraw((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0)
 				stopdrawclock();
 		}
-		lockdisplay(display);
-		if(req != Reqshallowdraw)
-			redraw();
+		/* FIXME: long lock */
+		/* FIXME: better to put these in every single drawquad/bezier call? */
+		if(req != Reqshallowdraw){
+			lockdisplay(display);
+			if(!redraw((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0)
+				stopdrawclock();
+			unlockdisplay(display);
+		}
 		CLK0(clk);
+		lockdisplay(display);
 		flushdraw();
-		CLK1(clk);
 		unlockdisplay(display);
+		CLK1(clk);
 	}
 }
 
@@ -379,7 +437,7 @@ ticproc(void *)
 	vlong t, Δt;
 
 	t0 = μsec();
-	step = drawstep ? Nsec/140. : Nsec/60.;
+	step = Nsec / 60.;
 	Alt a[] = {
 		{ticc, &stop, CHANRCV},
 		{nil, nil, CHANEND},
@@ -413,8 +471,7 @@ stopdrawclock(void)
 void
 startdrawclock(void)
 {
-	if(!noui)
-		sendul(ticc, 0);
+	sendul(ticc, 0);
 }
 
 // FIXME: portable code
@@ -425,8 +482,8 @@ initsysdraw(void)
 		sysfatal("initdraw: %r");
 	display->locking = 1;
 	unlockdisplay(display);
-	view.dim.o = ZV;
-	view.dim.v = Vec2(Dx(screen->r), Dy(screen->r));
+	view.w = Dx(screen->r);
+	view.h = Dy(screen->r);
 	if((drawc = chancreate(sizeof(ulong), 0)) == nil
 	|| (ticc = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");

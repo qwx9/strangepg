@@ -2,16 +2,13 @@
 #include "threads.h"
 #include <pool.h>
 
-int noui, debug;
+/* leave here to not have to redefine in tests and elsewhere */
+int debug;
 
 void
 sysquit(void)
 {
-	/* FIXME: inelegant */
-	if(noui)
-		threadexits(nil);
-	else
-		threadexitsall(nil);
+	threadexitsall(nil);
 }
 
 char *

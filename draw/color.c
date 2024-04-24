@@ -86,7 +86,7 @@ somecolor(Graph *g)
 void
 settheme(void)
 {
-	if(haxx0rz)
+	if((view.flags & VFhaxx0rz) != 0)
 		theme = theme1;
 	else
 		theme = theme2;

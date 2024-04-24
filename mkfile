@@ -12,6 +12,7 @@ OFILES=\
 	cmd/cmd.$O\
 	draw/color.$O\
 	draw/draw.$O\
+	draw/shape.$O\
 	fs/em.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
@@ -19,7 +20,6 @@ OFILES=\
 	fs/load.$O\
 	fs/meta.$O\
 	graph/graph.$O\
-	graph/vertex.$O\
 	layout/conga.$O\
 	layout/fr.$O\
 	layout/layout.$O\
@@ -27,7 +27,6 @@ OFILES=\
 	layout/pfr.$O\
 	layout/pline.$O\
 	layout/random.$O\
-	rend/rend.$O\
 	plan9/awk.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
@@ -55,10 +54,12 @@ HFILES=\
 	draw/drw.h\
 	fs/em.h\
 	fs/fs.h\
+	graph/graph.h\
 	layout/layout.h\
 	lib/khash.h\
 	plan9/strpg.h\
 	plan9/threads.h\
+	ui/ui.h\
 	util/dynar.h\
 
 </sys/src/cmd/mkmany

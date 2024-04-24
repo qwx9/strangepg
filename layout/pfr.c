@@ -1,4 +1,6 @@
 #include "strpg.h"
+#include "graph.h"
+#include "drw.h"
 #include "layout.h"
 
 enum{
@@ -11,8 +13,8 @@ typedef struct D D;
 struct P{
 	float x;
 	float y;
-	double *nx;
-	double *ny;
+	float *nx;
+	float *ny;
 	ssize i;
 	ssize e;
 	int nin;
@@ -45,9 +47,8 @@ new(Graph *g)
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
-		p.nx = &u->vrect.o.x;
-		p.ny = &u->vrect.o.y;
-		u->vrect.v = ZV;
+		p.nx = &u->pos.x;
+		p.ny = &u->pos.y;
 		dypush(ptab, p);
 		n += 1.0;
 	}

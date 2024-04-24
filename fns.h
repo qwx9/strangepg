@@ -7,90 +7,19 @@ char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
 #define panic(x) {warn((x)); abort();}
+void	errmsg(char*, ...);
+int	errstr(char*, uint);
 vlong	μsec(void);
-
-Quad	Qd(Vertex, Vector);
-double	qΔx(Quad);
-double	qΔy(Quad);
-int	ptinquad(Vertex, Quad);
-Quad	insetquad(Quad, int);
-Quad	quadaddpt2(Quad, Vector);
-Quad	quadsubpt2(Quad, Vector);
-Vertex	floorpt2(Vertex);
-int	eqpt2(Point2, Point2);
+void	sysquit(void);
+void	quit(void);
+void	sysinit(void);
 
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 
-int	errstr(char*, uint);
-
-int	zoomgraph(Graph*, int);
-
-void	expandnode(Graph*, Node*);
-void	retractnode(Graph*, Node*);
-
-Node*	getnode(Graph*, ssize);
-Node*	getactivenode(Graph*, Node*);
-Node*	str2node(Graph*, char*);
-Edge*	getedge(Graph*, ssize);
-int	ischild(Graph*, ssize, ssize);
-Node*	touchnode(Graph*g, ssize id, ssize pid, ssize idx, int w);
-Node*	pushnode(Graph*, ssize, ssize, ssize, int);
-Node*	touchnode(Graph*g, ssize id, ssize pid, ssize idx, int w);
-Node*	pushsibling(Graph*, ssize, Node*, ssize, int);
-Node*	pushnamednode(Graph*, char*);
-Node*	pushchild(Graph*, ssize, Node*, ssize, int);
-Edge*	pushnamededge(Graph*, char*, char*, int, int);
-Edge*	pushedge(Graph*, Node*, Node*, int, int);
-void	poptree(Graph*, Node*);
-void	printgraph(Graph*);
-
-void	clearmeta(Graph*);
-void	cleargraph(Graph*);
-void	nukegraph(Graph*);
-void	pushgraph(Graph);
-void	lockgraphs(int);
-void	unlockgraphs(int);
-Graph	initgraph(int);
-
-int	initcmd(void);
-
-void	initfs(void);
-void	freefs(File*);
-int	loadfs(char*, int);
-
-void	sysinit(void);
-void	sysquit(void);
-
-void	initsysdraw(void);
-void	drawui(void);
-void	redraw(void);
-void	reqdraw(int);
-u32int	scrobj(int, int);
-void	showobj(Obj*);
-void	stopdrawclock(void);
-void	startdrawclock(void);
-
-void	initrend(void);
-int	renderlayout(Graph*);
-int	rerender(int);
-
-Obj	mouseselect(int, int);
-int	panview(Vector);
-int	zoomview(Vector);
-void	initsysui(void);
-void	initui(void);
-void	evloop(void);
-void	errmsg(char*, ...);
-void	resetui(int);
-int	mouseevent(Vertex, Vertex, int);
-int	keyevent(Rune);
-void	quit(void);
-
 void	newthread(void (*)(void*), void (*)(void*), void*, void*, char*, uint);
 void*	threadstore(void*);
 
-/* you gotta wonder what will come next */
 #define DPRINT(x,...)	do{ \
 	if((debug&(x)) != 0) \
 		dprint((x), __VA_ARGS__); \

@@ -1,6 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
-#include "threads.h"
+#include "graph.h"
 
 /* FIXME: NOTE: returning stuff by copy to feed graphs etc means pointers
  * will be invalidated as soon as those arrays are resized, so just malloc
@@ -18,17 +18,17 @@ enum{
 typedef struct P P;
 struct P{
 	Graph *g;
-	double x;
-	double y;
-	double Δx;
-	double Δy;
+	float x;
+	float y;
+	float Δx;
+	float Δy;
 	ssize i;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
-#define	cool(t)	((t) > 0 ? (t) - 0.001 : 0)
+#define	cool(t)	((t) > 0 ? (t) - 0.001f : 0.0f)
 
 static void *
 new(Graph *g)
@@ -42,9 +42,8 @@ new(Graph *g)
 		u = g->nodes + i;
 		p.i = i;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			u->vrect.o = u->fixed;
-			p.x = u->fixed.x;
-			p.y = u->fixed.y;
+			p.x = u->pos.x = u->fixpos.x;
+			p.y = u->pos.y = u->fixpos.y;
 			if((u->flags & FNfixed) != 0)
 				p.i = -1;
 		}else{
@@ -69,7 +68,7 @@ static int
 compute(void *arg, volatile int *stat, int idx)
 {
 	ssize i;
-	double k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
+	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
 	Edge *e;
@@ -79,7 +78,7 @@ compute(void *arg, volatile int *stat, int idx)
 		return 0;
 	ptab = arg;
 	g = ptab->g;
-	k = 1 * sqrt((double)Area / dylen(g->nodes));
+	k = 1 * sqrt((float)Area / dylen(g->nodes));
 	t = 1.0;
 	for(;;){
 		Δr = 0;
@@ -135,8 +134,8 @@ compute(void *arg, volatile int *stat, int idx)
 			u->x = x;
 			u->y = y;
 			nu = g->nodes + u->i;
-			nu->vrect.o.x = x;
-			nu->vrect.o.y = y;
+			nu->pos.x = x;
+			nu->pos.y = y;
 			if(Δr < δ)
 				Δr = δ;
 		}

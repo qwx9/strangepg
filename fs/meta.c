@@ -53,13 +53,13 @@ collectgfanodes(Graph *g, File *f)
 			/* FIXME: no error checking */
 			}else if(strncmp(s, "fx", 2) == 0){
 				n->flags |= FNfixed;
-				n->fixed.x = atof(s+5);
+				n->fixpos.x = atof(s+5);
 			}else if(strncmp(s, "fy", 2) == 0){
 				n->flags |= FNfixed;
-				n->fixed.y = atof(s+5);
+				n->fixpos.y = atof(s+5);
 			}else if(strncmp(s, "mv", 2) == 0){
-				n->flags |= FNinitpos;	/* FIXME */
-				n->fixed.x = atof(s+5);
+				n->flags |= FNinitpos;
+				n->fixpos.x = atof(s+5);
 			}
 			s[2] = 0;
 			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);

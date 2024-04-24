@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
+#include "graph.h"
 
 /* FIXME: just set constant link length between fixed and movable? */
 /* FIXME: chrona/other layout */
@@ -17,8 +18,8 @@ struct P{
 	uchar fixed;
 	float x;
 	float y;
-	double *nx;
-	double *ny;
+	float *nx;
+	float *ny;
 	ssize i;
 	ssize e;
 	int nin;
@@ -33,7 +34,7 @@ struct D{
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
-#define	cool(t)	((t) > 0 ? (t) - 0.0001 : 0)
+#define	cool(t)	((t) - 0.0001f > 0 ? (t) - 0.0001f : 0.0f)
 
 static void *
 new(Graph *g)
@@ -49,11 +50,11 @@ new(Graph *g)
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
-		p.nx = &u->vrect.o.x;
-		p.ny = &u->vrect.o.y;
+		p.nx = &u->pos.x;
+		p.ny = &u->pos.y;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			p.x = u->fixed.x;
-			p.y = u->fixed.y;
+			p.x = u->fixpos.x;
+			p.y = u->fixpos.y;
 			if((u->flags & FNfixed) != 0){
 				nf++;
 				if(maxx < p.x)
@@ -67,7 +68,6 @@ new(Graph *g)
 		}
 		*p.nx = p.x;
 		*p.ny = p.y;
-		u->vrect.v = ZV;
 		dypush(ptab, p);
 	}
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){

@@ -1,5 +1,7 @@
 #include "strpg.h"
+#include "ui.h"
 #include "cmd.h"
+#include "graph.h"
 #include "drw.h"
 #include "layout.h"
 #include "threads.h"
@@ -13,13 +15,11 @@ pan(float Δx, float Δy)
 {
 	Vertex v;
 
-	/* FIXME */
-	v = (Vertex){Δx, Δy, 0.0f};
-	v = addpt2(v, view.pan);
-	if(eqpt2(v, view.pan))
+	v = addv(V(Δx, Δy, 0.0f), view.pan);
+	if(eqv(v, view.pan))
 		return;
+	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
 	view.pan = v;
-	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", v.x, v.y, view.pan.x, view.pan.y);
 	pandraw(Δx, Δy);
 	reqdraw(Reqredraw);
 }
@@ -36,7 +36,7 @@ zoom(float Δx, float Δy)
 	if(view.zoom + Δ == view.zoom)
 		return;
 	view.zoom += Δ;
-	DPRINT(Debugdraw, "zoom %.1f,%.1f → Δ %.2f → %.2f ", Δx, Δy, Δ, view.zoom);
+	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
 	zoomdraw(Δ);
 	reqdraw(Reqredraw);
 }
@@ -56,19 +56,18 @@ keyevent(Rune r)
 
 	DPRINT(Debugdraw, "keyevent %d", r);
 	switch(r){
-	case KBup: pan(0.0f, -view.dim.v.y / 2.0f); break;
-	case KBdown: pan(0.0f, +view.dim.v.y / 2.0f); break;
-	case KBright: pan(+view.dim.v.x / 2.0f, 0.0f); break;
-	case KBleft: pan(-view.dim.v.x / 2.0f, 0.0f); break;
+	case KBup: pan(0.0f, -view.w / 2.0f); break;
+	case KBdown: pan(0.0f, +view.h / 2.0f); break;
+	case KBright: pan(+view.w / 2.0f, 0.0f); break;
+	case KBleft: pan(-view.w / 2.0f, 0.0f); break;
 	case KBescape: free(prompt); prompt = nil; reqdraw(Reqresetui); break;
 	case '\n': keyprompt(0);  reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
 	case 'R': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
-	case 'a': showarrows ^= 1; reqdraw(Reqredraw); break;
-	case 'r': norefresh ^= 1; break;
-	case 'l': drawlabels ^= 1; break;
+	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqredraw); break;
+	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqredraw); break;
 	default: keyprompt(r); break;
 	}
 	return 0;
@@ -109,18 +108,19 @@ mouseevent(Vertex v, Vertex Δ, int b)
 }
 
 void
-resetui(int all)
+resetui(void)
 {
 	view.center = ZV;
-	DPRINT(Debugdraw, "resetui center %.1f,%.1f", view.center.x, view.center.y);
-	if(all){
-		view.pan = ZV;
-		view.zoom = 1.0;
-	}
+	view.eye = V(0.0f, 0.0f, 10.0f);
+	view.up = V(0.0f, 1.0f, 0.0f);
+	view.Δeye = subv(view.eye, view.center);
+	view.pan = ZV;
+	view.zoom = 1.0;
 }
 
 void
 initui(void)
 {
 	initsysui();
+	resetui();
 }

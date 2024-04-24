@@ -1,8 +1,10 @@
 #include "strpg.h"
-#include "cmd.h"
-#include "threads.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include "ui.h"
+#include "cmd.h"
+#include "drw.h"
+#include "threads.h"
 
 GLFWwindow* glfw_window(void);
 
@@ -30,7 +32,7 @@ mouseposev(GLFWwindow *, double x, double y)
 	if(ms.b != 0){
 		Δx = x - ms.ox;
 		Δy = y - ms.oy;
-		if(mouseevent(Vec2(x, y), Vec2(Δx, Δy), ms.b) < 0)
+		if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f), ms.b) < 0)
 			warn("mouseev\n");
 		ms.ox = x;
 		ms.oy = y;

@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
+#include "drw.h"
 #include "threads.h"
 
 int nlaythreads = 4;
@@ -71,7 +72,7 @@ layproc(void *arg)
 			l->flags |= LFstop;
 			sk = nil;
 			new = 1;
-			reqdraw(Reqrender);
+			reqdraw(Reqshape);
 			break;
 		default:
 			again = 1;
@@ -92,7 +93,7 @@ layproc(void *arg)
 			l->flags = 0;
 			if(!again || sk == nil){
 				g->flags &= ~GFdrawme;
-				reqdraw(Reqrender);
+				reqdraw(Reqshape);
 				break;
 			}
 			oldsk = l->sk;

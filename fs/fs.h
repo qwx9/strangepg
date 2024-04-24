@@ -28,6 +28,19 @@ char*	readline(File*, int*);
 void	regfs(Filefmt*);
 
 void	collectgfameta(Graph*);
+void	clearmeta(Graph*);
+
+int	sysopen(File*, int);
+int	sysfdopen(File*, int, int);
+int	syswrite(File*, void*, int);
+int	sysread(File*, void*, int);
+int	syswstatlen(File*, vlong);
+vlong	sysftell(File*);
+vlong	sysseek(File*, vlong);
+void	sysremove(char*);
+int	sysmktmp(void);
+void	sysflush(File*);
+void	sysclose(File*);
 
 #define	GBIT8(p)	(((uchar*)(p))[0])
 #define	GBIT16(p)	(((uchar*)(p))[0]|(((uchar*)(p))[1]<<8))
@@ -43,7 +56,16 @@ void	collectgfameta(Graph*);
 #define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
 			   (p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
 
-void	freefs(File*);
+u8int	get8(File*);
+u16int	get16(File*);
+u32int	get32(File*);
+u64int	get64(File*);
+double	getdbl(File*);
+int	put8(File*, u8int);
+int	put16(File*, u16int);
+int	put32(File*, u32int);
+int	put64(File*, u64int);
+
 int	openfs(File*, char*, int);
 int	fdopenfs(File*, int, int);
 File*	graphopenfs(Graph*, char*, int);
@@ -55,24 +77,6 @@ void	flushfs(File*);
 vlong	seekfs(File*, vlong);
 vlong	tellfs(File*);
 void	closefs(File*);
-u8int	get8(File*);
-u16int	get16(File*);
-u32int	get32(File*);
-u64int	get64(File*);
-double	getdbl(File*);
-int	put8(File*, u8int);
-int	put16(File*, u16int);
-int	put32(File*, u32int);
-int	put64(File*, u64int);
-
-int	sysopen(File*, int);
-int	sysfdopen(File*, int, int);
-int	syswrite(File*, void*, int);
-int	sysread(File*, void*, int);
-int	syswstatlen(File*, vlong);
-vlong	sysftell(File*);
-vlong	sysseek(File*, vlong);
-void	sysremove(char*);
-int	sysmktmp(void);
-void	sysflush(File*);
-void	sysclose(File*);
+void	freefs(File*);
+int	loadfs(char*, int);
+void	initfs(void);

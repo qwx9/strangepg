@@ -1,11 +1,8 @@
+typedef struct Vertex Vertex;
 typedef struct Graph Graph;
-typedef struct Shape Shape;
-typedef struct Quad Quad;
-typedef struct Obj Obj;
 typedef struct Node Node;
 typedef struct Edge Edge;
 typedef struct Layout Layout;
-typedef struct View View;
 typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Color Color;
@@ -26,21 +23,10 @@ enum{
 	Vreverse = 1,
 };
 
-typedef Point2 Vertex;
-typedef Point2 Vector;
-
-extern Vertex ZV;
-extern Quad ZQ;
-
-struct Quad{
-	Vertex o;	/* position in original reference */
-	Vector v;	/* dimensions and orientation */
-};
-
-/* FIXME: drawshit etc */
-enum{
-	Nodesz = 8,
-	Ptsz = 2,	// FIXME: mostly unused
+struct Vertex{
+	float x;
+	float y;
+	float z;
 };
 
 enum{
@@ -49,22 +35,23 @@ enum{
 };
 struct Node{
 	ssize id;		/* key */
-	ssize idx;		/* index (leaf) */
-	ssize pid;		/* key */
-	ssize layid;	/* index */
+	ssize pid;		/* key (parent) */
+	ssize idx;		/* index: leaf */
+	ssize layid;	/* index: layout backref */
 	int lvl;
 	ssize *in;		/* dynamic array (edge indices) */
 	ssize *out;		/* dynamic array (edge indices) */
 	vlong metaoff;
 	int weight;
-	/* FIXME: fix this mess */
-	Quad q1;		/* bounding polygon */
-	Quad q2;
-	Vertex fixed;
-	Quad shape;
-	Quad vrect;		/* direction/length vector */
+	int length;
+	Vertex pos;
+	Vertex fixpos;
+	Vertex rot;
+
+	// FIXME:
+	Vertex dir;
+
 	Color *col;
-	double θ;
 	u32int flags;
 	ssize prev;		/* index */
 	ssize next;		/* index */
@@ -105,23 +92,8 @@ struct Graph{
 	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
 	Layout *layout;
-	Quad dim;
-	Vertex off;
 };
 extern Graph *graphs;	/* dynamic array */
-
-enum{
-	Onil,
-	Onode,
-	Oedge,
-};
-struct Obj{
-	Graph *g;
-	int type;
-	ssize idx;
-};
-extern Obj selected;	// FIXME: only one
-extern Obj aintnothingthere;
 
 enum{
 	FFdead,	/* deallocated */
@@ -131,32 +103,6 @@ enum{
 };
 
 enum{
-	Reqresetdraw = 1<<0,	/* reset and redo everything */
-	Reqresetui = 1<<1,		/* reset view position, etc., redraw */
-	Reqrefresh = 1<<2,		/* render and redraw: while layouting */
-	Reqrender = 1<<3,		/* force refresh: layout end */
-	Reqredraw = 1<<4,		/* paint and flush canvas */
-	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
-};
-
-struct View{
-	Quad dim;
-	Vector pan;
-	Vector center;
-	double zoom;
-};
-extern View view;
-extern int showarrows, drawstep;
-extern int haxx0rz;
-
-enum{
-	/* FIXME: ui shit */
-	Mlmb = 1<<0,
-	Mmmb = 1<<1,
-	Mrmb = 1<<2,
-	Mscrlup = 1<<3,	// FIXME: shouldn't be
-	Mscrldn = 1<<4,
-
 	Debugdraw = 1<<0,
 	Debugrender = 1<<1,
 	Debuglayout = 1<<2,
@@ -167,13 +113,6 @@ enum{
 	Debugperf = 1<<7,
 	Debugmeta = 1<<8,
 	Debugtheworld = 0xffffffff,
-
-	/* unicode arrows, children's compilers, mandrake */
-	KBleft = 0x110000,	/* outside unicode range */
-	KBright,
-	KBup,
-	KBdown,
-	KBescape,
 
 	PerfΔt = 1000000,
 };
@@ -187,7 +126,3 @@ struct Clk{
 };
 
 extern int debug;
-extern int noui;
-extern int norefresh;
-
-extern int mainstacksize;	// FIXME

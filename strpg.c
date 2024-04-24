@@ -3,8 +3,8 @@
 #include "em.h"
 #include "drw.h"
 #include "layout.h"
-
-int haxx0rz;
+#include "fs.h"
+#include "ui.h"
 
 static int intype;
 
@@ -26,17 +26,9 @@ load(char **files)
 }
 
 static void
-run(void)
-{
-	if(noui)
-		quit();
-	evloop();
-}
-
-static void
 usage(void)
 {
-	sysfatal("usage: %s [-bins] [-l layout] [-m 16-63] [-t 1-128] [FILE]\n", argv0);
+	sysfatal("usage: %s [-bi] [-l layout] [-m 16-63] [-t 1-128] FILE [FILE..]\n", argv0);
 }
 
 static char **
@@ -47,6 +39,7 @@ parseargs(int argc, char **argv)
 	/* FIXME: remove intype and -i, add an optional format specifier in filename:
 	 *	strpg ass.gfa; strpg i~ass.bct */
 	/* FIXME: we won't try to guess format, but we should validate it */
+	/* FIXME: lilu dallas mooltigraph */
 	intype = FFgfa;
 	ARGBEGIN{
 	case 'D':
@@ -76,10 +69,8 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
-	case 'b': haxx0rz = 1; break;
-	case 'i':
-		intype = FFindex;
-		break;
+	case 'b': view.flags |= VFhaxx0rz; break;
+	case 'i': intype = FFindex; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
@@ -100,8 +91,6 @@ parseargs(int argc, char **argv)
 	case 'm':
 		multiplier = atoi(EARGF(usage()));
 		break;
-	case 'n': noui = 1; break;
-	case 's': drawstep = 1; break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
 		if(nlaythreads <= 0 || nlaythreads > 128){
@@ -123,12 +112,8 @@ init(void)
 	initem();
 	initfs();
 	initlayout();
-	initrend();
-	if(noui)
-		return;
 	initdrw();
 	initui();
-	resetui(1);
 }
 
 /* note: npe already sets mainstacksize higher before renaming main */
@@ -140,7 +125,7 @@ main(int argc, char **argv)
 	argv = parseargs(argc, argv);
 	init();
 	load(argv);
-	run();
+	evloop();
 	sysquit();
 	return 0;
 }

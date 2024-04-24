@@ -1,4 +1,6 @@
 #include "strpg.h"
+#include "graph.h"
+#include "fs.h"
 #include "em.h"
 #include "cmd.h"
 #include "drw.h"

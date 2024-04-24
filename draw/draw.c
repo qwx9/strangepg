@@ -1,36 +1,13 @@
 #include "strpg.h"
+#include "graph.h"
 #include "drw.h"
+#include "ui.h"
 #include "threads.h"
 
 View view;
-int showarrows, drawstep;
-int norefresh;
-int drawlabels;
-
 Obj aintnothingthere = {nil, Onil, -1};
+
 static Obj *visobj;
-
-Vertex
-centerscalept2(Vertex v)
-{
-	return addpt2(subpt2(mulpt2(v, view.zoom), view.pan), view.center);
-}
-
-Quad
-centerscalequad(Quad q)
-{
-	q.v = addpt2(q.o, q.v);
-	q.o = centerscalept2(q.o);
-	q.v = centerscalept2(q.v);
-	return q;
-}
-
-static void
-drawguides(void)
-{
-	drawline(Qd(ZV, view.center), 0, 1, -1, color(theme[Cemph]));
-	drawline(Qd(ZV, view.pan), 0, 2, -1, color(theme[Ctext]));
-}
 
 static u32int
 mapvis(Graph *g, int type, ssize idx)
@@ -47,47 +24,48 @@ mouseselect(int x, int y)
 {
 	u32int i;
 
-	if(x < 0 || y < 0 || x >= view.dim.v.x || y >= view.dim.v.y)
+	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
 		return aintnothingthere;
 	if((i = scrobj(x, y)) == 0 || i-1 >= dylen(visobj))
 		return aintnothingthere;
 	return visobj[i-1];
 }
 
-/* FIXME: the interfaces here need refactoring, too cumbersome and
- * redundant */
-static int
-drawedge(Graph *g, Quad q, double w, ssize idx)
+static void
+drawguides(void)
 {
-	u32int i;
-
-	DPRINT(Debugdraw, "drawedge %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	i = mapvis(g, Oedge, idx);
-	q.v = subpt2(q.v, q.o);	// FIXME
-	return drawbezier(q, w, i, color(theme[Cedge]));
+	drawline(ZV, view.center, 0, 1, -1, color(theme[Cemph]));
+	drawline(ZV, view.pan, 0, 2, -1, color(theme[Ctext]));
 }
 
-static int
-drawnode(Graph *g, Node *n)
+static inline int
+drawedge(Graph *g, Node *u, Node *v, double w, ssize idx)
 {
 	u32int i;
 
-	//DPRINT(Debugdraw, "drawnode2 p %.1f,%.1f:%.1f,%.1f q %.1f,%.1f:%.1f,%.1f", p.o.x, p.o.y, p.v.x, p.v.y, q.o.x, q.o.y, q.v.x, q.v.y);
-	i = mapvis(g, Onode, n - g->nodes);
-	if(!haxx0rz || !showarrows){
-		if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0)
+	i = mapvis(g, Oedge, idx);
+	/* FIXME: offset a and b by rotation/length parameters */
+	// FIXME
+	//q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
+	return drawbezier(u->pos, v->pos, w, i, color(theme[Cedge]));
+}
+
+static inline int
+drawnode(Graph *g, Node *n, ssize idx)
+{
+	u32int i;
+
+	i = mapvis(g, Onode, idx);
+	if((view.flags & VFdrawarrows) == 0){
+		if(drawquad(n->pos, n->rot, i, n->col) < 0)
 			return -1;
-	}
-	if(drawlabels && drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
+	//if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0)
+	}else if(drawline(n->pos, addv(n->pos, n->dir), MAX(0., view.zoom/5), 1, -1, color(theme[Cemph])) < 0)
+		return -1;
+	//if(drawlabels && drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
+	if((view.flags & VFdrawarrows) != 0 && drawlabel(n, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
-}
-
-static int
-drawnodevec(Quad q)
-{
-	DPRINT(Debugdraw, "drawnodevec %.1f,%.1f:%.1f,%.1f", q.o.x, q.o.y, q.v.x, q.v.y);
-	return drawline(q, MAX(0., view.zoom/5), 1, -1, color(theme[Cemph]));
 }
 
 static int
@@ -96,16 +74,14 @@ drawedges(Graph *g)
 	ssize i;
 	Edge *e;
 	Node *u, *v;
-	Quad q;
 
-	// FIXME: get rid of .o vertex + .v vector, just .min .max points or w/e
 	for(i=g->edge0.next; i>=0; i=e->next){
 		e = g->edges + i;
 		u = getnode(g, e->u >> 1);
 		v = getnode(g, e->v >> 1);
 		assert(u != nil && v != nil);
-		q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
-		drawedge(g, q, MAX(0., view.zoom/5), e - g->edges);
+		// FIXME: honor w param
+		drawedge(g, u, v, MAX(0., view.zoom/5), i);
 	}
 	return 0;
 }
@@ -116,12 +92,9 @@ drawnodes(Graph *g)
 	ssize i;
 	Node *n;
 
-	DPRINT(Debugdraw, "drawnodes dim %.1f,%.1f", g->dim.v.x, g->dim.v.y);
 	for(i=g->node0.next; i>=0; i=n->next){
 		n = g->nodes + i;
-		if(showarrows)
-			drawnodevec(n->vrect);
-		drawnode(g, n);
+		drawnode(g, n, i);
 	}
 	return 0;
 }
@@ -138,16 +111,11 @@ drawworld(void)
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
 		drawnodes(g);
-		if(debug)
-			drawline(Qd(ZV, g->off), 0, g - graphs + 3, -1, color(theme[Ctext]));
 	}
 	unlockgraphs(0);
 	if(debug)
 		drawguides();
 }
-
-// FIXME: move more control shit from os-specific draw to here
-//	+ clearer naming common vs. os
 
 void
 drawui(void)
@@ -157,17 +125,21 @@ drawui(void)
 	showobj(&selected);
 }
 
-void
-redraw(void)
+int
+redraw(int force)
 {
+	int go;
 	static Clk clk = {.lab = "redraw"};
 
+	go = 1;
+	if(!reshape(force))
+		go = 0;
 	CLK0(clk);
-	DPRINT(Debugdraw, "redraw");
 	dyclear(visobj);
 	cleardraw();
 	drawworld();
 	CLK1(clk);
+	return go;
 }
 
 void

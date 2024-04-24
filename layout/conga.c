@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "layout.h"
+#include "drw.h"
 
 static void *
 new(Graph *g)
@@ -10,7 +11,8 @@ new(Graph *g)
 
 	for(i=g->node0.next, x=-(Nodesz+Ptsz)*(g->nnodes-1)/2; i>=0; i=u->next, x+=Nodesz+Ptsz){
 		u = g->nodes + i;
-		u->vrect = Qd(Vec2(x, 0), ZV);
+		u->pos.x = x;
+		u->pos.y = 0;
 	}
 	return nil;
 }

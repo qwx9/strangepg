@@ -1,8 +1,6 @@
 #include "strpg.h"
 #include <signal.h>
-#include "drw.h"
-#include "threads.h"
-#include "flextgl/flextGL.h"
+#include "lib/flextgl/flextGL.h"
 #define HANDMADE_MATH_IMPLEMENTATION
 //#define HANDMADE_MATH_NO_SSE
 #include "lib/HandmadeMath.h"
@@ -11,8 +9,11 @@
 //#define SOKOL_DEBUG
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
-#include "sokol_gfx_ext.h"
 #include "lib/glfw_glue.h"
+#include "sokol_gfx_ext.h"
+#include "drw.h"
+#include "ui.h"
+#include "threads.h"
 
 struct Color{
 	u32int col;
@@ -22,19 +23,18 @@ struct Color{
 };
 
 /* FIXME:
- * - refactor rend and draw
- *	and geom; use macros ± inline shit like handmade math and also hmm; and view
+ * - resize: resize images etc as well, otherwise it just stretches shit; push up
+ *	default window size + clamp to screen size, or always set to screen size, or
+ *	add a flag, etc.
+ * - basic cimgui: mouse picking + awk
  * - debug node rotation → requires refactoring rend/draw
  *	using the scale param is also wrong anyway
  *	rend angle calculation is just wrong
  * - debug scaling
  */
 /* FIXME: blackjack and hookers:
- * - resize: resize images etc as well, otherwise it just stretches shit; push up
- *	default window size + clamp to screen size, or always set to screen size, or
- *	add a flag, etc.
- * - make quads thick lines? generalize to edges? maybe that way we can shape
- *	algorithmically nodes and edges both
+ * - switch to opengl4, add tesselation, generalize nodes as thick lines, shape
+ *	nodes and edges during tesselation stage, store shape params, implement beziers
  * - we want 60fps → draw, render and flush together must be below 16.67ms
  * - shader benchmarking? flush is fast but what happens on the gpu side? why
  *	is it not smooth even though flush is fast? because of rend stalling mouse
@@ -43,20 +43,11 @@ struct Color{
  *	become expensive; improvements: pass by ref, don't use geom, use floats, hmm
  *	simplify rend; make sure it doesn't modify state that others use and maybe
  *	move to its own thread as well, it should really only set angle...
- * - bezier shaders + GLEdge improvements
- * - basic cimgui
  * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
  *	redraw only, not re-render etc
- * - extreme zoom out: make sure stuff is still visible (as 1px dots or lines?)
- * - benchmark: w/ rotate through hmm; no transparency
  * - compiled shaders: better performance? just push source and compiled
  *   ones to the repo, use sokol-tools
- * - pragma once?
  * - bonus for navigation: rotate in (any?) axis, experiment with ui
- * - refactor rend, draw to use the vertex buffers, mvp and transfo matrices (ofc plan9
- *   would render quads directly instead of triangles, etc.)
- *   use floats, etc.
- *	 draw/, plan9/: remove all the geom.c bullshit, huge slowdown
  * - decouple input from rendering
  * - draw labels, arrows
  * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
@@ -101,6 +92,7 @@ static GLNode *nodev;
 static GLEdge *edgev;
 
 /* FIXME: sokol/ui? */
+// FIXME: in draw as well
 struct Camera{
 	float ar;
 	HMM_Vec3 eye;
@@ -155,22 +147,23 @@ showobj(Obj *)
 }
 
 int
-drawlabel(Node *, Quad, Quad, Quad, vlong, Color *)
+drawlabel(Node *, Color *)
 {
 	return 0;
 }
 
+// FIXME: generalize drawbezier, merge to drawline?
 int
-drawline(Quad q, double w, int emph, s32int idx, Color *c)
+drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 {
 	GLEdge e = {
 		.pos1 = {
-			.X = q.o.x,
-			.Y = q.o.y,
+			.X = a.x,
+			.Y = a.y,
 		},
 		.pos2 = {
-			.X = q.o.x + q.v.x,
-			.Y = q.o.y + q.v.y,
+			.X = b.x,
+			.Y = b.y,
 		},
 		.col = {
 			.X = c->r,
@@ -185,29 +178,26 @@ drawline(Quad q, double w, int emph, s32int idx, Color *c)
 }
 
 int
-drawbezier(Quad q, double w, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, double w, s32int idx, Color *c)
 {
 	// FIXME
-	return drawline(q, w, 0, idx, c);
+	return drawline(a, b, w, 0, idx, c);
 }
 
-/* FIXME: plan9: don't use geom or pass by value; refactor draw, rend; use hmm */
-/* FIXME: we need untransformed shapes, where plan9 needs the opposite; fix this */
-/* FIXME: q1 and q2 are meant for a series of lines and are invalid rectangles */
 int
-drawquad(Quad q1, Quad q2, Quad q, double θ, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
 {
 	GLNode v = {
 		.pos = {
-			.X = q.o.x+q.v.x,
-			.Y = q.o.y+q.v.y,
+			.X = pos.x,
+			.Y = pos.y,
 		},
 		.col = {
 			.X = c->r,
 			.Y = c->g,
 			.Z = c->b,
 		},
-		.θ = θ,
+		.θ = rot.z,
 		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
@@ -230,18 +220,20 @@ quitdraw(void)
 	glfwTerminate();
 }
 
+// FIXME: from view struct
 static void
 updatecam(void)
 {
 	HMM_Mat4 vw, proj;
 
 	cam.Δeye = HMM_SubV3(cam.eye, cam.center);
-	cam.ar = view.dim.v.x / view.dim.v.y;
+	cam.ar = view.w / view.h;
 	proj = HMM_Perspective_RH_NO(60.0f, cam.ar, 0.01f, 1000.0f);
 	vw = HMM_LookAt_RH(cam.eye, cam.center, cam.up);
 	cam.mvp = HMM_MulM4(proj, vw);
 }
 
+// FIXME: in ui or draw; merge with plan9
 void
 zoomdraw(float Δ)
 {
@@ -249,14 +241,15 @@ zoomdraw(float Δ)
 	updatecam();
 }
 
+// FIXME: in ui or draw; merge with plan9
 void
 pandraw(float Δx, float Δy)
 {
 	float len;
 	HMM_Vec3 dy, dx, c;
 
-	Δx /= view.dim.v.x;
-	Δy /= view.dim.v.y;
+	Δx /= view.w;
+	Δy /= view.h;
 	cam.center.X += Δx * 2.0f * cam.Δeye.Z * cam.ar * tan(FOV / 2.0f);
 	cam.center.Y -= Δy * 2.0f * cam.Δeye.Z * tan(FOV / 2.0f);
 	cam.eye.X = cam.center.X;
@@ -344,6 +337,14 @@ stopdrawclock(void)
 {
 }
 
+static void
+resetdraw(void)
+{
+	// FIXME: ...
+
+	reqdraw(Reqresetdraw);
+}
+
 void
 evloop(void)
 {
@@ -363,23 +364,20 @@ evloop(void)
 			CLK0(fclk);
 			/* Reqresetdraw for resizing: handled by callback */
 			if((req & Reqresetui) != 0)
-				resetui(1);
-			if((req & Reqrefresh) != 0 && !norefresh || (req & Reqrender) != 0){
-				if(!rerender(req & Reqrender))
-					stopdrawclock();
-			}
+				resetui();
 			// FIXME: actually implement shallow redraw, etc.
 			if(req != Reqshallowdraw){
-				redraw();
-				if(dylen(nodev) == 0)
-					continue;
-				CLK0(clk);
-				flush();
-				CLK1(clk);
+				if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
+					stopdrawclock();
+				if(dylen(nodev) > 0){
+					CLK0(clk);
+					flush();
+					CLK1(clk);
+				}
 			}
 			CLK1(fclk);
 		}
-		//if(drawstep)...?
+		//if(drawstep)...?	// FIXME: μsleep(1) + timing check, don't exceed like 120Hz
 		reqdraw(Reqrefresh);	/* FIXME */
 		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
 	}
@@ -403,8 +401,9 @@ glresize(GLFWwindow *, int w, int h)
 {
 	/* FIXME: if initial window is too small this will be triggered */
 	/* FIXME: unhandled */
-	view.dim.v = Vec2(w, h);
-	resetui(1);
+	view.w = w;
+	view.h = h;
+	resetdraw();
 }
 
 static void
@@ -421,8 +420,8 @@ initgl(void)
 
 	glfw_init(&(glfw_desc_t){
 		.title = "strpg",
-		.width = view.dim.v.x,
-		.height = view.dim.v.y,
+		.width = view.w,
+		.height = view.h,
 		.sample_count = 4,
 	});
 	glfwSetErrorCallback(glerr);
@@ -832,8 +831,9 @@ initgl(void)
 void
 initsysdraw(void)
 {
-	view.dim.o = ZV;	/* FIXME: horrible */
-	view.dim.v = Vec2(Vdefw, Vdefh);
+	/* FIXME: get some sensible default (2/3 size of screen or fullscreen) */
+	view.w = Vdefw;
+	view.h = Vdefh;
 	initgl();
 	glfwSetFramebufferSizeCallback(glfw_window(), glresize);
 	/* FIXME: the reason why this can't be 0 is because of the fucking

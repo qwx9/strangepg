@@ -76,7 +76,10 @@ initrepl(void)
 	r = fork();
 	switch(r){
 	case -1: return -1;
-	case 0: cproc(); sysfatal("execl: %s", error());
+	case 0:
+		cproc();
+		sysfatal("execl: %s", error());
+		break;
 	default:
 		close(epfd[0]);
 		close(fucker[1]);

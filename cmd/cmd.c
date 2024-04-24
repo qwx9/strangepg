@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "cmd.h"
+#include "graph.h"
 #include "drw.h"
 #include "fs.h"
 
@@ -56,8 +57,8 @@ readcmd(char *s)
 				goto error;
 			}
 			n->flags |= FNfixed;
-			n->fixed.x = x;
-			n->fixed.y = y;
+			n->fixpos.x = x;
+			n->fixpos.y = y;
 			break;
 		case 'C':
 			if(m != 2){

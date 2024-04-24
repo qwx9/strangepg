@@ -6,7 +6,8 @@
 
 #undef dup
 
-int noui, debug;
+/* leave here to not have to redefine in tests and elsewhere */
+int debug;
 
 char *argv0;
 

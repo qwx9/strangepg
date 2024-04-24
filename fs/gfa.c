@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "graph.h"
 #include "fs.h"
 
 /* assumptions:
