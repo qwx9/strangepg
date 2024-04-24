@@ -39,7 +39,7 @@ THIS SOFTWARE.
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "awk.h"
-#include "awkgram.tab.h"
+#include AWKTAB
 
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);

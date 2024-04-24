@@ -27,7 +27,7 @@ THIS SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include "awk.h"
-#include "awkgram.tab.h"
+#include AWKTAB
 
 Node *nodealloc(size_t n)
 {

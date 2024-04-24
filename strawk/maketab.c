@@ -32,7 +32,7 @@ THIS SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include "awk.h"
-#include "awkgram.tab.h"
+#include AWKTAB
 
 struct xx
 {	int token;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
 	printf("#include <stdio.h>\n");
 	printf("#include \"awk.h\"\n");
-	printf("#include \"awkgram.tab.h\"\n\n");
+	printf("#include \"" AWKTAB "\"\n\n");
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: maketab YTAB_H\n");

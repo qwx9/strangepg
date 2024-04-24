@@ -273,7 +273,10 @@ typedef struct fa {
 } fa;
 
 #include "mt19937-64.h"
+#define	AWKTAB	"awkgram.tab.h"
 #ifdef _PLAN9_SOURCE
+#undef	AWKTAB
+#define	AWKTAB	"awkgram.plan9.h"
 #include "plan9.h"
 #endif
 #include "proto.h"

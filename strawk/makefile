@@ -48,7 +48,7 @@ SOURCE = awk.h awkgram.tab.c awkgram.tab.h proto.h awkgram.y lex.c b.c main.c \
 LISTING = awk.h proto.h awkgram.y lex.c b.c main.c maketab.c parse.c \
 	lib.c run.c tran.c mt19937-64.c
 
-SHIP = README LICENSE FIXES $(SOURCE) awkgram.tab.[ch].bak makefile  \
+k = README LICENSE FIXES $(SOURCE) awkgram.tab.[ch].bak makefile  \
 	 awk.1
 
 all: $(BINTARGET)

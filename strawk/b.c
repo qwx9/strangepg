@@ -32,7 +32,7 @@ THIS SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include "awk.h"
-#include "awkgram.tab.h"
+#include AWKTAB
 
 #define MAXLIN 22
 

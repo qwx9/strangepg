@@ -4,7 +4,7 @@ BIN=/$objtype/bin
 
 YFILES=awkgram.y
 OFILES=\
-	awkgram.$O\
+	awkgram.plan9.$O\
 	b.$O\
 	lex.$O\
 	lib.$O\
@@ -18,7 +18,7 @@ OFILES=\
 
 HFILES=\
 	awk.h\
-	awkgram.tab.h\
+	awkgram.plan9.h\
 	mt19937-64.h\
 	plan9.h\
 	proto.h\
@@ -27,20 +27,26 @@ default:V: all
 
 </sys/src/cmd/mkone
 
-YFLAGS=$YFLAGS -S -s awkgram
+YFLAGS=$YFLAGS -S -s awkgram.plan9
 CC=pcc
-CFLAGS=-c -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE
-CLEANFILES=awkgram.c awkgram.tab.h awkgram.tab.c proctab.c $cputype.maketab maketab.$O
+CFLAGS=-c -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE -DOS=plan9
 
-awkgram.tab.h awkgram.c:	$YFILES
-	$YACC -o awkgram.c $YFLAGS $prereq
+awkgram.plan9.h awkgram.plan9.c:	$YFILES
+	$YACC -o awkgram.plan9.c $YFLAGS $prereq
+	mv awkgram.plan9.tab.h awkgram.plan9.h
 
 proctab.c:	$cputype.maketab
-	./$cputype.maketab awkgram.tab.h >proctab.c
+	./$cputype.maketab awkgram.plan9.h >proctab.c
 
-$cputype.maketab:	awkgram.tab.h maketab.c
+$cputype.maketab:	awkgram.plan9.h maketab.c
 	objtype=$cputype mk maketab.$cputype
 
 maketab.$cputype:V:
 	$CC $CFLAGS maketab.c
 	$LD $LDFLAGS -o $cputype.maketab maketab.$O
+
+clean:V:
+	rm -f *.[$OS] [$OS].out *.maketab y.tab.? y.debug y.output $TARG
+
+nuke:V:
+	rm -f *.[$OS] [$OS].out *.maketab y.tab.? y.debug y.output $TARG awkgram.plan9.[ch] proctab.c
