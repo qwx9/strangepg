@@ -1,4 +1,10 @@
 **/*.[0-9o]
+**/[0-9].*
 test/*.idx
 test/*.idx[eu]
 test/*.bak
+strawk/awkgram.plan9.[ch]
+strawk/maketab
+strawk/strawk
+strpg
+strcoarse
