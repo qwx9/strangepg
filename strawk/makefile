@@ -85,8 +85,8 @@ tar:
 names:
 	@echo $(LISTING)
 
-INSTALLPREFIX:= $(HOME)
-BINDIR:= $(INSTALLPREFIX)/bin
+PREFIX?= $(HOME)/.local
+BINDIR:= $(PREFIX)/bin
 
 install: $(ALLTARGETS)
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)

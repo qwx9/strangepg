@@ -2,21 +2,22 @@ PROGRAM:= strpg
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
-	coarsen\
+	strindex\
+	strcoarse\
 	/tmp/main.awk\
 
 DIRS:=\
 	strawk\
 
-#INSTALLPREFIX:= /usr/local
-INSTALLPREFIX:= $(HOME)
-BINDIR:= $(INSTALLPREFIX)/bin
+#PREFIX:= /usr/local
+PREFIX?= $(HOME)/.local
+BINDIR:= $(PREFIX)/bin
 
 OBJS:=\
 	lib/chan.o\
+	lib/flextgl/flextGL.o\
 	lib/glfw_glue.o\
 	lib/queue.o\
-	lib/plan9/geom.o\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
 	lib/plan9/strecpy.o\
@@ -24,12 +25,12 @@ OBJS:=\
 	linux/fs.o\
 	linux/sys.o\
 	linux/threads.o\
-	sokol/flextgl/flextGL.o\
 	sokol/draw.o\
 	sokol/ui.o\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
+	draw/shape.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\
@@ -37,7 +38,6 @@ OBJS:=\
 	fs/load.o\
 	fs/meta.o\
 	graph/graph.o\
-	graph/vertex.o\
 	layout/conga.o\
 	layout/fr.o\
 	layout/layout.o\
@@ -45,7 +45,6 @@ OBJS:=\
 	layout/pfr.o\
 	layout/pline.o\
 	layout/random.o\
-	rend/rend.o\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\
@@ -132,13 +131,18 @@ endif
 
 all:	$(ALLTARGETS) dirall
 
+# FIXME
 /tmp/main.awk: cmd/main.awk
+	cp -x $^ $@
+
+# FIXME
+strindex:	index.sh
 	cp -x $^ $@
 
 $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
-coarsen:	$(COARSENOBJS)
+strcoarse:	$(COARSENOBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 install: $(ALLTARGETS) dirinstall
@@ -167,7 +171,7 @@ dirall:
 dirinstall:
 	for i in $(DIRS); do \
 		cd $$i; \
-		make install; \
+		make PREFIX=$(PREFIX) install; \
 		cd ..; \
 	done
 
