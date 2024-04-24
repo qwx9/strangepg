@@ -2,11 +2,11 @@
 #include <signal.h>
 #include "lib/flextgl/flextGL.h"
 #define HANDMADE_MATH_IMPLEMENTATION
-//#define HANDMADE_MATH_NO_SSE
+//#define HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
-//#define SOKOL_DEBUG
+//#define NDEBUG
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
 #include "lib/glfw_glue.h"
@@ -23,19 +23,22 @@ struct Color{
 };
 
 /* FIXME:
- * - resize: resize images etc as well, otherwise it just stretches shit; push up
- *	default window size + clamp to screen size, or always set to screen size, or
- *	add a flag, etc.
+ * - resize: compensate for different viewsize == different gl coordinate system
+ *	by moving eye (zoom + pan)
+ * - don't rebuild strawk every time from yacc + linux/plan9 bison/yacc specific output
+ * - debug node angle and scale, offset edge control points
  * - basic cimgui: mouse picking + awk
- * - debug node rotation → requires refactoring rend/draw
- *	using the scale param is also wrong anyway
- *	rend angle calculation is just wrong
- * - debug scaling
+ * - use cimgui (see https://github.com/peko/cimgui-c-example for cimgui+glfw) and glfw/imgui-glfw.cc
+ * - don't clear/push instance data each frame: that data is already there, operate
+ *	directly on the instance data and render the draw*() functions nops
+ *	ie. decouple geometry Node/Edge from the rest of their data, mirror ds
+ * - implement spaced shallow redraw: straight flush, no reshape/redraw
+ * - merge portable draw code; fix plan9 drawing
  */
 /* FIXME: blackjack and hookers:
  * - switch to opengl4, add tesselation, generalize nodes as thick lines, shape
  *	nodes and edges during tesselation stage, store shape params, implement beziers
- * - we want 60fps → draw, render and flush together must be below 16.67ms
+ *		.. see discussion on tesselation: mesh shaders instead?
  * - shader benchmarking? flush is fast but what happens on the gpu side? why
  *	is it not smooth even though flush is fast? because of rend stalling mouse
  *	events? is it even on the same thread? lockgraphs?
@@ -47,13 +50,11 @@ struct Color{
  *	redraw only, not re-render etc
  * - compiled shaders: better performance? just push source and compiled
  *   ones to the repo, use sokol-tools
- * - bonus for navigation: rotate in (any?) axis, experiment with ui
  * - decouple input from rendering
  * - draw labels, arrows
  * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
  *	unnecessary for drawing, gl can do it on its own via the depth buffer
  *	SO: geometry + compute shaders for layouting
- * - use cimgui (see https://github.com/peko/cimgui-c-example for cimgui+glfw) and glfw/imgui-glfw.cc
  * - beziers, thickness: https://thebookofshaders.com/05/
  * - get rid of unnecessary glue code (that isn't even updated)
  * - extend for 3d vis and navigation, later port to plan9
@@ -91,7 +92,6 @@ struct hjdicks GLEdge{
 static GLNode *nodev;
 static GLEdge *edgev;
 
-/* FIXME: sokol/ui? */
 // FIXME: in draw as well
 struct Camera{
 	float ar;
@@ -337,14 +337,6 @@ stopdrawclock(void)
 {
 }
 
-static void
-resetdraw(void)
-{
-	// FIXME: ...
-
-	reqdraw(Reqresetdraw);
-}
-
 void
 evloop(void)
 {
@@ -377,7 +369,6 @@ evloop(void)
 			}
 			CLK1(fclk);
 		}
-		//if(drawstep)...?	// FIXME: μsleep(1) + timing check, don't exceed like 120Hz
 		reqdraw(Reqrefresh);	/* FIXME */
 		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
 	}
@@ -397,13 +388,49 @@ reqdraw(int r)
 }
 
 static void
-glresize(GLFWwindow *, int w, int h)
+initfb(int w, int h)
 {
-	/* FIXME: if initial window is too small this will be triggered */
-	/* FIXME: unhandled */
 	view.w = w;
 	view.h = h;
-	resetdraw();
+	/* multi-target rendering targets, without multisampling */
+	fb = sg_make_image(&(sg_image_desc){
+		.render_target = true,
+		.width = w,
+		.height = h,
+		.sample_count = 1,
+	});
+	pickfb = sg_make_image(&(sg_image_desc){
+		.render_target = true,
+		.width = w,
+		.height = h,
+		.pixel_format = SG_PIXELFORMAT_R32UI,
+		.sample_count = 1,
+	});
+	zfb = sg_make_image(&(sg_image_desc){
+		.render_target = true,
+		.width = w,
+		.height = h,
+		.pixel_format = SG_PIXELFORMAT_DEPTH,
+		.sample_count = 1,
+	});
+	offscreen_attachments = sg_make_attachments(&(sg_attachments_desc){
+		.colors = {
+			[0].image = fb,
+			[1].image = pickfb,
+		},
+		.depth_stencil.image = zfb,
+	});
+	fsq_bind.fs.images[0] = fb;
+}
+
+static void
+glresize(GLFWwindow *, int w, int h)
+{
+	sg_destroy_image(fb);
+	sg_destroy_image(pickfb);
+	sg_destroy_image(zfb);
+	initfb(w, h);
+	reqdraw(Reqresetdraw);
 }
 
 static void
@@ -414,14 +441,14 @@ glerr(int err, const char *desc)
 
 /* FIXME: error handling + error strings */
 static void
-initgl(void)
+initgl(int w, int h)
 {
 	Color *c;
 
 	glfw_init(&(glfw_desc_t){
 		.title = "strpg",
-		.width = view.w,
-		.height = view.h,
+		.width = w,
+		.height = h,
 		.sample_count = 4,
 	});
 	glfwSetErrorCallback(glerr);
@@ -565,34 +592,6 @@ initgl(void)
 			"}\n",
 	});
 
-	/* multi-target rendering targets, without multisampling */
-	fb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
-		.width = glfw_width(),
-		.height = glfw_height(),
-		.sample_count = 1,
-	});
-	pickfb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
-		.width = glfw_width(),
-		.height = glfw_height(),
-		.pixel_format = SG_PIXELFORMAT_R32UI,
-		.sample_count = 1,
-	});
-	zfb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
-		.width = glfw_width(),
-		.height = glfw_height(),
-		.pixel_format = SG_PIXELFORMAT_DEPTH,
-		.sample_count = 1,
-	});
-	offscreen_attachments = sg_make_attachments(&(sg_attachments_desc){
-		.colors = {
-			[0].image = fb,
-			[1].image = pickfb,
-		},
-		.depth_stencil.image = zfb,
-	});
 	c = color(theme[Cbg]);
 	/* clear colors on the first pass, don't do anything on the second */
 	offscreen_pass_action = (sg_pass_action){
@@ -774,7 +773,6 @@ initgl(void)
 	});
 	fsq_bind = (sg_bindings){
 		.vertex_buffers[0] = quad_vbuf,
-		.fs.images[0] = fb,
 		.fs.samplers[0] = smp,
 	};
 	sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
@@ -825,6 +823,8 @@ initgl(void)
 		.depth.load_action = SG_LOADACTION_DONTCARE,
 		.stencil.load_action = SG_LOADACTION_DONTCARE
 	};
+	initfb(w, h);
+	glfwSetFramebufferSizeCallback(glfw_window(), glresize);
 }
 
 /* FIXME: error handling */
@@ -832,10 +832,7 @@ void
 initsysdraw(void)
 {
 	/* FIXME: get some sensible default (2/3 size of screen or fullscreen) */
-	view.w = Vdefw;
-	view.h = Vdefh;
-	initgl();
-	glfwSetFramebufferSizeCallback(glfw_window(), glresize);
+	initgl(Vdefw, Vdefh);
 	/* FIXME: the reason why this can't be 0 is because of the fucking
 	 * input handling being synchronous */
 	if((drawc = chancreate(sizeof(ulong), 64)) == nil)
