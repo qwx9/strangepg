@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "drw.h"
+#include "ui.h"
 #include "threads.h"
 #include <draw.h>
 
@@ -14,6 +15,8 @@ static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
 static Channel *drawc, *ticc;
 static QLock ticker;
+
+#define v2p(v)	Pt((v).x, (v).y)
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -68,102 +71,6 @@ col2int(Color *c)
 	return c->col >> 8;
 }
 
-#define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.pan), view.center)
-
-void
-zoomdraw(float)
-{
-}
-
-void
-pandraw(float, float)
-{
-}
-
-FIXME
-#define	v2p(v)	Pt((v).x, (v).y)
-/* FIXME: don't even think about it */
-/*
-Quad
-centerscalequad(Quad q)
-{
-	q.v = addpt2(q.o, q.v);
-	q.o = centerscalev(q.o);
-	q.v = centerscalev(q.v);
-	return q;
-}
-*/
-/* FIXME:
-Vertex ZV;
-Quad ZQ;
-
-Quad
-Qd(Vertex o, Vector v)
-{
-	return (Quad){o, v};
-}
-
-double
-qΔx(Quad q)
-{
-	return q.v.x - q.o.x;
-}
-
-double
-qΔy(Quad q)
-{
-	return q.v.y - q.o.y;
-}
-
-int
-ptinquad(Vertex v, Quad q)
-{
-	return v.x >= q.o.x && v.x < q.o.x + q.v.x
-		&& v.y >= q.o.y && v.y < q.o.y + q.v.y;
-}
-
-Quad
-insetquad(Quad q, int Δ)
-{
-	return (Quad){
-		Vec2(q.o.x - Δ, q.o.y - Δ),
-		Vec2(q.v.x + Δ, q.v.y + Δ)
-	};
-}
-
-Quad
-quadaddpt2(Quad q, Vector v)
-{
-	return (Quad){addpt2(q.o, v), addpt2(q.v, v)};
-}
-
-Quad
-quadsubpt2(Quad q, Vector v)
-{
-	return (Quad){addpt2(q.o, v), subpt2(q.v, v)};
-}
-
-Vertex
-floorpt2(Vertex v)
-{
-	return Vec2(floor(v.x), floor(v.y));
-}
-
-int
-eqpt2(Point2 a, Point2 b)
-{
-	return a.x == b.x && a.y == b.y && a.w == b.w;
-}
-*/
-
-FIXME
-static Rectangle
-centerscalerect(Quad q)
-{
-	q = centerscalequad(q);
-	return Rpt(v2p(q.o), v2p(q.v));
-}
-
 u32int
 scrobj(int x, int y)
 {
@@ -214,41 +121,14 @@ showobj(Obj *o)
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
 }
 
-static void
-rotatenode(Graph *g, Node *u)
+void
+zoomdraw(float)
 {
-	double θ, vx, vy, rx, ry, sx, sy;
+}
 
-	u->θ = makenicerkindof(g, u);
-	vx = Nodesz * (cos(u->θ) - sin(u->θ));	/* x´ = x cosβ - y sinβ */
-	vy = Nodesz * (sin(u->θ) + cos(u->θ));	/* y´ = x sinβ + y cosβ */
-	u->vrect.v = Vec2(vx, vy);
-	u->q1 = u->vrect;
-	u->q2 = u->vrect;
-	θ = u->θ;
-	if(fabs(u->θ) >= PI/2)
-		θ += PI/2;
-	else
-		θ -= PI/2;
-	rx = Nodesz/8 * (cos(θ) - sin(θ));
-	ry = Nodesz/8 * (sin(θ) + cos(θ));
-	if(fabs(u->θ) >= PI/2)
-		θ -= PI;
-	else
-		θ += PI;
-	sx = Nodesz/4 * (cos(θ) - sin(θ));
-	sy = Nodesz/4 * (sin(θ) + cos(θ));
-	u->q1.o.x += rx;
-	u->q1.o.y += ry;
-	u->q1.v.x = u->q1.v.x + sx;
-	u->q1.v.y = u->q1.v.y + sy;
-	u->q2.o.x -= rx;
-	u->q2.o.y -= ry;
-	u->q2.v.x = u->q2.v.x - sx;
-	u->q2.v.y = u->q2.v.y - sy;
-	u->shape.o = u->vrect.o;	// FIXME: redundant??
-	// FIXME: both dimensions are erroneous
-	u->shape.v = Vec2(Nodesz+PI, Nodesz/4);	// FIXME: systematic error above
+void
+pandraw(float, float)
+{
 }
 
 int
@@ -263,6 +143,7 @@ drawlabel(Node *n, Color *c)
 	 * doom */
 	/* FIXME: just keep label in em/memory, what's the point */
 	v = centerscalev(n->pos);
+	/* FIXME: unstackenblochen placement */
 	p = Pt(v.x + Ptsz, v.y + Ptsz);
 	snprint(lab, sizeof lab, "%zx", n->id);
 	string(viewfb, p, c->i, ZP, font, lab);
@@ -270,23 +151,18 @@ drawlabel(Node *n, Color *c)
 }
 
 int
-drawquad(Vertex pos, float θ, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
 {
-	Rectangle r1, r2;
+	float cθ, sθ;
+	Point p[5];
 
-	q1 = centerscalequad(q1);
-	q2 = centerscalequad(q2);
-	r1 = Rpt(v2p(q1.o), v2p(q2.v));
-	r2 = Rpt(v2p(q2.o), v2p(q1.v));
-	if(!rectXrect(canonrect(r1), viewfb->r) && !rectXrect(canonrect(r2), viewfb->r))
-		return 0;
-	Point p[] = {
-		r1.max,
-		r1.min,
-		r2.min,
-		r2.max,
-		r1.max,
-	};
+	cθ = cos(rot.z);
+	sθ = sin(rot.z);
+	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[3] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[4] = p[0];
 	polyop(viewfb, p, nelem(p), 0, 0, 1, c->shad, ZP, SatopD);
 	fillpoly(viewfb, p, nelem(p), ~0, c->i, ZP);
 	if(idx >= 0){
@@ -300,52 +176,49 @@ int
 drawbezier(Vertex a, Vertex b, double w, s32int idx, Color *c)
 {
 	double θ;
-	Point p2, p3;
-	Rectangle r;
+	Point p[4];
 
-	q.v = subpt2(q.v, q.o);	// FIXME (re-added by centerscalerect)
-	r = centerscalerect(q);
-	if(!rectXrect(canonrect(r), viewfb->r))
-		return 0;
-	θ = atan2(r.min.x - r.max.x, r.min.y - r.max.y);
-	// FIXME: adjustments for short edges and rotation
-	if(r.min.x - r.max.x > ceil(4 * Nodesz * view.zoom))
-		p2 = subpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
+	θ = atan2(a.x - b.x, a.y - b.y);
+	p[0] = v2p(centerscalev(a));
+	p[3] = v2p(centerscalev(b));
+	/* FIXME: unstackenblochen bezier math and *post* centerscale */
+	/* FIXME: adjustments for short edges and rotation */
+	if(a.x - b.x > ceil(4 * Nodesz * view.zoom))
+		p[1] = subpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
 	else
-		p2 = addpt(r.min, mulpt(Pt(Nodesz,Nodesz), θ));
-	if(r.min.y - r.max.y > ceil(4 * Nodesz * view.zoom))
-		p3 = addpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
+		p[1] = addpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
+	if(a.y - b.y > ceil(4 * Nodesz * view.zoom))
+		p[2] = addpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
 	else
-		p3 = subpt(r.max, mulpt(Pt(Nodesz,Nodesz), θ));
-	bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-		showarrows ? Endarrow : Endsquare, w, c->i, ZP);
-	// FIXME: remove haxx0rz and zoom check altogether?
-	// FIXME: haxx0rz check doesn't belong here?
-	if(!haxx0rz && view.zoom > 1.){
-		bezier(viewfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, w+1, c->shad, ZP);
-		if(idx >= 0)
-			bezier(selfb, r.min, p2, p3, r.max, Endsquare,
-				showarrows ? Endarrow : Endsquare, w+1, i2c(idx), ZP);
-	}else if(idx >= 0)
-		bezier(selfb, r.min, p2, p3, r.max, Endsquare,
-			showarrows ? Endarrow : Endsquare, w, i2c(idx), ZP);
+		p[2] = subpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
+	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
+		(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
+	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
+		(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, c->shad, ZP);
+	if(idx >= 0)
+		bezier(selfb, p[0], p[1], p[2], p[3], Endsquare,
+			(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(idx), ZP);
 	return 0;
 }
 
 int
 drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 {
-	Rectangle r;
+	Point p[2];
 
-	r = centerscalerect(q);
+	a = centerscalev(a);
+	b = centerscalev(b);
+	p[0] = Pt(a.x, a.y);
+	p[1] = Pt(b.x, b.y);
+	/*
 	if(!rectXrect(canonrect(r), viewfb->r))
 		return 0;
-	line(viewfb, r.min, r.max,
-		Endsquare, showarrows||emph ? Endarrow : Endsquare, w, c->i, ZP);
+	*/
+	line(viewfb, p[0], p[1],
+		Endsquare, (view.flags & VFdrawarrows) != 0||emph ? Endarrow : Endsquare, w, c->i, ZP);
 	if(idx >= 0)
-		line(selfb, r.min, r.max,
-			Endsquare, showarrows||emph ? Endarrow : Endsquare, w, i2c(idx), ZP);
+		line(selfb, p[0], p[1],
+			Endsquare, (view.flags & VFdrawarrows) != 0||emph ? Endarrow : Endsquare, w, i2c(idx), ZP);
 	return 0;
 }
 
@@ -396,16 +269,16 @@ drawproc(void *)
 			unlockdisplay(display);
 		}
 		if((req & Reqresetui) != 0)
-			resetui(1);
-		if((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0){
-			if(!redraw((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0)
+			resetui();
+		if((req & Reqrefresh) != 0 || (req & Reqshape) != 0){
+			if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
 				stopdrawclock();
 		}
 		/* FIXME: long lock */
 		/* FIXME: better to put these in every single drawquad/bezier call? */
 		if(req != Reqshallowdraw){
 			lockdisplay(display);
-			if(!redraw((req & Reqrefresh) != 0 && !norefresh || (req & Reqshape) != 0)
+			if(!redraw((req & (Reqrefresh|Reqshape)) != 0))
 				stopdrawclock();
 			unlockdisplay(display);
 		}

@@ -1,5 +1,7 @@
 #include "strpg.h"
+#include "ui.h"
 #include "cmd.h"
+#include "drw.h"
 #include "threads.h"
 #include <draw.h>
 #include <mouse.h>
@@ -90,7 +92,7 @@ evloop(void)
 				mold = mc->Mouse;
 			Δ = subpt(mc->xy, mold.xy);
 			// FIXME: scroll
-			mouseevent(Vec2(mc->xy.x, mc->xy.y), Vec2(Δ.x, Δ.y), mc->buttons & 7);
+			mouseevent(V(mc->xy.x, mc->xy.y, 0.0f), V(Δ.x, Δ.y, 0.0f), mc->buttons & 7);
 			mold = mc->Mouse;
 			break;
 		case Akbd:

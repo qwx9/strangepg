@@ -25,6 +25,9 @@ struct Quad{
 #define qsubv(q,v)	Q(subv((q).tl,(v)), subv((q).tr,(v)), subv((q).bl,(v)), subv((q).br,(v)))
 #define	qinset(q,s)	Q(subv((q).tl,V((s),(s))), subv((q).tr,V((s),(s))), addv((q).bl,V((s),(s))), addv((q).br,V((s),(s))))
 
+#define zrotv(v,cosθ,sinθ)	V((v).x * (cosθ) - (v).y * (sinθ), (v).x * (sinθ) + (v).y * (cosθ), 0.0f)
+#define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.pan), view.center)
+
 #define	ZV	V(0.0f, 0.0f, 0.0f)
 
 enum{
