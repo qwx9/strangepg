@@ -311,7 +311,7 @@ emw64(EM *em, vlong off, u64int v)
 	u = PLEA(p, off);
 	PBIT64(u, v);
 	p->flags |= Fdirty;
-	DPRINT(Debugextmem, "w64 %#zx:%#p:%#p[%#zx][%#zx]:%#p[%#zx] (%#zx) → %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
+	DPRINT(Debugextmem, "w64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) → %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
 }
 
 u64int
@@ -325,7 +325,7 @@ emr64(EM *em, vlong off)
 	p = GETPAGE(em, off);
 	u = PLEA(p, off);
 	v = GBIT64(u);
-	DPRINT(Debugextmem, "r64 %#zx:%#p:%#p[%#zx][%#zx]:%#p[%#zx] (%#zx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
+	DPRINT(Debugextmem, "r64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
 	return v;
 }
 

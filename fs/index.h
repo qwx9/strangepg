@@ -2,7 +2,7 @@ typedef struct Level Level;
 
 struct Level{
 	vlong noff;
-	usize eoff;
+	vlong eoff;
 	usize nnodes;
 	usize nedges;
 };

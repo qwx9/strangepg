@@ -6,7 +6,7 @@ extern int multiplier;
 
 int	em2fs(EM*, File*, ssize);
 uchar*	emptr(EM*, vlong);
-usize	emr64(EM*, vlong);
+u64int	emr64(EM*, vlong);
 void	emw64(EM*, vlong, u64int);
 void	emclose(EM*);
 EM*	emopen(char*);
