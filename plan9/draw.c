@@ -131,6 +131,11 @@ pandraw(float, float)
 {
 }
 
+void
+renderui(void)
+{
+}
+
 int
 drawlabel(Node *n, Color *c)
 {
@@ -149,6 +154,8 @@ drawlabel(Node *n, Color *c)
 	string(viewfb, p, c->i, ZP, font, lab);
 	return 0;
 }
+
+/* FIXME: no prior screen intersection test */
 
 int
 drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
@@ -206,14 +213,8 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 {
 	Point p[2];
 
-	a = centerscalev(a);
-	b = centerscalev(b);
-	p[0] = Pt(a.x, a.y);
-	p[1] = Pt(b.x, b.y);
-	/*
-	if(!rectXrect(canonrect(r), viewfb->r))
-		return 0;
-	*/
+	p[0] = v2p(centerscalev(a));
+	p[1] = v2p(centerscalev(b));
 	line(viewfb, p[0], p[1],
 		Endsquare, (view.flags & VFdrawarrows) != 0||emph ? Endarrow : Endsquare, w, c->i, ZP);
 	if(idx >= 0)
@@ -227,6 +228,7 @@ flushdraw(void)
 {
 	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
 	drawui();
+	renderui();
 	flushimage(display, 1);
 }
 

@@ -1,12 +1,24 @@
 #include "strpg.h"
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+//#define NDEBUG
+#define SOKOL_GLCORE33
+#include "lib/sokol_gfx.h"
+#include "lib/sokol_log.h"
+#include "lib/glfw_glue.h"
+/* include nuklear.h before the sokol_nuklear.h implementation */
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_STANDARD_VARARGS
+#include "lib/nuklear.h"
+#define	SOKOL_NUKLEAR_NO_SOKOL_APP
+#include "lib/sokol_nuklear.h"
 #include "ui.h"
 #include "cmd.h"
 #include "drw.h"
 #include "threads.h"
-
-GLFWwindow* glfw_window(void);
 
 typedef struct Mouse Mouse;
 struct Mouse{
@@ -22,6 +34,13 @@ char*
 enterprompt(Rune, char*)
 {
 	return nil;
+}
+
+void
+drawui(void)
+{
+	if(selected.type != Onil)
+		showobj(&selected);
 }
 
 static void
@@ -113,8 +132,15 @@ keyev(GLFWwindow *, int k, int, int action, int mod)
 void
 initsysui(void)
 {
-	//glfwSetCharCallback(glfw_window(), ukeyev);
-	glfwSetKeyCallback(glfw_window(), keyev);
-	glfwSetMouseButtonCallback(glfw_window(), mousebutev);
-	glfwSetCursorPosCallback(glfw_window(), mouseposev);
+	GLFWwindow *w;
+
+	w = glfw_window();
+	//glfwSetCharCallback(w, ukeyev);
+	glfwSetKeyCallback(w, keyev);
+	glfwSetMouseButtonCallback(w, mousebutev);
+	glfwSetCursorPosCallback(w, mouseposev);
+    snk_setup(&(snk_desc_t){
+        .dpi_scale = 1.0f,
+        .logger.func = slog_func,
+    });
 }

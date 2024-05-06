@@ -1,16 +1,29 @@
 #include "strpg.h"
 #include <signal.h>
 #include "lib/flextgl/flextGL.h"
-#define HANDMADE_MATH_IMPLEMENTATION
-//#define HANDMADE_MATH_NO_SIMD
+#define	HANDMADE_MATH_IMPLEMENTATION
+//#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
-#define SOKOL_IMPL
-#define SOKOL_GLCORE33
-//#define NDEBUG
+#define	SOKOL_IMPL
+#define	SOKOL_GLCORE33
+//#define	NDEBUG
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
 #include "lib/glfw_glue.h"
 #include "sokol_gfx_ext.h"
+/* include nuklear.h before the sokol_nuklear.h implementation */
+#define	NK_INCLUDE_FIXED_TYPES
+#define	NK_INCLUDE_STANDARD_IO
+#define	NK_INCLUDE_DEFAULT_ALLOCATOR
+#define	NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define	NK_INCLUDE_FONT_BAKING
+#define	NK_INCLUDE_DEFAULT_FONT
+#define	NK_INCLUDE_STANDARD_VARARGS
+#define	NK_IMPLEMENTATION
+#include "lib/nuklear.h"
+#define	SOKOL_NUKLEAR_IMPL
+#define	SOKOL_NUKLEAR_NO_SOKOL_APP
+#include "lib/sokol_nuklear.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
@@ -23,9 +36,9 @@ struct Color{
 };
 
 /* FIXME:
+ * - frame: process all outstanding events at once instead of doing 1 ev → frame
  * - resize: compensate for different viewsize == different gl coordinate system
  *	by moving eye (zoom + pan)
- * - don't rebuild strawk every time from yacc + linux/plan9 bison/yacc specific output
  * - debug node angle and scale, offset edge control points
  * - basic cimgui: mouse picking + awk
  * - use cimgui (see https://github.com/peko/cimgui-c-example for cimgui+glfw) and glfw/imgui-glfw.cc
@@ -60,11 +73,10 @@ struct Color{
  * - extend for 3d vis and navigation, later port to plan9
  * - 3d layout algo on top of this, would be nice to have by may
  *	zoom will just become z-panning
- *	depth tricks would be employed only in non-3d layouts
  */
 
-#define FNodesz	((float)Nodesz)
-#define Nodethiccc	(FNodesz/Ptsz)
+#define	FNodesz	((float)Nodesz)
+#define	Nodethiccc	(FNodesz/Ptsz)
 #define	FOV	60.0f
 
 typedef struct Camera Camera;
@@ -72,7 +84,7 @@ typedef struct Params Params;
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
 
-#define hjdicks __attribute((packed))
+#define	hjdicks __attribute((packed))
 struct hjdicks Params{
 	HMM_Mat4 mvp;
 	HMM_Vec2 scale;	/* FIXME */
@@ -215,7 +227,7 @@ cleardraw(void)
 static void
 quitdraw(void)
 {
-	// FIXME: free shit or who cares?
+	snk_shutdown();
 	sg_shutdown();
 	glfwTerminate();
 }
@@ -257,17 +269,11 @@ pandraw(float Δx, float Δy)
 	updatecam();
 }
 
-static void
-flush(void)
+static inline void
+renderedges(Params p)
 {
 	ssize n;
-	Params p;
 	sg_buffer_desc d;
-
-	p = (Params){
-		.mvp = cam.mvp,
-		.scale = HMM_V2(FNodesz, FNodesz),
-	};
 
 	n = dylen(edgev);
 	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
@@ -291,6 +297,13 @@ flush(void)
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
 	sg_draw(0, 2, n);
 	sg_end_pass();
+}
+
+static inline void
+rendernodes(Params p)
+{
+	ssize n;
+	sg_buffer_desc d;
 
 	n = dylen(nodev);
 	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
@@ -314,7 +327,11 @@ flush(void)
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
 	sg_draw(0, 6, n);
 	sg_end_pass();
+}
 
+static inline void
+renderscreen(Params p)
+{
 	sg_begin_pass(&(sg_pass){
 		.action = default_pass_action,
 		.swapchain = glfw_swapchain(),
@@ -323,6 +340,37 @@ flush(void)
 	sg_apply_bindings(&fsq_bind);
 	sg_draw(0, 4, 1);
 	sg_end_pass();
+}
+
+static inline void
+renderui(void)
+{
+	return;
+	struct nk_context *ctx;
+
+	ctx = snk_new_frame();
+	USED(ctx);
+	sg_begin_pass(&(sg_pass){
+		.action.colors[0].load_action = SG_LOADACTION_DONTCARE,
+		.swapchain = glfw_swapchain(),
+	});
+	snk_render(view.w, view.h);
+	sg_end_pass();
+}
+
+static void
+flush(void)
+{
+	Params p;
+
+	p = (Params){
+		.mvp = cam.mvp,
+		.scale = HMM_V2(FNodesz, FNodesz),
+	};
+	renderedges(p);
+	rendernodes(p);
+	renderscreen(p);
+	renderui();
 	sg_commit();
 	glfwSwapBuffers(glfw_window());
 }
@@ -335,56 +383,6 @@ startdrawclock(void)
 void
 stopdrawclock(void)
 {
-}
-
-void
-evloop(void)
-{
-	int req;
-	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
-
-	/* FIXME: if we want the plan9 lilu dallas mooltithreading, this needs
-	 *	a different design; on plan9 input and drawing are decoupled,
-	 *	whereas here the same thread processes both; either figure out a
-	 *	way to decouple them again (ticker, multithread glfw, locks) or
-	 *	do it the old fashion way (poll for events, process, sleep); the
-	 *	latter sucks because slow redraw throttles input, and we don't want
-	 *	that */
-	req = 0;
-	while (!glfwWindowShouldClose(glfw_window())) {
-		if((req = nbrecvul(drawc)) != 0){
-			CLK0(fclk);
-			/* Reqresetdraw for resizing: handled by callback */
-			if((req & Reqresetui) != 0)
-				resetui();
-			// FIXME: actually implement shallow redraw, etc.
-			if(req != Reqshallowdraw){
-				if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
-					stopdrawclock();
-				if(dylen(nodev) > 0){
-					CLK0(clk);
-					flush();
-					CLK1(clk);
-				}
-			}
-			CLK1(fclk);
-		}
-		reqdraw(Reqrefresh);	/* FIXME */
-		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
-	}
-	quitdraw();
-}
-
-void
-reqdraw(int r)
-{
-	static ulong f;
-
-	f |= r;
-	if(nbsendul(drawc, f) != 0){
-		glfwPostEmptyEvent();
-		f = 0;
-	}
 }
 
 static void
@@ -424,12 +422,73 @@ initfb(int w, int h)
 }
 
 static void
-glresize(GLFWwindow *, int w, int h)
+resize(void)
 {
 	sg_destroy_image(fb);
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
-	initfb(w, h);
+	sg_destroy_attachments(offscreen_attachments);
+	view.w = glfw_width();
+	view.h = glfw_height();
+	initfb(view.w, view.h);
+	updatecam();
+}
+
+void
+evloop(void)
+{
+	int req;
+	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
+
+	/* FIXME: if we want the plan9 lilu dallas mooltithreading, this needs
+	 *	a different design; on plan9 input and drawing are decoupled,
+	 *	whereas here the same thread processes both; either figure out a
+	 *	way to decouple them again (ticker, multithread glfw, locks) or
+	 *	do it the old fashion way (poll for events, process, sleep); the
+	 *	latter sucks because slow redraw throttles input, and we don't want
+	 *	that */
+	req = 0;
+	while (!glfwWindowShouldClose(glfw_window())) {
+		if((req = nbrecvul(drawc)) != 0){
+			CLK0(fclk);
+			if((req & Reqresetdraw) != 0)
+				resize();
+			if((req & Reqresetui) != 0)
+				resetui();
+			// FIXME: actually implement shallow redraw, etc.
+			if(req != Reqshallowdraw){
+				if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
+					stopdrawclock();
+				if(dylen(nodev) > 0){
+					CLK0(clk);
+					flush();
+					CLK1(clk);
+				}
+			}
+			CLK1(fclk);
+		}
+		reqdraw(Reqrefresh);	/* FIXME */
+		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
+	}
+	quitdraw();
+}
+
+void
+reqdraw(int r)
+{
+	static ulong f;
+
+	f |= r;
+	if(nbsendul(drawc, f) != 0){
+		glfwPostEmptyEvent();
+		f = 0;
+	}
+}
+
+static void
+glresize(GLFWwindow *, int, int)
+{
+	warn("resize signal\n");
 	reqdraw(Reqresetdraw);
 }
 
@@ -823,8 +882,8 @@ initgl(int w, int h)
 		.depth.load_action = SG_LOADACTION_DONTCARE,
 		.stencil.load_action = SG_LOADACTION_DONTCARE
 	};
-	initfb(w, h);
 	glfwSetFramebufferSizeCallback(glfw_window(), glresize);
+	initfb(w, h);
 }
 
 /* FIXME: error handling */

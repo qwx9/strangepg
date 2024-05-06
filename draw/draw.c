@@ -117,14 +117,6 @@ drawworld(void)
 		drawguides();
 }
 
-void
-drawui(void)
-{
-	if(selected.type == Onil)
-		return;
-	showobj(&selected);
-}
-
 int
 redraw(int force)
 {

@@ -12,6 +12,13 @@ extern Channel *cmdc;
 static Keyboardctl *kc;
 static Mousectl *mc;
 
+void
+drawui(void)
+{
+	if(selected.type != Onil)
+		showobj(&selected);
+}
+
 static int
 k2e(Rune r)
 {
