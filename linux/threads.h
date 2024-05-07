@@ -10,6 +10,7 @@ ulong	recvul(Channel*);
 int	nbsendp(Channel*, void*);
 int	nbsendul(Channel*, ulong);
 ulong	nbrecvul(Channel*);
+void*	nbrecvp(Channel*);
 #define	sendul	chan_send_int32
 #define	sendp	chan_send
 

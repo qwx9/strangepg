@@ -152,3 +152,13 @@ nbrecvul(Channel *c)
 		return 0;
 	return n;
 }
+
+void*
+nbrecvp(Channel *c)
+{
+	void *p;
+
+	if(chan_select(&c, 1, &p, nil, 0, nil) < 0)
+		return nil;
+	return p;
+}
