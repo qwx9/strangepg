@@ -7,8 +7,7 @@
 #include "threads.h"
 
 Obj selected;
-
-static char *prompt;
+int prompting;
 
 static void
 pan(float Δx, float Δy)
@@ -41,34 +40,29 @@ zoom(float Δx, float Δy)
 	reqdraw(Reqredraw);
 }
 
-static void
-keyprompt(Rune r)
-{
-	if((prompt = enterprompt(r, prompt)) == nil)
-		return;
-	pushcmd("%s", prompt);
-}
-
 int
 keyevent(Rune r)
 {
 	Graph *g;
 
 	DPRINT(Debugdraw, "keyevent %d", r);
+	if(prompting){
+		prompt(r);
+		return 0;
+	}
 	switch(r){
 	case KBup: pan(0.0f, -view.w / 2.0f); break;
 	case KBdown: pan(0.0f, +view.h / 2.0f); break;
 	case KBright: pan(+view.w / 2.0f, 0.0f); break;
 	case KBleft: pan(-view.w / 2.0f, 0.0f); break;
-	case KBescape: free(prompt); prompt = nil; reqdraw(Reqresetui); break;
-	case '\n': keyprompt(0);  reqdraw(Reqresetui); break;
+	case KBescape: resetprompt(); reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
-	case 'R': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
+	case 'r': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
 	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqredraw); break;
 	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqredraw); break;
-	default: keyprompt(r); break;
+	default: prompt(r); break;
 	}
 	return 0;
 }

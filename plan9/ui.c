@@ -11,6 +11,7 @@ extern Channel *cmdc;
 
 static Keyboardctl *kc;
 static Mousectl *mc;
+static char *ptext;
 
 void
 drawui(void)
@@ -58,6 +59,21 @@ enterprompt(Rune r, char *old)
 		return estrdup(buf);
 	else
 		return nil;
+}
+
+void
+resetprompt(void)
+{
+	free(ptext);
+	ptext = nil;
+}
+
+void
+prompt(Rune r)
+{
+	if((ptext = enterprompt(r, ptext)) == nil)
+		return;
+	pushcmd("%s", ptext);
 }
 
 void

@@ -6,10 +6,12 @@
 #include "lib/HandmadeMath.h"
 #define	SOKOL_IMPL
 #define	SOKOL_GLCORE33
+#define	SOKOL_NO_ENTRY
 //#define	NDEBUG
+#include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
-#include "lib/glfw_glue.h"
+#include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
 /* include nuklear.h before the sokol_nuklear.h implementation */
 #define	NK_INCLUDE_FIXED_TYPES
@@ -19,14 +21,17 @@
 #define	NK_INCLUDE_FONT_BAKING
 #define	NK_INCLUDE_DEFAULT_FONT
 #define	NK_INCLUDE_STANDARD_VARARGS
+//#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
 #define	NK_IMPLEMENTATION
 #include "lib/nuklear.h"
 #define	SOKOL_NUKLEAR_IMPL
-#define	SOKOL_NUKLEAR_NO_SOKOL_APP
 #include "lib/sokol_nuklear.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
+
+void	event(const sapp_event*);
+void	_drawui(struct nk_context*);
 
 struct Color{
 	u32int col;
@@ -36,12 +41,10 @@ struct Color{
 };
 
 /* FIXME:
- * - frame: process all outstanding events at once instead of doing 1 ev → frame
  * - resize: compensate for different viewsize == different gl coordinate system
  *	by moving eye (zoom + pan)
  * - debug node angle and scale, offset edge control points
  * - basic cimgui: mouse picking + awk
- * - use cimgui (see https://github.com/peko/cimgui-c-example for cimgui+glfw) and glfw/imgui-glfw.cc
  * - don't clear/push instance data each frame: that data is already there, operate
  *	directly on the instance data and render the draw*() functions nops
  *	ie. decouple geometry Node/Edge from the rest of their data, mirror ds
@@ -79,7 +82,6 @@ struct Color{
 #define	Nodethiccc	(FNodesz/Ptsz)
 #define	FOV	60.0f
 
-typedef struct Camera Camera;
 typedef struct Params Params;
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
@@ -103,17 +105,7 @@ struct hjdicks GLEdge{
 };
 static GLNode *nodev;
 static GLEdge *edgev;
-
-// FIXME: in draw as well
-struct Camera{
-	float ar;
-	HMM_Vec3 eye;
-	HMM_Vec3 center;
-	HMM_Vec3 Δeye;
-	HMM_Vec3 up;
-	HMM_Mat4 mvp;
-};
-static Camera cam;
+static HMM_Mat4 mvp;
 
 static sg_pass_action offscreen_pass_action, offscreen_pass_action2;
 static sg_pass_action default_pass_action;
@@ -153,9 +145,28 @@ scrobj(int x, int y)
 	return sg_query_image_pixel(x, y, pickfb);
 }
 
+/* FIXME: parts in shared port code */
 void
-showobj(Obj *)
+showobj(Obj *o)
 {
+	char s[128];
+	Node *n;
+	Edge *e;
+
+	if(selected.type == Onil)
+		return;
+	switch(selected.type){
+	case Oedge:
+		e = o->g->edges + o->idx;
+		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
+		break;
+	case Onode:
+		n = o->g->nodes + o->idx;
+		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
+		break;
+	}
+	//string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
+	warn("selected: %s\n", s);
 }
 
 int
@@ -224,36 +235,30 @@ cleardraw(void)
 	dyreset(edgev);
 }
 
+// FIXME: merge with port
 static void
-quitdraw(void)
+updateview(void)
 {
-	snk_shutdown();
-	sg_shutdown();
-	glfwTerminate();
-}
-
-// FIXME: from view struct
-static void
-updatecam(void)
-{
+	HMM_Vec3 eye, center, up;
 	HMM_Mat4 vw, proj;
 
-	cam.Δeye = HMM_SubV3(cam.eye, cam.center);
-	cam.ar = view.w / view.h;
-	proj = HMM_Perspective_RH_NO(60.0f, cam.ar, 0.01f, 1000.0f);
-	vw = HMM_LookAt_RH(cam.eye, cam.center, cam.up);
-	cam.mvp = HMM_MulM4(proj, vw);
+	view.Δeye = subv(view.eye, view.center);
+	view.ar = view.w / view.h;
+	proj = HMM_Perspective_RH_NO(60.0f, view.ar, 0.01f, 1000.0f);
+	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
+	center = HMM_V3(view.center.x, view.center.y, view.center.z);
+	up = HMM_V3(view.up.x, view.up.y, view.up.z);
+	vw = HMM_LookAt_RH(eye, center, up);
+	mvp = HMM_MulM4(proj, vw);
 }
 
-// FIXME: in ui or draw; merge with plan9
 void
 zoomdraw(float Δ)
 {
-	cam.eye = HMM_SubV3(cam.eye, HMM_MulV3F(cam.Δeye, Δ));
-	updatecam();
+	view.eye = subv(view.eye, mulv(view.Δeye, Δ));
+	updateview();
 }
 
-// FIXME: in ui or draw; merge with plan9
 void
 pandraw(float Δx, float Δy)
 {
@@ -262,11 +267,11 @@ pandraw(float Δx, float Δy)
 
 	Δx /= view.w;
 	Δy /= view.h;
-	cam.center.X += Δx * 2.0f * cam.Δeye.Z * cam.ar * tan(FOV / 2.0f);
-	cam.center.Y -= Δy * 2.0f * cam.Δeye.Z * tan(FOV / 2.0f);
-	cam.eye.X = cam.center.X;
-	cam.eye.Y = cam.center.Y;
-	updatecam();
+	view.center.x += Δx * 2.0f * view.Δeye.z * view.ar * tan(FOV / 2.0f);
+	view.center.y -= Δy * 2.0f * view.Δeye.z * tan(FOV / 2.0f);
+	view.eye.x = view.center.x;
+	view.eye.y = view.center.y;
+	updateview();
 }
 
 static inline void
@@ -334,26 +339,11 @@ renderscreen(Params p)
 {
 	sg_begin_pass(&(sg_pass){
 		.action = default_pass_action,
-		.swapchain = glfw_swapchain(),
+		.swapchain = sglue_swapchain(),
 	});
 	sg_apply_pipeline(fsq_pip);
 	sg_apply_bindings(&fsq_bind);
 	sg_draw(0, 4, 1);
-	sg_end_pass();
-}
-
-static inline void
-renderui(void)
-{
-	return;
-	struct nk_context *ctx;
-
-	ctx = snk_new_frame();
-	USED(ctx);
-	sg_begin_pass(&(sg_pass){
-		.action.colors[0].load_action = SG_LOADACTION_DONTCARE,
-		.swapchain = glfw_swapchain(),
-	});
 	snk_render(view.w, view.h);
 	sg_end_pass();
 }
@@ -364,15 +354,15 @@ flush(void)
 	Params p;
 
 	p = (Params){
-		.mvp = cam.mvp,
+		.mvp = mvp,
 		.scale = HMM_V2(FNodesz, FNodesz),
 	};
-	renderedges(p);
-	rendernodes(p);
+	if(dylen(nodev) > 0){
+		renderedges(p);
+		rendernodes(p);
+	}
 	renderscreen(p);
-	renderui();
 	sg_commit();
-	glfwSwapBuffers(glfw_window());
 }
 
 void
@@ -428,49 +418,10 @@ resize(void)
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
 	sg_destroy_attachments(offscreen_attachments);
-	view.w = glfw_width();
-	view.h = glfw_height();
+	view.w = sapp_width();
+	view.h = sapp_height();
 	initfb(view.w, view.h);
-	updatecam();
-}
-
-void
-evloop(void)
-{
-	int req;
-	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
-
-	/* FIXME: if we want the plan9 lilu dallas mooltithreading, this needs
-	 *	a different design; on plan9 input and drawing are decoupled,
-	 *	whereas here the same thread processes both; either figure out a
-	 *	way to decouple them again (ticker, multithread glfw, locks) or
-	 *	do it the old fashion way (poll for events, process, sleep); the
-	 *	latter sucks because slow redraw throttles input, and we don't want
-	 *	that */
-	req = 0;
-	while (!glfwWindowShouldClose(glfw_window())) {
-		if((req = nbrecvul(drawc)) != 0){
-			CLK0(fclk);
-			if((req & Reqresetdraw) != 0)
-				resize();
-			if((req & Reqresetui) != 0)
-				resetui();
-			// FIXME: actually implement shallow redraw, etc.
-			if(req != Reqshallowdraw){
-				if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
-					stopdrawclock();
-				if(dylen(nodev) > 0){
-					CLK0(clk);
-					flush();
-					CLK1(clk);
-				}
-			}
-			CLK1(fclk);
-		}
-		reqdraw(Reqrefresh);	/* FIXME */
-		glfwWaitEvents();		/* FIXME: kind of redundant with nbrecv */
-	}
-	quitdraw();
+	updateview();
 }
 
 void
@@ -479,45 +430,42 @@ reqdraw(int r)
 	static ulong f;
 
 	f |= r;
-	if(nbsendul(drawc, f) != 0){
-		glfwPostEmptyEvent();
+	if(nbsendul(drawc, f) != 0)
 		f = 0;
+}
+
+void
+frame(void)
+{
+	int req;
+	struct nk_context *ctx;
+	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
+
+	req = nbrecvul(drawc) | Reqrefresh;
+	CLK0(fclk);
+	ctx = snk_new_frame();
+	if((req & Reqresetdraw) != 0)
+		resize();
+	if((req & Reqresetui) != 0){
+		resetui();
+		updateview();
 	}
+	// FIXME: actually implement shallow redraw, etc.
+	if(req != Reqshallowdraw){
+		if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
+			stopdrawclock();
+		_drawui(ctx);
+	}
+	CLK0(clk);
+	flush();
+	CLK1(clk);
+	CLK1(fclk);
 }
 
 static void
-glresize(GLFWwindow *, int, int)
-{
-	warn("resize signal\n");
-	reqdraw(Reqresetdraw);
-}
-
-static void
-glerr(int err, const char *desc)
-{
-	warn("glerr %d: %s\n", err, desc);
-}
-
-/* FIXME: error handling + error strings */
-static void
-initgl(int w, int h)
+initgl(void)
 {
 	Color *c;
-
-	glfw_init(&(glfw_desc_t){
-		.title = "strpg",
-		.width = w,
-		.height = h,
-		.sample_count = 4,
-	});
-	glfwSetErrorCallback(glerr);
-	if(!flextInit(glfw_window()))
-		sysfatal("flextGL: failed to initialize: %s", error());
-	sg_setup(&(sg_desc){
-		.environment = glfw_environment(),
-		.logger.func = slog_func,
-	});
-	assert(sg_isvalid());
 
 	/* geometry */
 	float nodevert[] = {
@@ -882,23 +830,59 @@ initgl(int w, int h)
 		.depth.load_action = SG_LOADACTION_DONTCARE,
 		.stencil.load_action = SG_LOADACTION_DONTCARE
 	};
-	glfwSetFramebufferSizeCallback(glfw_window(), glresize);
-	initfb(w, h);
+	initfb(sapp_width(), sapp_height());
 }
 
-/* FIXME: error handling */
+static void
+init(void)
+{
+	if(!flextInit())
+		sysfatal("flextGL: failed to initialize: %s", error());
+	sg_setup(&(sg_desc){
+		.environment = sglue_environment(),
+		.logger.func = slog_func,
+	});
+	assert(sg_isvalid());
+	initgl();
+	snk_setup(&(snk_desc_t){
+		.dpi_scale = sapp_dpi_scale(),
+		.logger.func = slog_func,
+	});
+	resetui();
+	updateview();
+}
+
+static void
+cleanup(void)
+{
+	snk_shutdown();
+	sg_shutdown();
+	sysquit();
+}
+
 void
 initsysdraw(void)
 {
-	/* FIXME: get some sensible default (2/3 size of screen or fullscreen) */
-	initgl(Vdefw, Vdefh);
 	/* FIXME: the reason why this can't be 0 is because of the fucking
 	 * input handling being synchronous */
 	if((drawc = chancreate(sizeof(ulong), 64)) == nil)
 		sysfatal("initsysdraw: chancreate");
-	cam.eye = HMM_V3(0.0f, 0.0f, 10.0f);
-	cam.center = HMM_V3(0.0f, 0.0f, 0.0f);
-	cam.up = HMM_V3(0.0f, 1.0f, 0.0f);
-	updatecam();
-	//atexit(quitdraw);
+}
+
+void
+evloop(void)
+{
+	sapp_run(&(sapp_desc){
+		.init_cb = init,
+		.frame_cb = frame,
+		.cleanup_cb = cleanup,
+		.event_cb = event,
+		.width = 768,
+		.height = 768,
+		.enable_clipboard = true,
+		.window_title = "strangepg",
+		.ios_keyboard_resizes_canvas = true,
+		.icon.sokol_default = true,
+		.logger.func = slog_func,
+	});
 }

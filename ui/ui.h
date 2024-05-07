@@ -28,6 +28,8 @@ struct Obj{
 extern Obj selected;	// FIXME: only one
 extern Obj aintnothingthere;
 
+void	resetprompt(void);
+void	prompt(Rune);
 u32int	scrobj(int, int);
 void	showobj(Obj*);
 Obj	mouseselect(int, int);

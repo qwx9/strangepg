@@ -16,7 +16,6 @@ BINDIR:= $(PREFIX)/bin
 OBJS:=\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
-	lib/glfw_glue.o\
 	lib/queue.o\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
@@ -90,7 +89,7 @@ IFLAGS?=\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
-LDLIBS?= -lGL -lglfw -lm
+LDLIBS?= -lGL -lX11 -lXcursor -lXi -lm
 
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
