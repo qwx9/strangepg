@@ -3,7 +3,7 @@
 #include "threads.h"
 #include <bio.h>
 
-Channel *cmdc;
+extern Channel *cmdc;
 
 static int epfd[2] = {-1, -1};
 
@@ -28,10 +28,9 @@ readcproc(void *)
 
 	threadsetname("cproc");
 	for(;;){
-		if((n = read(epfd[1], buf, sizeof buf)) <= 0)
+		/* FIXME: not handling longer input */
+		if((n = read(fd, buf, sizeof buf-1)) <= 0)
 			break;
-		if(n == sizeof buf)	// FIXME: unhandled
-			n--;
 		buf[n] = 0;
 		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
 		for(s=p=buf; p<buf+n; s=++p){
@@ -72,7 +71,7 @@ initrepl(void)
 {
 	if(pipe(epfd) < 0)
 		return -1;
-	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
+	if((cmdc = chancreate(sizeof(char*), 16)) == nil)
 		return -1;
 	if(procrfork(cproc, nil, mainstacksize, RFNAMEG|RFENVG|RFFDG|RFNOMNT) < 0
 	|| proccreate(readcproc, nil, mainstacksize) < 0)

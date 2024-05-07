@@ -1,8 +1,11 @@
 #include "strpg.h"
-#include "cmd.h"
 #include "graph.h"
 #include "drw.h"
 #include "fs.h"
+#include "threads.h"
+#include "cmd.h"
+
+Channel *cmdc;
 
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
  * how do we dispatch user queries? would be useful to do queries
@@ -82,6 +85,17 @@ readcmd(char *s)
 	}
 	if(redraw)
 		reqdraw(Reqredraw);
+}
+
+void
+pollcmd(void)
+{
+	char *s;
+
+	while((s = nbrecvp(cmdc)) != nil){
+		readcmd(s);
+		free(s);
+	}
 }
 
 void

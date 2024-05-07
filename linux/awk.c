@@ -2,7 +2,7 @@
 #include "cmd.h"
 #include "threads.h"
 
-Channel *cmdc;
+extern Channel *cmdc;
 
 static int epfd[2], fucker[2];	/* children's pipes, mandrake */
 
@@ -43,10 +43,9 @@ readcproc(void *)
 
 	fd = fucker[0];
 	for(;;){
-		if((n = read(fd, buf, sizeof buf)) <= 0)
+		/* FIXME: not handling longer input */
+		if((n = read(fd, buf, sizeof buf-1)) <= 0)
 			break;
-		if(n == sizeof buf)	// FIXME: unhandled
-			n--;
 		buf[n] = 0;
 		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
 		for(s=p=buf; p<buf+n; s=++p){
@@ -71,7 +70,7 @@ initrepl(void)
 
 	if(pipe(epfd) < 0 || pipe(fucker) < 0)
 		return -1;
-	if((cmdc = chancreate(sizeof(void*), 16)) == nil)
+	if((cmdc = chancreate(sizeof(char*), 16)) == nil)
 		return -1;
 	r = fork();
 	switch(r){
