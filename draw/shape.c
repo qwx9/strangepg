@@ -48,12 +48,7 @@ setzangle(Graph *g, Node *u)
 	if(faceyourfears(g, u, u->out, &θ, 0) < 0
 	/* face away from incoming */
 	&& faceyourfears(g, u, u->in, &θ, 1) < 0)
-		return 0;
-	θ -= PI / 4;	/* upper left to bottom right corner */
-	while(θ >= 2*PI)
-		θ -= 2*PI;
-	while(θ < 0)
-		θ += 2*PI;
+		return 0.0f;
 	return θ;
 }
 
@@ -61,6 +56,8 @@ static inline void
 shapenode(Graph *g, Node *u)
 {
 	u->rot.z = setzangle(g, u);
+	//u->dir.x = cos(θ);
+	//u->dir.y = -sin(θ);
 }
 
 static void
