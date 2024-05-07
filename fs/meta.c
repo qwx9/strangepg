@@ -66,6 +66,7 @@ collectgfanodes(Graph *g, File *f)
 		}
 		nerr = 0;
 	}
+	warn("collectgfanodes: done\n");
 	return 0;
 }
 
