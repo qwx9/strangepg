@@ -10,6 +10,7 @@ enum{
 	LLpfr,
 	LLlinear,
 	LLpline,
+	LLcirc,
 	LLnil,
 };
 struct Shitkicker{
@@ -30,6 +31,7 @@ Shitkicker*	regfr(void);
 Shitkicker*	regpfr(void);
 Shitkicker*	reglinear(void);
 Shitkicker*	regpline(void);
+Shitkicker*	regcirc(void);
 
 void	initlayout(void);
 int	runlayout(Graph*, int);

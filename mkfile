@@ -20,6 +20,7 @@ OFILES=\
 	fs/load.$O\
 	fs/meta.$O\
 	graph/graph.$O\
+	layout/circ.$O\
 	layout/conga.$O\
 	layout/fr.$O\
 	layout/layout.$O\

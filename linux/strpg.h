@@ -75,8 +75,8 @@ char*	strecpy(char*, char*, char*);
 #define nil NULL	// better for them to be interchangeable here
 
 enum{
-	Vdefw = 1600,
-	Vdefh = 1200,
+	Vdefw = 960,
+	Vdefh = 600,
 };
 
 #include "lib/khash.h"

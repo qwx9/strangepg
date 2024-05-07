@@ -37,6 +37,7 @@ OBJS:=\
 	fs/load.o\
 	fs/meta.o\
 	graph/graph.o\
+	layout/circ.o\
 	layout/conga.o\
 	layout/fr.o\
 	layout/layout.o\
