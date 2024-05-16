@@ -1,6 +1,8 @@
+/*
 #if defined(SOKOL_IMPL) && !defined(SOKOL_NUKLEAR_IMPL)
 #define SOKOL_NUKLEAR_IMPL
 #endif
+*/
 #ifndef SOKOL_NUKLEAR_INCLUDED
 /*
     sokol_nuklear.h -- drop-in Nuklear renderer/event-handler for sokol_gfx.h
@@ -432,6 +434,7 @@ typedef struct snk_desc_t {
 } snk_desc_t;
 
 SOKOL_NUKLEAR_API_DECL void snk_setup(const snk_desc_t* desc);
+SOKOL_NUKLEAR_API_DECL struct nk_context* snk_get_context(void);
 SOKOL_NUKLEAR_API_DECL struct nk_context* snk_new_frame(void);
 SOKOL_NUKLEAR_API_DECL void snk_render(int width, int height);
 SOKOL_NUKLEAR_API_DECL snk_image_t snk_make_image(const snk_image_desc_t* desc);
@@ -2263,6 +2266,11 @@ SOKOL_API_IMPL void snk_setup(const snk_desc_t* desc) {
     });
 
     sg_pop_debug_group();
+}
+
+SOKOL_API_IMPL struct nk_context* snk_get_context(void) {
+    SOKOL_ASSERT(_SNK_INIT_COOKIE == _snuklear.init_cookie);
+    return &_snuklear.ctx;
 }
 
 SOKOL_API_IMPL void snk_shutdown(void) {
