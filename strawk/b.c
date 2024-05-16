@@ -327,8 +327,7 @@ void freetr(Node *p)	/* free parse tree */
 	case CAT:
 	case OR:
 		freetr(left(p));
-		freetr(right(p));
-		xfree(p);
+        xfree(p);
 		break;
 	default:	/* can't happen */
 		FATAL("can't happen: unknown type %d in freetr", type(p));
@@ -645,14 +644,14 @@ static int set_gototab(fa *f, int state, int ch, int val) /* hide gototab implem
 		f->gototab[state].entries[0].state = val;
 		f->gototab[state].inuse++;
 		return val;
-	} else if (ch > f->gototab[state].entries[f->gototab[state].inuse-1].ch) {
+	} else if ((unsigned)ch > f->gototab[state].entries[f->gototab[state].inuse-1].ch) {
 		// not seen yet, insert and return
 		gtt *tab = & f->gototab[state];
 		if (tab->inuse + 1 >= tab->allocated)
 			resize_gototab(f, state);
 
-		f->gototab[state].entries[f->gototab[state].inuse-1].ch = ch;
-		f->gototab[state].entries[f->gototab[state].inuse-1].state = val;
+		f->gototab[state].entries[f->gototab[state].inuse].ch = ch;
+		f->gototab[state].entries[f->gototab[state].inuse].state = val;
 		f->gototab[state].inuse++;
 		return val;
 	} else {
@@ -677,9 +676,9 @@ static int set_gototab(fa *f, int state, int ch, int val) /* hide gototab implem
 	gtt *tab = & f->gototab[state];
 	if (tab->inuse + 1 >= tab->allocated)
 		resize_gototab(f, state);
-	++tab->inuse;
 	f->gototab[state].entries[tab->inuse].ch = ch;
 	f->gototab[state].entries[tab->inuse].state = val;
+	++tab->inuse;
 
 	qsort(f->gototab[state].entries,
 		f->gototab[state].inuse, sizeof(gtte), entry_cmp);
@@ -869,7 +868,7 @@ bool fnematch(fa *pfa, FILE *f, char **pbuf, int *pbufsize, int quantum)
 		 * Call u8_rune with at least awk_mb_cur_max ahead in
 		 * the buffer until EOF interferes.
 		 */
-		if (k - j < awk_mb_cur_max) {
+		if (k - j < (int)awk_mb_cur_max) {
 			if (k + awk_mb_cur_max > buf + bufsize) {
 				char *obuf = buf;
 				adjbuf((char **) &buf, &bufsize,

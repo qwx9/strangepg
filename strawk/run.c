@@ -657,7 +657,7 @@ int u8_byte2char(const char *s, int bytenum)
 	return charnum;
 }
 
-/* runetochar() adapted from rune.c in the Plan 9 distributione */
+/* runetochar() adapted from rune.c in the Plan 9 distribution */
 
 enum
 {
@@ -1789,7 +1789,7 @@ Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 		for (;;) {
 			n++;
 			t = s;
-			while (*s != sep && *s != '\n' && *s != '\0')
+			while (*s != sep && *s != '\0')
 				s++;
 			temp = *s;
 			setptr(s, '\0');
@@ -2023,7 +2023,7 @@ static char *nawk_tolower(const char *s)
 Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg list */
 {
 	Cell *x, *y;
-	Awkfloat u;
+	Awkfloat u = 0;
 	int t;
 	Awkfloat tmp;
 	char *buf;
@@ -2070,10 +2070,7 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 		}
 		break;
 	case FRAND:
-		/* random() returns numbers in [0..2^31-1]
-		 * in order to get a number in [0, 1), divide it by 2^31
-		 */
-		u = genrand64_real2(&mtrand);
+		u = genrand64_real2(&mtrand);	/* [0,1) */
 		break;
 	case FSRAND:
 		if (isrec(x))	/* no argument provided */
@@ -2167,7 +2164,7 @@ Cell *dosub(Node **a, int subop)        /* sub and gsub */
 	const char *start;
 	const char *noempty = NULL;      /* empty match disallowed here */
 	size_t m = 0;                    /* match count */
-	size_t whichm;                   /* which match to select, 0 = global */
+	size_t whichm = 0;               /* which match to select, 0 = global */
 	int mtype;                       /* match type */
 
 	if (a[0] == NULL) {	/* 0 => a[1] is already-compiled regexpr */
