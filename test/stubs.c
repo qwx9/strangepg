@@ -28,7 +28,7 @@ somepalette(Graph*)
 }
 
 void
-stoplayout(Graph*)
+haltlayout(Graph*)
 {
 }
 

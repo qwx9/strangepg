@@ -60,6 +60,7 @@ keyevent(Rune r)
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
 	case 'r': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
+	case 'p': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) togglelayout(g); unlockgraphs(0); break;
 	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqredraw); break;
 	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqredraw); break;
 	default: prompt(r); break;
@@ -83,7 +84,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
 				assert(o.idx < dylen(o.g->nodes));
-				if(stoplayout(o.g) < 0)
+				if(haltlayout(o.g) < 0)
 					warn("mouseevent: %s\n", error());
 				expandnode(o.g, o.g->nodes + o.idx);
 				selected = aintnothingthere;

@@ -11,10 +11,12 @@ static Shitkicker *sktab[LLnil];
 /* FIXME: yuck, all this shit only because libchan doesn't fucking
  * implement blocking alt() */
 enum{
-	Layidle = 1,
+	Layintr,
+	Layidle,
 	Laystop,
-	Layagain,
 	Laynew,
+	Layagain,
+	Layhalt,
 };
 struct Layout{
 	int flags;
@@ -53,73 +55,74 @@ workproc(void *arg)
 static void
 layproc(void *arg)
 {
-	int i, new, again;
+	int i, new;
 	ulong r;
 	Graph *g;
 	Layout *l;
 	Shitkicker *sk, *oldsk;
-	Clk clk = {.lab = "layproc"};
 
 	g = arg;
 	sk = nil;
-	new = again = 1;
+	new = 1;
 	l = g->layout;
 	for(;;){
 		/* FIXME: yuck, if only libchan had alt */
 		switch((r = recvul(l->c))){
-		case 0: break;
+		case Layintr:
+			break;
+		/* distinguishing halt vs. stop this ways keeps responsibility
+		 * of updating sk here, leaving no bookkeeping in the main thread */
+		case Layhalt:
+			new = 1;
+			/* wet floor */
 		case Laystop:
 			l->flags |= LFstop;
 			sk = nil;
-			new = 1;
 			reqdraw(Reqshape);
 			break;
-		default:
-			again = 1;
-			if(r == Layagain)
-				sk = l->sk != nil ? l->sk : sktab[deflayout];
-			else{
-				r -= Laynew;
-				assert(r < LLnil);
-				sk = sktab[r];
-			}
+		case Layagain:
+			sk = l->sk != nil ? l->sk : sktab[deflayout];
 			goto start;
 		case Layidle:
 			l->nidle++;
+			goto start;
+		case Laynew:
+		default:
+			r -= Laynew;
+			assert(r < LLnil);
+			sk = sktab[r];
 			/* wet floor */
 		start:
-			if(l->nidle < nlaythreads)
+			if(l->nidle < nlaythreads)	/* start once all workers are up */
 				break;
-			l->flags = 0;
-			if(!again || sk == nil){
+			if(sk == nil){
 				g->flags &= ~GFdrawme;
 				reqdraw(Reqshape);
 				break;
 			}
+			l->flags = 0;
 			oldsk = l->sk;
 			if((new || sk != oldsk) && oldsk != nil){
+				warn("reinit\n");
 				g->flags &= ~GFlayme;
 				if(oldsk->cleanup != nil && l->scratch != nil){
-					l->sk->cleanup(l->scratch);
+					oldsk->cleanup(l->scratch);
 					l->scratch = nil;
 				}
 			}
 			l->sk = sk;
 			if((new || sk != oldsk) && sk->new != nil){
-				/* FIXME: no sampling == useless */
-				CLK0(clk);
 				l->scratch = sk->new(g);
-				CLK1(clk);
 				g->flags |= GFlayme;
 			}else if(sk->update != nil)
 				sk->update(g, l->scratch);
-			again = new = 0;
 			g->flags |= GFdrawme;
 			l->nidle = 0;
 			startdrawclock();
 			for(i=0; i<nlaythreads; i++)
 				if(sendul(l->wc, i+1) < 0)
 					return;
+			new = 0;
 			break;
 		}
 	}
@@ -142,16 +145,50 @@ newlayout(Graph *g)
 	return l;
 }
 
+/* FIXME */
+static inline int
+layoutreq(Layout *l, int req)
+{
+	if(sendul(l->c, req) < 0)
+		return -1;
+	return 0;
+}
+
+/* FIXME: sucks */
+int
+haltlayout(Graph *g)
+{
+	Layout *l;
+
+	if((l = g->layout) == nil || l->sk == nil){
+		werrstr("resetlayout: %#p uninitialized layout\n", g);
+		return -1;
+	}
+	return layoutreq(l, Layhalt);
+}
+
 int
 stoplayout(Graph *g)
 {
 	Layout *l;
 
-	if((l = g->layout) == nil)
-		return 0;
-	if(sendul(l->c, Laystop) < 0)
+	if((l = g->layout) == nil || l->sk == nil){
+		werrstr("resetlayout: %#p uninitialized layout\n", g);
 		return -1;
-	return 0;
+	}
+	return layoutreq(l, Laystop);
+}
+
+int
+updatelayout(Graph *g)
+{
+	Layout *l;
+
+	if((l = g->layout) == nil || l->sk == nil){
+		werrstr("resetlayout: %#p uninitialized layout\n", g);
+		return -1;
+	}
+	return layoutreq(l, Layagain);
 }
 
 int
@@ -163,13 +200,13 @@ resetlayout(Graph *g)
 		werrstr("resetlayout: %#p uninitialized layout\n", g);
 		return -1;
 	}
-	if(stoplayout(g) < 0)
+	if(layoutreq(l, Layhalt) < 0)
 		return -1;
 	return runlayout(g, -1);
 }
 
 int
-updatelayout(Graph *g)
+togglelayout(Graph *g)
 {
 	Layout *l;
 
@@ -177,7 +214,9 @@ updatelayout(Graph *g)
 		werrstr("updatelayout: %#p uninitialized layout\n", g);
 		return -1;
 	}
-	return runlayout(g, -1);
+	if((l->flags & LFstop) != 0)
+		return layoutreq(l, Layagain);
+	return layoutreq(l, Laystop);
 }
 
 int

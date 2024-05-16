@@ -465,7 +465,7 @@ nukegraph(Graph *g)
 {
 	if(g->type <= FFdead)
 		return;
-	if(stoplayout(g) < 0)
+	if(haltlayout(g) < 0)
 		warn("nukegraph: %s\n", error());
 	cleargraph(g);
 	freefs(g->f);	// FIXME: probably not necessary to have in the first place

@@ -66,6 +66,7 @@ Mouse buttons:
 
 Keyboard shortcuts:
 
+- Pause/unpause layout: 'p' key
 - Re-layout: 'r' key
 - Quit: 'q' key or close window
 - Arrow keys: move view by screenful in a cardinal direction

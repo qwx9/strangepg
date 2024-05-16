@@ -36,5 +36,6 @@ Shitkicker*	regcirc(void);
 void	initlayout(void);
 int	runlayout(Graph*, int);
 int	resetlayout(Graph*);
-int	stoplayout(Graph*);
+int	haltlayout(Graph*);
 int	updatelayout(Graph*);
+int	togglelayout(Graph*);
