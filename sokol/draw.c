@@ -22,9 +22,7 @@
 #define	NK_INCLUDE_DEFAULT_FONT
 #define	NK_INCLUDE_STANDARD_VARARGS
 //#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
-#define	NK_IMPLEMENTATION
 #include "lib/nuklear.h"
-#define	SOKOL_NUKLEAR_IMPL
 #include "lib/sokol_nuklear.h"
 #include "drw.h"
 #include "ui.h"
@@ -32,6 +30,7 @@
 
 void	event(const sapp_event*);
 void	_drawui(struct nk_context*);
+void	setnktheme(void);
 
 struct Color{
 	u32int col;
@@ -44,12 +43,10 @@ struct Color{
  * - resize: compensate for different viewsize == different gl coordinate system
  *	by moving eye (zoom + pan)
  * - debug node angle and scale, offset edge control points
- * - basic cimgui: mouse picking + awk
  * - don't clear/push instance data each frame: that data is already there, operate
  *	directly on the instance data and render the draw*() functions nops
  *	ie. decouple geometry Node/Edge from the rest of their data, mirror ds
- * - implement spaced shallow redraw: straight flush, no reshape/redraw
- * - merge portable draw code; fix plan9 drawing
+ *	=> don't clear on every frame unless we get a re-render ctl
  */
 /* FIXME: blackjack and hookers:
  * - switch to opengl4, add tesselation, generalize nodes as thick lines, shape
@@ -63,16 +60,15 @@ struct Color{
  *	simplify rend; make sure it doesn't modify state that others use and maybe
  *	move to its own thread as well, it should really only set angle...
  * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
- *	redraw only, not re-render etc
+ *	redraw only, not re-render etc; or rather toggle continuous redraw?
+ *	does performance/load suffer?
  * - compiled shaders: better performance? just push source and compiled
  *   ones to the repo, use sokol-tools
- * - decouple input from rendering
  * - draw labels, arrows
  * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
  *	unnecessary for drawing, gl can do it on its own via the depth buffer
  *	SO: geometry + compute shaders for layouting
  * - beziers, thickness: https://thebookofshaders.com/05/
- * - get rid of unnecessary glue code (that isn't even updated)
  * - extend for 3d vis and navigation, later port to plan9
  * - 3d layout algo on top of this, would be nice to have by may
  *	zoom will just become z-panning
@@ -848,6 +844,7 @@ init(void)
 		.dpi_scale = sapp_dpi_scale(),
 		.logger.func = slog_func,
 	});
+	setnktheme();
 	resetui();
 	updateview();
 }
@@ -877,8 +874,8 @@ evloop(void)
 		.frame_cb = frame,
 		.cleanup_cb = cleanup,
 		.event_cb = event,
-		.width = 768,
-		.height = 768,
+		.width = Vdefw,
+		.height = Vdefh,
 		.enable_clipboard = true,
 		.window_title = "strangepg",
 		.ios_keyboard_resizes_canvas = true,

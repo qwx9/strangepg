@@ -14,33 +14,48 @@
 #define	NK_INCLUDE_DEFAULT_FONT
 #define	NK_INCLUDE_STANDARD_VARARGS
 //#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
+#define	NK_IMPLEMENTATION
 #include "lib/nuklear.h"
+#define	SOKOL_NUKLEAR_IMPL
 #include "lib/sokol_nuklear.h"
 #include "ui.h"
 #include "cmd.h"
 #include "drw.h"
 
+typedef struct nk_context nk_context;
+typedef struct nk_color nk_color;
+typedef struct nk_text_edit nk_text_edit;
+
+static nk_text_edit nkprompt;
+static nk_color nktheme[NK_COLOR_COUNT];
 static int butts;
 static int prompting;
 static char ptext[1024];
 static int plen;
 
 enum{
-	NKpopt = NK_EDIT_BOX |
+	NKpopt =
+		NK_EDIT_BOX |
 		NK_EDIT_SIG_ENTER |
-		NK_EDIT_GOTO_END_ON_ACTIVATE,
-	NKwopt = NK_WINDOW_SCALABLE |
+		NK_EDIT_GOTO_END_ON_ACTIVATE |
+		NK_EDIT_CTRL_ENTER_NEWLINE,
+	NKwopt =
+		NK_WINDOW_SCALABLE |
 		NK_WINDOW_MOVABLE |
-		NK_WINDOW_SCALE_LEFT |
-		NK_WINDOW_MINIMIZABLE,
+		NK_WINDOW_BORDER |
+		NK_WINDOW_MINIMIZABLE |
+		NK_WINDOW_SCROLL_AUTO_HIDE,
 };
 
-/* FIXME: prompting requires mouse action onto the prompt area */
+/* FIXME: clear text on escape while prompt active */
+/* FIXME: implement wrap or sth (see old nuklear repo issues) */
 void
 resetprompt(void)
 {
-	ptext[0] = 0;
+	memset(ptext, 0, plen);
 	plen = 0;
+	nk_textedit_clear_state(&nkprompt, NK_TEXT_EDIT_MULTI_LINE, nk_filter_default);
+	nk_str_clear(&nkprompt.string);
 }
 void
 prompt(Rune)
@@ -49,17 +64,20 @@ prompt(Rune)
 
 /* must be called after a new frame was started and before flushing */
 void
-_drawui(struct nk_context *ctx)
+_drawui(nk_context *ctx)
 {
+	float h;
 	nk_flags e;
 
 	if(selected.type != Onil)
 		showobj(&selected);
-	if(nk_begin(ctx, "Prompt", nk_rect(10, 10, 410, 74), NKwopt)){
-		nk_layout_row_dynamic(ctx, 400, 1);
-		e = nk_edit_string(ctx, NKpopt, ptext, &plen, sizeof ptext-1, nk_filter_default);
+	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w, 78), NKwopt)){
+		/* FIXME: no wrap */
+		nk_layout_row_dynamic(ctx, 0, 1);
+		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
 		prompting = (e & NK_EDIT_ACTIVE) != 0;
 		if((e & NK_EDIT_COMMITED) != 0){
+			plen = nk_str_len_char(&nkprompt.string);
 			ptext[plen] = 0;
 			pushcmd("%s", ptext);
 		}
@@ -158,6 +176,32 @@ event(const sapp_event* ev)
 }
 
 void
+setnktheme(void)
+{
+	nk_context *ctx;
+
+	ctx = snk_get_context();
+	memcpy(nktheme, nk_default_color_style, sizeof nk_default_color_style);
+	if((view.flags & VFhaxx0rz) == 0){
+		nktheme[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
+		nktheme[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
+		nktheme[NK_COLOR_HEADER] = (nk_color){0x99, 0x99, 0x99, 0xcc};
+		nktheme[NK_COLOR_BORDER] = nktheme[NK_COLOR_HEADER];
+		nktheme[NK_COLOR_SELECT] = (nk_color){0xcc, 0xcc, 0xcc, 0xcc};
+		nktheme[NK_COLOR_SELECT_ACTIVE] = (nk_color){0x66, 0x66, 0x66, 0xcc};
+		nktheme[NK_COLOR_EDIT] = (nk_color){0xff, 0xff, 0xff, 0xff};
+		nktheme[NK_COLOR_EDIT_CURSOR] = nktheme[NK_COLOR_TEXT];
+		nktheme[NK_COLOR_SCROLLBAR] = nktheme[NK_COLOR_WINDOW];
+		nktheme[NK_COLOR_SCROLLBAR_CURSOR] = (nk_color){0xcc, 0xcc, 0x8e, 0xcc};
+		nktheme[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
+		nktheme[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
+		nktheme[NK_COLOR_TAB_HEADER] = nktheme[NK_COLOR_WINDOW];
+		nk_style_from_table(ctx, nktheme);
+	}
+}
+
+void
 initsysui(void)
 {
+	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
 }
