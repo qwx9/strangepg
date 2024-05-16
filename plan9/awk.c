@@ -29,7 +29,7 @@ readcproc(void *)
 	threadsetname("cproc");
 	for(;;){
 		/* FIXME: not handling longer input */
-		if((n = read(fd, buf, sizeof buf-1)) <= 0)
+		if((n = read(epfd[1], buf, sizeof buf-1)) <= 0)
 			break;
 		buf[n] = 0;
 		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
