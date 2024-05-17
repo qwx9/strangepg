@@ -39,3 +39,11 @@ int	resetlayout(Graph*);
 int	haltlayout(Graph*);
 int	updatelayout(Graph*);
 int	togglelayout(Graph*);
+
+#define ROTATENODE(rot, dir, dx, dy)	do{\
+	float θ; \
+	θ = atan2((dy), (dx)); \
+	(rot)->z = θ; \
+	(dir)->x = cos(θ); \
+	(dir)->y = -sin(θ); \
+}while(0)

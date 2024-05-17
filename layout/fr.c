@@ -122,6 +122,7 @@ compute(void *arg, volatile int *stat, int idx)
 			nu = g->nodes + u->i;
 			nu->pos.x = x;
 			nu->pos.y = y;
+			ROTATENODE(&nu->rot, &nu->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}

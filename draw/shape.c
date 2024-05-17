@@ -56,8 +56,6 @@ static inline void
 shapenode(Graph *g, Node *u)
 {
 	u->rot.z = setzangle(g, u);
-	//u->dir.x = cos(θ);
-	//u->dir.y = -sin(θ);
 }
 
 static void
@@ -94,7 +92,8 @@ reshape(int force)
 				DPRINT(Debugrender, "reshape: empty graph");
 				continue;
 			}
-			shapegraph(g);
+			/* FIXME: now no-op */
+			//shapegraph(g);
 			r = 1;
 		}
 	}

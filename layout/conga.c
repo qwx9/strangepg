@@ -13,6 +13,7 @@ new(Graph *g)
 		u = g->nodes + i;
 		u->pos.x = x;
 		u->pos.y = 0;
+		ROTATENODE(&u->rot, &u->dir, 1, 0);
 	}
 	return nil;
 }

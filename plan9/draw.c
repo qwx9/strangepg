@@ -215,11 +215,13 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 
 	p[0] = v2p(centerscalev(a));
 	p[1] = v2p(centerscalev(b));
-	line(viewfb, p[0], p[1],
-		Endsquare, (view.flags & VFdrawarrows) != 0||emph ? Endarrow : Endsquare, w, c->i, ZP);
+	line(viewfb, p[0], p[1], Endsquare,
+		(view.flags & VFdrawarrows) != 0 || emph ? Endarrow : Endsquare,
+		w, c->i, ZP);
 	if(idx >= 0)
-		line(selfb, p[0], p[1],
-			Endsquare, (view.flags & VFdrawarrows) != 0||emph ? Endarrow : Endsquare, w, i2c(idx), ZP);
+		line(selfb, p[0], p[1], Endsquare,
+			(view.flags & VFdrawarrows) != 0 || emph ? Endarrow : Endsquare,
+			w, i2c(idx), ZP);
 	return 0;
 }
 

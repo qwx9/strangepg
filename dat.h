@@ -47,10 +47,7 @@ struct Node{
 	Vertex pos;
 	Vertex fixpos;
 	Vertex rot;
-
-	// FIXME:
 	Vertex dir;
-
 	Color *col;
 	u32int flags;
 	ssize prev;		/* index */

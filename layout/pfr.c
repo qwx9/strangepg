@@ -11,10 +11,10 @@ enum{
 typedef struct P P;
 typedef struct D D;
 struct P{
-	float x;
-	float y;
-	float *nx;
-	float *ny;
+	Vertex xyz;
+	Vertex *pos;
+	Vertex *dir;
+	Vertex *rot;
 	ssize i;
 	ssize e;
 	int nin;
@@ -47,15 +47,17 @@ new(Graph *g)
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
-		p.nx = &u->pos.x;
-		p.ny = &u->pos.y;
+		p.pos = &u->pos;
+		p.dir = &u->dir;
+		p.rot = &u->rot;
 		dypush(ptab, p);
 		n += 1.0;
 	}
 	n = Nodesz * log(n);
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
-		*pp->nx = pp->x = -n + nrand(2*n);
-		*pp->ny = pp->y = -n + nrand(2*n);
+		pp->xyz.x = -n + nrand(2*n);
+		pp->xyz.y = -n + nrand(2*n);
+		*pp->pos = pp->xyz;
 		u = g->nodes + pp->i;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
@@ -118,14 +120,14 @@ compute(void *arg, volatile int *stat, int i)
 		for(u=p0; u<p1; u+=nlaythreads){
 			if((*stat & LFstop) != 0)
 				return 0;
-			x = u->x;
-			y = u->y;
+			x = u->xyz.x;
+			y = u->xyz.y;
 			Δx = Δy = 0;
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
-				δx = x - v->x;
-				δy = y - v->y;
+				δx = x - v->xyz.x;
+				δy = y - v->xyz.y;
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
@@ -136,8 +138,8 @@ compute(void *arg, volatile int *stat, int i)
 			e = d->etab + u->e;
 			for(ee=e+u->nout; e<ee; e++){
 				v = pp + *e;
-				δx = x - v->x;
-				δy = y - v->y;
+				δx = x - v->xyz.x;
+				δy = y - v->xyz.y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -147,8 +149,8 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			for(ee+=u->nin; e<ee; e++){
 				v = pp + *e;
-				δx = v->x - x;
-				δy = v->y - y;
+				δx = v->xyz.y - x;
+				δy = v->xyz.y - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -161,10 +163,10 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(δx, δy);
 			x += t * δx / δ;
 			y += t * δy / δ;
-			*u->nx = x;
-			*u->ny = y;
-			u->x = x;
-			u->y = y;
+			u->xyz.x = x;
+			u->xyz.y = y;
+			*u->pos = u->xyz;
+			ROTATENODE(u->rot, u->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}

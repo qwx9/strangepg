@@ -44,9 +44,6 @@ drawedge(Graph *g, Node *u, Node *v, double w, ssize idx)
 	u32int i;
 
 	i = mapvis(g, Oedge, idx);
-	/* FIXME: offset a and b by rotation/length parameters */
-	// FIXME
-	//q = Qd(addpt2(u->vrect.o, u->vrect.v), v->vrect.o);
 	return drawbezier(u->pos, v->pos, w, i, color(theme[Cedge]));
 }
 
@@ -59,11 +56,9 @@ drawnode(Graph *g, Node *n, ssize idx)
 	if((view.flags & VFdrawarrows) == 0){
 		if(drawquad(n->pos, n->rot, i, n->col) < 0)
 			return -1;
-	//if(drawquad(n->q1, n->q2, n->shape, n->θ, i, n->col) < 0)
 	}else if(drawline(n->pos, addv(n->pos, n->dir), MAX(0., view.zoom/5), 1, -1, color(theme[Cemph])) < 0)
 		return -1;
-	//if(drawlabels && drawlabel(n, n->q1, n->q2, n->shape, n->id, color(theme[Ctext])) < 0)
-	if((view.flags & VFdrawarrows) != 0 && drawlabel(n, color(theme[Ctext])) < 0)
+	if((view.flags & VFdrawlabels) != 0 && drawlabel(n, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
 }

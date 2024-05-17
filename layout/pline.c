@@ -16,10 +16,10 @@ typedef struct P P;
 typedef struct D D;
 struct P{
 	uchar fixed;
-	float x;
-	float y;
-	float *nx;
-	float *ny;
+	Vertex xyz;
+	Vertex *pos;
+	Vertex *dir;
+	Vertex *rot;
 	ssize i;
 	ssize e;
 	int nin;
@@ -50,32 +50,30 @@ new(Graph *g)
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
-		p.nx = &u->pos.x;
-		p.ny = &u->pos.y;
+		p.pos = &u->pos;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			p.x = u->fixpos.x;
-			p.y = u->fixpos.y;
+			p.xyz.x = u->fixpos.x;
+			p.xyz.y = u->fixpos.y;
 			if((u->flags & FNfixed) != 0){
 				nf++;
-				if(maxx < p.x)
-					maxx = p.x;
+				if(maxx < p.xyz.x)
+					maxx = p.xyz.x;
 			}else{
-				p.y = -128 + nrand(256);
+				p.xyz.y = -128 + nrand(256);
 			}
 		}else{
-			p.x = g->nnodes / 2;
-			p.y = -32 + nrand(64);
+			p.xyz.x = g->nnodes / 2;
+			p.xyz.y = -32 + nrand(64);
 		}
-		*p.nx = p.x;
-		*p.ny = p.y;
+		*p.pos = p.xyz;
 		dypush(ptab, p);
 	}
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
 		if((u->flags & FNfixed) != 0){
 			pp->i = -1;
-			pp->x -= maxx / 2;
-			*pp->nx = pp->x;
+			pp->xyz.x -= maxx / 2;
+			pp->pos->x = pp->xyz.x;
 			continue;
 		}
 		pp->e = dylen(etab);
@@ -138,16 +136,16 @@ compute(void *arg, volatile int *stat, int i)
 		for(u=p0; u<p1; u+=nlaythreads){
 			if((*stat & LFstop) != 0)
 				return 0;
-			x = u->x;
-			y = u->y;
+			x = u->xyz.x;
+			y = u->xyz.y;
 			Δx = Δy = 0;
 			if(u->i < 0)
 				continue;
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
-				δx = x - v->x;
-				δy = y - v->y;
+				δx = x - v->xyz.x;
+				δy = y - v->xyz.y;
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
@@ -158,8 +156,8 @@ compute(void *arg, volatile int *stat, int i)
 			e = d->etab + u->e;
 			for(ee=e+u->nout; e<ee; e++){
 				v = pp + *e;
-				δx = x - v->x;
-				δy = y - v->y;
+				δx = x - v->xyz.x;
+				δy = y - v->xyz.y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -169,8 +167,8 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			for(ee+=u->nin; e<ee; e++){
 				v = pp + *e;
-				δx = v->x - x;
-				δy = v->y - y;
+				δx = v->xyz.x - x;
+				δy = v->xyz.y - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -183,10 +181,10 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(δx, δy);
 			x += t * δx / δ;
 			y += t * δy / δ;
-			*u->nx = x;
-			*u->ny = y;
-			u->x = x;
-			u->y = y;
+			u->xyz.x = x;
+			u->xyz.y = y;
+			*u->pos = u->xyz;
+			ROTATENODE(u->rot, u->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}
