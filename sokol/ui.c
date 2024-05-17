@@ -133,6 +133,7 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	case SAPP_KEYCODE_RIGHT: r = KBright; break;
 	case SAPP_KEYCODE_ESCAPE: r = KBescape; break;
 	case SAPP_KEYCODE_L: r = 'l'; break;
+	case SAPP_KEYCODE_P: r = 'p'; break;
 	case SAPP_KEYCODE_R: r = 'r'; break;
 	case SAPP_KEYCODE_Q: sapp_quit(); return 1;
 	case SAPP_KEYCODE_MINUS: r = '-'; break;
