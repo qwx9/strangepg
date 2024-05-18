@@ -56,6 +56,28 @@ strpg file.gfa
 - -t nth:	number of layouting workers (default: 4)
 - -l alg:	select layouting algorithm (see Layouts below) (default: fr)
 
+### Layouts
+
+_strangepg_ ships with a few selectable layouting algorithms currently all based
+on a spring model force-directed approach.
+Select one with the *-l* option.
+Layouting preallocates a pool of worker threads, but depending on the algorithm,
+only one worker may be active. The default is 4, changed via the *-t* option:
+
+```bash
+# example: parallel FR layout with 8 workers: 
+strpg -l pfr -t 8 file.gfa
+```
+
+Available layouts:
+
+- _fr_: Fruchterman-Reingold-based layout (default)
+- _pfr_: parallel version of the above
+- _conga_: fixed node placement on a line by GFA file order
+- _random_: random fixed node placement
+- _linear_: _fr_ layout with the addition of optionally fixed position nodes (_fx_ and _fy_ GFA segment tags) and initial position (via _mv_ segment tag)
+- _pline_: parallel version of the above
+
 ### Navigation
 
 Mouse buttons:
@@ -219,28 +241,6 @@ color[condition] = red	# result applied to all elements for which condition is t
 color[LN < 150] = red	# LN and color are vectors of equal length
 ```
 ... etc.
-
-### Layouts
-
-_strangepg_ ships with a few selectable layouting algorithms currently all based
-on a spring model force-directed approach.
-Select one with the *-l* option.
-Layouting preallocates a pool of worker threads, but depending on the algorithm,
-only one worker may be active. The default is 4, changed via the *-t* option:
-
-```bash
-# example: parallel FR layout with 8 workers: 
-strpg -l pfr -t 8 file.gfa
-```
-
-Available layouts:
-
-- _fr_: Fruchterman-Reingold-based layout (default)
-- _pfr_: parallel version of the above
-- _conga_: fixed node placement on a line by GFA file order
-- _random_: random fixed node placement
-- _linear_: _fr_ layout with the addition of optionally fixed position nodes (_fx_ and _fy_ GFA segment tags) and initial position (via _mv_ segment tag)
-- _pline_: parallel version of the above
 
 ## Compilation options
 
