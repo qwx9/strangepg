@@ -160,14 +160,14 @@ uninstall: $(ALLTARGETS)
 dirall:
 	for i in $(DIRS); do \
 		cd $$i; \
-		make all; \
+		make $(MAKEFLAGS) all; \
 		cd ..; \
 	done
 
 dirinstall:
 	for i in $(DIRS); do \
 		cd $$i; \
-		make PREFIX=$(PREFIX) install; \
+		make $(MAKEFLAGS) PREFIX=$(PREFIX) install; \
 		cd ..; \
 	done
 
