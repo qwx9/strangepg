@@ -4,7 +4,6 @@ ALLTARGETS:=\
 	$(BINTARGET)\
 	strindex\
 	strcoarse\
-	/tmp/main.awk\
 
 DIRS:=\
 	strawk\
@@ -26,6 +25,7 @@ OBJS:=\
 	linux/threads.o\
 	sokol/draw.o\
 	sokol/ui.o\
+	cmd/awkprog.o\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
@@ -130,10 +130,6 @@ ifeq ($(wildcard .git),.git)
 endif
 
 all:	$(ALLTARGETS) dirall
-
-# FIXME
-/tmp/main.awk: cmd/main.awk
-	cp -x $^ $@
 
 # FIXME
 strindex:	index.sh

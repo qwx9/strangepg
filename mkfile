@@ -9,6 +9,7 @@ DIRS=\
 
 OFILES=\
 	strpg.$O\
+	cmd/awkprog.$O\
 	cmd/cmd.$O\
 	draw/color.$O\
 	draw/draw.$O\
@@ -77,10 +78,8 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 $O.coarsen: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
-install:V:	/tmp/main.awk
-
-/tmp/main.awk: cmd/main.awk
-	cp $prereq $target
+cmd/awkprog.c:	cmd/main.awk
+	n/awk2c.rc <$prereq >$target
 
 CLEANFILES=$OFILES
 
@@ -111,4 +110,4 @@ nuke:
 		cd $i
 		mk nuke
 	}
-	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].* $TARG $CLEANFILES
+	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].* $TARG $CLEANFILES cmd/awkprog.c

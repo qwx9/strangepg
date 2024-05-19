@@ -16,7 +16,7 @@ cproc(void *)
 	dup(epfd[0], 0);
 	dup(epfd[0], 1);
 	close(epfd[0]);
-	procexecl(nil, "/bin/strawk", "strawk", "-f", "/tmp/main.awk", nil);
+	procexecl(nil, "/bin/strawk", "strawk", awkprog, nil);
 	sysfatal("procexecl: %r");
 }
 

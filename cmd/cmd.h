@@ -1,3 +1,5 @@
+extern char *awkprog;
+
 void	readcmd(char*);
 void	pollcmd(void);
 void	sendcmd(char*);
