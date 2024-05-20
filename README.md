@@ -1,5 +1,40 @@
 # strange pangenome scale visualization
 
+Huge graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
+Currently supports graphs in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format.
+
+_Note: this is a work in progress._
+
+## Features
+
+- Written from scratch in pure C (Plan 9 C: C89 + some extensions)
+- High performance graphics with modern and efficient renderer
+- Mouse-driven UI navigation
+- strawk: embedded graph manipulation language for arbitrary coloring, filtering, etc. based on GFA tags
+- Highly responsive: no loading bars, immediate feedback whenever possible
+- Highly modular, extensible and cross-platform by design
+- Extensible layouting: easy to modify or add layout algorithms (and rebuild)
+- Minimal external dependencies, bundling small header-only libraries whenever possible
+
+Licensed under MIT.
+
+#### Alien software
+
+Data structures:
+- khash from [klib](https://github.com/attractivechaos/klib)
+- [chan](https://github.com/tylertreat/chan)
+
+strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
+
+Linux graphics:
+- sokol_gfx, sokol_app, sokol_nuklear and glue code from [sokol](https://github.com/floooh/sokol)
+- [HandmadeMath](https://github.com/StrangeZak/Handmade-Math)
+- [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear)
+
+Used but not bundled:
+- GL extension loading via [flextGL](https://github.com/mosra/flextGL)
+- GNU Bison or Plan9 yacc(1)
+
 ## Installation
 
 ### Compilation
@@ -242,7 +277,7 @@ color[LN < 150] = red	# LN and color are vectors of equal length
 ```
 ... etc.
 
-## Compilation options
+## Additional compilation settings
 
 ### Installation prefix
 
@@ -255,7 +290,7 @@ make -j
 sudo make PREFIX=/usr/local install
 ```
 
-### Compiler settings
+### Compiler
 
 To build using a different compiler, eg. clang, use the _CC_ make variable:
 
@@ -264,3 +299,21 @@ make CC=clang -j
 sudo make PREFIX=/usr/local install
 ```
 
+Tested with clang and gcc only.
+
+### Rebuilding strawk
+
+_GNU bison_ is needed to regenerate some of the files.
+To use a different _YACC_ implementation, edit the _makefile_.
+
+```bash
+cd strawk
+make nuke
+make install
+```
+
+
+## 9front
+
+Build with _mk_ instead of _make_ in the usual manner.
+Additionally requires [npe](https://git.sr.ht/~ft/npe).
