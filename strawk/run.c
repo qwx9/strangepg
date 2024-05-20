@@ -2101,6 +2101,7 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 			execute(runnerup);
 		// FIXME: no cleanup!
 		runnerup = NULL;
+		errorflag = 0;
 		fflush(stdout);
 		break;
 	default:	/* can't happen */
