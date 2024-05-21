@@ -217,7 +217,7 @@ redactedge(Graph *g, ssize id)
 	cuttie((e->v & 1) == 0 ? v->in : v->out, id);
 	k = kh_get(idmap, g->emap, id);
 	kh_del(idmap, g->emap, k);
-	pushcmd("deledge(%d,%d)", e->u, e->v);
+	pushcmd("deledge(%d)", e->id);
 	UNLINK(g->edges, &g->edge0, e, e);
 	printgraph(g);
 }
@@ -386,7 +386,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	ep = g->edges + i;
 	ep->prev = ep->next = i;
 	DPRINT(Debugcoarse, "newedge %zx[%zd]: %zd,%zd", e.id, i, e.u>>1, e.v>>1);
-	pushcmd("addedge(%d,%d,%d)", id, e.u, e.v);
+	pushcmd("addedge(%d,%d,%d,%d,%d)", id, e.u, udir, e.v, vdir);
 	return ep;
 }
 
@@ -410,7 +410,6 @@ Edge *
 pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 {
 	Node *u, *v;
-	Edge *e;
 
 	DPRINT(Debugcoarse, "pushnamededge %s,%s", eu, ev);
 	if((u = getnamednode(g, eu)) == nil
@@ -424,9 +423,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 		v = getnamednode(g, ev);
 		assert(u != nil && v != nil);
 	}
-	e = pushedge(g, u, v, d1, d2);
-	pushcmd("addedge(%d,%d,%d)", e->id, e->u, e->v);
-	return e;
+	return pushedge(g, u, v, d1, d2);
 }
 
 void 

@@ -53,30 +53,43 @@ function addnode(id, label, color){
 }
 function nodecolor(id, color){
 	if(!(id in lnode)){
-		print "E no such node"
+		print "E no such node", id
 		return
 	}
 	CL[id] = color
 	print "C", id, color
 }
 function delnode(id){
+	if(!(id in lnode)){
+		print "E no such node", id
+		return
+	}
 	delete node[lnode[id]]
 	delete lnode[id]
 }
-function addedge(id, u, v, 	e){
-	e = u "\x1c" v
-	edge[e] = id
-	ledge[id] = e
+function addedge(id, u, urev, v, vrev, 	pair){
+	pair = u (urev ? "-" : "+") "\x1c" v (vrev ? "-" : "+")
+	edge[pair] = id
+	ledge[id] = pair
 }
-function deledge(u, v){
-	id = edge[u,v]
+function deledge(id){
+	if(!(id in ledge)){
+		print "E no such edge", id
+		return
+	}
+	pair = ledge[id]
+	delete edge[pair]
+	delete ledge[id]
+}
+function deledgeuv(u, urev, v, vrev){
+	pair = u urev "\x1c" v vrev
+	if(!(pair in edge)){
+		print "E no such edge", u urev "," v vrev
+		return
+	}
+	id = edge[u urev,v vrev]
 	delete ledge[id]
 	delete edge[u,v]
-}
-function deledge0(i){
-	id = ledge[i]
-	delete edge[id]
-	delete ledge[i]
 }
 function cmd(code){
 	if(code == "FGD135")

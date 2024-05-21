@@ -96,7 +96,7 @@ collectgfaedges(Graph *g, File *f)
 			continue;
 		t = nextfield(f, s, nil);
 		if(l > 0)
-			pushcmd("cigar[edge[%d]] = \"%s\"", e->id, s);
+			pushcmd("cigar[ledge[%d]] = \"%s\"", e->id, s);
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, nil);
 			if(l < 6 || s[2] != ':' || s[4] != ':')

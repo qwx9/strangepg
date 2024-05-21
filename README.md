@@ -171,17 +171,19 @@ All of the tags contained in _S_ (segment) and _L_ (link) records in every input
 
 ```awk
 nodetag[id] = value
-edgetag[id1,id2] = value
+edgetag[id1 dir1,id2 dir2] = value
 ```
 
 ids are unique integers 0,1,…,n ∈ ℕ internal to _strangepg_.
+_dir1_ and _dir2_ are orientations of the nodes,
+in the same format as _L_ records: "+" for forward, "-" for reverse.
 Two mapping tables are exposed to translate between ids and GFA labels:
 
 ```awk
 lnode[id] = label
 node[label] = id
 ledge[id] = edge1,edge2
-edge[edge1,edge2] = id
+edge[id1 dir1,id2 dir2] = id
 ```
 
 For example, the following GFA file excerpt:
@@ -200,15 +202,23 @@ LN[0] = 16
 LN[1] = 4
 CL[1] = "#581845"
 FC[1] = 1
-ledge[0] = "01"
-edge[0,1] = 0
-cigar[0,1] = "0M"
-FC[0,1] = 1
+ledge[0] = "0+1+"
+edge["0+","1+"] = 0
+cigar["0+","1+"] = "0M"
+FC["0+","1+"] = 1
 ```
 
 Notice that for segment _s2_ when both an inlined sequence exists (character string other than '\*') and an _LN_ tag is specified,
 the value of _LN_ will be *the actual length of the sequence*,
 rather than the value of the tag in the file.
+
+The biggest downside is the syntax for specifying an edge from node labels:
+
+```awk
+edge[node["s1"]"+", node["s2"]"+"]
+```
+
+This will be improved in time.
 
 (Note about _ledge_: the comma character ',' between brackets has a special meaning
 and is encoded internally by the ascii character 0x1c (File Separator).)
