@@ -112,7 +112,7 @@ extern int yydebug;
     XOR = 313,                     /* XOR  */
     BAND = 314,                    /* BAND  */
     BOR = 315,                     /* BOR  */
-    COMPL = 316,                   /* COMPL  */
+    CMPL = 316,                    /* CMPL  */
     ASSIGN = 317,                  /* ASSIGN  */
     ASGNOP = 318,                  /* ASGNOP  */
     ADDEQ = 319,                   /* ADDEQ  */
@@ -148,15 +148,14 @@ extern int yydebug;
     SUBSTR = 349,                  /* SUBSTR  */
     WHILE = 350,                   /* WHILE  */
     CAT = 351,                     /* CAT  */
-    CMPL = 352,                    /* CMPL  */
-    NOT = 353,                     /* NOT  */
-    UMINUS = 354,                  /* UMINUS  */
-    UPLUS = 355,                   /* UPLUS  */
-    POWER = 356,                   /* POWER  */
-    DECR = 357,                    /* DECR  */
-    INCR = 358,                    /* INCR  */
-    INDIRECT = 359,                /* INDIRECT  */
-    LASTTOKEN = 360                /* LASTTOKEN  */
+    NOT = 352,                     /* NOT  */
+    UMINUS = 353,                  /* UMINUS  */
+    UPLUS = 354,                   /* UPLUS  */
+    POWER = 355,                   /* POWER  */
+    DECR = 356,                    /* DECR  */
+    INCR = 357,                    /* INCR  */
+    INDIRECT = 358,                /* INDIRECT  */
+    LASTTOKEN = 359                /* LASTTOKEN  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -172,7 +171,7 @@ union YYSTYPE
 	int	i;
 	char	*s;
 
-#line 176 "awkgram.tab.h"
+#line 175 "awkgram.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

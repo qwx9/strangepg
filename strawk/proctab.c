@@ -2,7 +2,7 @@
 #include "awk.h"
 #include "awkgram.tab.h"
 
-static const char * const printname[103] = {
+static const char * const printname[102] = {
 	"FIRSTTOKEN",	/* 258 */
 	"PROGRAM",	/* 259 */
 	"PASTAT",	/* 260 */
@@ -61,7 +61,7 @@ static const char * const printname[103] = {
 	"XOR",	/* 313 */
 	"BAND",	/* 314 */
 	"BOR",	/* 315 */
-	"COMPL",	/* 316 */
+	"CMPL",	/* 316 */
 	"ASSIGN",	/* 317 */
 	"ASGNOP",	/* 318 */
 	"ADDEQ",	/* 319 */
@@ -97,19 +97,18 @@ static const char * const printname[103] = {
 	"SUBSTR",	/* 349 */
 	"WHILE",	/* 350 */
 	"CAT",	/* 351 */
-	"CMPL",	/* 352 */
-	"NOT",	/* 353 */
-	"UMINUS",	/* 354 */
-	"UPLUS",	/* 355 */
-	"POWER",	/* 356 */
-	"DECR",	/* 357 */
-	"INCR",	/* 358 */
-	"INDIRECT",	/* 359 */
-	"LASTTOKEN",	/* 360 */
+	"NOT",	/* 352 */
+	"UMINUS",	/* 353 */
+	"UPLUS",	/* 354 */
+	"POWER",	/* 355 */
+	"DECR",	/* 356 */
+	"INCR",	/* 357 */
+	"INDIRECT",	/* 358 */
+	"LASTTOKEN",	/* 359 */
 };
 
 
-Cell *(*proctab[103])(Node **, int) = {
+Cell *(*proctab[102])(Node **, int) = {
 	nullproc,	/* FIRSTTOKEN */
 	program,	/* PROGRAM */
 	pastat,	/* PASTAT */
@@ -168,7 +167,7 @@ Cell *(*proctab[103])(Node **, int) = {
 	arith,	/* XOR */
 	arith,	/* BAND */
 	arith,	/* BOR */
-	nullproc,	/* COMPL */
+	arith,	/* CMPL */
 	assign,	/* ASSIGN */
 	nullproc,	/* ASGNOP */
 	assign,	/* ADDEQ */
@@ -204,7 +203,6 @@ Cell *(*proctab[103])(Node **, int) = {
 	substr,	/* SUBSTR */
 	whilestat,	/* WHILE */
 	cat,	/* CAT */
-	arith,	/* CMPL */
 	boolop,	/* NOT */
 	arith,	/* UMINUS */
 	arith,	/* UPLUS */
