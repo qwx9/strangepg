@@ -217,7 +217,7 @@ redactedge(Graph *g, ssize id)
 	cuttie((e->v & 1) == 0 ? v->in : v->out, id);
 	k = kh_get(idmap, g->emap, id);
 	kh_del(idmap, g->emap, k);
-	pushcmd("C %d %d", e->u, e->v);
+	pushcmd("deledge(%d,%d)", e->u, e->v);
 	UNLINK(g->edges, &g->edge0, e, e);
 	printgraph(g);
 }
@@ -233,7 +233,7 @@ hidenode(Graph *g, Node *n)
 		redactedge(g, *e);
 	for(e=n->in, ee=e+dylen(n->in); e<ee; e++)
 		redactedge(g, *e);
-	pushcmd("d %d", n->id);
+	pushcmd("delnode(%d)", n->id);
 	UNLINK(g->nodes, &g->node0, n, n);
 	dyfree(n->out);
 	dyfree(n->in);
@@ -266,7 +266,7 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	np = g->nodes + i;
 	np->prev = np->next = i;
 	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);	// FIXME: gfa only?
-	pushcmd("n %d %s \"0x%x\"", id, bleh, col2int(n.col));
+	pushcmd("addnode(%d,\"%s\",\"0x%x\")", id, bleh, col2int(n.col));
 	return np;
 }
 
@@ -352,7 +352,7 @@ pushnamednode(Graph *g, char *s)
 	assert(ret != 0);
 	kh_val(g->strnmap, k) = id;
 	DPRINT(Debugcoarse, "pushnamednode %zd", id);
-	pushcmd("n %d %s", id, s);
+	pushcmd("addnode(%d,\"%s\")", id, s);
 	return n;
 }
 
@@ -386,7 +386,7 @@ newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
 	ep = g->edges + i;
 	ep->prev = ep->next = i;
 	DPRINT(Debugcoarse, "newedge %zx[%zd]: %zd,%zd", e.id, i, e.u>>1, e.v>>1);
-	pushcmd("e %d %d %d", id, e.u, e.v);
+	pushcmd("addedge(%d,%d,%d)", id, e.u, e.v);
 	return ep;
 }
 
@@ -425,7 +425,7 @@ pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
 		assert(u != nil && v != nil);
 	}
 	e = pushedge(g, u, v, d1, d2);
-	pushcmd("e %d %d %d", e->id, e->u, e->v);
+	pushcmd("addedge(%d,%d,%d)", e->id, e->u, e->v);
 	return e;
 }
 

@@ -36,7 +36,7 @@ collectgfanodes(Graph *g, File *f)
 			continue;
 		t = nextfield(f, s, &l);	/* seq */
 		if(l > 1 || s[0] != '*'){
-			pushcmd("LN[\"n\",%d] = %d", n->id, l);
+			pushcmd("LN[%d] = %d", n->id, l);
 			r = 1;
 		}
 		for(s=t; s!=nil; s=t){
@@ -62,7 +62,7 @@ collectgfanodes(Graph *g, File *f)
 				n->fixpos.x = atof(s+5);
 			}
 			s[2] = 0;
-			pushcmd("%s[\"n\",%d] = \"%s\"", s, n->id, s+5);
+			pushcmd("%s[%d] = \"%s\"", s, n->id, s+5);
 		}
 		nerr = 0;
 	}
@@ -96,13 +96,13 @@ collectgfaedges(Graph *g, File *f)
 			continue;
 		t = nextfield(f, s, nil);
 		if(l > 0)
-			pushcmd("cigar[%d] = \"%s\"", e->id, s);
+			pushcmd("cigar[edge[%d]] = \"%s\"", e->id, s);
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, nil);
 			if(l < 6 || s[2] != ':' || s[4] != ':')
 				continue;
 			s[2] = 0;
-			pushcmd("%s[\"e\",%d] = \"%s\"", s, e->id, s+5);
+			pushcmd("%s[%d,%d] = \"%s\"", s, e->u, e->v, s+5);
 		}
 		nerr = 0;
 	}
@@ -121,7 +121,7 @@ collectgfameta(Graph *g)
 	if(collectgfaedges(g, f) < 0)
 		warn("collectmeta: %s\n", error());
 	g->flags |= GFarmed;
-	pushcmd("FGD135");
+	pushcmd("cmd(\"FGD135\")");
 }
 
 void

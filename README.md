@@ -134,6 +134,7 @@ Keyboard shortcuts:
 _strangepg_ provides a text prompt for interaction with the graph by issuing commands.
 Those affect the current state of the graph by accessing
 node and edge data and properties.
+They are effectively [_awk_](https://awk.dev) one-liners.
 
 #### Examples
 
@@ -144,12 +145,12 @@ for(i in lnode) if(i % 2 == 1) nodecolor(i, red)
 
 Color nodes with sequence length > 50:
 ```awk
-for(i in lnode) if(LN["n",i] > 50) nodecolor(i, red)
+for(i in lnode) if(LN[i] > 50) nodecolor(i, red)
 ```
 
 Color based on if-elseif-else pattern:
 ```awk
-for(i in lnode) nodecolor(i, LN["n",i] > 200 ? red : LN["n",i] > 50 ? green : blue)
+for(i in LN) nodecolor(i, LN[i] > 200 ? red : LN[i] > 50 ? green : blue)
 ```
 
 Color nodes with labels matching a regexp:
@@ -166,21 +167,28 @@ The data available is based on the contents of the input GFA file:
 
 Node sequences are currently unused.
 Tags may be defined or modified at runtime via the prompt.
-They are defined per segment (node) or link (edge) to allow overlaps between them; for example, the GFAv1 spec specifies *FC* as a typical optional flag for both segments and links.
-Existing tags are encoded as: *two_letter_tagname*["*n|e*", *id*] = *value*.
+All of the tags contained in _S_ (segment) and _L_ (link) records in every input GFA file are saved as tables with the same name, indexed by node id (segments) or pair of node ids (links) as such:
+
+```awk
+nodetag[id] = value
+edgetag[id1,id2] = value
+```
 
 ids are unique integers 0,1,…,n ∈ ℕ internal to _strangepg_.
-Two mapping tables are also exposed to translate between ids and GFA labels:
+Two mapping tables are exposed to translate between ids and GFA labels:
 
 ```awk
 lnode[id] = label
 node[label] = id
+ledge[id] = edge1,edge2
+edge[edge1,edge2] = id
 ```
 
-For example, the following segment records:
+For example, the following GFA file excerpt:
 ```awk
 S	s1	*	LN:i:16
-S	s2	ATTA	LN:i:5
+S	s2	ATTA	LN:i:5	CL:z:#581845	FC:i:1
+L	s1	+	s2	+	0M	FC:i:1
 ```
 ... will result in the following definitions:
 ```
@@ -188,11 +196,22 @@ lnode[0] = "s1"
 lnode[1] = "s2"
 node["s1"] = 0
 node["s2"] = 1
-LN["n",0] = 16
-LN["n",1] = 4
+LN[0] = 16
+LN[1] = 4
+CL[1] = "#581845"
+FC[1] = 1
+ledge[0] = "01"
+edge[0,1] = 0
+cigar[0,1] = "0M"
+FC[0,1] = 1
 ```
 
-Notice that for _s2_ if both a sequence exists and an LN tag is specified, only the actual length of the inlined sequence is used.
+Notice that for segment _s2_ when both an inlined sequence exists (character string other than '\*') and an _LN_ tag is specified,
+the value of _LN_ will be *the actual length of the sequence*,
+rather than the value of the tag in the file.
+
+(Note about _ledge_: the comma character ',' between brackets has a special meaning
+and is encoded internally by the ascii character 0x1c (File Separator).)
 
 #### Expressions
 
@@ -202,17 +221,55 @@ Commands are for now essentially _awk_ code. For example:
 for(i in lnode) nodecolor(i, red)
 ```
 
+_lnode_ maps between ids and GFA labels: it is a hash table.
+Its keys are node ids, and its values are node labels
+(and vice versa for the _node_ table).
+
+Node selection is currently done by looping through all nodes (or edges)
+and selecting them with a conditional expression:
+
+```awk
+for(i in lnode) if(CL[i] == red) nodecolor(i, green)
+```
+
+For the time being, the built-in functions all use node ids.
+To select by node label, one can do the following:
+
+```awk
+for(i in node) if(CL[node[i]] == red) nodecolor(node[i], green)
+```
+
+Or:
+
+```awk
+nodecolor(node["s1"], red)
+```
+
+Currently, changing a variable's value directly rather than through a function
+will not work as expected.
+In other words, the following will change the _CL_ value for the node, but not the color of the node on screen:
+
+```awk
+CL[node["s1"]] = red
+```
+
+This is due to a limitation of the current approach,
+which will be addressed in future.
+Anything affecting how a node or edge is displayed
+must instead be done via the provided built-in functions.
+
 #### Built-in functions and variables
 
 Functions:
 ```awk
-nodecolor(id, color)
+nodecolor(id, color)	# change node color
+fix(id, x, y)			# freeze node position in space (for "linear", "pline" layouts only)
 ```
 
 - nodecolor(_id_, _color_): change a node's color
 	* _id_: integer node id
 	* _color_: RGB24 color in hexadecimal (0xRRGGBB) passed as a string
-- fix(_id_, _x_, _y_): set and freeze node position
+- fix(_id_, _x_, _y_): set and freeze node position (layout-dependent)
 	* _id_: integer node id
 	* _x_: x coordinate, floating-point
 	* _y_: y coordinate, floating-point
@@ -262,6 +319,58 @@ lightorange3 = "0xfdbf6f"
 greyviolet = "0xcab2d6"
 paleyellow = "0xffff99"
 ```
+
+#### User definitions
+
+_strangepg_ essentially runs and communicates with a backgrounded awk instance.
+As such any awk single-line expression valid within the default pattern can be specified.
+In other words, variables can be modified or new ones added,
+and any existing function may be called (exceptions below).
+
+#### Changes compared to standard awk
+
+_strawk_, the awk binary currently used by _strangepg_,
+is derived from [onetrueawk](https://github.com/onetrueawk/awk),
+which is the continuation of standard (bwk) awk.
+
+It has a number of changes:
+
+1. Bit operations have been added,
+but as part of the grammar instead of functions such as or(), and(), etc.
+Operands are cast to unsigned 64-bit integers first.
+Since awk values are still floating-point internally,
+*this may yield unexpected results* (until fixed).
+They are the following:
+- binary operators: | (or), & (and), ^ (xor), << (left shift), >> (right shift)
+- unary operators: ` (complement: sucks but overloading ~ makes things too complicated)
+- assignment operators: &=, |=, ^=, <<=, >>=
+
+2. The exponentiation operator is **.
+
+3. Precedence rules for bit operators are *not* C-like:
+|, ^ and & have *higher* precedence than all comparison operators (==, <, etc.).
+This means that the following are now equivalent:
+
+```awk
+v = (a & 1) != 0
+v = a & 1 != 0		# as opposed to C: a & (1 != 0)
+```
+
+4. New function: eval().
+It's a horrible hack and will be rendered obsolete by future improvements.
+The purpose is to allow awk to parse and evaluate a string as code.
+The alternative is to write a parser in awk and use patterns
+(with the constraint that user expressions shouldn't be too obscure or tedious).
+Doing this for now is much simpler, but it's still nasty.
+Errors within evaluated expressions do not cause the program to exit.
+
+5. Different PRNG which handles floating-point; this may be reconsidered later.
+
+TODO (short term):
+- Unsigned 64-bit internal values instead of floating-point
+- C-style hexadecimal and octal numeric constants
+- Multi-line expressions
+- ...
 
 #### This sucks
 

@@ -42,98 +42,56 @@ BEGIN{
 	greyviolet = "0xcab2d6"
 	paleyellow = "0xffff99"
 }
-# for now, doing everything with id's, not names
-function nodecolor(id, c){
+function addnode(id, label, color){
+	# remove placeholder for nodes spawned from out of order links
+	if(id in lnode)
+		delete node[lnode[id]]
+	node[label] = id
+	lnode[id] = label
+	if(color != "")
+		CL[id] = color
+}
+function nodecolor(id, color){
 	if(!(id in lnode)){
 		print "E no such node"
 		return
 	}
-	color[lnode[id]] = c
-	print "C", id, c
+	CL[id] = color
+	print "C", id, color
 }
-function fix(id, x, y){
+function delnode(id){
+	delete node[lnode[id]]
+	delete lnode[id]
+}
+function addedge(id, u, v, 	e){
+	e = u "\x1c" v
+	edge[e] = id
+	ledge[id] = e
+}
+function deledge(u, v){
+	id = edge[u,v]
+	delete ledge[id]
+	delete edge[u,v]
+}
+function deledge0(i){
+	id = ledge[i]
+	delete edge[id]
+	delete ledge[i]
+}
+function cmd(code){
+	if(code == "FGD135")
+		crm114 = 1
+}
+function selectnode(){
+}
+function selectedge(){
+}
+function fixnode(id, x, y){
 	if(y == "")
 		y = 0
 	fx[id] = x
 	fy[id] = y
 	print "x", id, x, y
-}
-# FIXME: we're now in between awk and fawk; these could become all
-# functions and avoid having to match against every pattern, but we
-# also don't want to quote strings unless necessary, etc.;  figure
-# this out later
-$1 == "n"{
-	if($2 in lnode)
-		delete node[lnode[$2]]
-	node[$3] = $2
-	lnode[$2] = $3
-	if(NF > 3)
-		color[$2] = $4
-	next
-}
-$1 == "e"{
-	e = $3 "\x1c" $4
-	edge[e] = $2
-	ledge[$2] = e
-	next
-}
-$1 == "d"{
-	delete node[lnode[$2]]
-	delete lnode[$2]
-	next
-}
-$1 == "c"{
-	id = ledge[$2]
-	delete edge[id]
-	delete ledge[$2]
-	next
-}
-$1 == "C"{
-	id = edge[$2,$3]
-	delete ledge[id]
-	delete edge[$2,$3]
-	next
-}
-# FIXME: not distinguishing between node/edge? should we?
-$1 == "s"{
-	if($2 == "cig"){ cig[$3] = $4 }
-	else if($2 == "color"){ color[$3] = $4 }
-	# maybe this alone is sufficient?
-	# FIXME: useless if eval works
-	else{
-		k = $2 "\1xc" $3
-		if(!(k in sym)){
-			lhs[$2]++
-			rhs[$2] = rhs[$2] "\1xc" $3
-		}
-		sym[k] = $4
-	}
-	next
-}
-# tokenize and eval expression in the same way? combined with
-# not distinguishing between node/edge/etc, pretty generic; in
-# the end this is going to be our repl...
-/^[ \t]*node\[[^\]]+\][ \t]*$/{
-	gsub(OFS"|node\\[|\\]", "")
-	s = lnode[$1]
-	if($1 in NLN)
-		s = s ", LN=" NLN[$1]
-	if($1 in color)
-		s = s ", color=" color[$1]
-	print "node", $1, s
-	next
-}
-/^[ \t]*edge\[[^\]]+\][ \t]*$/{
-	gsub(OFS"|edge\\[|\\]", "")
-	s = ledge[$1]
-	if($1 in cig)
-		s = s ", overlap=" cig[$1]
-	print "edge", $1, s
-	next
-}
-/^FGD135$/{
-	crm114 = 1
-	next
 }
 {
 	eval("{" $0 "}")

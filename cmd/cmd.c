@@ -32,7 +32,7 @@ readcmd(char *s)
 		case 'C':
 			break;
 		default:
-			warn("readcmd: unhandled reply <%s>\n", s);
+			warn("reply: <%s>\n", s);
 			goto next;
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
