@@ -6,7 +6,6 @@
 /* FIXME: chrona/other layout */
 
 enum{
-	//Nrep = 100,
 	W = 256,
 	L = 256,
 	Area = W * L,
@@ -15,7 +14,6 @@ enum{
 typedef struct P P;
 typedef struct D D;
 struct P{
-	uchar fixed;
 	Vertex xyz;
 	Vertex *pos;
 	Vertex *dir;
@@ -28,37 +26,38 @@ struct P{
 struct D{
 	P *ptab;
 	ssize *etab;
+	ssize *ftab;
 	float k;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
-#define	cool(t)	((t) - 0.0001f > 0 ? (t) - 0.0001f : 0.0f)
 
 static void *
 new(Graph *g)
 {
-	ssize nf, maxx, i, *e, *ee, *etab;
+	ssize nf, maxx, i, *e, *ee, *etab, *ftab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
 	D *aux;
 
 	ptab = nil;
-	etab = nil;
+	etab = ftab = nil;
 	for(i=g->node0.next, nf=maxx=0; i>=0; i=u->next){
 		u = g->nodes + i;
-		u->layid = dylen(ptab);
 		p.i = i;
 		p.pos = &u->pos;
+		p.rot = &u->rot;
+		p.dir = &u->dir;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			p.xyz.x = u->fixpos.x;
 			p.xyz.y = u->fixpos.y;
 			if((u->flags & FNfixed) != 0){
-				nf++;
 				if(maxx < p.xyz.x)
 					maxx = p.xyz.x;
 			}else{
+				nf++;
 				p.xyz.y = -128 + nrand(256);
 			}
 		}else{
@@ -66,6 +65,9 @@ new(Graph *g)
 			p.xyz.y = -32 + nrand(64);
 		}
 		*p.pos = p.xyz;
+		u->layid = dylen(ptab);
+		if((u->flags & FNfixed) == 0)
+			dypush(ftab, u->layid);
 		dypush(ptab, p);
 	}
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
@@ -95,6 +97,7 @@ new(Graph *g)
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->etab = etab;
+	aux->ftab = ftab;
 	aux->k = 1 * sqrt((float)Area / dylen(ptab));
 	return aux;
 }
@@ -107,6 +110,7 @@ cleanup(void *p)
 	aux = p;
 	dyfree(aux->ptab);
 	dyfree(aux->etab);
+	dyfree(aux->ftab);
 	free(aux);
 }
 
@@ -115,32 +119,38 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	P *pp, *p0, *p1, *u, *v;
+	P *pp, *u, *v;
+	int c;
+	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize *e, *ee;
+	ssize *e, *ee, *fp, *f0, *f1;
 	D *d;
 
 	d = arg;
+	fp = d->ftab;
 	pp = d->ptab;
 	k = d->k;
-	t = 1.0;
-	p0 = pp + i;
-	p1 = pp + dylen(pp);
-	if(p1 > pp + dylen(pp))
-		p1 = pp + dylen(pp);
-	for(;;){
+	t = 1.0f;
+	f0 = fp + i;
+	f1 = fp + dylen(fp);
+	if(f1 > fp + dylen(fp))
+		f1 = fp + dylen(fp);
+	for(c=0;;c++){
 		Δr = 0;
 		/* not the best way to do this, but skipping through the array
 		 * approximately gives a view over the entire graph, not just
 		 * a slice, for eg. termination */
-		for(u=p0; u<p1; u+=nlaythreads){
+		for(fp=f0; fp<f1; fp+=nlaythreads){
 			if((*stat & LFstop) != 0)
 				return 0;
+			u = pp + *fp;
 			x = u->xyz.x;
 			y = u->xyz.y;
 			Δx = Δy = 0;
 			if(u->i < 0)
 				continue;
+
+			/* FIXME: removing this is not really a fix
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
@@ -151,6 +161,8 @@ compute(void *arg, volatile int *stat, int i)
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
 			}
+			*/
+
 			if((*stat & LFstop) != 0)
 				return 0;
 			e = d->etab + u->e;
@@ -176,11 +188,11 @@ compute(void *arg, volatile int *stat, int i)
 				Δx += rx;
 				Δy += ry;
 			}
-			δx = Δx;
-			δy = Δy;
+			δx = t * Δx;
+			δy = t * Δy;
 			δ = Δ(δx, δy);
-			x += t * δx / δ;
-			y += t * δy / δ;
+			x += δx / δ;
+			y += δy / δ;
 			u->xyz.x = x;
 			u->xyz.y = y;
 			*u->pos = u->xyz;
@@ -190,7 +202,9 @@ compute(void *arg, volatile int *stat, int i)
 		}
 		if(Δr < 1.0)
 			break;
-		t = cool(t);
+		/* y = 1 - (x/Nrep)^4 */
+		dt = c * (1.0 / 100000.0);
+		t = 1.0 - dt * dt * dt * dt;
 	}
 	return 0;
 }
