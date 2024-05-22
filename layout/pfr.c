@@ -4,8 +4,7 @@
 #include "layout.h"
 
 enum{
-	//Nrep = 100,
-	Length = 200,
+	Length = 256,
 };
 
 typedef struct P P;
@@ -29,8 +28,6 @@ struct D{
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
-#define	cool(t)	((t) - 0.0001f > 0.0001f ? (t) - 0.0001f : (t))
-//#define	cool(t,n)	((t) * ((n - 1.0) / n))
 
 static void *
 new(Graph *g)
@@ -99,7 +96,9 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
+	int c;
 	P *pp, *p0, *p1, *u, *v;
+	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
 	ssize *e, *ee;
 	D *d;
@@ -107,12 +106,12 @@ compute(void *arg, volatile int *stat, int i)
 	d = arg;
 	pp = d->ptab;
 	k = d->k;
-	t = 1.0;
+	t = 1.0f;
 	p0 = pp + i;
 	p1 = pp + dylen(pp);
 	if(p1 > pp + dylen(pp))
 		p1 = pp + dylen(pp);
-	for(;;){
+	for(c=0;;c++){
 		Δr = 0;
 		/* not the best way to do this, but skipping through the array
 		 * approximately gives a view over the entire graph, not just
@@ -149,7 +148,7 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			for(ee+=u->nin; e<ee; e++){
 				v = pp + *e;
-				δx = v->xyz.y - x;
+				δx = v->xyz.x - x;
 				δy = v->xyz.y - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
@@ -158,11 +157,11 @@ compute(void *arg, volatile int *stat, int i)
 				Δx += rx;
 				Δy += ry;
 			}
-			δx = Δx;
-			δy = Δy;
+			δx = t * Δx;
+			δy = t * Δy;
 			δ = Δ(δx, δy);
-			x += t * δx / δ;
-			y += t * δy / δ;
+			x += δx / δ;
+			y += δy / δ;
 			u->xyz.x = x;
 			u->xyz.y = y;
 			*u->pos = u->xyz;
@@ -170,13 +169,11 @@ compute(void *arg, volatile int *stat, int i)
 			if(Δr < δ)
 				Δr = δ;
 		}
-		if(Δr < 1.0)
+		if(Δr < 1.0f)
 			return 0;
-		if(t == 0.0){
-			warn("fuck %f\n", Δr);
-			return 0;
-		}
-		t = cool(t);
+		/* y = 1 - (x/Nrep)^4 */
+		dt = c * (1.0 / 4000.0);
+		t = 1.0 - dt * dt * dt * dt;
 	}
 }
 
