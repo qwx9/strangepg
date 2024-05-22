@@ -85,6 +85,8 @@ layproc(void *arg)
 			goto start;
 		case Layidle:
 			l->nidle++;
+			if(!new)
+				break;
 			goto start;
 		case Laynew:
 		default:
