@@ -414,9 +414,7 @@ resize(void)
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
 	sg_destroy_attachments(offscreen_attachments);
-	view.w = sapp_width();
-	view.h = sapp_height();
-	initfb(view.w, view.h);
+	initfb(sapp_width(), sapp_height());
 	updateview();
 }
 
