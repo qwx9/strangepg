@@ -34,14 +34,15 @@ loadfs(char *path, int type)
 	return 0;
 }
 
+/* FIXME: unused */
 void
-nukefs(Graph *g)
+unloadfs(Graph *g)
 {
 	Filefmt *ff;
 
 	ff = fftab[g->type];
 	if(g->type <= FFdead || g->type >= nelem(fftab)){
-		warn("nukefs: invalid graph type %d", g->type);
+		warn("unloadfs: invalid graph type %d", g->type);
 		return;
 	}
 	ff->nuke(g);

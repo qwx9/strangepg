@@ -31,16 +31,16 @@ collectgfanodes(Graph *g, File *f)
 			continue;
 		}
 		DPRINT(Debugmeta, "collectgfanodes node[%zd]: %d %s", n-g->nodes, f->trunc, s);
-		if((s = nextfield(f, s, nil)) == nil	/* S */
-		|| (s = nextfield(f, s, nil)) == nil)	/* id */
+		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
+		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* id */
 			continue;
-		t = nextfield(f, s, &l);	/* seq */
+		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
 			pushcmd("LN[%d] = %d", n->id, l);
 			r = 1;
 		}
 		for(s=t; s!=nil; s=t){
-			t = nextfield(f, s, &l);
+			t = nextfield(f, s, &l, '\t');
 			if(l < 5 || s[2] != ':' || s[4] != ':'){
 				warn("node[%zd]: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
 				continue;
@@ -88,17 +88,17 @@ collectgfaedges(Graph *g, File *f)
 			continue;
 		}
 		DPRINT(Debugmeta, "collectgfaedges edges[%zd]: %d %s", e-g->edges, f->trunc, s);
-		if((s = nextfield(f, s, nil)) == nil	/* L */
-		|| (s = nextfield(f, s, nil)) == nil	/* u */
-		|| (s = nextfield(f, s, nil)) == nil	/* du */
-		|| (s = nextfield(f, s, nil)) == nil	/* v */
-		|| (s = nextfield(f, s, nil)) == nil)	/* dv */
+		if((s = nextfield(f, s, nil, '\t')) == nil	/* L */
+		|| (s = nextfield(f, s, nil, '\t')) == nil	/* u */
+		|| (s = nextfield(f, s, nil, '\t')) == nil	/* du */
+		|| (s = nextfield(f, s, nil, '\t')) == nil	/* v */
+		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* dv */
 			continue;
-		t = nextfield(f, s, nil);
+		t = nextfield(f, s, nil, '\t');
 		if(l > 0)
 			pushcmd("cigar[ledge[%d]] = \"%s\"", e->id, s);
 		for(s=t; s!=nil; s=t){
-			t = nextfield(f, s, nil);
+			t = nextfield(f, s, nil, '\t');
 			if(l < 6 || s[2] != ':' || s[4] != ':')
 				continue;
 			s[2] = 0;

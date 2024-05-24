@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "graph.h"
+#include "fs.h"
 #include "drw.h"
 #include "threads.h"
 

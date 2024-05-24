@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "graph.h"
+#include "fs.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
@@ -129,6 +130,8 @@ redraw(int force)
 	return go;
 }
 
+/* note: view screen dimensions are *not* necessarily set by the
+ * end of all initialization */
 void
 initdrw(void)
 {

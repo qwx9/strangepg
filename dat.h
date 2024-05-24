@@ -93,13 +93,6 @@ struct Graph{
 extern Graph *graphs;	/* dynamic array */
 
 enum{
-	FFdead,	/* deallocated */
-	FFgfa,
-	FFindex,
-	FFnil,
-};
-
-enum{
 	Debugdraw = 1<<0,
 	Debugrender = 1<<1,
 	Debuglayout = 1<<2,

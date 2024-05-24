@@ -19,10 +19,17 @@ struct Filefmt{
 	void (*nuke)(Graph*);
 };
 
+enum{
+	FFdead,	/* deallocated */
+	FFgfa,
+	FFindex,
+	FFnil,
+};
+
 Filefmt*	reggfa(void);
 Filefmt*	regindex(void);
 int	readchar(File*);
-char*	nextfield(File*, char*, int*);
+char*	nextfield(File*, char*, int*, char);
 char*	readfrag(File*, int*);
 char*	readline(File*, int*);
 void	regfs(Filefmt*);
@@ -76,6 +83,7 @@ int	writefs(File*, void*, int);
 void	flushfs(File*);
 vlong	seekfs(File*, vlong);
 vlong	tellfs(File*);
+void	nukefs(File*);
 void	closefs(File*);
 void	freefs(File*);
 int	loadfs(char*, int);

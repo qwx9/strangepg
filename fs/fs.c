@@ -10,6 +10,19 @@ closefs(File *f)
 	/* not freeing f->path */	// FIXME: are you sure about that
 }
 
+void
+nukefs(File *f)
+{
+	if(f == nil)
+		return;
+	if(f->aux != nil)
+		closefs(f);
+	if(f->path != nil)
+		free(f->path);
+	/* FIXME: fix api first */
+	//free(f);
+}
+
 vlong
 seekfs(File *f, vlong off)
 {
@@ -143,7 +156,7 @@ tellfs(File *f)
 
 /* FIXME: sucks */
 char *
-nextfield(File *f, char *s, int *len)
+nextfield(File *f, char *s, int *len, char sep)
 {
 	int n;
 	char *t;
@@ -152,7 +165,7 @@ nextfield(File *f, char *s, int *len)
 		*len = 0;
 	if(s == nil || *s == 0)
 		return nil;
-	if((t = strchr(s, '\t')) != nil){
+	if((t = strchr(s, sep)) != nil){
 		if(len != nil)
 			*len = t - s;
 		*t++ = 0;
@@ -163,7 +176,7 @@ nextfield(File *f, char *s, int *len)
 	while(f != nil && f->trunc){
 		if((s = readfrag(f, &n)) == nil)
 			return nil;
-		if((t = strchr(s, '\t')) != nil){
+		if((t = strchr(s, sep)) != nil){
 			if(len != nil)
 				*len += t - s;
 			*t++ = 0;
