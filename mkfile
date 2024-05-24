@@ -20,6 +20,7 @@ OFILES=\
 	fs/index.$O\
 	fs/load.$O\
 	fs/meta.$O\
+	fs/metacsv.$O\
 	graph/graph.$O\
 	layout/circ.$O\
 	layout/conga.$O\

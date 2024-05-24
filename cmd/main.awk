@@ -13,6 +13,7 @@ BEGIN{
 	lightgreen = "0x33a02c"
 	lightred = "0xe31a1c"
 	violet = "0x6a3d9a"
+	purple = violet
 	lightbrown = "0xb15928"
 	paleblue = "0x8080ff"
 	palegreen = "0x8ec65e"
@@ -57,7 +58,7 @@ function nodecolor(id, color){
 		return
 	}
 	CL[id] = color
-	print "C", id, color
+	print "c", id, color
 }
 function delnode(id){
 	if(!(id in lnode)){
@@ -92,8 +93,11 @@ function deledgeuv(u, urev, v, vrev){
 	delete edge[u,v]
 }
 function cmd(code){
-	if(code == "FGD135")
+	if(code == "FGD135")	# wing attack plan R
 		crm114 = 1
+}
+function readcsv(f){
+	print "f", f
 }
 function selectnode(){
 }

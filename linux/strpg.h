@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <time.h>
+#include <ctype.h>
 
 /* u.h */
 //#define nil		((void*)0)

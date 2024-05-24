@@ -36,6 +36,7 @@ OBJS:=\
 	fs/index.o\
 	fs/load.o\
 	fs/meta.o\
+	fs/metacsv.o\
 	graph/graph.o\
 	layout/circ.o\
 	layout/conga.o\

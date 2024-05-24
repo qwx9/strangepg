@@ -20,7 +20,8 @@ readcmd(char *s)
 	Graph *g;
 
 	redraw = 0;
-	t = nextfield(nil, s, nil);
+	/* FIXME: no readline?? callers give back an entire read */
+	t = nextfield(nil, s, nil, '\n');
 	while(s != nil){
 		switch(*s){
 		case 0:
@@ -28,8 +29,9 @@ readcmd(char *s)
 		case 'E': 
 			warn("Error:%s\n", s+1);
 			goto next;
+		case 'c':
+		case 'f':
 		case 'x':
-		case 'C':
 			break;
 		default:
 			warn("reply: <%s>\n", s);
@@ -41,6 +43,14 @@ readcmd(char *s)
 		switch(s[0]){
 		error:
 			warn("readcmd: %s\n", error());
+			break;
+		case 'f':
+			if(m != 1){
+				werrstr("invalid f message length %d\n", m);
+				goto error;
+			}
+			if(loadfs(fld[0], FFcsv) < 0)
+				warn("readcmd: csv %s: %s\n", fld[0], error());
 			break;
 		case 'x':
 			if(m != 3){
@@ -63,7 +73,7 @@ readcmd(char *s)
 			n->fixpos.x = x;
 			n->fixpos.y = y;
 			break;
-		case 'C':
+		case 'c':
 			if(m != 2){
 				werrstr("invalid C message length %d\n", m);
 				goto error;
@@ -81,7 +91,7 @@ readcmd(char *s)
 		}
 	next:
 		s = t;
-		t = nextfield(nil, s, nil);
+		t = nextfield(nil, s, nil, '\n');
 	}
 	if(redraw)
 		reqdraw(Reqredraw);
