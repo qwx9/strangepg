@@ -4,7 +4,7 @@
 #include "layout.h"
 
 enum{
-	Length = 200,
+	Length = 512,
 };
 
 typedef struct P P;
@@ -33,6 +33,7 @@ struct D{
 static void *
 new(Graph *g)
 {
+	uint min, max;
 	ssize i, n, *e, *ee, *etab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
@@ -40,6 +41,8 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
+	min = -1U;
+	max = 0;
 	for(i=g->node0.next, n=0; i>=0; i=u->next, n++){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
@@ -48,16 +51,17 @@ new(Graph *g)
 		p.dir = &u->dir;
 		p.rot = &u->rot;
 		dypush(ptab, p);
+		if(u->pos0.x < min)
+			min = u->pos0.x;
+		else if(u->pos0.x > max)
+			max = u->pos0.x;
 	}
-	// FIXME: fix this first
-	// FIXME: min, max of BO
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
 		pp->xyz = u->pos0;
-		//pp->xyz.x *= Nodesz + Ptsz;
-		//pp->xyz.x -= (Nodesz + Ptsz) * n / 2;
-		if(u->pos0.x > 0)
-			pp->xyz.x -= 390196;	/* 390196 - 402766 */
+		pp->xyz.x -= min + (max - min) / 2;
+		pp->xyz.x *= Nodesz + 32;
+		pp->xyz.y = -32 + nrand(32);
 		*pp->pos = pp->xyz;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
