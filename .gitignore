@@ -3,6 +3,9 @@
 test/*.idx
 test/*.idx[eu]
 test/*.bak
+test/*.[se]
+test/*.bct
+test/*.b[se]
 strawk/awkgram.plan9.[ch]
 strawk/maketab
 strawk/strawk
