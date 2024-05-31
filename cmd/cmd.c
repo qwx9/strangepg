@@ -7,107 +7,6 @@
 
 Channel *cmdc;
 
-/* FIXME: multiple graphs: per-graph state? one pipe per graph?
- * how do we dispatch user queries? would be useful to do queries
- * on multiple ones! */
-void
-readcmd(char *s)
-{
-	int m, redraw;
-	ssize x, y;
-	char *fld[8], *p, *t;
-	Node *n;
-	Graph *g;
-
-	redraw = 0;
-	/* FIXME: no readline?? callers give back an entire read */
-	t = nextfield(nil, s, nil, '\n');
-	while(s != nil){
-		switch(*s){
-		case 0:
-			return;
-		case 'E': 
-			warn("Error:%s\n", s+1);
-			goto next;
-		case 'c':
-		case 'f':
-		case 'x':
-			break;
-		default:
-			warn("reply: <%s>\n", s);
-			goto next;
-		}
-		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
-			goto error;
-		g = graphs;	/* FIXME */
-		switch(s[0]){
-		error:
-			warn("readcmd: %s\n", error());
-			break;
-		case 'f':
-			if(m != 1){
-				werrstr("invalid f message length %d\n", m);
-				goto error;
-			}
-			if(loadfs(fld[0], FFcsv) < 0)
-				warn("readcmd: csv %s: %s\n", fld[0], error());
-			break;
-		case 'x':
-			if(m != 3){
-				werrstr("invalid x message length %d\n", m);
-				goto error;
-			}
-			if((n = str2node(g, fld[0])) == nil)
-				goto error;
-			x = strtoll(fld[1], &p, 0);
-			if(p == fld[1]){
-				werrstr("invalid coordinate %s", fld[1]);
-				goto error;
-			}
-			y = strtoll(fld[2], &p, 0);
-			if(p == fld[2]){
-				werrstr("invalid coordinate %s", fld[2]);
-				goto error;
-			}
-			n->flags |= FNfixed;
-			n->fixpos.x = x;
-			n->fixpos.y = y;
-			break;
-		case 'c':
-			if(m != 2){
-				werrstr("invalid C message length %d\n", m);
-				goto error;
-			}
-			if((n = str2node(g, fld[0])) == nil)
-				goto error;
-			x = strtoll(fld[1], &p, 0);
-			if(p == fld[1]){
-				werrstr("invalid color %s", fld[1]);
-				goto error;
-			}
-			n->col = color(x);
-			redraw = 1;
-			break;
-		}
-	next:
-		s = t;
-		t = nextfield(nil, s, nil, '\n');
-	}
-	if(redraw)
-		reqdraw(Reqredraw);
-}
-
-void
-pollcmd(void)
-{
-	char *s;
-
-	while((s = nbrecvp(cmdc)) != nil){
-		readcmd(s);
-		free(s);
-	}
-}
-
 void
 pushcmd(char *fmt, ...)
 {
@@ -154,10 +53,153 @@ pushcmd(char *fmt, ...)
 	sendcmd(sb);
 }
 
+/* FIXME: multiple graphs: per-graph state? one pipe per graph?
+ * how do we dispatch user queries? would be useful to do queries
+ * on multiple ones! */
+void
+readcmd(char *s)
+{
+	int m, redraw;
+	float x, y;
+	ssize v;
+	char *fld[8], *p, *t;
+	Node *n;
+	Graph *g;
+
+	redraw = 0;
+	t = nextfield(nil, s, nil, '\n');
+	while(s != nil){
+		switch(*s){
+		case 0:
+			return;
+		case 'E': 
+			warn("Error:%s\n", s+1);
+			goto next;
+		case 'c':
+		case 'f':
+		case 'x':
+			break;
+		default:
+			warn("reply: <%s>\n", s);
+			goto next;
+		}
+		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
+			goto error;
+		/* FIXME: mootigraph */
+		g = graphs;
+		/* FIXME: stupid approach */
+		switch(s[0]){
+		error:
+			warn("readcmd: %s\n", error());
+			break;
+		case 'f':
+			if(m != 1){
+				werrstr("invalid f message length %d\n", m);
+				goto error;
+			}
+			if(loadfs(fld[0], FFcsv) < 0)
+				warn("readcmd: csv %s: %s\n", fld[0], error());
+			break;
+		case 'X':
+			if(m != 3){
+				werrstr("invalid X message length %d\n", m);
+				goto error;
+			}
+			if((n = str2node(g, fld[0])) == nil)
+				goto error;
+			x = strtod(fld[1], &p);
+			if(p == fld[1]){
+				werrstr("invalid coordinate %s", fld[1]);
+				goto error;
+			}
+			y = strtod(fld[2], &p);
+			if(p == fld[2]){
+				werrstr("invalid coordinate %s", fld[2]);
+				goto error;
+			}
+			n->flags |= FNfixed;
+			n->pos0.x = x;
+			n->pos0.y = y;
+			break;
+		case 'x':
+			if(m != 2){
+				werrstr("invalid x message length %d\n", m);
+				goto error;
+			}
+			if((n = str2node(g, fld[0])) == nil)
+				goto error;
+			x = strtod(fld[1], &p);
+			if(p == fld[1]){
+				werrstr("invalid coordinate %s", fld[1]);
+				goto error;
+			}
+			n->flags |= FNinitpos;
+			n->pos0.x = x;
+			break;
+		case 'c':
+			if(m != 2){
+				werrstr("invalid c message length %d\n", m);
+				goto error;
+			}
+			if((n = str2node(g, fld[0])) == nil)
+				goto error;
+			v = strtoll(fld[1], &p, 0);
+			if(p == fld[1]){
+				werrstr("invalid color %s", fld[1]);
+				goto error;
+			}
+			n->col = color(v);
+			redraw = 1;
+			break;
+		}
+	next:
+		s = t;
+		t = nextfield(nil, s, nil, '\n');
+	}
+	if(redraw)
+		reqdraw(Reqredraw);
+}
+
+void
+pollcmd(void)
+{
+	char *s;
+
+	while((s = nbrecvp(cmdc)) != nil){
+		readcmd(s);
+		free(s);
+	}
+}
+
+static void
+readcproc(void *fd)
+{
+	int n;
+	char *s;
+	File *f;
+
+	f = emalloc(sizeof *f);
+	if(fdopenfs(f, (intptr)fd, OREAD) < 0)
+		sysfatal("readcproc: %s", error());
+	while((s = readline(f, &n)) != nil){
+		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, s);
+		if(f->trunc){
+			warn("readcproc: discarding abnormally long awk line");
+			continue;
+		}
+		/* reader must free */
+		sendp(cmdc, estrdup(s));
+	}
+	freefs(f);
+}
+
 int
 initcmd(void)
 {
-	if(initrepl() < 0)
+	int fd;
+
+	if((fd = initrepl()) < 0)
 		sysfatal("initcmd: %s", error());
+	newthread(readcproc, nil, (void*)(intptr)fd, nil, "readawk", mainstacksize);
 	return 0;
 }

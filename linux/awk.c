@@ -35,34 +35,6 @@ sendcmd(char *cmd)
 	}
 }
 
-static void
-readcproc(void *)
-{
-	int n, fd;
-	char buf[8192], *p, *s;
-
-	fd = fucker[0];
-	for(;;){
-		/* FIXME: not handling longer input */
-		if((n = read(fd, buf, sizeof buf-1)) <= 0)
-			break;
-		buf[n] = 0;
-		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
-		for(s=p=buf; p<buf+n; s=++p){
-			if((p = strchr(p, '\n')) == nil)
-				break;
-			/* reader must free */
-			*p = 0;
-			sendp(cmdc, estrdup(s));
-		}
-		if(s < buf + n)
-			sendp(cmdc, estrdup(s));
-	}
-	close(fd);
-	if(n < 0)
-		warn("readcproc: %s", error());
-}
-
 int
 initrepl(void)
 {
@@ -84,6 +56,5 @@ initrepl(void)
 		close(fucker[1]);
 		break;
 	}
-	newthread(readcproc, nil, nil, nil, "cmd", mainstacksize);
-	return 0;
+	return fucker[0];
 }

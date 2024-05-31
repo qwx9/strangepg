@@ -43,54 +43,52 @@ BEGIN{
 	greyviolet = "0xcab2d6"
 	paleyellow = "0xffff99"
 }
-function addnode(id, label, color){
+function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
-	if(id in lnode)
-		delete node[lnode[id]]
-	node[label] = id
+	if(name in node)
+		delete node[name]
+	node[name] = id
 	lnode[id] = label
 	if(color != "")
-		CL[id] = color
+		CL[name] = color
 }
-function nodecolor(id, color){
-	if(!(id in lnode)){
-		print "E no such node", id
+function nodecolor(name, color){
+	if(!(name in node)){
+		print "E no such node", name
 		return
 	}
-	CL[id] = color
-	print "c", id, color
+	CL[name] = color
+	print "c", node[name], color
 }
-function delnode(id){
-	if(!(id in lnode)){
-		print "E no such node", id
+function delnode(name){
+	if(!(name in node)){
+		print "E no such node", name
 		return
 	}
-	delete node[lnode[id]]
-	delete lnode[id]
+	delete lnode[node[name]]
+	delete node[name]
 }
 function addedge(id, u, urev, v, vrev, 	pair){
 	pair = u (urev ? "-" : "+") "\x1c" v (vrev ? "-" : "+")
 	edge[pair] = id
 	ledge[id] = pair
 }
-function deledge(id){
-	if(!(id in ledge)){
-		print "E no such edge", id
+function deledgebyid(id){
+	if(!(name in edge)){
+		print "E no such edge", name
 		return
 	}
-	pair = ledge[id]
-	delete edge[pair]
+	delete edge[ledge[id]]
 	delete ledge[id]
 }
-function deledgeuv(u, urev, v, vrev){
+function deledge(u, urev, v, vrev){
 	pair = u urev "\x1c" v vrev
 	if(!(pair in edge)){
 		print "E no such edge", u urev "," v vrev
 		return
 	}
-	id = edge[u urev,v vrev]
-	delete ledge[id]
-	delete edge[u,v]
+	delete ledge[edge[pair]]
+	delete edge[pair]
 }
 function cmd(code){
 	if(code == "FGD135")	# wing attack plan R
@@ -103,12 +101,25 @@ function selectnode(){
 }
 function selectedge(){
 }
-function fixnode(id, x, y){
+# FIXME: stupid
+function fixnode(name, x, y){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
 	if(y == "")
 		y = 0
-	fx[id] = x
-	fy[id] = y
-	print "x", id, x, y
+	fx[name] = x
+	fy[name] = y
+	print "X", node[name], x, y
+}
+function fixnodex(name, x){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
+	BO[name] = x
+	print "x", node[name], x
 }
 {
 	eval("{" $0 "}")

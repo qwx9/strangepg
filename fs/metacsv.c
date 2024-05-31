@@ -59,26 +59,26 @@ static void
 loadcsv(void *arg)
 {
 	int r, nf, nr;
-	char *s, *t, *path, **tags, name[512];
-	File f;
+	char *s, *t, *path, *tag, **tags, name[512];
+	File *f;
 
 	path = arg;
 	DPRINT(Debugfs, "loadcsv %s", path);
 	r = -1;
 	tags = nil;
-	memset(&f, 0, sizeof f);
-	if(openfs(&f, path, OREAD) < 0)
+	f = emalloc(sizeof *f);
+	if(openfs(f, path, OREAD) < 0)
 		goto end;
 	free(path);
-	if((tags = csvheader(&f)) == nil)
+	if((tags = csvheader(f)) == nil)
 		goto end;
 	nr = 1;
 	name[sizeof name-1] = 0;
 	/* beyond the tag names in the header, we leave all input validation to strawk */
-	while((s = readline(&f, nil)) != nil){
+	while((s = readline(f, nil)) != nil){
 		*name = 0;
 		for(nf=0; s!=nil; s=t, nf++){
-			t = nextfield(&f, s, nil, ',');
+			t = nextfield(f, s, nil, ',');
 			if(nf == 0){
 				strncpy(name, s, sizeof name - 1);
 				continue;
@@ -86,12 +86,15 @@ loadcsv(void *arg)
 				warn("readcsv: line %d: ignoring extra columns\n", nr);
 				break;
 			}
-			/* FIXME: value may still be garbage if containing weird
-			 * symbols */
-			if(strcmp(tags[nf-1], "CL") == 0)
-				pushcmd("nodecolor(node[\"%s\"], %s)", name, s);
+			tag = tags[nf-1];
+			// FIXME: stupid
+			/* FIXME: also allow Color (case-insensitive)? */
+			if(strcmp(tag, "CL") == 0)
+				pushcmd("nodecolor(\"%s\", %s)", name, s);
+			else if(strcmp(tag, "BO") == 0)
+				pushcmd("fixnodex(\"%s\", %s)", name, s);
 			else
-				pushcmd("%s[\"%s\"] = %s", tags[nf-1], name, s);
+				pushcmd("%s[\"%s\"] = \"%s\"", tags[nf-1], name, s);
 		}
 		nr++;
 	}
@@ -101,9 +104,11 @@ end:
 		free(tags[nf]);
 	dyfree(tags);
 	USED(tags);
-	nukefs(&f);
+	freefs(f);
 	if(r < 0)
-		warn("loadcsv: %s", error());
+		warn("loadcsv: %s\n", error());
+	else
+		warn("done reading csv\n");
 }
 
 static Filefmt ff = {

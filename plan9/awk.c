@@ -73,8 +73,7 @@ initrepl(void)
 		return -1;
 	if((cmdc = chancreate(sizeof(char*), 16)) == nil)
 		return -1;
-	if(procrfork(cproc, nil, mainstacksize, RFNAMEG|RFENVG|RFFDG|RFNOMNT) < 0
-	|| proccreate(readcproc, nil, mainstacksize) < 0)
+	if(procrfork(cproc, nil, mainstacksize, RFNAMEG|RFENVG|RFFDG|RFNOMNT) < 0)
 		return -1;
-	return 0;
+	return epfd[1];
 }
