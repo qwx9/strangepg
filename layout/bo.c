@@ -1,14 +1,10 @@
 #include "strpg.h"
-#include "layout.h"
 #include "graph.h"
-
-/* FIXME: just set constant link length between fixed and movable? */
-/* FIXME: chrona/other layout */
+#include "drw.h"
+#include "layout.h"
 
 enum{
-	W = 256,
-	L = 256,
-	Area = W * L,
+	Length = 200,
 };
 
 typedef struct P P;
@@ -26,8 +22,8 @@ struct P{
 struct D{
 	P *ptab;
 	ssize *etab;
-	ssize *ftab;
 	float k;
+	int nth;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -37,47 +33,32 @@ struct D{
 static void *
 new(Graph *g)
 {
-	ssize nf, maxx, i, *e, *ee, *etab, *ftab;
+	ssize i, n, *e, *ee, *etab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
 	D *aux;
 
 	ptab = nil;
-	etab = ftab = nil;
-	for(i=g->node0.next, nf=maxx=0; i>=0; i=u->next){
+	etab = nil;
+	for(i=g->node0.next, n=0; i>=0; i=u->next, n++){
 		u = g->nodes + i;
+		u->layid = dylen(ptab);
 		p.i = i;
 		p.pos = &u->pos;
-		p.rot = &u->rot;
 		p.dir = &u->dir;
-		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			p.xyz.x = u->pos0.x;
-			p.xyz.y = u->pos0.y;
-			if((u->flags & FNfixed) != 0){
-				if(maxx < p.xyz.x)
-					maxx = p.xyz.x;
-			}else{
-				nf++;
-				p.xyz.y = -128 + nrand(256);
-			}
-		}else{
-			p.xyz.x = g->nnodes / 2;
-			p.xyz.y = -32 + nrand(64);
-		}
-		*p.pos = p.xyz;
-		u->layid = dylen(ptab);
-		if((u->flags & FNfixed) == 0)
-			dypush(ftab, u->layid);
+		p.rot = &u->rot;
 		dypush(ptab, p);
 	}
+	// FIXME: fix this first
+	// FIXME: min, max of BO
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
-		if((u->flags & FNfixed) != 0){
-			pp->i = -1;
-			pp->xyz.x -= maxx / 2;
-			pp->pos->x = pp->xyz.x;
-			continue;
-		}
+		pp->xyz = u->pos0;
+		//pp->xyz.x *= Nodesz + Ptsz;
+		//pp->xyz.x -= (Nodesz + Ptsz) * n / 2;
+		if(u->pos0.x > 0)
+			pp->xyz.x -= 390196;	/* 390196 - 402766 */
+		*pp->pos = pp->xyz;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
 			v = getnode(g, g->edges[*e].v >> 1);
@@ -97,8 +78,8 @@ new(Graph *g)
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->etab = etab;
-	aux->ftab = ftab;
-	aux->k = 1 * sqrt((float)Area / dylen(ptab));
+	aux->k = 1 * sqrt((float)(Length * Length) / dylen(ptab));
+	aux->nth = nlaythreads;
 	return aux;
 }
 
@@ -110,47 +91,36 @@ cleanup(void *p)
 	aux = p;
 	dyfree(aux->ptab);
 	dyfree(aux->etab);
-	dyfree(aux->ftab);
 	free(aux);
 }
 
-/* FIXME: compensate for the fact that movable nodes move towards fixed ones,
- * rather than both toward each other */
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	P *pp, *u, *v;
-	int c;
+	int c, nth;
+	P *pp, *p0, *p1, *u, *v;
 	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize *e, *ee, *fp, *f0, *f1;
+	ssize *e, *ee;
 	D *d;
 
 	d = arg;
-	fp = d->ftab;
 	pp = d->ptab;
 	k = d->k;
+	nth = d->nth;
 	t = 1.0f;
-	f0 = fp + i;
-	f1 = fp + dylen(fp);
-	if(f1 > fp + dylen(fp))
-		f1 = fp + dylen(fp);
+	p0 = pp + i;
+	p1 = pp + dylen(pp);
+	if(p1 > pp + dylen(pp))
+		p1 = pp + dylen(pp);
 	for(c=0;;c++){
 		Δr = 0;
-		/* not the best way to do this, but skipping through the array
-		 * approximately gives a view over the entire graph, not just
-		 * a slice, for eg. termination */
-		for(fp=f0; fp<f1; fp+=nlaythreads){
+		for(u=p0; u<p1; u+=nth){
 			if((*stat & LFstop) != 0)
 				return 0;
-			u = pp + *fp;
 			x = u->xyz.x;
 			y = u->xyz.y;
 			Δx = Δy = 0;
-			if(u->i < 0)
-				continue;
-
-			/* FIXME: removing this is not really a fix
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
@@ -161,8 +131,6 @@ compute(void *arg, volatile int *stat, int i)
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
 			}
-			*/
-
 			if((*stat & LFstop) != 0)
 				return 0;
 			e = d->etab + u->e;
@@ -200,24 +168,23 @@ compute(void *arg, volatile int *stat, int i)
 			if(Δr < δ)
 				Δr = δ;
 		}
-		if(Δr < 1.0)
-			break;
+		if(Δr < 1.0f)
+			return 0;
 		/* y = 1 - (x/Nrep)^4 */
-		dt = c * (1.0 / 100000.0);
+		dt = c * (1.0 / 4000.0);
 		t = 1.0 - dt * dt * dt * dt;
 	}
-	return 0;
 }
 
 static Shitkicker ll = {
-	.name = "pline",
+	.name = "bo",
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,
 };
 
 Shitkicker *
-regpline(void)
+regbo(void)
 {
 	return &ll;
 }

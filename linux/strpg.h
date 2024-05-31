@@ -75,11 +75,6 @@ char*	strecpy(char*, char*, char*);
 //#define const
 #define nil NULL	// better for them to be interchangeable here
 
-enum{
-	Vdefw = 768,
-	Vdefh = 768,
-};
-
 #include "lib/khash.h"
 #include "dat.h"
 #include "fns.h"

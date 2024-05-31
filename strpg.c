@@ -87,6 +87,8 @@ parseargs(int argc, char **argv)
 			deflayout = LLpline;
 		else if(strcmp(s, "circ") == 0)
 			deflayout = LLcirc;
+		else if(strcmp(s, "bo") == 0)
+			deflayout = LLbo;
 		else
 			sysfatal("unknown layout type");
 		break;

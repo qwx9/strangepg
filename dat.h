@@ -45,7 +45,7 @@ struct Node{
 	int weight;
 	int length;
 	Vertex pos;
-	Vertex fixpos;
+	Vertex pos0;
 	Vertex rot;
 	Vertex dir;
 	Color *col;
@@ -116,3 +116,8 @@ struct Clk{
 };
 
 extern int debug;
+
+enum{
+	Vdefw = 768,
+	Vdefh = 768,
+};

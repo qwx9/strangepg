@@ -10,8 +10,8 @@ new(Graph *g)
 
 	for(i=g->node0.next; i>=0; i=u->next){
 		u = g->nodes + i;
-		u->pos.x = -view.w / 2 + nrand(view.w);
-		u->pos.y = -view.h / 2 + nrand(view.h);
+		u->pos.x = -Vdefw / 2 + nrand(Vdefw);
+		u->pos.y = -Vdefh / 2 + nrand(Vdefh);
 	}
 	return nil;
 }

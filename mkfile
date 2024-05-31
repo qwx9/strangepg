@@ -22,6 +22,7 @@ OFILES=\
 	fs/meta.$O\
 	fs/metacsv.$O\
 	graph/graph.$O\
+	layout/bo.$O\
 	layout/circ.$O\
 	layout/conga.$O\
 	layout/fr.$O\
