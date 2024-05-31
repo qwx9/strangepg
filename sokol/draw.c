@@ -549,7 +549,7 @@ initgl(void)
 			"layout(location=0) out vec4 c0;\n"
 			"layout(location=1) out uint c1;\n"
 			"void main() {\n"
-			"  c0 = vec4(col, 0.8);\n"
+			"  c0 = vec4(col, 0.6);\n"
 			"  c1 = idx;\n"
 			"}\n",
 	});
