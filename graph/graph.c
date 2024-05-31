@@ -100,8 +100,10 @@ getnode(Graph *g, ssize id)
 	khiter_t k;
 
 	k = kh_get(idmap, g->nmap, id);
-	if(k == kh_end(g->nmap))
+	if(k == kh_end(g->nmap)){
+		werrstr("getnode: no such node id=%zd\n", id);
 		return nil;
+	}
 	i = kh_val(g->nmap, k);
 	assert(i >= 0 && i < dylen(g->nodes));
 	return g->nodes + i;
@@ -341,7 +343,7 @@ pushnamednode(Graph *g, char *s)
 	khiter_t k;
 
 	if((n = getnamednode(g, s)) != nil){
-		warn("duplicate node %s\n", s);
+		DPRINT(Debugfs, "duplicate node %s", s);
 		return n;
 	}
 	i = dylen(g->nodes);
