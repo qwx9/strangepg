@@ -93,10 +93,8 @@ drawui(void)
 static void
 mouseposev(float x, float y, float Δx, float Δy)
 {
-	if(butts != 0){
-		if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f), butts) < 0)
-			warn("mouseevent: %s\n", error());
-	}
+	if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f), butts) < 0)
+		warn("mouseevent: %s\n", error());
 }
 
 static void
@@ -148,7 +146,7 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	return 0;
 }
 
-static int inline
+inline static int
 special(const sapp_event* ev)
 {
 	switch (ev->type){
