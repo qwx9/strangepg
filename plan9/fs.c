@@ -119,7 +119,7 @@ readfrag(File *f, int *len)
 	char *s;
 	Biobuf *bf;
 
-	assert(f != nil && f->path != nil && f->aux != nil);
+	assert(f != nil && f->aux != nil);
 	if(len != nil)
 		*len = 0;
 	bf = f->aux;

@@ -1,26 +1,22 @@
 #include "strpg.h"
 #include "fs.h"
 
+/* not freeing f->path for later reuse */
 void
 closefs(File *f)
 {
-	free(f->s);
-	f->s = nil;
 	sysclose(f);
-	/* not freeing f->path */	// FIXME: are you sure about that
 }
 
 void
-nukefs(File *f)
+freefs(File *f)
 {
 	if(f == nil)
 		return;
 	if(f->aux != nil)
 		closefs(f);
-	if(f->path != nil)
-		free(f->path);
-	/* FIXME: fix api first */
-	//free(f);
+	free(f->path);
+	free(f);
 }
 
 vlong
@@ -210,15 +206,4 @@ int
 fdopenfs(File *f, int fd, int mode)
 {
 	return sysfdopen(f, fd, mode);
-}
-
-void
-freefs(File *f)
-{
-	if(f == nil)
-		return;
-	if(f->s != nil)
-		closefs(f);
-	free(f->path);
-	free(f);
 }

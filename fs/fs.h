@@ -7,8 +7,6 @@ struct File{
 	int trunc;
 	int nr;
 	int err;	// FIXME: not here
-	/* FIXME: fix rest of File* interface */
-	char *s;
 	vlong foff;
 };
 
@@ -85,7 +83,6 @@ int	writefs(File*, void*, int);
 void	flushfs(File*);
 vlong	seekfs(File*, vlong);
 vlong	tellfs(File*);
-void	nukefs(File*);
 void	closefs(File*);
 void	freefs(File*);
 int	loadfs(char*, int);

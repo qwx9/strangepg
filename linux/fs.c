@@ -144,7 +144,7 @@ readfrag(File *f, int *len)
 	int n, m;
 	char *s;
 
-	assert(f != nil && f->path != nil && f->aux != nil);
+	assert(f != nil && f->aux != nil);
 	if(len != nil)
 		*len = 0;
 	if(f->trunc)
@@ -168,30 +168,3 @@ readfrag(File *f, int *len)
 		*len = n;
 	return s;
 }
-
-/* FIXME: deprecated
-char *
-readrecord(File *f)
-{
-	ssize_t n;
-	size_t sz;
-
-	assert(f != nil && f->path != nil);
-	assert(f->aux != nil);
-	f->foff = sysftell(f);
-	if(f->s != nil)
-		free(f->s);
-	f->s = nil;
-	sz = 0;
-	if((n = getline(&f->s, &sz, f->aux)) < 0)
-		return nil;
-	if((f->nf = getfields(f->s, f->fld, nelem(f->fld), 1, "\t ")) < 1){
-		free(f->s);
-		f->s = nil;
-		werrstr("line %d: invalid record", f->nr+1);
-		return nil;
-	}
-	f->nr++;
-	return f->s;
-}
-*/
