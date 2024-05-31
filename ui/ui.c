@@ -24,9 +24,9 @@ pan(float Δx, float Δy)
 }
 
 static void
-zoom(float Δx, float Δy)
+zoom(Vertex center, float Δx, float Δy)
 {
-	float Δ;
+	float Δ, m;
 
 	/* scalar projection of v onto (1,1) unit vector; this way,
 	 * zoom in when dragging ↘; also scale to reasonable
@@ -37,7 +37,11 @@ zoom(float Δx, float Δy)
 	view.zoom += Δ;
 	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
 	zoomdraw(Δ);
-	reqdraw(Reqredraw);
+	center.x -= view.w / 2;
+	center.y -= view.h / 2;
+	center.z = 0.0f;
+	center = mulv(center, Δ);
+	pan(center.x, center.y);
 }
 
 int
@@ -73,7 +77,12 @@ int
 mouseevent(Vertex v, Vertex Δ, int b)
 {
 	Obj o;
+	static int ob;
+	static Vertex click;
 
+	if(ob == 0 && b != 0)
+		click = v;
+	ob = b;
 	if((b & 7) == Mlmb){
 		// FIXME: detect out of focus and click twice?
 		// FIXME: drag → move (in draw fsm)
@@ -98,7 +107,7 @@ mouseevent(Vertex v, Vertex Δ, int b)
 	}else if((b & 7) == Mrmb)
 		pan(-Δ.x, -Δ.y);
 	else if((b & 7) == (Mlmb | Mrmb))
-		zoom(-Δ.x, -Δ.y);
+		zoom(click, -Δ.x, -Δ.y);
 	return 0;
 }
 
