@@ -127,9 +127,12 @@ mouseevent(Vertex v, Vertex Δ)
 			}
 		}
 		reqdraw(Reqshallowdraw);
-	}else if(m == Mrmb)
-		pan(-Δ.x, -Δ.y);
-	else if(m == (Mlmb | Mrmb))
+	}else if(m == Mrmb){
+		if((mod & Mctrl) != 0)
+			zoom(-Δ.x, -Δ.y);
+		else
+			pan(-Δ.x, -Δ.y);
+	}else if(m == (Mlmb | Mrmb))
 		zoom(-Δ.x, -Δ.y);
 	omod = m;
 	return 0;
