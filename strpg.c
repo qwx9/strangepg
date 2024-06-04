@@ -131,5 +131,4 @@ main(int argc, char **argv)
 	load(argv);
 	evloop();
 	sysquit();
-	return 0;
 }

@@ -852,7 +852,6 @@ cleanup(void)
 {
 	snk_shutdown();
 	sg_shutdown();
-	sysquit();
 }
 
 void

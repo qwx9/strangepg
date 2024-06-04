@@ -16,7 +16,7 @@ static char errbuf[1024];
 void
 sysquit(void)
 {
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 int
