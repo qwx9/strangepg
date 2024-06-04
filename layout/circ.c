@@ -52,8 +52,8 @@ new(Graph *g)
 		p.nx = &u->pos.x;
 		p.ny = &u->pos.y;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			p.x = u->fixpos.x;
-			p.y = u->fixpos.y;
+			p.x = u->pos0.x;
+			p.y = u->pos0.y;
 			if((u->flags & FNfixed) != 0)
 				nf++;
 			else
