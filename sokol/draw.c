@@ -162,7 +162,7 @@ showobj(Obj *o)
 		break;
 	}
 	//string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
-	warn("selected: %s\n", s);
+	//warn("selected: %s\n", s);
 }
 
 int
