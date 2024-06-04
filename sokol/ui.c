@@ -28,7 +28,6 @@ typedef struct nk_text_edit nk_text_edit;
 
 static nk_text_edit nkprompt;
 static nk_color nktheme[NK_COLOR_COUNT];
-static int butts;
 static int prompting;
 static char ptext[1024];
 static int plen;
@@ -93,25 +92,31 @@ drawui(void)
 static void
 mouseposev(float x, float y, float Δx, float Δy)
 {
-	if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f), butts) < 0)
+	if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f)) < 0)
 		warn("mouseevent: %s\n", error());
 }
 
 static void
 mousebutev(float x, float y, float Δx, float Δy, int b, int down)
 {
-	int m;
+	Rune r;
 
+	r = 0;
 	switch(b){
-	case SAPP_MOUSEBUTTON_LEFT: m = Mlmb; break;
-	case SAPP_MOUSEBUTTON_MIDDLE: m = Mmmb; break;
-	case SAPP_MOUSEBUTTON_RIGHT: m = Mrmb; break;
+	case SAPP_MOUSEBUTTON_LEFT: r = KMlmb; break;
+	case SAPP_MOUSEBUTTON_MIDDLE: r = KMmmb; break;
+	case SAPP_MOUSEBUTTON_RIGHT: r = KMrmb; break;
+	/* sokol_app doesn't distinguish between up/down or horizontal/vertical
+	 * mouse scrolling */
+	case -1:
+		if(Δy != 0)
+			r = Δy < 0 ? KMscrlup : KMscrldn;
+		else if(Δx != 0)
+			r = Δx < 0 ? KMscrlup : KMscrldn;
+		break;
 	default: warn("mousebutev: unhandled mouse button %d\n", b); return;
 	}
-	if(down)
-		butts = butts | m;
-	else
-		butts = butts & ~m;
+	keyevent(r, down);
 	mouseposev(x, y, Δx, Δy);
 }
 
@@ -120,9 +125,8 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 {
 	Rune r;
 
-	if(prompting || !down)
+	if(prompting)
 		return 0;
-	/* FIXME: more generic interface, make keyevent return ate or not */
 	r = 0;
 	switch(k){
 	case SAPP_KEYCODE_UP: r = KBup; break;
@@ -130,6 +134,11 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	case SAPP_KEYCODE_LEFT: r = KBleft; break;
 	case SAPP_KEYCODE_RIGHT: r = KBright; break;
 	case SAPP_KEYCODE_ESCAPE: r = KBescape; break;
+	case SAPP_KEYCODE_ENTER: r = KBenter; break;
+	case SAPP_KEYCODE_LEFT_SHIFT: /* wet floor */
+	case SAPP_KEYCODE_RIGHT_SHIFT: r = KBshift; break;
+	case SAPP_KEYCODE_LEFT_CONTROL: /* wet floor */
+	case SAPP_KEYCODE_RIGHT_CONTROL: r = KBctrl; break;
 	case SAPP_KEYCODE_L: r = 'l'; break;
 	case SAPP_KEYCODE_P: r = 'p'; break;
 	case SAPP_KEYCODE_R: r = 'r'; break;
@@ -139,7 +148,7 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	default:;
 	}
 	if(r != 0){
-		if(keyevent(r) < 0)
+		if(keyevent(r, down) < 0)
 			warn("keyev: invalid input key %d\n", r);
 		return 1;
 	}
@@ -156,6 +165,8 @@ special(const sapp_event* ev)
 		ev->mouse_dx, ev->mouse_dy, ev->mouse_button, 1); break;
 	case SAPP_EVENTTYPE_MOUSE_UP: mousebutev(ev->mouse_x, ev->mouse_y,
 		ev->mouse_dx, ev->mouse_dy, ev->mouse_button, 0); break;
+	case SAPP_EVENTTYPE_MOUSE_SCROLL: mousebutev(ev->mouse_x, ev->mouse_y,
+		ev->scroll_x, ev->scroll_y, -1, 1); break;
 	case SAPP_EVENTTYPE_KEY_DOWN: return keyev(ev->key_code, ev->modifiers, 1);
 	case SAPP_EVENTTYPE_KEY_UP: return keyev(ev->key_code, ev->modifiers, 0);
 	case SAPP_EVENTTYPE_RESIZED: reqdraw(Reqresetdraw); break;

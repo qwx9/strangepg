@@ -9,6 +9,19 @@
 Obj selected;
 int prompting;
 
+enum{
+	Mctrl = 1<<0,
+	Mshift = 1<<1,
+	Malt = 1<<2,
+	Mlmb = 1<<3,
+	Mmmb = 1<<4,
+	Mrmb = 1<<5,
+
+	Mmask = Mlmb | Mmmb | Mrmb,
+};
+static int mod;
+static Vertex center;
+
 static void
 pan(float Δx, float Δy)
 {
@@ -24,9 +37,10 @@ pan(float Δx, float Δy)
 }
 
 static void
-zoom(Vertex center, float Δx, float Δy)
+zoom(float Δx, float Δy)
 {
-	float Δ, m;
+	float Δ;
+	Vertex v;
 
 	/* scalar projection of v onto (1,1) unit vector; this way,
 	 * zoom in when dragging ↘; also scale to reasonable
@@ -37,16 +51,14 @@ zoom(Vertex center, float Δx, float Δy)
 	view.zoom += Δ;
 	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
 	zoomdraw(Δ);
-	center.x -= view.w / 2;
-	center.y -= view.h / 2;
-	center.z = 0.0f;
-	center = mulv(center, Δ);
-	pan(center.x, center.y);
+	v = mulv(center, Δ);
+	pan(v.x, v.y);
 }
 
 int
-keyevent(Rune r)
+keyevent(Rune r, int down)
 {
+	int m;
 	Graph *g;
 
 	DPRINT(Debugdraw, "keyevent %d", r);
@@ -55,10 +67,28 @@ keyevent(Rune r)
 		return 0;
 	}
 	switch(r){
+	case KBctrl: m = Mctrl; goto setmod;
+	case KBshift: m = Mshift; goto setmod;
+	case KBalt: m = Malt; goto setmod;
+	case KMlmb: m = Mlmb; goto setmod;
+	case KMmmb: m = Mmmb; goto setmod;
+	case KMrmb: m = Mrmb; goto setmod;
+	setmod:
+		if(down)
+			mod |= m;
+		else
+			mod &= ~m;
+		return 0;
+	}
+	if(!down)
+		return 0;
+	switch(r){
 	case KBup: pan(0.0f, -view.w / 2.0f); break;
 	case KBdown: pan(0.0f, +view.h / 2.0f); break;
 	case KBright: pan(+view.w / 2.0f, 0.0f); break;
 	case KBleft: pan(-view.w / 2.0f, 0.0f); break;
+	case KMscrlup: zoom(5.0f, 5.0f); break;
+	case KMscrldn: zoom(-5.0f, -5.0f); break;
 	case KBescape: resetprompt(); reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
@@ -67,28 +97,24 @@ keyevent(Rune r)
 	case 'p': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) togglelayout(g); unlockgraphs(0); break;
 	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqredraw); break;
 	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqredraw); break;
-	default: prompt(r); break;
+	case '\n': prompt(r); break;
 	}
 	return 0;
 }
 
 /* the very first mouse event will have nonsense deltas */
 int
-mouseevent(Vertex v, Vertex Δ, int b)
+mouseevent(Vertex v, Vertex Δ)
 {
+	int m;
 	Obj o;
-	static int ob;
-	static Vertex click;
+	static int omod;
 
-	if(ob == 0 && b != 0)
-		click = v;
-	ob = b;
-	if((b & 7) == Mlmb){
-		// FIXME: detect out of focus and click twice?
-		// FIXME: drag → move (in draw fsm)
+	m = mod & Mmask;
+	if(m != 0 && omod == 0)
+		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
+	if(m == Mlmb && (omod & Mlmb) == 0){
 		o = selected;
-		// FIXME: everything should stop while this does its thing
-		//rlock(&drawlock);
 		selected = mouseselect(v.x, v.y);
 		if(selected.type == Onode && o.g != nil && o.g->c != nil){
 			if(memcmp(&selected, &o, sizeof o) == 0){
@@ -101,13 +127,11 @@ mouseevent(Vertex v, Vertex Δ, int b)
 			}
 		}
 		reqdraw(Reqshallowdraw);
-		//runlock(&drawlock);
-	}else if((b & 7) == Mmmb){
-		// FIXME: menu
-	}else if((b & 7) == Mrmb)
+	}else if(m == Mrmb)
 		pan(-Δ.x, -Δ.y);
-	else if((b & 7) == (Mlmb | Mrmb))
-		zoom(click, -Δ.x, -Δ.y);
+	else if(m == (Mlmb | Mrmb))
+		zoom(-Δ.x, -Δ.y);
+	omod = m;
 	return 0;
 }
 
