@@ -83,7 +83,7 @@ loadgfa1(void *arg)
 	DPRINT(Debugfs, "loadgfa1 %s", path);
 	g = initgraph(FFgfa);
 	if((f = graphopenfs(&g, path, OREAD)) == nil)
-		sysfatal("%s", error());
+		sysfatal("loadgfa %s: %s", path, error());
 	free(path);
 	while((s = readline(f, nil)) != nil){
 		p = nextfield(f, s, nil, '\t');

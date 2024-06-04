@@ -32,10 +32,8 @@ sysopen(File *f, int omode)
 
 	assert(f->path != nil);
 	mode = modestr(omode);
-	if((bf = fopen(f->path, mode)) == NULL){
-		warn("sysopen \"%s\": %s\n", f->path, error());
+	if((bf = fopen(f->path, mode)) == NULL)
 		return -1;
-	}
 	f->aux = bf;
 	return 0;
 }
@@ -47,10 +45,8 @@ sysfdopen(File *f, int fd, int omode)
 	char *mode;
 
 	mode = modestr(omode);
-	if((bf = fdopen(fd, mode)) == NULL){
-		warn("sysfdopen %d: %s\n", fd, error());
+	if((bf = fdopen(fd, mode)) == NULL)
 		return -1;
-	}
 	f->aux = bf;
 	return 0;
 }

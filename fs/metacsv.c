@@ -69,7 +69,6 @@ loadcsv(void *arg)
 	f = emalloc(sizeof *f);
 	if(openfs(f, path, OREAD) < 0)
 		goto end;
-	free(path);
 	if((tags = csvheader(f)) == nil)
 		goto end;
 	nr = 1;
@@ -106,9 +105,10 @@ end:
 	USED(tags);
 	freefs(f);
 	if(r < 0)
-		warn("loadcsv: %s\n", error());
+		warn("loadcsv %s: %s\n", path, error());
 	else
 		warn("done reading csv\n");
+	free(path);
 }
 
 static Filefmt ff = {
