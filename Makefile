@@ -2,8 +2,9 @@ PROGRAM:= strpg
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
-	strindex\
-	strcoarse\
+
+#	strindex\
+#	strcoarse\
 
 DIRS:=\
 	strawk\
@@ -13,6 +14,8 @@ PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
 
 OBJS:=\
+	sokol/draw.o\
+	sokol/ui.o\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
 	lib/queue.o\
@@ -23,8 +26,6 @@ OBJS:=\
 	linux/fs.o\
 	linux/sys.o\
 	linux/threads.o\
-	sokol/draw.o\
-	sokol/ui.o\
 	cmd/awkprog.o\
 	cmd/cmd.o\
 	draw/color.o\
@@ -63,9 +64,16 @@ COARSENOBJS:=\
 	linux/threads.o\
 	util/print.o\
 
+DEPS:=$(patsubst %.o,%.d,$(OBJS) $(COARSENOBJS))
+
 ALLOBJS:=\
 	$(OBJS)\
 	$(COARSENOBJS)\
+
+CLEANFILES:=\
+	$(OBJS)\
+	$(COARSENOBJS)\
+	$(DEPS)\
 
 CC?= clang
 OFLAGS?= -O3 -pipe -march=native
@@ -76,6 +84,8 @@ CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 # _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
 CFLAGS+= -D_XOPEN_SOURCE=500
 CFLAGS+= -pthread
+# generate dependency files for headers
+CFLAGS+= -MMD -MP
 WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
@@ -113,7 +123,8 @@ else
 			-Wno-ignored-qualifiers \
 			-Wno-c2x-extensions -Wno-gnu-designator \
 			-Wno-incompatible-pointer-types-discards-qualifiers \
-			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast
+			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast \
+			-Wno-implicit-fallthrough
 endif
 ifdef STATIC
 	LDFLAGS+= -static
@@ -151,7 +162,7 @@ install: $(ALLTARGETS) dirinstall
 
 uninstall: $(ALLTARGETS)
 	for i in $(ALLTARGETS); do \
-		rm -f $(BINDIR)/$$i; \
+		$(RM) $(BINDIR)/$$i; \
 	done
 	for i in $(DIRS); do \
 		cd $$i; \
@@ -174,9 +185,11 @@ dirinstall:
 	done
 
 clean:
-	rm -f $(ALLOBJS) $(ALLTARGETS)
+	$(RM) $(CLEANFILES)
 	for i in $(DIRS); do \
 		cd $$i; \
 		make clean; \
 		cd ..; \
 	done
+
+-include $(DEPS)
