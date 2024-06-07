@@ -10,7 +10,7 @@ struct Color{
 	Image *shad;
 };
 
-static Point panmax;
+static Point panmax, ΔZP;
 static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
 static Channel *drawc, *ticc;
@@ -228,7 +228,7 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 static void
 flushdraw(void)
 {
-	drawop(screen, screen->r, viewfb, nil, ZP, SoverD);
+	drawop(screen, screen->r, viewfb, nil, ΔZP, SoverD);
 	drawui();
 	renderui();
 	flushimage(display, 1);
@@ -239,7 +239,8 @@ resetdraw(void)
 {
 	view.w = Dx(screen->r);
 	view.h = Dy(screen->r);
-	viewr = rectsubpt(screen->r, screen->r.min);
+	ΔZP = Pt(-view.w/2, -view.h/2);
+	viewr = rectaddpt(rectsubpt(screen->r, screen->r.min), ΔZP);
 	DPRINT(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
 	freeimage(selfb);
