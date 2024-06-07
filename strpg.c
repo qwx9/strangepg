@@ -130,5 +130,6 @@ main(int argc, char **argv)
 	init();
 	load(argv);
 	evloop();
-	sysquit();
+	quit();
+	return 0;
 }
