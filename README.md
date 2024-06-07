@@ -3,10 +3,11 @@
 Huge graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
 Currently supports graphs in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format.
 
-_Note: this is a work in progress._
+_Note: this is a work in progress. That includes this README._
 
 ## Features
 
+[...]
 - Written from scratch in pure C (Plan 9 C: C89 + some extensions)
 - High performance graphics with modern and efficient renderer
 - Mouse-driven UI navigation
@@ -46,6 +47,7 @@ make -j install
 ```
 
 _-j_ is an optional flag to enable parallel building using all available cores.
+This installs the binaries ```strpg``` and ```strawk```.
 
 ### Dependencies
 
@@ -112,6 +114,7 @@ Available layouts:
 - _random_: random fixed node placement
 - _linear_: _fr_ layout with the addition of optionally fixed position nodes (_fx_ and _fy_ GFA segment tags) and initial position (via _mv_ segment tag)
 - _pline_: parallel version of the above
+- _bo_: similar to _pline_ but using BO tags for initial placement along a horizontal line
 
 ### Navigation
 
@@ -119,14 +122,22 @@ Mouse buttons:
 
 - Select object: click left mouse button (click on nothing to unselect)
 - Move (pan) view: drag with right mouse button or press a cursor key to jump
-- Zoom view: drag with left + right mouse button together: pull (drag towards bottom right) to zoom in, push (draw towards top left) to zoom out
+- Zoom view: three options:
+	* mouse scroll keys
+	* hold control + right mouse
+	* hold left + right mouse button and drag: pull (drag towards bottom right) to zoom in, push (draw towards top left) to zoom out
 
 Keyboard shortcuts:
 
 - Pause/unpause layout: 'p' key
 - Re-layout: 'r' key
 - Quit: 'q' key or close window
-- Arrow keys: move view by screenful in a cardinal direction
+- Reset initial position: 'escape' key
+- Arrow keys: move view by screenful in cardinal direction
+
+9front only:
+- Draw labels: 'l' key
+- Draw nodes as arrows according to direction: 'a' key
 
 
 ### Interaction
@@ -140,12 +151,12 @@ They are effectively [_awk_](https://awk.dev) one-liners.
 
 Color every second node in red:
 ```awk
-for(i in lnode) if(i % 2 == 1) nodecolor(i, red)
+for(i in node) if(i % 2 == 1) nodecolor(i, red)
 ```
 
 Color nodes with sequence length > 50:
 ```awk
-for(i in lnode) if(LN[i] > 50) nodecolor(i, red)
+for(i in node) if(LN[i] > 50) nodecolor(i, red)
 ```
 
 Color based on if-elseif-else pattern:
@@ -155,7 +166,7 @@ for(i in LN) nodecolor(i, LN[i] > 200 ? red : LN[i] > 50 ? green : blue)
 
 Color nodes with labels matching a regexp:
 ```awk
-for(i in lnode) if(lnode[i] ~ /chr13/) nodecolor(i, red)
+for(i in node) if(i ~ /chr13/) nodecolor(i, red)
 ```
 
 #### Variables
@@ -167,24 +178,15 @@ The data available is based on the contents of the input GFA file:
 
 Node sequences are currently unused.
 Tags may be defined or modified at runtime via the prompt.
-All of the tags contained in _S_ (segment) and _L_ (link) records in every input GFA file are saved as tables with the same name, indexed by node id (segments) or pair of node ids (links) as such:
+All of the tags contained in _S_ (segment) and _L_ (link) records in every input GFA file are saved as tables with the same name, indexed by node label (segments) or pair of node label (links) as such:
 
 ```awk
-nodetag[id] = value
-edgetag[id1 dir1,id2 dir2] = value
+nodetag[label] = value
+edgetag[label1 dir1,label2 dir2] = value
 ```
 
-ids are unique integers 0,1,…,n ∈ ℕ internal to _strangepg_.
 _dir1_ and _dir2_ are orientations of the nodes,
 in the same format as _L_ records: "+" for forward, "-" for reverse.
-Two mapping tables are exposed to translate between ids and GFA labels:
-
-```awk
-lnode[id] = label
-node[label] = id
-ledge[id] = edge1,edge2
-edge[id1 dir1,id2 dir2] = id
-```
 
 For example, the following GFA file excerpt:
 ```awk
@@ -194,65 +196,46 @@ L	s1	+	s2	+	0M	FC:i:1
 ```
 ... will result in the following definitions:
 ```
-lnode[0] = "s1"
-lnode[1] = "s2"
 node["s1"] = 0
 node["s2"] = 1
-LN[0] = 16
-LN[1] = 4
-CL[1] = "#581845"
-FC[1] = 1
-ledge[0] = "0+1+"
-edge["0+","1+"] = 0
-cigar["0+","1+"] = "0M"
-FC["0+","1+"] = 1
+LN["s1"] = 16
+LN["s2"] = 4
+CL["s2"] = "#581845"
+FC["s2"] = 1
+edge["s1+","s2+"] = 0
+cigar["s1+","s2+"] = "0M"
+FC["s1+","s2+"] = 1
 ```
 
 Notice that for segment _s2_ when both an inlined sequence exists (character string other than '\*') and an _LN_ tag is specified,
 the value of _LN_ will be *the actual length of the sequence*,
 rather than the value of the tag in the file.
 
-The biggest downside is the syntax for specifying an edge from node labels:
-
-```awk
-edge[node["s1"]"+", node["s2"]"+"]
-```
-
-This will be improved in time.
-
-(Note about _ledge_: the comma character ',' between brackets has a special meaning
-and is encoded internally by the ascii character 0x1c (File Separator).)
+_Note: like in awk, the comma character ',' between brackets has a special meaning
+and is encoded internally by the ascii character 0x1c (File Separator)._
 
 #### Expressions
 
 Commands are for now essentially _awk_ code. For example:
 
 ```awk
-for(i in lnode) nodecolor(i, red)
+for(i in node) nodecolor(i, red)
 ```
 
-_lnode_ maps between ids and GFA labels: it is a hash table.
-Its keys are node ids, and its values are node labels
-(and vice versa for the _node_ table).
+_node_ is a hash table mapping GFA labels to an internal id.
 
 Node selection is currently done by looping through all nodes (or edges)
 and selecting them with a conditional expression:
 
 ```awk
-for(i in lnode) if(CL[i] == red) nodecolor(i, green)
+for(i in node) if(CL[i] == red) nodecolor(i, green)	# color red nodes in green
 ```
 
-For the time being, the built-in functions all use node ids.
-To select by node label, one can do the following:
+The following expressions are also valid:
 
 ```awk
-for(i in node) if(CL[node[i]] == red) nodecolor(node[i], green)
-```
-
-Or:
-
-```awk
-nodecolor(node["s1"], red)
+nodecolor("s1", red)	# color s1 node
+for(i in node) if(LN[i] < 100 && (CL[i] == green || CL[i] == red)) nodecolor(i, blue)
 ```
 
 Currently, changing a variable's value directly rather than through a function
@@ -260,7 +243,7 @@ will not work as expected.
 In other words, the following will change the _CL_ value for the node, but not the color of the node on screen:
 
 ```awk
-CL[node["s1"]] = red
+CL["s1"] = red
 ```
 
 This is due to a limitation of the current approach,
@@ -272,17 +255,21 @@ must instead be done via the provided built-in functions.
 
 Functions:
 ```awk
-nodecolor(id, color)	# change node color
-fix(id, x, y)			# freeze node position in space (for "linear", "pline" layouts only)
+nodecolor(label, color)	# change node color
+fixnode(label, x, y)	# freeze node position in space (for "linear", "pline" layouts only)
+fixnodex(label, x)	# set initial x position without freezing (for "linear", "pline", "bo" layouts)
 ```
 
-- nodecolor(_id_, _color_): change a node's color
-	* _id_: integer node id
+- nodecolor(_label_, _color_): change a node's color
+	* _label_: GFA segment label
 	* _color_: RGB24 color in hexadecimal (0xRRGGBB) passed as a string
-- fix(_id_, _x_, _y_): set and freeze node position (layout-dependent)
-	* _id_: integer node id
+- fixnode(_label_, _x_, _y_): set and freeze node position (layout-dependent)
+	* _label_: GFA segment label
 	* _x_: x coordinate, floating-point
 	* _y_: y coordinate, floating-point
+- fixnode(_label_, _x_): set initial node position (layout-dependent)
+	* _label_: GFA segment label
+	* _x_: x coordinate, floating-point
 
 Color constants:
 ```awk
@@ -336,6 +323,7 @@ _strangepg_ essentially runs and communicates with a backgrounded awk instance.
 As such any awk single-line expression valid within the default pattern can be specified.
 In other words, variables can be modified or new ones added,
 and any existing function may be called (exceptions below).
+Currently, functions may not be defined.
 
 #### Changes compared to standard awk
 
@@ -374,13 +362,19 @@ The alternative is to write a parser in awk and use patterns
 Doing this for now is much simpler, but it's still nasty.
 Errors within evaluated expressions do not cause the program to exit.
 
-5. Different PRNG which handles floating-point; this may be reconsidered later.
+5. Removed _getline_, _nextfile_, _system_; removed _--safe_.
+
+6. Different PRNG which handles floating-point; this may be reconsidered later.
+
+[...]
 
 TODO (short term):
 - Unsigned 64-bit internal values instead of floating-point
 - C-style hexadecimal and octal numeric constants
 - Multi-line expressions
 - ...
+
+_TODO: turn this around: language features/manpage_
 
 #### This sucks
 
@@ -390,7 +384,7 @@ The syntax and interface will be reworked completely over time.
 The goal is a vector language with syntax such as:
 
 ```R
-color[nodelabel] = red	# no function call, no quotes
+color[label] = red	# no function call, no quotes
 color[condition] = red	# result applied to all elements for which condition is true
 color[LN < 150] = red	# LN and color are vectors of equal length
 ```
