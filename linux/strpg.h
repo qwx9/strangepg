@@ -75,6 +75,44 @@ char*	strecpy(char*, char*, char*);
 //#define const
 #define nil NULL	// better for them to be interchangeable here
 
+enum{
+	KF = 0xF000,	/* Rune: beginning of private Unicode space */
+	Spec = 0xF800,
+	Kview = Spec|0x00,
+	Khome = KF|0x0D,
+	Kup = KF|0x0E,
+	Kdown = Kview,
+	Kpgup = KF|0x0F,
+	Kprint = KF|0x10,
+	Kleft = KF|0x11,
+	Kright = KF|0x12,
+	Kpgdown = KF|0x13,
+	Kins = KF|0x14,
+	Kalt = KF|0x15,
+	Kshift = KF|0x16,
+	Kctl = KF|0x17,
+	Kend = KF|0x18,
+	Kscroll = KF|0x19,
+	Kscrolloneup = KF|0x20,
+	Kscrollonedown = KF|0x21,
+	Ksoh = 0x01,
+	Kstx = 0x02,
+	Ketx = 0x03,
+	Keof = 0x04,
+	Kenq = 0x05,
+	Kack = 0x06,
+	Kbs = 0x08,
+	Knack = 0x15,
+	Ketb = 0x17,
+	Kdel = 0x7f,
+	Kesc = 0x1b,
+	Kbreak = Spec|0x61,
+	Kcaps = Spec|0x64,
+	Knum = Spec|0x65,
+	Kaltgr = Spec|0x67,
+	Kmouse = Spec|0x100,
+};
+
 #include "lib/khash.h"
 #include "dat.h"
 #include "fns.h"

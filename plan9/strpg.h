@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include <geometry.h>
+#include <keyboard.h>
 
 typedef intptr	ssize;
 

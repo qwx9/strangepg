@@ -103,16 +103,16 @@ mousebutev(float x, float y, float Δx, float Δy, int b, int down)
 
 	r = 0;
 	switch(b){
-	case SAPP_MOUSEBUTTON_LEFT: r = KMlmb; break;
-	case SAPP_MOUSEBUTTON_MIDDLE: r = KMmmb; break;
-	case SAPP_MOUSEBUTTON_RIGHT: r = KMrmb; break;
+	case SAPP_MOUSEBUTTON_LEFT: r = Klmb; break;
+	case SAPP_MOUSEBUTTON_MIDDLE: r = Kmmb; break;
+	case SAPP_MOUSEBUTTON_RIGHT: r = Krmb; break;
 	/* sokol_app doesn't distinguish between up/down or horizontal/vertical
 	 * mouse scrolling */
 	case -1:
 		if(Δy != 0)
-			r = Δy < 0 ? KMscrlup : KMscrldn;
+			r = Δy < 0 ? Kscrlup : Kscrldn;
 		else if(Δx != 0)
-			r = Δx < 0 ? KMscrlup : KMscrldn;
+			r = Δx < 0 ? Kscrlup : Kscrldn;
 		break;
 	default: warn("mousebutev: unhandled mouse button %d\n", b); return;
 	}
@@ -129,21 +129,20 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 		return 0;
 	r = 0;
 	switch(k){
-	case SAPP_KEYCODE_UP: r = KBup; break;
-	case SAPP_KEYCODE_DOWN: r = KBdown; break;
-	case SAPP_KEYCODE_LEFT: r = KBleft; break;
-	case SAPP_KEYCODE_RIGHT: r = KBright; break;
-	case SAPP_KEYCODE_ESCAPE: r = KBescape; break;
-	case SAPP_KEYCODE_ENTER: r = KBenter; break;
+	case SAPP_KEYCODE_UP: r = Kup; break;
+	case SAPP_KEYCODE_DOWN: r = Kdown; break;
+	case SAPP_KEYCODE_LEFT: r = Kleft; break;
+	case SAPP_KEYCODE_RIGHT: r = Kright; break;
+	case SAPP_KEYCODE_ESCAPE: r = Kesc; break;	/* WHY */
+	case SAPP_KEYCODE_KP_ENTER: /* wet floor */
+	case SAPP_KEYCODE_ENTER: r = '\n'; break;	/* WHY */
 	case SAPP_KEYCODE_LEFT_SHIFT: /* wet floor */
-	case SAPP_KEYCODE_RIGHT_SHIFT: r = KBshift; break;
+	case SAPP_KEYCODE_RIGHT_SHIFT: r = Kshift; break;
 	case SAPP_KEYCODE_LEFT_CONTROL: /* wet floor */
-	case SAPP_KEYCODE_RIGHT_CONTROL: r = KBctrl; break;
-	case SAPP_KEYCODE_L: r = 'l'; break;
-	case SAPP_KEYCODE_P: r = 'p'; break;
-	case SAPP_KEYCODE_R: r = 'r'; break;
+	case SAPP_KEYCODE_RIGHT_CONTROL: r = Kctl; break;
+	case SAPP_KEYCODE_LEFT_ALT: /* wet floor */
+	case SAPP_KEYCODE_RIGHT_ALT: r = Kalt; break;
 	case SAPP_KEYCODE_Q: sapp_quit(); return 1;
-	case SAPP_KEYCODE_MINUS: r = '-'; break;
 	case SAPP_KEYCODE_EQUAL: if((mod & SAPP_MODIFIER_SHIFT) != 0) r = '+'; break;
 	default:;
 	}

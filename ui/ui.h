@@ -1,21 +1,11 @@
 typedef struct Obj Obj;
 
 enum{
-	/* unicode arrows, children's compilers, mandrake */
-	KBleft = 0x110000,	/* outside unicode range */
-	KBright,
-	KBup,
-	KBdown,
-	KBescape,
-	KBctrl,
-	KBshift,
-	KBalt,
-	KBenter,
-	KMlmb,
-	KMmmb,
-	KMrmb,
-	KMscrlup,
-	KMscrldn,
+	Klmb = Kmouse | 1<<0,
+	Kmmb = Kmouse | 1<<1,
+	Krmb = Kmouse | 1<<2,
+	Kscrlup = Kmouse | 1<<3,
+	Kscrldn = Kmouse | 1<<4,
 };
 
 enum{

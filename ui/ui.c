@@ -67,12 +67,12 @@ keyevent(Rune r, int down)
 		return 0;
 	}
 	switch(r){
-	case KBctrl: m = Mctrl; goto setmod;
-	case KBshift: m = Mshift; goto setmod;
-	case KBalt: m = Malt; goto setmod;
-	case KMlmb: m = Mlmb; goto setmod;
-	case KMmmb: m = Mmmb; goto setmod;
-	case KMrmb: m = Mrmb; goto setmod;
+	case Kctl: m = Mctrl; goto setmod;
+	case Kshift: m = Mshift; goto setmod;
+	case Kalt: m = Malt; goto setmod;
+	case Klmb: m = Mlmb; goto setmod;
+	case Kmmb: m = Mmmb; goto setmod;
+	case Krmb: m = Mrmb; goto setmod;
 	setmod:
 		if(down)
 			mod |= m;
@@ -83,13 +83,13 @@ keyevent(Rune r, int down)
 	if(!down)
 		return 0;
 	switch(r){
-	case KBup: pan(0.0f, -view.w / 2.0f); break;
-	case KBdown: pan(0.0f, +view.h / 2.0f); break;
-	case KBright: pan(+view.w / 2.0f, 0.0f); break;
-	case KBleft: pan(-view.w / 2.0f, 0.0f); break;
-	case KMscrlup: zoom(5.0f, 5.0f); break;
-	case KMscrldn: zoom(-5.0f, -5.0f); break;
-	case KBescape: resetprompt(); reqdraw(Reqresetui); break;
+	case Kup: pan(0.0f, -view.w / 2.0f); break;
+	case Kdown: pan(0.0f, +view.h / 2.0f); break;
+	case Kright: pan(+view.w / 2.0f, 0.0f); break;
+	case Kleft: pan(-view.w / 2.0f, 0.0f); break;
+	case Kscrlup: zoom(5.0f, 5.0f); break;
+	case Kscrldn: zoom(-5.0f, -5.0f); break;
+	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
 	/* FIXME: doesn't quite make sense */
 	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
