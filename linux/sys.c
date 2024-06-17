@@ -3,6 +3,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include "threads.h"
+#include "cmd.h"
 
 #undef dup
 
@@ -16,6 +18,7 @@ static char errbuf[1024];
 void
 sysquit(void)
 {
+	close(epfd[1]);	/* for interrupting cproc */
 	exit(EXIT_SUCCESS);
 }
 
