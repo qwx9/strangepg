@@ -144,7 +144,11 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	case SAPP_KEYCODE_RIGHT_ALT: r = Kalt; break;
 	case SAPP_KEYCODE_Q: sapp_quit(); return 1;
 	case SAPP_KEYCODE_EQUAL: if((mod & SAPP_MODIFIER_SHIFT) != 0) r = '+'; break;
-	default:;
+	default:
+		if(k >= 'A' && k <= 'Z')
+			k = tolower(k);
+		r = k;
+		break;
 	}
 	if(r != 0){
 		if(keyevent(r, down) < 0)

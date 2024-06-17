@@ -105,7 +105,6 @@ layproc(void *arg)
 			l->flags = 0;
 			oldsk = l->sk;
 			if((new || sk != oldsk) && oldsk != nil){
-				warn("reinit\n");
 				g->flags &= ~GFlayme;
 				if(oldsk->cleanup != nil && l->scratch != nil){
 					oldsk->cleanup(l->scratch);
