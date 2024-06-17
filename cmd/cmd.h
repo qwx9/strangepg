@@ -1,4 +1,6 @@
 extern char *awkprog;
+extern Channel *cmdc;
+extern int epfd[2];
 
 void	readcmd(char*);
 void	pollcmd(void);

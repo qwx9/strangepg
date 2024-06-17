@@ -1,10 +1,10 @@
 #include "strpg.h"
-#include "ui.h"
+#include "threads.h"
 #include "cmd.h"
 #include "graph.h"
 #include "drw.h"
 #include "layout.h"
-#include "threads.h"
+#include "ui.h"
 
 Obj selected;
 int prompting;

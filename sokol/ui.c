@@ -19,6 +19,7 @@
 #define	SOKOL_NUKLEAR_IMPL
 #include "lib/sokol_nuklear.h"
 #include "ui.h"
+#include "threads.h"
 #include "cmd.h"
 #include "drw.h"
 

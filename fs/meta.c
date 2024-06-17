@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
+#include "threads.h"
 #include "cmd.h"
 
 /* FIXME:

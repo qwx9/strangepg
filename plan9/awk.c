@@ -3,12 +3,6 @@
 #include "threads.h"
 #include <bio.h>
 
-extern Channel *cmdc;
-
-static int epfd[2] = {-1, -1};
-
-/* FIXME: portable(ish) version? */
-
 static void
 cproc(void *)
 {
@@ -47,23 +41,6 @@ readcproc(void *)
 	epfd[1] = -1;
 	if(n < 0)
 		warn("readcproc: %r");
-}
-
-void
-sendcmd(char *cmd)
-{
-	int n;
-
-	if(epfd[1] < 0){
-		warn("pushcmd: pipe closed\n");
-		return;
-	}
-	n = strlen(cmd);
-	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
-	if(epfd[1] < 0)
-		warn("sendcmd: closed pipe\n");
-	else if(write(epfd[1], cmd, n) != n)
-		sysfatal("sendcmd: %r");
 }
 
 int

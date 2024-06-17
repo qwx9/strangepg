@@ -1,11 +1,11 @@
 #include "strpg.h"
 #include "graph.h"
 #include "fs.h"
+#include "threads.h"
 #include "em.h"
 #include "cmd.h"
 #include "drw.h"
 #include "layout.h"
-#include "threads.h"
 
 /* FIXME: think about an alternate, easier, em-backed representation: just a tree
  *	expanded nodes are marked expanded, otherwise a traversal ends on that,
