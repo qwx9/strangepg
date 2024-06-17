@@ -108,7 +108,7 @@
 #ifdef HANDMADE_MATH_NO_SSE
 # warning "HANDMADE_MATH_NO_SSE is deprecated, use HANDMADE_MATH_NO_SIMD instead"
 # define HANDMADE_MATH_NO_SIMD
-#endif 
+#endif
 
 /* let's figure out if SSE is really available (unless disabled anyway)
    (it isn't on non-x86/x86_64 platforms or even x86 without explicit SSE support)
@@ -147,9 +147,7 @@
 #if defined(__GNUC__) || defined(__clang__)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wfloat-equal"
-# if (defined(__GNUC__) && (__GNUC__ == 4 && __GNUC_MINOR__ < 8)) || defined(__clang__)
-#  pragma GCC diagnostic ignored "-Wmissing-braces"
-# endif
+# pragma GCC diagnostic ignored "-Wmissing-braces"
 # ifdef __clang__
 #  pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -368,7 +366,7 @@ typedef union HMM_Vec4
 
 #ifdef HANDMADE_MATH__USE_NEON
     float32x4_t NEON;
-#endif 
+#endif
 
 #ifdef __cplusplus
     inline float &operator[](int Index) { return Elements[Index]; }
@@ -1599,8 +1597,8 @@ static inline HMM_Mat4 HMM_MulM4F(HMM_Mat4 Matrix, float Scalar)
     ASSERT_COVERED(HMM_MulM4F);
 
     HMM_Mat4 Result;
-    
-    
+
+
 #ifdef HANDMADE_MATH__USE_SSE
     __m128 SSEScalar = _mm_set1_ps(Scalar);
     Result.Columns[0].SSE = _mm_mul_ps(Matrix.Columns[0].SSE, SSEScalar);
@@ -2206,7 +2204,7 @@ static inline HMM_Quat HMM_MulQ(HMM_Quat Left, HMM_Quat Right)
     float32x4_t Right1032 = vrev64q_f32(Right.NEON);
     float32x4_t Right3210 = vcombine_f32(vget_high_f32(Right1032), vget_low_f32(Right1032));
     float32x4_t Right2301 = vrev64q_f32(Right3210);
-    
+
     float32x4_t FirstSign = {1.0f, -1.0f, 1.0f, -1.0f};
     Result.NEON = vmulq_f32(Right3210, vmulq_f32(vdupq_laneq_f32(Left.NEON, 0), FirstSign));
     float32x4_t SecondSign = {1.0f, 1.0f, -1.0f, -1.0f};
@@ -2214,7 +2212,7 @@ static inline HMM_Quat HMM_MulQ(HMM_Quat Left, HMM_Quat Right)
     float32x4_t ThirdSign = {-1.0f, 1.0f, 1.0f, -1.0f};
     Result.NEON = vfmaq_f32(Result.NEON, Right1032, vmulq_f32(vdupq_laneq_f32(Left.NEON, 2), ThirdSign));
     Result.NEON = vfmaq_laneq_f32(Result.NEON, Right.NEON, Left.NEON, 3);
-    
+
 #else
     Result.X =  Right.Elements[3] * +Left.Elements[0];
     Result.Y =  Right.Elements[2] * -Left.Elements[0];
@@ -2598,6 +2596,27 @@ static inline HMM_Quat HMM_QFromAxisAngle_LH(HMM_Vec3 Axis, float Angle)
     ASSERT_COVERED(HMM_QFromAxisAngle_LH);
 
     return HMM_QFromAxisAngle_RH(Axis, -Angle);
+}
+
+COVERAGE(HMM_QFromNormPair, 1)
+static inline HMM_Quat HMM_QFromNormPair(HMM_Vec3 Left, HMM_Vec3 Right)
+{
+    ASSERT_COVERED(HMM_QFromNormPair);
+
+    HMM_Quat Result;
+
+    Result.XYZ = HMM_Cross(Left, Right);
+    Result.W = 1.0f + HMM_DotV3(Left, Right);
+
+    return HMM_NormQ(Result);
+}
+
+COVERAGE(HMM_QFromVecPair, 1)
+static inline HMM_Quat HMM_QFromVecPair(HMM_Vec3 Left, HMM_Vec3 Right)
+{
+    ASSERT_COVERED(HMM_QFromVecPair);
+
+    return HMM_QFromNormPair(HMM_NormV3(Left), HMM_NormV3(Right));
 }
 
 COVERAGE(HMM_RotateV2, 1)
@@ -3911,6 +3930,3 @@ static inline HMM_Vec4 operator-(HMM_Vec4 In)
 #endif
 
 #endif /* HANDMADE_MATH_H */
-
-
-

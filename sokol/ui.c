@@ -1,5 +1,5 @@
 #include "strpg.h"
-#define	SOKOL_GLCORE33
+#define	SOKOL_GLCORE
 //#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"

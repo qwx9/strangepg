@@ -5,7 +5,7 @@
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
 #define	SOKOL_IMPL
-#define	SOKOL_GLCORE33
+#define	SOKOL_GLCORE
 #define	SOKOL_NO_ENTRY
 //#define	NDEBUG
 #include "lib/sokol_app.h"
