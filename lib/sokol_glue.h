@@ -99,16 +99,9 @@
 #error "Please include sokol_gfx.h before sokol_glue.h"
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 SOKOL_GLUE_API_DECL sg_environment sglue_environment(void);
 SOKOL_GLUE_API_DECL sg_swapchain sglue_swapchain(void);
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 #endif /* SOKOL_GLUE_INCLUDED */
 
 /*-- IMPLEMENTATION ----------------------------------------------------------*/
@@ -131,10 +124,6 @@ SOKOL_API_IMPL sg_environment sglue_environment(void) {
     env.defaults.color_format = (sg_pixel_format) sapp_color_format();
     env.defaults.depth_format = (sg_pixel_format) sapp_depth_format();
     env.defaults.sample_count = sapp_sample_count();
-    env.metal.device = sapp_metal_get_device();
-    env.d3d11.device = sapp_d3d11_get_device();
-    env.d3d11.device_context = sapp_d3d11_get_device_context();
-    env.wgpu.device = sapp_wgpu_get_device();
     return env;
 }
 
@@ -146,15 +135,6 @@ SOKOL_API_IMPL sg_swapchain sglue_swapchain(void) {
     swapchain.sample_count = sapp_sample_count();
     swapchain.color_format = (sg_pixel_format)sapp_color_format();
     swapchain.depth_format = (sg_pixel_format)sapp_depth_format();
-    swapchain.metal.current_drawable = sapp_metal_get_current_drawable();
-    swapchain.metal.depth_stencil_texture = sapp_metal_get_depth_stencil_texture();
-    swapchain.metal.msaa_color_texture = sapp_metal_get_msaa_color_texture();
-    swapchain.d3d11.render_view = sapp_d3d11_get_render_view();
-    swapchain.d3d11.resolve_view = sapp_d3d11_get_resolve_view();
-    swapchain.d3d11.depth_stencil_view = sapp_d3d11_get_depth_stencil_view();
-    swapchain.wgpu.render_view = sapp_wgpu_get_render_view();
-    swapchain.wgpu.resolve_view = sapp_wgpu_get_resolve_view();
-    swapchain.wgpu.depth_stencil_view = sapp_wgpu_get_depth_stencil_view();
     swapchain.gl.framebuffer = sapp_gl_get_framebuffer();
     return swapchain;
 }
