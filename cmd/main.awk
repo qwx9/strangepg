@@ -45,10 +45,12 @@ BEGIN{
 }
 function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
-	if(name in node)
-		delete node[name]
+	if(id in lnode){
+		delete node[lnode[id]]
+		delete lnode[id]
+	}
 	node[name] = id
-	lnode[id] = label
+	lnode[id] = name
 	if(color != "")
 		CL[name] = color
 }
