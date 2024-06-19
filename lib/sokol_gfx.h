@@ -2610,6 +2610,23 @@ typedef struct sg_pass_action {
     sg_pass.swapchain. Look at the function sglue_swapchain() in the sokol_glue.h
     as an example.
 */
+typedef struct sg_metal_swapchain {
+    const void* current_drawable;       // CAMetalDrawable (NOT MTLDrawable!!!)
+    const void* depth_stencil_texture;  // MTLTexture
+    const void* msaa_color_texture;     // MTLTexture
+} sg_metal_swapchain;
+
+typedef struct sg_d3d11_swapchain {
+    const void* render_view;            // ID3D11RenderTargetView
+    const void* resolve_view;           // ID3D11RenderTargetView
+    const void* depth_stencil_view;     // ID3D11DepthStencilView
+} sg_d3d11_swapchain;
+
+typedef struct sg_wgpu_swapchain {
+    const void* render_view;            // WGPUTextureView
+    const void* resolve_view;           // WGPUTextureView
+    const void* depth_stencil_view;     // WGPUTextureView
+} sg_wgpu_swapchain;
 
 typedef struct sg_gl_swapchain {
     uint32_t framebuffer;               // GL framebuffer object
@@ -2621,6 +2638,9 @@ typedef struct sg_swapchain {
     int sample_count;
     sg_pixel_format color_format;
     sg_pixel_format depth_format;
+    sg_metal_swapchain metal;
+    sg_d3d11_swapchain d3d11;
+    sg_wgpu_swapchain wgpu;
     sg_gl_swapchain gl;
 } sg_swapchain;
 
@@ -2769,6 +2789,9 @@ typedef struct sg_buffer_desc {
     const char* label;
     // optionally inject backend-specific resources
     uint32_t gl_buffers[SG_NUM_INFLIGHT_FRAMES];
+    const void* mtl_buffers[SG_NUM_INFLIGHT_FRAMES];
+    const void* d3d11_buffer;
+    const void* wgpu_buffer;
     uint32_t _end_canary;
 } sg_buffer_desc;
 
@@ -2855,6 +2878,11 @@ typedef struct sg_image_desc {
     // optionally inject backend-specific resources
     uint32_t gl_textures[SG_NUM_INFLIGHT_FRAMES];
     uint32_t gl_texture_target;
+    const void* mtl_textures[SG_NUM_INFLIGHT_FRAMES];
+    const void* d3d11_texture;
+    const void* d3d11_shader_resource_view;
+    const void* wgpu_texture;
+    const void* wgpu_texture_view;
     uint32_t _end_canary;
 } sg_image_desc;
 
@@ -2892,6 +2920,9 @@ typedef struct sg_sampler_desc {
     const char* label;
     // optionally inject backend-specific resources
     uint32_t gl_sampler;
+    const void* mtl_sampler;
+    const void* d3d11_sampler;
+    const void* wgpu_sampler;
     uint32_t _end_canary;
 } sg_sampler_desc;
 
@@ -2985,6 +3016,7 @@ typedef struct sg_shader_stage_desc {
     const char* source;
     sg_range bytecode;
     const char* entry;
+    const char* d3d11_target;
     sg_shader_uniform_block_desc uniform_blocks[SG_MAX_SHADERSTAGE_UBS];
     sg_shader_storage_buffer_desc storage_buffers[SG_MAX_SHADERSTAGE_STORAGEBUFFERS];
     sg_shader_image_desc images[SG_MAX_SHADERSTAGE_IMAGES];
@@ -3348,6 +3380,117 @@ typedef struct sg_frame_stats_gl {
     uint32_t num_uniform;
 } sg_frame_stats_gl;
 
+typedef struct sg_frame_stats_d3d11_pass {
+    uint32_t num_om_set_render_targets;
+    uint32_t num_clear_render_target_view;
+    uint32_t num_clear_depth_stencil_view;
+    uint32_t num_resolve_subresource;
+} sg_frame_stats_d3d11_pass;
+
+typedef struct sg_frame_stats_d3d11_pipeline {
+    uint32_t num_rs_set_state;
+    uint32_t num_om_set_depth_stencil_state;
+    uint32_t num_om_set_blend_state;
+    uint32_t num_ia_set_primitive_topology;
+    uint32_t num_ia_set_input_layout;
+    uint32_t num_vs_set_shader;
+    uint32_t num_vs_set_constant_buffers;
+    uint32_t num_ps_set_shader;
+    uint32_t num_ps_set_constant_buffers;
+} sg_frame_stats_d3d11_pipeline;
+
+typedef struct sg_frame_stats_d3d11_bindings {
+    uint32_t num_ia_set_vertex_buffers;
+    uint32_t num_ia_set_index_buffer;
+    uint32_t num_vs_set_shader_resources;
+    uint32_t num_ps_set_shader_resources;
+    uint32_t num_vs_set_samplers;
+    uint32_t num_ps_set_samplers;
+} sg_frame_stats_d3d11_bindings;
+
+typedef struct sg_frame_stats_d3d11_uniforms {
+    uint32_t num_update_subresource;
+} sg_frame_stats_d3d11_uniforms;
+
+typedef struct sg_frame_stats_d3d11_draw {
+    uint32_t num_draw_indexed_instanced;
+    uint32_t num_draw_indexed;
+    uint32_t num_draw_instanced;
+    uint32_t num_draw;
+} sg_frame_stats_d3d11_draw;
+
+typedef struct sg_frame_stats_d3d11 {
+    sg_frame_stats_d3d11_pass pass;
+    sg_frame_stats_d3d11_pipeline pipeline;
+    sg_frame_stats_d3d11_bindings bindings;
+    sg_frame_stats_d3d11_uniforms uniforms;
+    sg_frame_stats_d3d11_draw draw;
+    uint32_t num_map;
+    uint32_t num_unmap;
+} sg_frame_stats_d3d11;
+
+typedef struct sg_frame_stats_metal_idpool {
+    uint32_t num_added;
+    uint32_t num_released;
+    uint32_t num_garbage_collected;
+} sg_frame_stats_metal_idpool;
+
+typedef struct sg_frame_stats_metal_pipeline {
+    uint32_t num_set_blend_color;
+    uint32_t num_set_cull_mode;
+    uint32_t num_set_front_facing_winding;
+    uint32_t num_set_stencil_reference_value;
+    uint32_t num_set_depth_bias;
+    uint32_t num_set_render_pipeline_state;
+    uint32_t num_set_depth_stencil_state;
+} sg_frame_stats_metal_pipeline;
+
+typedef struct sg_frame_stats_metal_bindings {
+    uint32_t num_set_vertex_buffer;
+    uint32_t num_set_vertex_texture;
+    uint32_t num_set_vertex_sampler_state;
+    uint32_t num_set_fragment_buffer;
+    uint32_t num_set_fragment_texture;
+    uint32_t num_set_fragment_sampler_state;
+} sg_frame_stats_metal_bindings;
+
+typedef struct sg_frame_stats_metal_uniforms {
+    uint32_t num_set_vertex_buffer_offset;
+    uint32_t num_set_fragment_buffer_offset;
+} sg_frame_stats_metal_uniforms;
+
+typedef struct sg_frame_stats_metal {
+    sg_frame_stats_metal_idpool idpool;
+    sg_frame_stats_metal_pipeline pipeline;
+    sg_frame_stats_metal_bindings bindings;
+    sg_frame_stats_metal_uniforms uniforms;
+} sg_frame_stats_metal;
+
+typedef struct sg_frame_stats_wgpu_uniforms {
+    uint32_t num_set_bindgroup;
+    uint32_t size_write_buffer;
+} sg_frame_stats_wgpu_uniforms;
+
+typedef struct sg_frame_stats_wgpu_bindings {
+    uint32_t num_set_vertex_buffer;
+    uint32_t num_skip_redundant_vertex_buffer;
+    uint32_t num_set_index_buffer;
+    uint32_t num_skip_redundant_index_buffer;
+    uint32_t num_create_bindgroup;
+    uint32_t num_discard_bindgroup;
+    uint32_t num_set_bindgroup;
+    uint32_t num_skip_redundant_bindgroup;
+    uint32_t num_bindgroup_cache_hits;
+    uint32_t num_bindgroup_cache_misses;
+    uint32_t num_bindgroup_cache_collisions;
+    uint32_t num_bindgroup_cache_hash_vs_key_mismatch;
+} sg_frame_stats_wgpu_bindings;
+
+typedef struct sg_frame_stats_wgpu {
+    sg_frame_stats_wgpu_uniforms uniforms;
+    sg_frame_stats_wgpu_bindings bindings;
+} sg_frame_stats_wgpu;
+
 typedef struct sg_frame_stats {
     uint32_t frame_index;   // current frame counter, starts at 0
 
@@ -3368,6 +3511,9 @@ typedef struct sg_frame_stats {
     uint32_t size_update_image;
 
     sg_frame_stats_gl gl;
+    sg_frame_stats_d3d11 d3d11;
+    sg_frame_stats_metal metal;
+    sg_frame_stats_wgpu wgpu;
 } sg_frame_stats;
 
 /*
@@ -3772,8 +3918,24 @@ typedef struct sg_environment_defaults {
     int sample_count;
 } sg_environment_defaults;
 
+typedef struct sg_metal_environment {
+    const void* device;
+} sg_metal_environment;
+
+typedef struct sg_d3d11_environment {
+    const void* device;
+    const void* device_context;
+} sg_d3d11_environment;
+
+typedef struct sg_wgpu_environment {
+    const void* device;
+} sg_wgpu_environment;
+
 typedef struct sg_environment {
     sg_environment_defaults defaults;
+    sg_metal_environment metal;
+    sg_d3d11_environment d3d11;
+    sg_wgpu_environment wgpu;
 } sg_environment;
 
 /*
@@ -3838,6 +4000,10 @@ typedef struct sg_desc {
     int uniform_buffer_size;
     int max_commit_listeners;
     bool disable_validation;    // disable validation layer even in debug mode, useful for tests
+    bool mtl_force_managed_storage_mode; // for debugging: use Metal managed storage mode for resources even with UMA
+    bool mtl_use_command_buffer_with_retained_references;    // Metal: use a managed MTLCommandBuffer which ref-counts used resources
+    bool wgpu_disable_bindgroups_cache;  // set to true to disable the WebGPU backend BindGroup cache
+    int wgpu_bindgroups_cache_size;      // number of slots in the WebGPU bindgroup cache (must be 2^N)
     sg_allocator allocator;
     sg_logger logger; // optional log function override
     sg_environment environment;
@@ -3968,6 +4134,96 @@ SOKOL_GFX_API_DECL sg_frame_stats sg_query_frame_stats(void);
    This group of functions will be expanded as needed.
 */
 
+typedef struct sg_d3d11_buffer_info {
+    const void* buf;      // ID3D11Buffer*
+} sg_d3d11_buffer_info;
+
+typedef struct sg_d3d11_image_info {
+    const void* tex2d;    // ID3D11Texture2D*
+    const void* tex3d;    // ID3D11Texture3D*
+    const void* res;      // ID3D11Resource* (either tex2d or tex3d)
+    const void* srv;      // ID3D11ShaderResourceView*
+} sg_d3d11_image_info;
+
+typedef struct sg_d3d11_sampler_info {
+    const void* smp;      // ID3D11SamplerState*
+} sg_d3d11_sampler_info;
+
+typedef struct sg_d3d11_shader_info {
+    const void* vs_cbufs[SG_MAX_SHADERSTAGE_UBS]; // ID3D11Buffer* (vertex stage constant buffers)
+    const void* fs_cbufs[SG_MAX_SHADERSTAGE_UBS]; // ID3D11Buffer* (fragment stage constant buffers)
+    const void* vs;   // ID3D11VertexShader*
+    const void* fs;   // ID3D11PixelShader*
+} sg_d3d11_shader_info;
+
+typedef struct sg_d3d11_pipeline_info {
+    const void* il;   // ID3D11InputLayout*
+    const void* rs;   // ID3D11RasterizerState*
+    const void* dss;  // ID3D11DepthStencilState*
+    const void* bs;   // ID3D11BlendState*
+} sg_d3d11_pipeline_info;
+
+typedef struct sg_d3d11_attachments_info {
+    const void* color_rtv[SG_MAX_COLOR_ATTACHMENTS];      // ID3D11RenderTargetView
+    const void* resolve_rtv[SG_MAX_COLOR_ATTACHMENTS];    // ID3D11RenderTargetView
+    const void* dsv;  // ID3D11DepthStencilView
+} sg_d3d11_attachments_info;
+
+typedef struct sg_mtl_buffer_info {
+    const void* buf[SG_NUM_INFLIGHT_FRAMES];  // id<MTLBuffer>
+    int active_slot;
+} sg_mtl_buffer_info;
+
+typedef struct sg_mtl_image_info {
+    const void* tex[SG_NUM_INFLIGHT_FRAMES]; // id<MTLTexture>
+    int active_slot;
+} sg_mtl_image_info;
+
+typedef struct sg_mtl_sampler_info {
+    const void* smp;  // id<MTLSamplerState>
+} sg_mtl_sampler_info;
+
+typedef struct sg_mtl_shader_info {
+    const void* vs_lib;   // id<MTLLibrary>
+    const void* fs_lib;   // id<MTLLibrary>
+    const void* vs_func;  // id<MTLFunction>
+    const void* fs_func;  // id<MTLFunction>
+} sg_mtl_shader_info;
+
+typedef struct sg_mtl_pipeline_info {
+    const void* rps;      // id<MTLRenderPipelineState>
+    const void* dss;      // id<MTLDepthStencilState>
+} sg_mtl_pipeline_info;
+
+typedef struct sg_wgpu_buffer_info {
+    const void* buf;  // WGPUBuffer
+} sg_wgpu_buffer_info;
+
+typedef struct sg_wgpu_image_info {
+    const void* tex;  // WGPUTexture
+    const void* view; // WGPUTextureView
+} sg_wgpu_image_info;
+
+typedef struct sg_wgpu_sampler_info {
+    const void* smp;  // WGPUSampler
+} sg_wgpu_sampler_info;
+
+typedef struct sg_wgpu_shader_info {
+    const void* vs_mod;   // WGPUShaderModule
+    const void* fs_mod;   // WGPUShaderModule
+    const void* bgl;      // WGPUBindGroupLayout;
+} sg_wgpu_shader_info;
+
+typedef struct sg_wgpu_pipeline_info {
+    const void* pip;      // WGPURenderPipeline
+} sg_wgpu_pipeline_info;
+
+typedef struct sg_wgpu_attachments_info {
+    const void* color_view[SG_MAX_COLOR_ATTACHMENTS];     // WGPUTextureView
+    const void* resolve_view[SG_MAX_COLOR_ATTACHMENTS];    // WGPUTextureView
+    const void* ds_view;  // WGPUTextureView
+} sg_wgpu_attachments_info;
+
 typedef struct sg_gl_buffer_info {
     uint32_t buf[SG_NUM_INFLIGHT_FRAMES];
     int active_slot;
@@ -3992,6 +4248,59 @@ typedef struct sg_gl_attachments_info {
     uint32_t framebuffer;
     uint32_t msaa_resolve_framebuffer[SG_MAX_COLOR_ATTACHMENTS];
 } sg_gl_attachments_info;
+
+// D3D11: return ID3D11Device
+SOKOL_GFX_API_DECL const void* sg_d3d11_device(void);
+// D3D11: return ID3D11DeviceContext
+SOKOL_GFX_API_DECL const void* sg_d3d11_device_context(void);
+// D3D11: get internal buffer resource objects
+SOKOL_GFX_API_DECL sg_d3d11_buffer_info sg_d3d11_query_buffer_info(sg_buffer buf);
+// D3D11: get internal image resource objects
+SOKOL_GFX_API_DECL sg_d3d11_image_info sg_d3d11_query_image_info(sg_image img);
+// D3D11: get internal sampler resource objects
+SOKOL_GFX_API_DECL sg_d3d11_sampler_info sg_d3d11_query_sampler_info(sg_sampler smp);
+// D3D11: get internal shader resource objects
+SOKOL_GFX_API_DECL sg_d3d11_shader_info sg_d3d11_query_shader_info(sg_shader shd);
+// D3D11: get internal pipeline resource objects
+SOKOL_GFX_API_DECL sg_d3d11_pipeline_info sg_d3d11_query_pipeline_info(sg_pipeline pip);
+// D3D11: get internal pass resource objects
+SOKOL_GFX_API_DECL sg_d3d11_attachments_info sg_d3d11_query_attachments_info(sg_attachments atts);
+
+// Metal: return __bridge-casted MTLDevice
+SOKOL_GFX_API_DECL const void* sg_mtl_device(void);
+// Metal: return __bridge-casted MTLRenderCommandEncoder in current pass (or zero if outside pass)
+SOKOL_GFX_API_DECL const void* sg_mtl_render_command_encoder(void);
+// Metal: get internal __bridge-casted buffer resource objects
+SOKOL_GFX_API_DECL sg_mtl_buffer_info sg_mtl_query_buffer_info(sg_buffer buf);
+// Metal: get internal __bridge-casted image resource objects
+SOKOL_GFX_API_DECL sg_mtl_image_info sg_mtl_query_image_info(sg_image img);
+// Metal: get internal __bridge-casted sampler resource objects
+SOKOL_GFX_API_DECL sg_mtl_sampler_info sg_mtl_query_sampler_info(sg_sampler smp);
+// Metal: get internal __bridge-casted shader resource objects
+SOKOL_GFX_API_DECL sg_mtl_shader_info sg_mtl_query_shader_info(sg_shader shd);
+// Metal: get internal __bridge-casted pipeline resource objects
+SOKOL_GFX_API_DECL sg_mtl_pipeline_info sg_mtl_query_pipeline_info(sg_pipeline pip);
+
+// WebGPU: return WGPUDevice object
+SOKOL_GFX_API_DECL const void* sg_wgpu_device(void);
+// WebGPU: return WGPUQueue object
+SOKOL_GFX_API_DECL const void* sg_wgpu_queue(void);
+// WebGPU: return this frame's WGPUCommandEncoder
+SOKOL_GFX_API_DECL const void* sg_wgpu_command_encoder(void);
+// WebGPU: return WGPURenderPassEncoder of current pass
+SOKOL_GFX_API_DECL const void* sg_wgpu_render_pass_encoder(void);
+// WebGPU: get internal buffer resource objects
+SOKOL_GFX_API_DECL sg_wgpu_buffer_info sg_wgpu_query_buffer_info(sg_buffer buf);
+// WebGPU: get internal image resource objects
+SOKOL_GFX_API_DECL sg_wgpu_image_info sg_wgpu_query_image_info(sg_image img);
+// WebGPU: get internal sampler resource objects
+SOKOL_GFX_API_DECL sg_wgpu_sampler_info sg_wgpu_query_sampler_info(sg_sampler smp);
+// WebGPU: get internal shader resource objects
+SOKOL_GFX_API_DECL sg_wgpu_shader_info sg_wgpu_query_shader_info(sg_shader shd);
+// WebGPU: get internal pipeline resource objects
+SOKOL_GFX_API_DECL sg_wgpu_pipeline_info sg_wgpu_query_pipeline_info(sg_pipeline pip);
+// WebGPU: get internal pass resource objects
+SOKOL_GFX_API_DECL sg_wgpu_attachments_info sg_wgpu_query_attachments_info(sg_attachments atts);
 
 // GL: get internal buffer resource objects
 SOKOL_GFX_API_DECL sg_gl_buffer_info sg_gl_query_buffer_info(sg_buffer buf);
@@ -4118,7 +4427,58 @@ inline int sg_append_buffer(sg_buffer buf_id, const sg_range& data) { return sg_
 #define SG_DEFAULT_CLEAR_STENCIL (0)
 #endif
 
-#if defined(SOKOL_GLCORE) || defined(SOKOL_GLES3)
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4115)   // named type definition in parentheses
+#pragma warning(disable:4505)   // unreferenced local function has been removed
+#pragma warning(disable:4201)   // nonstandard extension used: nameless struct/union (needed by d3d11.h)
+#pragma warning(disable:4054)   // 'type cast': from function pointer
+#pragma warning(disable:4055)   // 'type cast': from data pointer
+#endif
+
+#if defined(SOKOL_D3D11)
+    #ifndef D3D11_NO_HELPERS
+    #define D3D11_NO_HELPERS
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+    #endif
+    #ifndef NOMINMAX
+    #define NOMINMAX
+    #endif
+    #include <d3d11.h>
+    #include <d3dcompiler.h>
+    #ifdef _MSC_VER
+    #pragma comment (lib, "kernel32")
+    #pragma comment (lib, "user32")
+    #pragma comment (lib, "dxgi")
+    #pragma comment (lib, "d3d11")
+    #endif
+#elif defined(SOKOL_METAL)
+    // see https://clang.llvm.org/docs/LanguageExtensions.html#automatic-reference-counting
+    #if !defined(__cplusplus)
+        #if __has_feature(objc_arc) && !__has_feature(objc_arc_fields)
+            #error "sokol_gfx.h requires __has_feature(objc_arc_field) if ARC is enabled (use a more recent compiler version)"
+        #endif
+    #endif
+    #include <TargetConditionals.h>
+    #include <AvailabilityMacros.h>
+    #if defined(TARGET_OS_IPHONE) && !TARGET_OS_IPHONE
+        #define _SG_TARGET_MACOS (1)
+    #else
+        #define _SG_TARGET_IOS (1)
+        #if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR
+            #define _SG_TARGET_IOS_SIMULATOR (1)
+        #endif
+    #endif
+    #import <Metal/Metal.h>
+    #import <QuartzCore/CoreAnimation.h> // needed for CAMetalDrawable
+#elif defined(SOKOL_WGPU)
+    #include <webgpu/webgpu.h>
+    #if defined(__EMSCRIPTEN__)
+        #include <emscripten/emscripten.h>
+    #endif
+#elif defined(SOKOL_GLCORE) || defined(SOKOL_GLES3)
     #define _SOKOL_ANY_GL (1)
 
     // include platform specific GL headers (or on Win32: use an embedded GL loader)
@@ -5083,6 +5443,399 @@ typedef struct {
     #endif
 } _sg_gl_backend_t;
 
+#elif defined(SOKOL_D3D11)
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_buffer_common_t cmn;
+    struct {
+        ID3D11Buffer* buf;
+        ID3D11ShaderResourceView* srv;
+    } d3d11;
+} _sg_d3d11_buffer_t;
+typedef _sg_d3d11_buffer_t _sg_buffer_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_image_common_t cmn;
+    struct {
+        DXGI_FORMAT format;
+        ID3D11Texture2D* tex2d;
+        ID3D11Texture3D* tex3d;
+        ID3D11Resource* res;    // either tex2d or tex3d
+        ID3D11ShaderResourceView* srv;
+    } d3d11;
+} _sg_d3d11_image_t;
+typedef _sg_d3d11_image_t _sg_image_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_sampler_common_t cmn;
+    struct {
+        ID3D11SamplerState* smp;
+    } d3d11;
+} _sg_d3d11_sampler_t;
+typedef _sg_d3d11_sampler_t _sg_sampler_t;
+
+typedef struct {
+    _sg_str_t sem_name;
+    int sem_index;
+} _sg_d3d11_shader_attr_t;
+
+typedef struct {
+    ID3D11Buffer* cbufs[SG_MAX_SHADERSTAGE_UBS];
+} _sg_d3d11_shader_stage_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_shader_common_t cmn;
+    struct {
+        _sg_d3d11_shader_attr_t attrs[SG_MAX_VERTEX_ATTRIBUTES];
+        _sg_d3d11_shader_stage_t stage[SG_NUM_SHADER_STAGES];
+        ID3D11VertexShader* vs;
+        ID3D11PixelShader* fs;
+        void* vs_blob;
+        size_t vs_blob_length;
+    } d3d11;
+} _sg_d3d11_shader_t;
+typedef _sg_d3d11_shader_t _sg_shader_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_pipeline_common_t cmn;
+    _sg_shader_t* shader;
+    struct {
+        UINT stencil_ref;
+        UINT vb_strides[SG_MAX_VERTEX_BUFFERS];
+        D3D_PRIMITIVE_TOPOLOGY topology;
+        DXGI_FORMAT index_format;
+        ID3D11InputLayout* il;
+        ID3D11RasterizerState* rs;
+        ID3D11DepthStencilState* dss;
+        ID3D11BlendState* bs;
+    } d3d11;
+} _sg_d3d11_pipeline_t;
+typedef _sg_d3d11_pipeline_t _sg_pipeline_t;
+
+typedef struct {
+    _sg_image_t* image;
+    union {
+        ID3D11RenderTargetView* rtv;
+        ID3D11DepthStencilView* dsv;
+    } view;
+} _sg_d3d11_attachment_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_attachments_common_t cmn;
+    struct {
+        _sg_d3d11_attachment_t colors[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_d3d11_attachment_t resolves[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_d3d11_attachment_t depth_stencil;
+    } d3d11;
+} _sg_d3d11_attachments_t;
+typedef _sg_d3d11_attachments_t _sg_attachments_t;
+
+typedef struct {
+    bool valid;
+    ID3D11Device* dev;
+    ID3D11DeviceContext* ctx;
+    bool use_indexed_draw;
+    bool use_instanced_draw;
+    _sg_pipeline_t* cur_pipeline;
+    sg_pipeline cur_pipeline_id;
+    struct {
+        ID3D11RenderTargetView* render_view;
+        ID3D11RenderTargetView* resolve_view;
+    } cur_pass;
+    // on-demand loaded d3dcompiler_47.dll handles
+    HINSTANCE d3dcompiler_dll;
+    bool d3dcompiler_dll_load_failed;
+    pD3DCompile D3DCompile_func;
+    // global subresourcedata array for texture updates
+    D3D11_SUBRESOURCE_DATA subres_data[SG_MAX_MIPMAPS * SG_MAX_TEXTUREARRAY_LAYERS];
+} _sg_d3d11_backend_t;
+
+#elif defined(SOKOL_METAL)
+
+#if defined(_SG_TARGET_MACOS) || defined(_SG_TARGET_IOS_SIMULATOR)
+#define _SG_MTL_UB_ALIGN (256)
+#else
+#define _SG_MTL_UB_ALIGN (16)
+#endif
+#define _SG_MTL_INVALID_SLOT_INDEX (0)
+
+typedef struct {
+    uint32_t frame_index;   // frame index at which it is safe to release this resource
+    int slot_index;
+} _sg_mtl_release_item_t;
+
+typedef struct {
+    NSMutableArray* pool;
+    int num_slots;
+    int free_queue_top;
+    int* free_queue;
+    int release_queue_front;
+    int release_queue_back;
+    _sg_mtl_release_item_t* release_queue;
+} _sg_mtl_idpool_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_buffer_common_t cmn;
+    struct {
+        int buf[SG_NUM_INFLIGHT_FRAMES];  // index into _sg_mtl_pool
+    } mtl;
+} _sg_mtl_buffer_t;
+typedef _sg_mtl_buffer_t _sg_buffer_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_image_common_t cmn;
+    struct {
+        int tex[SG_NUM_INFLIGHT_FRAMES];
+    } mtl;
+} _sg_mtl_image_t;
+typedef _sg_mtl_image_t _sg_image_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_sampler_common_t cmn;
+    struct {
+        int sampler_state;
+    } mtl;
+} _sg_mtl_sampler_t;
+typedef _sg_mtl_sampler_t _sg_sampler_t;
+
+typedef struct {
+    int mtl_lib;
+    int mtl_func;
+} _sg_mtl_shader_stage_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_shader_common_t cmn;
+    struct {
+        _sg_mtl_shader_stage_t stage[SG_NUM_SHADER_STAGES];
+    } mtl;
+} _sg_mtl_shader_t;
+typedef _sg_mtl_shader_t _sg_shader_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_pipeline_common_t cmn;
+    _sg_shader_t* shader;
+    struct {
+        MTLPrimitiveType prim_type;
+        int index_size;
+        MTLIndexType index_type;
+        MTLCullMode cull_mode;
+        MTLWinding winding;
+        uint32_t stencil_ref;
+        int rps;
+        int dss;
+    } mtl;
+} _sg_mtl_pipeline_t;
+typedef _sg_mtl_pipeline_t _sg_pipeline_t;
+
+typedef struct {
+    _sg_image_t* image;
+} _sg_mtl_attachment_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_attachments_common_t cmn;
+    struct {
+        _sg_mtl_attachment_t colors[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_mtl_attachment_t resolves[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_mtl_attachment_t depth_stencil;
+    } mtl;
+} _sg_mtl_attachments_t;
+typedef _sg_mtl_attachments_t _sg_attachments_t;
+
+// resource binding state cache
+typedef struct {
+    const _sg_pipeline_t* cur_pipeline;
+    sg_pipeline cur_pipeline_id;
+    const _sg_buffer_t* cur_indexbuffer;
+    sg_buffer cur_indexbuffer_id;
+    int cur_indexbuffer_offset;
+    int cur_vertexbuffer_offsets[SG_MAX_VERTEX_BUFFERS];
+    sg_buffer cur_vertexbuffer_ids[SG_MAX_VERTEX_BUFFERS];
+    sg_image cur_vs_image_ids[SG_MAX_SHADERSTAGE_IMAGES];
+    sg_image cur_fs_image_ids[SG_MAX_SHADERSTAGE_IMAGES];
+    sg_sampler cur_vs_sampler_ids[SG_MAX_SHADERSTAGE_SAMPLERS];
+    sg_sampler cur_fs_sampler_ids[SG_MAX_SHADERSTAGE_SAMPLERS];
+    sg_buffer cur_vs_storagebuffer_ids[SG_MAX_SHADERSTAGE_STORAGEBUFFERS];
+    sg_buffer cur_fs_storagebuffer_ids[SG_MAX_SHADERSTAGE_STORAGEBUFFERS];
+} _sg_mtl_state_cache_t;
+
+typedef struct {
+    bool valid;
+    bool use_shared_storage_mode;
+    uint32_t cur_frame_rotate_index;
+    int ub_size;
+    int cur_ub_offset;
+    uint8_t* cur_ub_base_ptr;
+    _sg_mtl_state_cache_t state_cache;
+    _sg_mtl_idpool_t idpool;
+    dispatch_semaphore_t sem;
+    id<MTLDevice> device;
+    id<MTLCommandQueue> cmd_queue;
+    id<MTLCommandBuffer> cmd_buffer;
+    id<MTLRenderCommandEncoder> cmd_encoder;
+    id<CAMetalDrawable> cur_drawable;
+    id<MTLBuffer> uniform_buffers[SG_NUM_INFLIGHT_FRAMES];
+} _sg_mtl_backend_t;
+
+#elif defined(SOKOL_WGPU)
+
+#define _SG_WGPU_ROWPITCH_ALIGN (256)
+#define _SG_WGPU_MAX_UNIFORM_UPDATE_SIZE (1<<16) // also see WGPULimits.maxUniformBufferBindingSize
+#define _SG_WGPU_NUM_BINDGROUPS (2) // 0: uniforms, 1: images and sampler on both shader stages
+#define _SG_WGPU_UNIFORM_BINDGROUP_INDEX (0)
+#define _SG_WGPU_IMAGE_SAMPLER_BINDGROUP_INDEX (1)
+#define _SG_WGPU_MAX_BINDGROUP_ENTRIES (SG_NUM_SHADER_STAGES * (SG_MAX_SHADERSTAGE_IMAGES + SG_MAX_SHADERSTAGE_SAMPLERS + SG_MAX_SHADERSTAGE_STORAGEBUFFERS))
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_buffer_common_t cmn;
+    struct {
+        WGPUBuffer buf;
+    } wgpu;
+} _sg_wgpu_buffer_t;
+typedef _sg_wgpu_buffer_t _sg_buffer_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_image_common_t cmn;
+    struct {
+        WGPUTexture tex;
+        WGPUTextureView view;
+    } wgpu;
+} _sg_wgpu_image_t;
+typedef _sg_wgpu_image_t _sg_image_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_sampler_common_t cmn;
+    struct {
+        WGPUSampler smp;
+    } wgpu;
+} _sg_wgpu_sampler_t;
+typedef _sg_wgpu_sampler_t _sg_sampler_t;
+
+typedef struct {
+    WGPUShaderModule module;
+    _sg_str_t entry;
+} _sg_wgpu_shader_stage_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_shader_common_t cmn;
+    struct {
+        _sg_wgpu_shader_stage_t stage[SG_NUM_SHADER_STAGES];
+        WGPUBindGroupLayout bind_group_layout;
+    } wgpu;
+} _sg_wgpu_shader_t;
+typedef _sg_wgpu_shader_t _sg_shader_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_pipeline_common_t cmn;
+    _sg_shader_t* shader;
+    struct {
+        WGPURenderPipeline pip;
+        WGPUColor blend_color;
+    } wgpu;
+} _sg_wgpu_pipeline_t;
+typedef _sg_wgpu_pipeline_t _sg_pipeline_t;
+
+typedef struct {
+    _sg_image_t* image;
+    WGPUTextureView view;
+} _sg_wgpu_attachment_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    _sg_attachments_common_t cmn;
+    struct {
+        _sg_wgpu_attachment_t colors[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_wgpu_attachment_t resolves[SG_MAX_COLOR_ATTACHMENTS];
+        _sg_wgpu_attachment_t depth_stencil;
+    } wgpu;
+} _sg_wgpu_attachments_t;
+typedef _sg_wgpu_attachments_t _sg_attachments_t;
+
+// a pool of per-frame uniform buffers
+typedef struct {
+    uint32_t num_bytes;
+    uint32_t offset;    // current offset into buf
+    uint8_t* staging;   // intermediate buffer for uniform data updates
+    WGPUBuffer buf;     // the GPU-side uniform buffer
+    struct {
+        WGPUBindGroupLayout group_layout;
+        WGPUBindGroup group;
+        uint32_t offsets[SG_NUM_SHADER_STAGES][SG_MAX_SHADERSTAGE_UBS];
+    } bind;
+} _sg_wgpu_uniform_buffer_t;
+
+typedef struct {
+    uint32_t id;
+} _sg_wgpu_bindgroup_handle_t;
+
+#define _SG_WGPU_BINDGROUPSCACHE_NUM_ITEMS (1 + _SG_WGPU_MAX_BINDGROUP_ENTRIES)
+typedef struct {
+    uint64_t hash;
+    uint32_t items[_SG_WGPU_BINDGROUPSCACHE_NUM_ITEMS];
+} _sg_wgpu_bindgroups_cache_key_t;
+
+typedef struct {
+    uint32_t num;           // must be 2^n
+    uint32_t index_mask;    // mask to turn hash into valid index
+    _sg_wgpu_bindgroup_handle_t* items;
+} _sg_wgpu_bindgroups_cache_t;
+
+typedef struct {
+    _sg_slot_t slot;
+    WGPUBindGroup bindgroup;
+    _sg_wgpu_bindgroups_cache_key_t key;
+} _sg_wgpu_bindgroup_t;
+
+typedef struct {
+    _sg_pool_t pool;
+    _sg_wgpu_bindgroup_t* bindgroups;
+} _sg_wgpu_bindgroups_pool_t;
+
+typedef struct {
+    struct {
+        sg_buffer buffer;
+        int offset;
+    } vbs[SG_MAX_VERTEX_BUFFERS];
+    struct {
+        sg_buffer buffer;
+        int offset;
+    } ib;
+    _sg_wgpu_bindgroup_handle_t bg;
+} _sg_wgpu_bindings_cache_t;
+
+// the WGPU backend state
+typedef struct {
+    bool valid;
+    bool use_indexed_draw;
+    WGPUDevice dev;
+    WGPUSupportedLimits limits;
+    WGPUQueue queue;
+    WGPUCommandEncoder cmd_enc;
+    WGPURenderPassEncoder pass_enc;
+    WGPUBindGroup empty_bind_group;
+    const _sg_pipeline_t* cur_pipeline;
+    sg_pipeline cur_pipeline_id;
+    _sg_wgpu_uniform_buffer_t uniform;
+    _sg_wgpu_bindings_cache_t bindings_cache;
+    _sg_wgpu_bindgroups_cache_t bindgroups_cache;
+    _sg_wgpu_bindgroups_pool_t bindgroups_pool;
+} _sg_wgpu_backend_t;
 #endif
 
 // POOL STRUCTS
@@ -5172,7 +5925,15 @@ typedef struct {
     bool stats_enabled;
     sg_frame_stats stats;
     sg_frame_stats prev_stats;
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_backend_t gl;
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_backend_t mtl;
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_backend_t d3d11;
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_backend_t wgpu;
+    #endif
     #if defined(SOKOL_TRACE_HOOKS)
     sg_trace_hooks hooks;
     #endif
@@ -5801,7 +6562,400 @@ _SOKOL_PRIVATE sg_pass_action _sg_pass_action_defaults(const sg_pass_action* act
     return res;
 }
 
-#if defined(_SOKOL_ANY_GL)
+// ██████  ██    ██ ███    ███ ███    ███ ██    ██     ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
+// ██   ██ ██    ██ ████  ████ ████  ████  ██  ██      ██   ██ ██   ██ ██      ██  ██  ██      ████   ██ ██   ██
+// ██   ██ ██    ██ ██ ████ ██ ██ ████ ██   ████       ██████  ███████ ██      █████   █████   ██ ██  ██ ██   ██
+// ██   ██ ██    ██ ██  ██  ██ ██  ██  ██    ██        ██   ██ ██   ██ ██      ██  ██  ██      ██  ██ ██ ██   ██
+// ██████   ██████  ██      ██ ██      ██    ██        ██████  ██   ██  ██████ ██   ██ ███████ ██   ████ ██████
+//
+// >>dummy backend
+#if defined(SOKOL_DUMMY_BACKEND)
+
+_SOKOL_PRIVATE void _sg_dummy_setup_backend(const sg_desc* desc) {
+    SOKOL_ASSERT(desc);
+    _SOKOL_UNUSED(desc);
+    _sg.backend = SG_BACKEND_DUMMY;
+    for (int i = SG_PIXELFORMAT_R8; i < SG_PIXELFORMAT_BC1_RGBA; i++) {
+        _sg.formats[i].sample = true;
+        _sg.formats[i].filter = true;
+        _sg.formats[i].render = true;
+        _sg.formats[i].blend = true;
+        _sg.formats[i].msaa = true;
+    }
+    _sg.formats[SG_PIXELFORMAT_DEPTH].depth = true;
+    _sg.formats[SG_PIXELFORMAT_DEPTH_STENCIL].depth = true;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_backend(void) {
+    // empty
+}
+
+_SOKOL_PRIVATE void _sg_dummy_reset_state_cache(void) {
+    // empty
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_buffer(_sg_buffer_t* buf, const sg_buffer_desc* desc) {
+    SOKOL_ASSERT(buf && desc);
+    _SOKOL_UNUSED(buf);
+    _SOKOL_UNUSED(desc);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_buffer(_sg_buffer_t* buf) {
+    SOKOL_ASSERT(buf);
+    _SOKOL_UNUSED(buf);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_image(_sg_image_t* img, const sg_image_desc* desc) {
+    SOKOL_ASSERT(img && desc);
+    _SOKOL_UNUSED(img);
+    _SOKOL_UNUSED(desc);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_image(_sg_image_t* img) {
+    SOKOL_ASSERT(img);
+    _SOKOL_UNUSED(img);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_sampler(_sg_sampler_t* smp, const sg_sampler_desc* desc) {
+    SOKOL_ASSERT(smp && desc);
+    _SOKOL_UNUSED(smp);
+    _SOKOL_UNUSED(desc);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_sampler(_sg_sampler_t* smp) {
+    SOKOL_ASSERT(smp);
+    _SOKOL_UNUSED(smp);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_shader(_sg_shader_t* shd, const sg_shader_desc* desc) {
+    SOKOL_ASSERT(shd && desc);
+    _SOKOL_UNUSED(shd);
+    _SOKOL_UNUSED(desc);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_shader(_sg_shader_t* shd) {
+    SOKOL_ASSERT(shd);
+    _SOKOL_UNUSED(shd);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_pipeline(_sg_pipeline_t* pip, _sg_shader_t* shd, const sg_pipeline_desc* desc) {
+    SOKOL_ASSERT(pip && desc);
+    pip->shader = shd;
+    for (int attr_index = 0; attr_index < SG_MAX_VERTEX_ATTRIBUTES; attr_index++) {
+        const sg_vertex_attr_state* a_state = &desc->layout.attrs[attr_index];
+        if (a_state->format == SG_VERTEXFORMAT_INVALID) {
+            break;
+        }
+        SOKOL_ASSERT(a_state->buffer_index < SG_MAX_VERTEX_BUFFERS);
+        pip->cmn.vertex_buffer_layout_active[a_state->buffer_index] = true;
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    _SOKOL_UNUSED(pip);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_dummy_create_attachments(_sg_attachments_t* atts, _sg_image_t** color_images, _sg_image_t** resolve_images, _sg_image_t* ds_img, const sg_attachments_desc* desc) {
+    SOKOL_ASSERT(atts && desc);
+    SOKOL_ASSERT(color_images && resolve_images);
+
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        const sg_attachment_desc* color_desc = &desc->colors[i];
+        _SOKOL_UNUSED(color_desc);
+        SOKOL_ASSERT(color_desc->image.id != SG_INVALID_ID);
+        SOKOL_ASSERT(0 == atts->dmy.colors[i].image);
+        SOKOL_ASSERT(color_images[i] && (color_images[i]->slot.id == color_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_color_format(color_images[i]->cmn.pixel_format));
+        atts->dmy.colors[i].image = color_images[i];
+
+        const sg_attachment_desc* resolve_desc = &desc->resolves[i];
+        if (resolve_desc->image.id != SG_INVALID_ID) {
+            SOKOL_ASSERT(0 == atts->dmy.resolves[i].image);
+            SOKOL_ASSERT(resolve_images[i] && (resolve_images[i]->slot.id == resolve_desc->image.id));
+            SOKOL_ASSERT(color_images[i] && (color_images[i]->cmn.pixel_format == resolve_images[i]->cmn.pixel_format));
+            atts->dmy.resolves[i].image = resolve_images[i];
+        }
+    }
+
+    SOKOL_ASSERT(0 == atts->dmy.depth_stencil.image);
+    const sg_attachment_desc* ds_desc = &desc->depth_stencil;
+    if (ds_desc->image.id != SG_INVALID_ID) {
+        SOKOL_ASSERT(ds_img && (ds_img->slot.id == ds_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_depth_format(ds_img->cmn.pixel_format));
+        atts->dmy.depth_stencil.image = ds_img;
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_discard_attachments(_sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    _SOKOL_UNUSED(atts);
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_dummy_attachments_color_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->dmy.colors[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_dummy_attachments_resolve_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->dmy.resolves[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_dummy_attachments_ds_image(const _sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    return atts->dmy.depth_stencil.image;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_begin_pass(const sg_pass* pass) {
+    SOKOL_ASSERT(pass);
+    _SOKOL_UNUSED(pass);
+}
+
+_SOKOL_PRIVATE void _sg_dummy_end_pass(void) {
+    // empty
+}
+
+_SOKOL_PRIVATE void _sg_dummy_commit(void) {
+    // empty
+}
+
+_SOKOL_PRIVATE void _sg_dummy_apply_viewport(int x, int y, int w, int h, bool origin_top_left) {
+    _SOKOL_UNUSED(x);
+    _SOKOL_UNUSED(y);
+    _SOKOL_UNUSED(w);
+    _SOKOL_UNUSED(h);
+    _SOKOL_UNUSED(origin_top_left);
+}
+
+_SOKOL_PRIVATE void _sg_dummy_apply_scissor_rect(int x, int y, int w, int h, bool origin_top_left) {
+    _SOKOL_UNUSED(x);
+    _SOKOL_UNUSED(y);
+    _SOKOL_UNUSED(w);
+    _SOKOL_UNUSED(h);
+    _SOKOL_UNUSED(origin_top_left);
+}
+
+_SOKOL_PRIVATE void _sg_dummy_apply_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    _SOKOL_UNUSED(pip);
+}
+
+_SOKOL_PRIVATE bool _sg_dummy_apply_bindings(_sg_bindings_t* bnd) {
+    SOKOL_ASSERT(bnd);
+    SOKOL_ASSERT(bnd->pip);
+    _SOKOL_UNUSED(bnd);
+    return true;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_apply_uniforms(sg_shader_stage stage_index, int ub_index, const sg_range* data) {
+    _SOKOL_UNUSED(stage_index);
+    _SOKOL_UNUSED(ub_index);
+    _SOKOL_UNUSED(data);
+}
+
+_SOKOL_PRIVATE void _sg_dummy_draw(int base_element, int num_elements, int num_instances) {
+    _SOKOL_UNUSED(base_element);
+    _SOKOL_UNUSED(num_elements);
+    _SOKOL_UNUSED(num_instances);
+}
+
+_SOKOL_PRIVATE void _sg_dummy_update_buffer(_sg_buffer_t* buf, const sg_range* data) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    _SOKOL_UNUSED(data);
+    if (++buf->cmn.active_slot >= buf->cmn.num_slots) {
+        buf->cmn.active_slot = 0;
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_dummy_append_buffer(_sg_buffer_t* buf, const sg_range* data, bool new_frame) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    _SOKOL_UNUSED(data);
+    if (new_frame) {
+        if (++buf->cmn.active_slot >= buf->cmn.num_slots) {
+            buf->cmn.active_slot = 0;
+        }
+    }
+    return true;
+}
+
+_SOKOL_PRIVATE void _sg_dummy_update_image(_sg_image_t* img, const sg_image_data* data) {
+    SOKOL_ASSERT(img && data);
+    _SOKOL_UNUSED(data);
+    if (++img->cmn.active_slot >= img->cmn.num_slots) {
+        img->cmn.active_slot = 0;
+    }
+}
+
+//  ██████  ██████  ███████ ███    ██  ██████  ██          ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
+// ██    ██ ██   ██ ██      ████   ██ ██       ██          ██   ██ ██   ██ ██      ██  ██  ██      ████   ██ ██   ██
+// ██    ██ ██████  █████   ██ ██  ██ ██   ███ ██          ██████  ███████ ██      █████   █████   ██ ██  ██ ██   ██
+// ██    ██ ██      ██      ██  ██ ██ ██    ██ ██          ██   ██ ██   ██ ██      ██  ██  ██      ██  ██ ██ ██   ██
+//  ██████  ██      ███████ ██   ████  ██████  ███████     ██████  ██   ██  ██████ ██   ██ ███████ ██   ████ ██████
+//
+// >>opengl backend
+#elif defined(_SOKOL_ANY_GL)
+
+// optional GL loader for win32
+#if defined(_SOKOL_USE_WIN32_GL_LOADER)
+
+#ifndef SG_GL_FUNCS_EXT
+#define SG_GL_FUNCS_EXT
+#endif
+
+// X Macro list of GL function names and signatures
+#define _SG_GL_FUNCS \
+    SG_GL_FUNCS_EXT \
+    _SG_XMACRO(glBindVertexArray,                 void, (GLuint array)) \
+    _SG_XMACRO(glFramebufferTextureLayer,         void, (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)) \
+    _SG_XMACRO(glGenFramebuffers,                 void, (GLsizei n, GLuint * framebuffers)) \
+    _SG_XMACRO(glBindFramebuffer,                 void, (GLenum target, GLuint framebuffer)) \
+    _SG_XMACRO(glBindRenderbuffer,                void, (GLenum target, GLuint renderbuffer)) \
+    _SG_XMACRO(glGetStringi,                      const GLubyte *, (GLenum name, GLuint index)) \
+    _SG_XMACRO(glClearBufferfi,                   void, (GLenum buffer, GLint drawbuffer, GLfloat depth, GLint stencil)) \
+    _SG_XMACRO(glClearBufferfv,                   void, (GLenum buffer, GLint drawbuffer, const GLfloat * value)) \
+    _SG_XMACRO(glClearBufferuiv,                  void, (GLenum buffer, GLint drawbuffer, const GLuint * value)) \
+    _SG_XMACRO(glClearBufferiv,                   void, (GLenum buffer, GLint drawbuffer, const GLint * value)) \
+    _SG_XMACRO(glDeleteRenderbuffers,             void, (GLsizei n, const GLuint * renderbuffers)) \
+    _SG_XMACRO(glUniform1fv,                      void, (GLint location, GLsizei count, const GLfloat * value)) \
+    _SG_XMACRO(glUniform2fv,                      void, (GLint location, GLsizei count, const GLfloat * value)) \
+    _SG_XMACRO(glUniform3fv,                      void, (GLint location, GLsizei count, const GLfloat * value)) \
+    _SG_XMACRO(glUniform4fv,                      void, (GLint location, GLsizei count, const GLfloat * value)) \
+    _SG_XMACRO(glUniform1iv,                      void, (GLint location, GLsizei count, const GLint * value)) \
+    _SG_XMACRO(glUniform2iv,                      void, (GLint location, GLsizei count, const GLint * value)) \
+    _SG_XMACRO(glUniform3iv,                      void, (GLint location, GLsizei count, const GLint * value)) \
+    _SG_XMACRO(glUniform4iv,                      void, (GLint location, GLsizei count, const GLint * value)) \
+    _SG_XMACRO(glUniformMatrix4fv,                void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat * value)) \
+    _SG_XMACRO(glUseProgram,                      void, (GLuint program)) \
+    _SG_XMACRO(glShaderSource,                    void, (GLuint shader, GLsizei count, const GLchar *const* string, const GLint * length)) \
+    _SG_XMACRO(glLinkProgram,                     void, (GLuint program)) \
+    _SG_XMACRO(glGetUniformLocation,              GLint, (GLuint program, const GLchar * name)) \
+    _SG_XMACRO(glGetShaderiv,                     void, (GLuint shader, GLenum pname, GLint * params)) \
+    _SG_XMACRO(glGetProgramInfoLog,               void, (GLuint program, GLsizei bufSize, GLsizei * length, GLchar * infoLog)) \
+    _SG_XMACRO(glGetAttribLocation,               GLint, (GLuint program, const GLchar * name)) \
+    _SG_XMACRO(glDisableVertexAttribArray,        void, (GLuint index)) \
+    _SG_XMACRO(glDeleteShader,                    void, (GLuint shader)) \
+    _SG_XMACRO(glDeleteProgram,                   void, (GLuint program)) \
+    _SG_XMACRO(glCompileShader,                   void, (GLuint shader)) \
+    _SG_XMACRO(glStencilFuncSeparate,             void, (GLenum face, GLenum func, GLint ref, GLuint mask)) \
+    _SG_XMACRO(glStencilOpSeparate,               void, (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass)) \
+    _SG_XMACRO(glRenderbufferStorageMultisample,  void, (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)) \
+    _SG_XMACRO(glDrawBuffers,                     void, (GLsizei n, const GLenum * bufs)) \
+    _SG_XMACRO(glVertexAttribDivisor,             void, (GLuint index, GLuint divisor)) \
+    _SG_XMACRO(glBufferSubData,                   void, (GLenum target, GLintptr offset, GLsizeiptr size, const void * data)) \
+    _SG_XMACRO(glGenBuffers,                      void, (GLsizei n, GLuint * buffers)) \
+    _SG_XMACRO(glCheckFramebufferStatus,          GLenum, (GLenum target)) \
+    _SG_XMACRO(glFramebufferRenderbuffer,         void, (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)) \
+    _SG_XMACRO(glCompressedTexImage2D,            void, (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void * data)) \
+    _SG_XMACRO(glCompressedTexImage3D,            void, (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void * data)) \
+    _SG_XMACRO(glActiveTexture,                   void, (GLenum texture)) \
+    _SG_XMACRO(glTexSubImage3D,                   void, (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void * pixels)) \
+    _SG_XMACRO(glRenderbufferStorage,             void, (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)) \
+    _SG_XMACRO(glGenTextures,                     void, (GLsizei n, GLuint * textures)) \
+    _SG_XMACRO(glPolygonOffset,                   void, (GLfloat factor, GLfloat units)) \
+    _SG_XMACRO(glDrawElements,                    void, (GLenum mode, GLsizei count, GLenum type, const void * indices)) \
+    _SG_XMACRO(glDeleteFramebuffers,              void, (GLsizei n, const GLuint * framebuffers)) \
+    _SG_XMACRO(glBlendEquationSeparate,           void, (GLenum modeRGB, GLenum modeAlpha)) \
+    _SG_XMACRO(glDeleteTextures,                  void, (GLsizei n, const GLuint * textures)) \
+    _SG_XMACRO(glGetProgramiv,                    void, (GLuint program, GLenum pname, GLint * params)) \
+    _SG_XMACRO(glBindTexture,                     void, (GLenum target, GLuint texture)) \
+    _SG_XMACRO(glTexImage3D,                      void, (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void * pixels)) \
+    _SG_XMACRO(glCreateShader,                    GLuint, (GLenum type)) \
+    _SG_XMACRO(glTexSubImage2D,                   void, (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void * pixels)) \
+    _SG_XMACRO(glFramebufferTexture2D,            void, (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)) \
+    _SG_XMACRO(glCreateProgram,                   GLuint, (void)) \
+    _SG_XMACRO(glViewport,                        void, (GLint x, GLint y, GLsizei width, GLsizei height)) \
+    _SG_XMACRO(glDeleteBuffers,                   void, (GLsizei n, const GLuint * buffers)) \
+    _SG_XMACRO(glDrawArrays,                      void, (GLenum mode, GLint first, GLsizei count)) \
+    _SG_XMACRO(glDrawElementsInstanced,           void, (GLenum mode, GLsizei count, GLenum type, const void * indices, GLsizei instancecount)) \
+    _SG_XMACRO(glVertexAttribPointer,             void, (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void * pointer)) \
+    _SG_XMACRO(glUniform1i,                       void, (GLint location, GLint v0)) \
+    _SG_XMACRO(glDisable,                         void, (GLenum cap)) \
+    _SG_XMACRO(glColorMask,                       void, (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)) \
+    _SG_XMACRO(glColorMaski,                      void, (GLuint buf, GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)) \
+    _SG_XMACRO(glBindBuffer,                      void, (GLenum target, GLuint buffer)) \
+    _SG_XMACRO(glDeleteVertexArrays,              void, (GLsizei n, const GLuint * arrays)) \
+    _SG_XMACRO(glDepthMask,                       void, (GLboolean flag)) \
+    _SG_XMACRO(glDrawArraysInstanced,             void, (GLenum mode, GLint first, GLsizei count, GLsizei instancecount)) \
+    _SG_XMACRO(glScissor,                         void, (GLint x, GLint y, GLsizei width, GLsizei height)) \
+    _SG_XMACRO(glGenRenderbuffers,                void, (GLsizei n, GLuint * renderbuffers)) \
+    _SG_XMACRO(glBufferData,                      void, (GLenum target, GLsizeiptr size, const void * data, GLenum usage)) \
+    _SG_XMACRO(glBlendFuncSeparate,               void, (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha)) \
+    _SG_XMACRO(glTexParameteri,                   void, (GLenum target, GLenum pname, GLint param)) \
+    _SG_XMACRO(glGetIntegerv,                     void, (GLenum pname, GLint * data)) \
+    _SG_XMACRO(glEnable,                          void, (GLenum cap)) \
+    _SG_XMACRO(glBlitFramebuffer,                 void, (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)) \
+    _SG_XMACRO(glStencilMask,                     void, (GLuint mask)) \
+    _SG_XMACRO(glAttachShader,                    void, (GLuint program, GLuint shader)) \
+    _SG_XMACRO(glGetError,                        GLenum, (void)) \
+    _SG_XMACRO(glBlendColor,                      void, (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)) \
+    _SG_XMACRO(glTexParameterf,                   void, (GLenum target, GLenum pname, GLfloat param)) \
+    _SG_XMACRO(glTexParameterfv,                  void, (GLenum target, GLenum pname, const GLfloat* params)) \
+    _SG_XMACRO(glGetShaderInfoLog,                void, (GLuint shader, GLsizei bufSize, GLsizei * length, GLchar * infoLog)) \
+    _SG_XMACRO(glDepthFunc,                       void, (GLenum func)) \
+    _SG_XMACRO(glStencilOp ,                      void, (GLenum fail, GLenum zfail, GLenum zpass)) \
+    _SG_XMACRO(glStencilFunc,                     void, (GLenum func, GLint ref, GLuint mask)) \
+    _SG_XMACRO(glEnableVertexAttribArray,         void, (GLuint index)) \
+    _SG_XMACRO(glBlendFunc,                       void, (GLenum sfactor, GLenum dfactor)) \
+    _SG_XMACRO(glReadBuffer,                      void, (GLenum src)) \
+    _SG_XMACRO(glTexImage2D,                      void, (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void * pixels)) \
+    _SG_XMACRO(glGenVertexArrays,                 void, (GLsizei n, GLuint * arrays)) \
+    _SG_XMACRO(glFrontFace,                       void, (GLenum mode)) \
+    _SG_XMACRO(glCullFace,                        void, (GLenum mode)) \
+    _SG_XMACRO(glPixelStorei,                     void, (GLenum pname, GLint param)) \
+    _SG_XMACRO(glBindSampler,                     void, (GLuint unit, GLuint sampler)) \
+    _SG_XMACRO(glGenSamplers,                     void, (GLsizei n, GLuint* samplers)) \
+    _SG_XMACRO(glSamplerParameteri,               void, (GLuint sampler, GLenum pname, GLint param)) \
+    _SG_XMACRO(glSamplerParameterf,               void, (GLuint sampler, GLenum pname, GLfloat param)) \
+    _SG_XMACRO(glSamplerParameterfv,              void, (GLuint sampler, GLenum pname, const GLfloat* params)) \
+    _SG_XMACRO(glDeleteSamplers,                  void, (GLsizei n, const GLuint* samplers)) \
+    _SG_XMACRO(glBindBufferBase,                  void, (GLenum target, GLuint index, GLuint buffer))
+
+// generate GL function pointer typedefs
+#define _SG_XMACRO(name, ret, args) typedef ret (GL_APIENTRY* PFN_ ## name) args;
+_SG_GL_FUNCS
+#undef _SG_XMACRO
+
+// generate GL function pointers
+#define _SG_XMACRO(name, ret, args) static PFN_ ## name name;
+_SG_GL_FUNCS
+#undef _SG_XMACRO
+
+// helper function to lookup GL functions in GL DLL
+typedef PROC (WINAPI * _sg_wglGetProcAddress)(LPCSTR);
+_SOKOL_PRIVATE void* _sg_gl_getprocaddr(const char* name, _sg_wglGetProcAddress wgl_getprocaddress) {
+    void* proc_addr = (void*) wgl_getprocaddress(name);
+    if (0 == proc_addr) {
+        proc_addr = (void*) GetProcAddress(_sg.gl.opengl32_dll, name);
+    }
+    SOKOL_ASSERT(proc_addr);
+    return proc_addr;
+}
+
+// populate GL function pointers
+_SOKOL_PRIVATE  void _sg_gl_load_opengl(void) {
+    SOKOL_ASSERT(0 == _sg.gl.opengl32_dll);
+    _sg.gl.opengl32_dll = LoadLibraryA("opengl32.dll");
+    SOKOL_ASSERT(_sg.gl.opengl32_dll);
+    _sg_wglGetProcAddress wgl_getprocaddress = (_sg_wglGetProcAddress) GetProcAddress(_sg.gl.opengl32_dll, "wglGetProcAddress");
+    SOKOL_ASSERT(wgl_getprocaddress);
+    #define _SG_XMACRO(name, ret, args) name = (PFN_ ## name) _sg_gl_getprocaddr(#name, wgl_getprocaddress);
+    _SG_GL_FUNCS
+    #undef _SG_XMACRO
+}
+
+_SOKOL_PRIVATE void _sg_gl_unload_opengl(void) {
+    SOKOL_ASSERT(_sg.gl.opengl32_dll);
+    FreeLibrary(_sg.gl.opengl32_dll);
+    _sg.gl.opengl32_dll = 0;
+}
+#endif // _SOKOL_USE_WIN32_GL_LOADER
 
 //-- type translation ----------------------------------------------------------
 _SOKOL_PRIVATE GLenum _sg_gl_buffer_target(sg_buffer_type t) {
@@ -6528,6 +7682,103 @@ _SOKOL_PRIVATE void _sg_gl_init_caps_glcore(void) {
     const bool has_colorbuffer_half_float = true;
     const bool has_texture_float_linear = true; // FIXME???
     const bool has_float_blend = true;
+    _sg_gl_init_pixelformats(has_bgra);
+    _sg_gl_init_pixelformats_float(has_colorbuffer_float, has_texture_float_linear, has_float_blend);
+    _sg_gl_init_pixelformats_half_float(has_colorbuffer_half_float);
+    if (has_s3tc) {
+        _sg_gl_init_pixelformats_s3tc();
+    }
+    if (has_rgtc) {
+        _sg_gl_init_pixelformats_rgtc();
+    }
+    if (has_bptc) {
+        _sg_gl_init_pixelformats_bptc();
+    }
+    if (has_pvrtc) {
+        _sg_gl_init_pixelformats_pvrtc();
+    }
+    if (has_etc2) {
+        _sg_gl_init_pixelformats_etc2();
+    }
+    if (has_astc) {
+        _sg_gl_init_pixelformats_astc();
+    }
+}
+#endif
+
+#if defined(SOKOL_GLES3)
+_SOKOL_PRIVATE void _sg_gl_init_caps_gles3(void) {
+    _sg.backend = SG_BACKEND_GLES3;
+
+    _sg.features.origin_top_left = false;
+    _sg.features.image_clamp_to_border = false;
+    _sg.features.mrt_independent_blend_state = false;
+    _sg.features.mrt_independent_write_mask = false;
+    _sg.features.storage_buffer = false;
+
+    bool has_s3tc = false;  // BC1..BC3
+    bool has_rgtc = false;  // BC4 and BC5
+    bool has_bptc = false;  // BC6H and BC7
+    bool has_pvrtc = false;
+    #if defined(__EMSCRIPTEN__)
+        bool has_etc2 = false;
+    #else
+        bool has_etc2 = true;
+    #endif
+    bool has_astc = false;
+    bool has_colorbuffer_float = false;
+    bool has_colorbuffer_half_float = false;
+    bool has_texture_float_linear = false;
+    bool has_float_blend = false;
+    GLint num_ext = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &num_ext);
+    for (int i = 0; i < num_ext; i++) {
+        const char* ext = (const char*) glGetStringi(GL_EXTENSIONS, (GLuint)i);
+        if (ext) {
+            if (strstr(ext, "_texture_compression_s3tc")) {
+                has_s3tc = true;
+            } else if (strstr(ext, "_compressed_texture_s3tc")) {
+                has_s3tc = true;
+            } else if (strstr(ext, "_texture_compression_rgtc")) {
+                has_rgtc = true;
+            } else if (strstr(ext, "_texture_compression_bptc")) {
+                has_bptc = true;
+            } else if (strstr(ext, "_texture_compression_pvrtc")) {
+                has_pvrtc = true;
+            } else if (strstr(ext, "_compressed_texture_pvrtc")) {
+                has_pvrtc = true;
+            } else if (strstr(ext, "_compressed_texture_etc")) {
+                has_etc2 = true;
+            } else if (strstr(ext, "_compressed_texture_astc")) {
+                has_astc = true;
+            } else if (strstr(ext, "_color_buffer_float")) {
+                has_colorbuffer_float = true;
+            } else if (strstr(ext, "_color_buffer_half_float")) {
+                has_colorbuffer_half_float = true;
+            } else if (strstr(ext, "_texture_float_linear")) {
+                has_texture_float_linear = true;
+            } else if (strstr(ext, "_float_blend")) {
+                has_float_blend = true;
+            } else if (strstr(ext, "_texture_filter_anisotropic")) {
+                _sg.gl.ext_anisotropic = true;
+            }
+        }
+    }
+
+    /* on WebGL2, color_buffer_float also includes 16-bit formats
+       see: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float
+    */
+    #if defined(__EMSCRIPTEN__)
+    if (!has_colorbuffer_half_float && has_colorbuffer_float) {
+        has_colorbuffer_half_float = has_colorbuffer_float;
+    }
+    #endif
+
+    // limits
+    _sg_gl_init_limits();
+
+    // pixel formats
+    const bool has_bgra = false;    // not a bug
     _sg_gl_init_pixelformats(has_bgra);
     _sg_gl_init_pixelformats_float(has_colorbuffer_float, has_texture_float_linear, has_float_blend);
     _sg_gl_init_pixelformats_half_float(has_colorbuffer_half_float);
@@ -8280,7 +9531,5685 @@ _SOKOL_PRIVATE void _sg_gl_update_image(_sg_image_t* img, const sg_image_data* d
     _sg_gl_cache_restore_texture_sampler_binding(0);
 }
 
+// ██████  ██████  ██████   ██  ██     ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
+// ██   ██      ██ ██   ██ ███ ███     ██   ██ ██   ██ ██      ██  ██  ██      ████   ██ ██   ██
+// ██   ██  █████  ██   ██  ██  ██     ██████  ███████ ██      █████   █████   ██ ██  ██ ██   ██
+// ██   ██      ██ ██   ██  ██  ██     ██   ██ ██   ██ ██      ██  ██  ██      ██  ██ ██ ██   ██
+// ██████  ██████  ██████   ██  ██     ██████  ██   ██  ██████ ██   ██ ███████ ██   ████ ██████
+//
+// >>d3d11 backend
+#elif defined(SOKOL_D3D11)
 
+#define _SG_D3D11_MAX_SHADERSTAGE_SRVS (32)
+#define _SG_D3D11_SHADERSTAGE_IMAGE_SRV_OFFSET (0)
+#define _SG_D3D11_SHADERSTAGE_BUFFER_SRV_OFFSET (16)
+
+#if defined(__cplusplus)
+#define _sg_d3d11_AddRef(self) (self)->AddRef()
+#else
+#define _sg_d3d11_AddRef(self) (self)->lpVtbl->AddRef(self)
+#endif
+
+#if defined(__cplusplus)
+#define _sg_d3d11_Release(self) (self)->Release()
+#else
+#define _sg_d3d11_Release(self) (self)->lpVtbl->Release(self)
+#endif
+
+// NOTE: This needs to be a macro since we can't use the polymorphism in C. It's called on many kinds of resources.
+// NOTE: Based on microsoft docs, it's fine to call this with pData=NULL if DataSize is also zero.
+#if defined(__cplusplus)
+#define _sg_d3d11_SetPrivateData(self, guid, DataSize, pData) (self)->SetPrivateData(guid, DataSize, pData)
+#else
+#define _sg_d3d11_SetPrivateData(self, guid, DataSize, pData) (self)->lpVtbl->SetPrivateData(self, guid, DataSize, pData)
+#endif
+
+#if defined(__cplusplus)
+#define _sg_win32_refguid(guid) guid
+#else
+#define _sg_win32_refguid(guid) &guid
+#endif
+
+static const GUID _sg_d3d11_WKPDID_D3DDebugObjectName = { 0x429b8c22,0x9188,0x4b0c, {0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00} };
+
+#if defined(SOKOL_DEBUG)
+#define _sg_d3d11_setlabel(self, label) _sg_d3d11_SetPrivateData(self, _sg_win32_refguid(_sg_d3d11_WKPDID_D3DDebugObjectName), label ? (UINT)strlen(label) : 0, label)
+#else
+#define _sg_d3d11_setlabel(self, label)
+#endif
+
+
+//-- D3D11 C/C++ wrappers ------------------------------------------------------
+static inline HRESULT _sg_d3d11_CheckFormatSupport(ID3D11Device* self, DXGI_FORMAT Format, UINT* pFormatSupport) {
+    #if defined(__cplusplus)
+        return self->CheckFormatSupport(Format, pFormatSupport);
+    #else
+        return self->lpVtbl->CheckFormatSupport(self, Format, pFormatSupport);
+    #endif
+}
+
+static inline void _sg_d3d11_OMSetRenderTargets(ID3D11DeviceContext* self, UINT NumViews, ID3D11RenderTargetView* const* ppRenderTargetViews, ID3D11DepthStencilView *pDepthStencilView) {
+    #if defined(__cplusplus)
+        self->OMSetRenderTargets(NumViews, ppRenderTargetViews, pDepthStencilView);
+    #else
+        self->lpVtbl->OMSetRenderTargets(self, NumViews, ppRenderTargetViews, pDepthStencilView);
+    #endif
+}
+
+static inline void _sg_d3d11_RSSetState(ID3D11DeviceContext* self, ID3D11RasterizerState* pRasterizerState) {
+    #if defined(__cplusplus)
+        self->RSSetState(pRasterizerState);
+    #else
+        self->lpVtbl->RSSetState(self, pRasterizerState);
+    #endif
+}
+
+static inline void _sg_d3d11_OMSetDepthStencilState(ID3D11DeviceContext* self, ID3D11DepthStencilState* pDepthStencilState, UINT StencilRef) {
+    #if defined(__cplusplus)
+        self->OMSetDepthStencilState(pDepthStencilState, StencilRef);
+    #else
+        self->lpVtbl->OMSetDepthStencilState(self, pDepthStencilState, StencilRef);
+    #endif
+}
+
+static inline void _sg_d3d11_OMSetBlendState(ID3D11DeviceContext* self, ID3D11BlendState* pBlendState, const FLOAT BlendFactor[4], UINT SampleMask) {
+    #if defined(__cplusplus)
+        self->OMSetBlendState(pBlendState, BlendFactor, SampleMask);
+    #else
+        self->lpVtbl->OMSetBlendState(self, pBlendState, BlendFactor, SampleMask);
+    #endif
+}
+
+static inline void _sg_d3d11_IASetVertexBuffers(ID3D11DeviceContext* self, UINT StartSlot, UINT NumBuffers, ID3D11Buffer* const* ppVertexBuffers, const UINT* pStrides, const UINT* pOffsets) {
+    #if defined(__cplusplus)
+        self->IASetVertexBuffers(StartSlot, NumBuffers, ppVertexBuffers, pStrides, pOffsets);
+    #else
+        self->lpVtbl->IASetVertexBuffers(self, StartSlot, NumBuffers, ppVertexBuffers, pStrides, pOffsets);
+    #endif
+}
+
+static inline void _sg_d3d11_IASetIndexBuffer(ID3D11DeviceContext* self, ID3D11Buffer* pIndexBuffer, DXGI_FORMAT Format, UINT Offset) {
+    #if defined(__cplusplus)
+        self->IASetIndexBuffer(pIndexBuffer, Format, Offset);
+    #else
+        self->lpVtbl->IASetIndexBuffer(self, pIndexBuffer, Format, Offset);
+    #endif
+}
+
+static inline void _sg_d3d11_IASetInputLayout(ID3D11DeviceContext* self, ID3D11InputLayout* pInputLayout) {
+    #if defined(__cplusplus)
+        self->IASetInputLayout(pInputLayout);
+    #else
+        self->lpVtbl->IASetInputLayout(self, pInputLayout);
+    #endif
+}
+
+static inline void _sg_d3d11_VSSetShader(ID3D11DeviceContext* self, ID3D11VertexShader* pVertexShader, ID3D11ClassInstance* const* ppClassInstances, UINT NumClassInstances) {
+    #if defined(__cplusplus)
+        self->VSSetShader(pVertexShader, ppClassInstances, NumClassInstances);
+    #else
+        self->lpVtbl->VSSetShader(self, pVertexShader, ppClassInstances, NumClassInstances);
+    #endif
+}
+
+static inline void _sg_d3d11_PSSetShader(ID3D11DeviceContext* self, ID3D11PixelShader* pPixelShader, ID3D11ClassInstance* const* ppClassInstances, UINT NumClassInstances) {
+    #if defined(__cplusplus)
+        self->PSSetShader(pPixelShader, ppClassInstances, NumClassInstances);
+    #else
+        self->lpVtbl->PSSetShader(self, pPixelShader, ppClassInstances, NumClassInstances);
+    #endif
+}
+
+static inline void _sg_d3d11_VSSetConstantBuffers(ID3D11DeviceContext* self, UINT StartSlot, UINT NumBuffers, ID3D11Buffer* const* ppConstantBuffers) {
+    #if defined(__cplusplus)
+        self->VSSetConstantBuffers(StartSlot, NumBuffers, ppConstantBuffers);
+    #else
+        self->lpVtbl->VSSetConstantBuffers(self, StartSlot, NumBuffers, ppConstantBuffers);
+    #endif
+}
+
+static inline void _sg_d3d11_PSSetConstantBuffers(ID3D11DeviceContext* self, UINT StartSlot, UINT NumBuffers, ID3D11Buffer* const* ppConstantBuffers) {
+    #if defined(__cplusplus)
+        self->PSSetConstantBuffers(StartSlot, NumBuffers, ppConstantBuffers);
+    #else
+        self->lpVtbl->PSSetConstantBuffers(self, StartSlot, NumBuffers, ppConstantBuffers);
+    #endif
+}
+
+static inline void _sg_d3d11_VSSetShaderResources(ID3D11DeviceContext* self, UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView* const* ppShaderResourceViews) {
+    #if defined(__cplusplus)
+        self->VSSetShaderResources(StartSlot, NumViews, ppShaderResourceViews);
+    #else
+        self->lpVtbl->VSSetShaderResources(self, StartSlot, NumViews, ppShaderResourceViews);
+    #endif
+}
+
+static inline void _sg_d3d11_PSSetShaderResources(ID3D11DeviceContext* self, UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView* const* ppShaderResourceViews) {
+    #if defined(__cplusplus)
+        self->PSSetShaderResources(StartSlot, NumViews, ppShaderResourceViews);
+    #else
+        self->lpVtbl->PSSetShaderResources(self, StartSlot, NumViews, ppShaderResourceViews);
+    #endif
+}
+
+static inline void _sg_d3d11_VSSetSamplers(ID3D11DeviceContext* self, UINT StartSlot, UINT NumSamplers, ID3D11SamplerState* const* ppSamplers) {
+    #if defined(__cplusplus)
+        self->VSSetSamplers(StartSlot, NumSamplers, ppSamplers);
+    #else
+        self->lpVtbl->VSSetSamplers(self, StartSlot, NumSamplers, ppSamplers);
+    #endif
+}
+
+static inline void _sg_d3d11_PSSetSamplers(ID3D11DeviceContext* self, UINT StartSlot, UINT NumSamplers, ID3D11SamplerState* const* ppSamplers) {
+    #if defined(__cplusplus)
+        self->PSSetSamplers(StartSlot, NumSamplers, ppSamplers);
+    #else
+        self->lpVtbl->PSSetSamplers(self, StartSlot, NumSamplers, ppSamplers);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateBuffer(ID3D11Device* self, const D3D11_BUFFER_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Buffer** ppBuffer) {
+    #if defined(__cplusplus)
+        return self->CreateBuffer(pDesc, pInitialData, ppBuffer);
+    #else
+        return self->lpVtbl->CreateBuffer(self, pDesc, pInitialData, ppBuffer);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateTexture2D(ID3D11Device* self, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D) {
+    #if defined(__cplusplus)
+        return self->CreateTexture2D(pDesc, pInitialData, ppTexture2D);
+    #else
+        return self->lpVtbl->CreateTexture2D(self, pDesc, pInitialData, ppTexture2D);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateShaderResourceView(ID3D11Device* self, ID3D11Resource* pResource, const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc, ID3D11ShaderResourceView** ppSRView) {
+    #if defined(__cplusplus)
+        return self->CreateShaderResourceView(pResource, pDesc, ppSRView);
+    #else
+        return self->lpVtbl->CreateShaderResourceView(self, pResource, pDesc, ppSRView);
+    #endif
+}
+
+static inline void _sg_d3d11_GetResource(ID3D11View* self, ID3D11Resource** ppResource) {
+    #if defined(__cplusplus)
+        self->GetResource(ppResource);
+    #else
+        self->lpVtbl->GetResource(self, ppResource);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateTexture3D(ID3D11Device* self, const D3D11_TEXTURE3D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture3D** ppTexture3D) {
+    #if defined(__cplusplus)
+        return self->CreateTexture3D(pDesc, pInitialData, ppTexture3D);
+    #else
+        return self->lpVtbl->CreateTexture3D(self, pDesc, pInitialData, ppTexture3D);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateSamplerState(ID3D11Device* self, const D3D11_SAMPLER_DESC* pSamplerDesc, ID3D11SamplerState** ppSamplerState) {
+    #if defined(__cplusplus)
+        return self->CreateSamplerState(pSamplerDesc, ppSamplerState);
+    #else
+        return self->lpVtbl->CreateSamplerState(self, pSamplerDesc, ppSamplerState);
+    #endif
+}
+
+static inline LPVOID _sg_d3d11_GetBufferPointer(ID3D10Blob* self) {
+    #if defined(__cplusplus)
+        return self->GetBufferPointer();
+    #else
+        return self->lpVtbl->GetBufferPointer(self);
+    #endif
+}
+
+static inline SIZE_T _sg_d3d11_GetBufferSize(ID3D10Blob* self) {
+    #if defined(__cplusplus)
+        return self->GetBufferSize();
+    #else
+        return self->lpVtbl->GetBufferSize(self);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateVertexShader(ID3D11Device* self, const void* pShaderBytecode, SIZE_T BytecodeLength, ID3D11ClassLinkage* pClassLinkage, ID3D11VertexShader** ppVertexShader) {
+    #if defined(__cplusplus)
+        return self->CreateVertexShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppVertexShader);
+    #else
+        return self->lpVtbl->CreateVertexShader(self, pShaderBytecode, BytecodeLength, pClassLinkage, ppVertexShader);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreatePixelShader(ID3D11Device* self, const void* pShaderBytecode, SIZE_T BytecodeLength, ID3D11ClassLinkage* pClassLinkage, ID3D11PixelShader** ppPixelShader) {
+    #if defined(__cplusplus)
+        return self->CreatePixelShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppPixelShader);
+    #else
+        return self->lpVtbl->CreatePixelShader(self, pShaderBytecode, BytecodeLength, pClassLinkage, ppPixelShader);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateInputLayout(ID3D11Device* self, const D3D11_INPUT_ELEMENT_DESC* pInputElementDescs, UINT NumElements, const void* pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, ID3D11InputLayout **ppInputLayout) {
+    #if defined(__cplusplus)
+        return self->CreateInputLayout(pInputElementDescs, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, ppInputLayout);
+    #else
+        return self->lpVtbl->CreateInputLayout(self, pInputElementDescs, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, ppInputLayout);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateRasterizerState(ID3D11Device* self, const D3D11_RASTERIZER_DESC* pRasterizerDesc, ID3D11RasterizerState** ppRasterizerState) {
+    #if defined(__cplusplus)
+        return self->CreateRasterizerState(pRasterizerDesc, ppRasterizerState);
+    #else
+        return self->lpVtbl->CreateRasterizerState(self, pRasterizerDesc, ppRasterizerState);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateDepthStencilState(ID3D11Device* self, const D3D11_DEPTH_STENCIL_DESC* pDepthStencilDesc, ID3D11DepthStencilState** ppDepthStencilState) {
+    #if defined(__cplusplus)
+        return self->CreateDepthStencilState(pDepthStencilDesc, ppDepthStencilState);
+    #else
+        return self->lpVtbl->CreateDepthStencilState(self, pDepthStencilDesc, ppDepthStencilState);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateBlendState(ID3D11Device* self, const D3D11_BLEND_DESC* pBlendStateDesc, ID3D11BlendState** ppBlendState) {
+    #if defined(__cplusplus)
+        return self->CreateBlendState(pBlendStateDesc, ppBlendState);
+    #else
+        return self->lpVtbl->CreateBlendState(self, pBlendStateDesc, ppBlendState);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateRenderTargetView(ID3D11Device* self, ID3D11Resource *pResource, const D3D11_RENDER_TARGET_VIEW_DESC* pDesc, ID3D11RenderTargetView** ppRTView) {
+    #if defined(__cplusplus)
+        return self->CreateRenderTargetView(pResource, pDesc, ppRTView);
+    #else
+        return self->lpVtbl->CreateRenderTargetView(self, pResource, pDesc, ppRTView);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_CreateDepthStencilView(ID3D11Device* self, ID3D11Resource* pResource, const D3D11_DEPTH_STENCIL_VIEW_DESC* pDesc, ID3D11DepthStencilView** ppDepthStencilView) {
+    #if defined(__cplusplus)
+        return self->CreateDepthStencilView(pResource, pDesc, ppDepthStencilView);
+    #else
+        return self->lpVtbl->CreateDepthStencilView(self, pResource, pDesc, ppDepthStencilView);
+    #endif
+}
+
+static inline void _sg_d3d11_RSSetViewports(ID3D11DeviceContext* self, UINT NumViewports, const D3D11_VIEWPORT* pViewports) {
+    #if defined(__cplusplus)
+        self->RSSetViewports(NumViewports, pViewports);
+    #else
+        self->lpVtbl->RSSetViewports(self, NumViewports, pViewports);
+    #endif
+}
+
+static inline void _sg_d3d11_RSSetScissorRects(ID3D11DeviceContext* self, UINT NumRects, const D3D11_RECT* pRects) {
+    #if defined(__cplusplus)
+        self->RSSetScissorRects(NumRects, pRects);
+    #else
+        self->lpVtbl->RSSetScissorRects(self, NumRects, pRects);
+    #endif
+}
+
+static inline void _sg_d3d11_ClearRenderTargetView(ID3D11DeviceContext* self, ID3D11RenderTargetView* pRenderTargetView, const FLOAT ColorRGBA[4]) {
+    #if defined(__cplusplus)
+        self->ClearRenderTargetView(pRenderTargetView, ColorRGBA);
+    #else
+        self->lpVtbl->ClearRenderTargetView(self, pRenderTargetView, ColorRGBA);
+    #endif
+}
+
+static inline void _sg_d3d11_ClearDepthStencilView(ID3D11DeviceContext* self, ID3D11DepthStencilView* pDepthStencilView, UINT ClearFlags, FLOAT Depth, UINT8 Stencil) {
+    #if defined(__cplusplus)
+        self->ClearDepthStencilView(pDepthStencilView, ClearFlags, Depth, Stencil);
+    #else
+        self->lpVtbl->ClearDepthStencilView(self, pDepthStencilView, ClearFlags, Depth, Stencil);
+    #endif
+}
+
+static inline void _sg_d3d11_ResolveSubresource(ID3D11DeviceContext* self, ID3D11Resource* pDstResource, UINT DstSubresource, ID3D11Resource* pSrcResource, UINT SrcSubresource, DXGI_FORMAT Format) {
+    #if defined(__cplusplus)
+        self->ResolveSubresource(pDstResource, DstSubresource, pSrcResource, SrcSubresource, Format);
+    #else
+        self->lpVtbl->ResolveSubresource(self, pDstResource, DstSubresource, pSrcResource, SrcSubresource, Format);
+    #endif
+}
+
+static inline void _sg_d3d11_IASetPrimitiveTopology(ID3D11DeviceContext* self, D3D11_PRIMITIVE_TOPOLOGY Topology) {
+    #if defined(__cplusplus)
+        self->IASetPrimitiveTopology(Topology);
+    #else
+        self->lpVtbl->IASetPrimitiveTopology(self, Topology);
+    #endif
+}
+
+static inline void _sg_d3d11_UpdateSubresource(ID3D11DeviceContext* self, ID3D11Resource* pDstResource, UINT DstSubresource, const D3D11_BOX* pDstBox, const void* pSrcData, UINT SrcRowPitch, UINT SrcDepthPitch) {
+    #if defined(__cplusplus)
+        self->UpdateSubresource(pDstResource, DstSubresource, pDstBox, pSrcData, SrcRowPitch, SrcDepthPitch);
+    #else
+        self->lpVtbl->UpdateSubresource(self, pDstResource, DstSubresource, pDstBox, pSrcData, SrcRowPitch, SrcDepthPitch);
+    #endif
+}
+
+static inline void _sg_d3d11_DrawIndexed(ID3D11DeviceContext* self, UINT IndexCount, UINT StartIndexLocation, INT  BaseVertexLocation) {
+    #if defined(__cplusplus)
+        self->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
+    #else
+        self->lpVtbl->DrawIndexed(self, IndexCount, StartIndexLocation, BaseVertexLocation);
+    #endif
+}
+
+static inline void _sg_d3d11_DrawIndexedInstanced(ID3D11DeviceContext* self, UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation) {
+    #if defined(__cplusplus)
+        self->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+    #else
+        self->lpVtbl->DrawIndexedInstanced(self, IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+    #endif
+}
+
+static inline void _sg_d3d11_Draw(ID3D11DeviceContext* self, UINT VertexCount, UINT StartVertexLocation) {
+    #if defined(__cplusplus)
+        self->Draw(VertexCount, StartVertexLocation);
+    #else
+        self->lpVtbl->Draw(self, VertexCount, StartVertexLocation);
+    #endif
+}
+
+static inline void _sg_d3d11_DrawInstanced(ID3D11DeviceContext* self, UINT VertexCountPerInstance, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation) {
+    #if defined(__cplusplus)
+        self->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation);
+    #else
+        self->lpVtbl->DrawInstanced(self, VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation);
+    #endif
+}
+
+static inline HRESULT _sg_d3d11_Map(ID3D11DeviceContext* self, ID3D11Resource* pResource, UINT Subresource, D3D11_MAP MapType, UINT MapFlags, D3D11_MAPPED_SUBRESOURCE* pMappedResource) {
+    #if defined(__cplusplus)
+        return self->Map(pResource, Subresource, MapType, MapFlags, pMappedResource);
+    #else
+        return self->lpVtbl->Map(self, pResource, Subresource, MapType, MapFlags, pMappedResource);
+    #endif
+}
+
+static inline void _sg_d3d11_Unmap(ID3D11DeviceContext* self, ID3D11Resource* pResource, UINT Subresource) {
+    #if defined(__cplusplus)
+        self->Unmap(pResource, Subresource);
+    #else
+        self->lpVtbl->Unmap(self, pResource, Subresource);
+    #endif
+}
+
+static inline void _sg_d3d11_ClearState(ID3D11DeviceContext* self) {
+    #if defined(__cplusplus)
+        self->ClearState();
+    #else
+        self->lpVtbl->ClearState(self);
+    #endif
+}
+
+//-- enum translation functions ------------------------------------------------
+_SOKOL_PRIVATE D3D11_USAGE _sg_d3d11_usage(sg_usage usg) {
+    switch (usg) {
+        case SG_USAGE_IMMUTABLE:
+            return D3D11_USAGE_IMMUTABLE;
+        case SG_USAGE_DYNAMIC:
+        case SG_USAGE_STREAM:
+            return D3D11_USAGE_DYNAMIC;
+        default:
+            SOKOL_UNREACHABLE;
+            return (D3D11_USAGE) 0;
+    }
+}
+
+_SOKOL_PRIVATE UINT _sg_d3d11_buffer_bind_flags(sg_buffer_type t) {
+    switch (t) {
+        case SG_BUFFERTYPE_VERTEXBUFFER:
+            return D3D11_BIND_VERTEX_BUFFER;
+        case SG_BUFFERTYPE_INDEXBUFFER:
+            return D3D11_BIND_INDEX_BUFFER;
+        case SG_BUFFERTYPE_STORAGEBUFFER:
+            // FIXME: for compute shaders we'd want UNORDERED_ACCESS?
+            return D3D11_BIND_SHADER_RESOURCE;
+        default:
+            SOKOL_UNREACHABLE;
+            return 0;
+    }
+}
+
+_SOKOL_PRIVATE UINT _sg_d3d11_buffer_misc_flags(sg_buffer_type t) {
+    switch (t) {
+        case SG_BUFFERTYPE_VERTEXBUFFER:
+        case SG_BUFFERTYPE_INDEXBUFFER:
+            return 0;
+        case SG_BUFFERTYPE_STORAGEBUFFER:
+            return D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+        default:
+            SOKOL_UNREACHABLE;
+            return 0;
+    }
+}
+
+_SOKOL_PRIVATE UINT _sg_d3d11_cpu_access_flags(sg_usage usg) {
+    switch (usg) {
+        case SG_USAGE_IMMUTABLE:
+            return 0;
+        case SG_USAGE_DYNAMIC:
+        case SG_USAGE_STREAM:
+            return D3D11_CPU_ACCESS_WRITE;
+        default:
+            SOKOL_UNREACHABLE;
+            return 0;
+    }
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_texture_pixel_format(sg_pixel_format fmt) {
+    switch (fmt) {
+        case SG_PIXELFORMAT_R8:             return DXGI_FORMAT_R8_UNORM;
+        case SG_PIXELFORMAT_R8SN:           return DXGI_FORMAT_R8_SNORM;
+        case SG_PIXELFORMAT_R8UI:           return DXGI_FORMAT_R8_UINT;
+        case SG_PIXELFORMAT_R8SI:           return DXGI_FORMAT_R8_SINT;
+        case SG_PIXELFORMAT_R16:            return DXGI_FORMAT_R16_UNORM;
+        case SG_PIXELFORMAT_R16SN:          return DXGI_FORMAT_R16_SNORM;
+        case SG_PIXELFORMAT_R16UI:          return DXGI_FORMAT_R16_UINT;
+        case SG_PIXELFORMAT_R16SI:          return DXGI_FORMAT_R16_SINT;
+        case SG_PIXELFORMAT_R16F:           return DXGI_FORMAT_R16_FLOAT;
+        case SG_PIXELFORMAT_RG8:            return DXGI_FORMAT_R8G8_UNORM;
+        case SG_PIXELFORMAT_RG8SN:          return DXGI_FORMAT_R8G8_SNORM;
+        case SG_PIXELFORMAT_RG8UI:          return DXGI_FORMAT_R8G8_UINT;
+        case SG_PIXELFORMAT_RG8SI:          return DXGI_FORMAT_R8G8_SINT;
+        case SG_PIXELFORMAT_R32UI:          return DXGI_FORMAT_R32_UINT;
+        case SG_PIXELFORMAT_R32SI:          return DXGI_FORMAT_R32_SINT;
+        case SG_PIXELFORMAT_R32F:           return DXGI_FORMAT_R32_FLOAT;
+        case SG_PIXELFORMAT_RG16:           return DXGI_FORMAT_R16G16_UNORM;
+        case SG_PIXELFORMAT_RG16SN:         return DXGI_FORMAT_R16G16_SNORM;
+        case SG_PIXELFORMAT_RG16UI:         return DXGI_FORMAT_R16G16_UINT;
+        case SG_PIXELFORMAT_RG16SI:         return DXGI_FORMAT_R16G16_SINT;
+        case SG_PIXELFORMAT_RG16F:          return DXGI_FORMAT_R16G16_FLOAT;
+        case SG_PIXELFORMAT_RGBA8:          return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case SG_PIXELFORMAT_SRGB8A8:        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        case SG_PIXELFORMAT_RGBA8SN:        return DXGI_FORMAT_R8G8B8A8_SNORM;
+        case SG_PIXELFORMAT_RGBA8UI:        return DXGI_FORMAT_R8G8B8A8_UINT;
+        case SG_PIXELFORMAT_RGBA8SI:        return DXGI_FORMAT_R8G8B8A8_SINT;
+        case SG_PIXELFORMAT_BGRA8:          return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case SG_PIXELFORMAT_RGB10A2:        return DXGI_FORMAT_R10G10B10A2_UNORM;
+        case SG_PIXELFORMAT_RG11B10F:       return DXGI_FORMAT_R11G11B10_FLOAT;
+        case SG_PIXELFORMAT_RGB9E5:         return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+        case SG_PIXELFORMAT_RG32UI:         return DXGI_FORMAT_R32G32_UINT;
+        case SG_PIXELFORMAT_RG32SI:         return DXGI_FORMAT_R32G32_SINT;
+        case SG_PIXELFORMAT_RG32F:          return DXGI_FORMAT_R32G32_FLOAT;
+        case SG_PIXELFORMAT_RGBA16:         return DXGI_FORMAT_R16G16B16A16_UNORM;
+        case SG_PIXELFORMAT_RGBA16SN:       return DXGI_FORMAT_R16G16B16A16_SNORM;
+        case SG_PIXELFORMAT_RGBA16UI:       return DXGI_FORMAT_R16G16B16A16_UINT;
+        case SG_PIXELFORMAT_RGBA16SI:       return DXGI_FORMAT_R16G16B16A16_SINT;
+        case SG_PIXELFORMAT_RGBA16F:        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+        case SG_PIXELFORMAT_RGBA32UI:       return DXGI_FORMAT_R32G32B32A32_UINT;
+        case SG_PIXELFORMAT_RGBA32SI:       return DXGI_FORMAT_R32G32B32A32_SINT;
+        case SG_PIXELFORMAT_RGBA32F:        return DXGI_FORMAT_R32G32B32A32_FLOAT;
+        case SG_PIXELFORMAT_DEPTH:          return DXGI_FORMAT_R32_TYPELESS;
+        case SG_PIXELFORMAT_DEPTH_STENCIL:  return DXGI_FORMAT_R24G8_TYPELESS;
+        case SG_PIXELFORMAT_BC1_RGBA:       return DXGI_FORMAT_BC1_UNORM;
+        case SG_PIXELFORMAT_BC2_RGBA:       return DXGI_FORMAT_BC2_UNORM;
+        case SG_PIXELFORMAT_BC3_RGBA:       return DXGI_FORMAT_BC3_UNORM;
+        case SG_PIXELFORMAT_BC3_SRGBA:      return DXGI_FORMAT_BC3_UNORM_SRGB;
+        case SG_PIXELFORMAT_BC4_R:          return DXGI_FORMAT_BC4_UNORM;
+        case SG_PIXELFORMAT_BC4_RSN:        return DXGI_FORMAT_BC4_SNORM;
+        case SG_PIXELFORMAT_BC5_RG:         return DXGI_FORMAT_BC5_UNORM;
+        case SG_PIXELFORMAT_BC5_RGSN:       return DXGI_FORMAT_BC5_SNORM;
+        case SG_PIXELFORMAT_BC6H_RGBF:      return DXGI_FORMAT_BC6H_SF16;
+        case SG_PIXELFORMAT_BC6H_RGBUF:     return DXGI_FORMAT_BC6H_UF16;
+        case SG_PIXELFORMAT_BC7_RGBA:       return DXGI_FORMAT_BC7_UNORM;
+        case SG_PIXELFORMAT_BC7_SRGBA:      return DXGI_FORMAT_BC7_UNORM_SRGB;
+        default:                            return DXGI_FORMAT_UNKNOWN;
+    };
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_srv_pixel_format(sg_pixel_format fmt) {
+    if (fmt == SG_PIXELFORMAT_DEPTH) {
+        return DXGI_FORMAT_R32_FLOAT;
+    } else if (fmt == SG_PIXELFORMAT_DEPTH_STENCIL) {
+        return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    } else {
+        return _sg_d3d11_texture_pixel_format(fmt);
+    }
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_dsv_pixel_format(sg_pixel_format fmt) {
+    if (fmt == SG_PIXELFORMAT_DEPTH) {
+        return DXGI_FORMAT_D32_FLOAT;
+    } else if (fmt == SG_PIXELFORMAT_DEPTH_STENCIL) {
+        return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    } else {
+        return _sg_d3d11_texture_pixel_format(fmt);
+    }
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_rtv_pixel_format(sg_pixel_format fmt) {
+    if (fmt == SG_PIXELFORMAT_DEPTH) {
+        return DXGI_FORMAT_R32_FLOAT;
+    } else if (fmt == SG_PIXELFORMAT_DEPTH_STENCIL) {
+        return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    } else {
+        return _sg_d3d11_texture_pixel_format(fmt);
+    }
+}
+
+_SOKOL_PRIVATE D3D11_PRIMITIVE_TOPOLOGY _sg_d3d11_primitive_topology(sg_primitive_type prim_type) {
+    switch (prim_type) {
+        case SG_PRIMITIVETYPE_POINTS:           return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+        case SG_PRIMITIVETYPE_LINES:            return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+        case SG_PRIMITIVETYPE_LINE_STRIP:       return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+        case SG_PRIMITIVETYPE_TRIANGLES:        return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        case SG_PRIMITIVETYPE_TRIANGLE_STRIP:   return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+        default: SOKOL_UNREACHABLE; return (D3D11_PRIMITIVE_TOPOLOGY) 0;
+    }
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_index_format(sg_index_type index_type) {
+    switch (index_type) {
+        case SG_INDEXTYPE_NONE:     return DXGI_FORMAT_UNKNOWN;
+        case SG_INDEXTYPE_UINT16:   return DXGI_FORMAT_R16_UINT;
+        case SG_INDEXTYPE_UINT32:   return DXGI_FORMAT_R32_UINT;
+        default: SOKOL_UNREACHABLE; return (DXGI_FORMAT) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_FILTER _sg_d3d11_filter(sg_filter min_f, sg_filter mag_f, sg_filter mipmap_f, bool comparison, uint32_t max_anisotropy) {
+    uint32_t d3d11_filter = 0;
+    if (max_anisotropy > 1) {
+        // D3D11_FILTER_ANISOTROPIC = 0x55,
+        d3d11_filter |= 0x55;
+    } else {
+        // D3D11_FILTER_MIN_MAG_MIP_POINT = 0,
+        // D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
+        // D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
+        // D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
+        // D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
+        // D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
+        // D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
+        // D3D11_FILTER_MIN_MAG_MIP_LINEAR = 0x15,
+        if (mipmap_f == SG_FILTER_LINEAR) {
+            d3d11_filter |= 0x01;
+        }
+        if (mag_f == SG_FILTER_LINEAR) {
+            d3d11_filter |= 0x04;
+        }
+        if (min_f == SG_FILTER_LINEAR) {
+            d3d11_filter |= 0x10;
+        }
+    }
+    // D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
+    // D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
+    // D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
+    // D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
+    // D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
+    // D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
+    // D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
+    // D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
+    // D3D11_FILTER_COMPARISON_ANISOTROPIC = 0xd5,
+    if (comparison) {
+        d3d11_filter |= 0x80;
+    }
+    return (D3D11_FILTER)d3d11_filter;
+}
+
+_SOKOL_PRIVATE D3D11_TEXTURE_ADDRESS_MODE _sg_d3d11_address_mode(sg_wrap m) {
+    switch (m) {
+        case SG_WRAP_REPEAT:            return D3D11_TEXTURE_ADDRESS_WRAP;
+        case SG_WRAP_CLAMP_TO_EDGE:     return D3D11_TEXTURE_ADDRESS_CLAMP;
+        case SG_WRAP_CLAMP_TO_BORDER:   return D3D11_TEXTURE_ADDRESS_BORDER;
+        case SG_WRAP_MIRRORED_REPEAT:   return D3D11_TEXTURE_ADDRESS_MIRROR;
+        default: SOKOL_UNREACHABLE; return (D3D11_TEXTURE_ADDRESS_MODE) 0;
+    }
+}
+
+_SOKOL_PRIVATE DXGI_FORMAT _sg_d3d11_vertex_format(sg_vertex_format fmt) {
+    switch (fmt) {
+        case SG_VERTEXFORMAT_FLOAT:     return DXGI_FORMAT_R32_FLOAT;
+        case SG_VERTEXFORMAT_FLOAT2:    return DXGI_FORMAT_R32G32_FLOAT;
+        case SG_VERTEXFORMAT_FLOAT3:    return DXGI_FORMAT_R32G32B32_FLOAT;
+        case SG_VERTEXFORMAT_FLOAT4:    return DXGI_FORMAT_R32G32B32A32_FLOAT;
+        case SG_VERTEXFORMAT_BYTE4:     return DXGI_FORMAT_R8G8B8A8_SINT;
+        case SG_VERTEXFORMAT_BYTE4N:    return DXGI_FORMAT_R8G8B8A8_SNORM;
+        case SG_VERTEXFORMAT_UBYTE4:    return DXGI_FORMAT_R8G8B8A8_UINT;
+        case SG_VERTEXFORMAT_UBYTE4N:   return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case SG_VERTEXFORMAT_SHORT2:    return DXGI_FORMAT_R16G16_SINT;
+        case SG_VERTEXFORMAT_SHORT2N:   return DXGI_FORMAT_R16G16_SNORM;
+        case SG_VERTEXFORMAT_USHORT2N:  return DXGI_FORMAT_R16G16_UNORM;
+        case SG_VERTEXFORMAT_SHORT4:    return DXGI_FORMAT_R16G16B16A16_SINT;
+        case SG_VERTEXFORMAT_SHORT4N:   return DXGI_FORMAT_R16G16B16A16_SNORM;
+        case SG_VERTEXFORMAT_USHORT4N:  return DXGI_FORMAT_R16G16B16A16_UNORM;
+        case SG_VERTEXFORMAT_UINT10_N2: return DXGI_FORMAT_R10G10B10A2_UNORM;
+        case SG_VERTEXFORMAT_HALF2:     return DXGI_FORMAT_R16G16_FLOAT;
+        case SG_VERTEXFORMAT_HALF4:     return DXGI_FORMAT_R16G16B16A16_FLOAT;
+        default: SOKOL_UNREACHABLE; return (DXGI_FORMAT) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_INPUT_CLASSIFICATION _sg_d3d11_input_classification(sg_vertex_step step) {
+    switch (step) {
+        case SG_VERTEXSTEP_PER_VERTEX:      return D3D11_INPUT_PER_VERTEX_DATA;
+        case SG_VERTEXSTEP_PER_INSTANCE:    return D3D11_INPUT_PER_INSTANCE_DATA;
+        default: SOKOL_UNREACHABLE; return (D3D11_INPUT_CLASSIFICATION) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_CULL_MODE _sg_d3d11_cull_mode(sg_cull_mode m) {
+    switch (m) {
+        case SG_CULLMODE_NONE:      return D3D11_CULL_NONE;
+        case SG_CULLMODE_FRONT:     return D3D11_CULL_FRONT;
+        case SG_CULLMODE_BACK:      return D3D11_CULL_BACK;
+        default: SOKOL_UNREACHABLE; return (D3D11_CULL_MODE) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_COMPARISON_FUNC _sg_d3d11_compare_func(sg_compare_func f) {
+    switch (f) {
+        case SG_COMPAREFUNC_NEVER:          return D3D11_COMPARISON_NEVER;
+        case SG_COMPAREFUNC_LESS:           return D3D11_COMPARISON_LESS;
+        case SG_COMPAREFUNC_EQUAL:          return D3D11_COMPARISON_EQUAL;
+        case SG_COMPAREFUNC_LESS_EQUAL:     return D3D11_COMPARISON_LESS_EQUAL;
+        case SG_COMPAREFUNC_GREATER:        return D3D11_COMPARISON_GREATER;
+        case SG_COMPAREFUNC_NOT_EQUAL:      return D3D11_COMPARISON_NOT_EQUAL;
+        case SG_COMPAREFUNC_GREATER_EQUAL:  return D3D11_COMPARISON_GREATER_EQUAL;
+        case SG_COMPAREFUNC_ALWAYS:         return D3D11_COMPARISON_ALWAYS;
+        default: SOKOL_UNREACHABLE; return (D3D11_COMPARISON_FUNC) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_STENCIL_OP _sg_d3d11_stencil_op(sg_stencil_op op) {
+    switch (op) {
+        case SG_STENCILOP_KEEP:         return D3D11_STENCIL_OP_KEEP;
+        case SG_STENCILOP_ZERO:         return D3D11_STENCIL_OP_ZERO;
+        case SG_STENCILOP_REPLACE:      return D3D11_STENCIL_OP_REPLACE;
+        case SG_STENCILOP_INCR_CLAMP:   return D3D11_STENCIL_OP_INCR_SAT;
+        case SG_STENCILOP_DECR_CLAMP:   return D3D11_STENCIL_OP_DECR_SAT;
+        case SG_STENCILOP_INVERT:       return D3D11_STENCIL_OP_INVERT;
+        case SG_STENCILOP_INCR_WRAP:    return D3D11_STENCIL_OP_INCR;
+        case SG_STENCILOP_DECR_WRAP:    return D3D11_STENCIL_OP_DECR;
+        default: SOKOL_UNREACHABLE; return (D3D11_STENCIL_OP) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_BLEND _sg_d3d11_blend_factor(sg_blend_factor f) {
+    switch (f) {
+        case SG_BLENDFACTOR_ZERO:                   return D3D11_BLEND_ZERO;
+        case SG_BLENDFACTOR_ONE:                    return D3D11_BLEND_ONE;
+        case SG_BLENDFACTOR_SRC_COLOR:              return D3D11_BLEND_SRC_COLOR;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_COLOR:    return D3D11_BLEND_INV_SRC_COLOR;
+        case SG_BLENDFACTOR_SRC_ALPHA:              return D3D11_BLEND_SRC_ALPHA;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:    return D3D11_BLEND_INV_SRC_ALPHA;
+        case SG_BLENDFACTOR_DST_COLOR:              return D3D11_BLEND_DEST_COLOR;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_COLOR:    return D3D11_BLEND_INV_DEST_COLOR;
+        case SG_BLENDFACTOR_DST_ALPHA:              return D3D11_BLEND_DEST_ALPHA;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA:    return D3D11_BLEND_INV_DEST_ALPHA;
+        case SG_BLENDFACTOR_SRC_ALPHA_SATURATED:    return D3D11_BLEND_SRC_ALPHA_SAT;
+        case SG_BLENDFACTOR_BLEND_COLOR:            return D3D11_BLEND_BLEND_FACTOR;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_COLOR:  return D3D11_BLEND_INV_BLEND_FACTOR;
+        case SG_BLENDFACTOR_BLEND_ALPHA:            return D3D11_BLEND_BLEND_FACTOR;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA:  return D3D11_BLEND_INV_BLEND_FACTOR;
+        default: SOKOL_UNREACHABLE; return (D3D11_BLEND) 0;
+    }
+}
+
+_SOKOL_PRIVATE D3D11_BLEND_OP _sg_d3d11_blend_op(sg_blend_op op) {
+    switch (op) {
+        case SG_BLENDOP_ADD:                return D3D11_BLEND_OP_ADD;
+        case SG_BLENDOP_SUBTRACT:           return D3D11_BLEND_OP_SUBTRACT;
+        case SG_BLENDOP_REVERSE_SUBTRACT:   return D3D11_BLEND_OP_REV_SUBTRACT;
+        default: SOKOL_UNREACHABLE; return (D3D11_BLEND_OP) 0;
+    }
+}
+
+_SOKOL_PRIVATE UINT8 _sg_d3d11_color_write_mask(sg_color_mask m) {
+    UINT8 res = 0;
+    if (m & SG_COLORMASK_R) {
+        res |= D3D11_COLOR_WRITE_ENABLE_RED;
+    }
+    if (m & SG_COLORMASK_G) {
+        res |= D3D11_COLOR_WRITE_ENABLE_GREEN;
+    }
+    if (m & SG_COLORMASK_B) {
+        res |= D3D11_COLOR_WRITE_ENABLE_BLUE;
+    }
+    if (m & SG_COLORMASK_A) {
+        res |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
+    }
+    return res;
+}
+
+_SOKOL_PRIVATE UINT _sg_d3d11_dxgi_fmt_caps(DXGI_FORMAT dxgi_fmt) {
+    UINT dxgi_fmt_caps = 0;
+    if (dxgi_fmt != DXGI_FORMAT_UNKNOWN) {
+        HRESULT hr = _sg_d3d11_CheckFormatSupport(_sg.d3d11.dev, dxgi_fmt, &dxgi_fmt_caps);
+        SOKOL_ASSERT(SUCCEEDED(hr) || (E_FAIL == hr));
+        if (!SUCCEEDED(hr)) {
+            dxgi_fmt_caps = 0;
+        }
+    }
+    return dxgi_fmt_caps;
+}
+
+// see: https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-resources-limits#resource-limits-for-feature-level-11-hardware
+_SOKOL_PRIVATE void _sg_d3d11_init_caps(void) {
+    _sg.backend = SG_BACKEND_D3D11;
+
+    _sg.features.origin_top_left = true;
+    _sg.features.image_clamp_to_border = true;
+    _sg.features.mrt_independent_blend_state = true;
+    _sg.features.mrt_independent_write_mask = true;
+    _sg.features.storage_buffer = true;
+
+    _sg.limits.max_image_size_2d = 16 * 1024;
+    _sg.limits.max_image_size_cube = 16 * 1024;
+    _sg.limits.max_image_size_3d = 2 * 1024;
+    _sg.limits.max_image_size_array = 16 * 1024;
+    _sg.limits.max_image_array_layers = 2 * 1024;
+    _sg.limits.max_vertex_attrs = SG_MAX_VERTEX_ATTRIBUTES;
+
+    // see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support
+    for (int fmt = (SG_PIXELFORMAT_NONE+1); fmt < _SG_PIXELFORMAT_NUM; fmt++) {
+        const UINT srv_dxgi_fmt_caps = _sg_d3d11_dxgi_fmt_caps(_sg_d3d11_srv_pixel_format((sg_pixel_format)fmt));
+        const UINT rtv_dxgi_fmt_caps = _sg_d3d11_dxgi_fmt_caps(_sg_d3d11_rtv_pixel_format((sg_pixel_format)fmt));
+        const UINT dsv_dxgi_fmt_caps = _sg_d3d11_dxgi_fmt_caps(_sg_d3d11_dsv_pixel_format((sg_pixel_format)fmt));
+        _sg_pixelformat_info_t* info = &_sg.formats[fmt];
+        const bool render = 0 != (rtv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_RENDER_TARGET);
+        const bool depth  = 0 != (dsv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL);
+        info->sample = 0 != (srv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_TEXTURE2D);
+        info->filter = 0 != (srv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE);
+        info->render = render || depth;
+        info->blend  = 0 != (rtv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_BLENDABLE);
+        info->msaa   = 0 != (rtv_dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET);
+        info->depth  = depth;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_setup_backend(const sg_desc* desc) {
+    // assume _sg.d3d11 already is zero-initialized
+    SOKOL_ASSERT(desc);
+    SOKOL_ASSERT(desc->environment.d3d11.device);
+    SOKOL_ASSERT(desc->environment.d3d11.device_context);
+    _sg.d3d11.valid = true;
+    _sg.d3d11.dev = (ID3D11Device*) desc->environment.d3d11.device;
+    _sg.d3d11.ctx = (ID3D11DeviceContext*) desc->environment.d3d11.device_context;
+    _sg_d3d11_init_caps();
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_backend(void) {
+    SOKOL_ASSERT(_sg.d3d11.valid);
+    _sg.d3d11.valid = false;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_clear_state(void) {
+    // clear all the device context state, so that resource refs don't keep stuck in the d3d device context
+    _sg_d3d11_ClearState(_sg.d3d11.ctx);
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_reset_state_cache(void) {
+    // just clear the d3d11 device context state
+    _sg_d3d11_clear_state();
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_buffer(_sg_buffer_t* buf, const sg_buffer_desc* desc) {
+    SOKOL_ASSERT(buf && desc);
+    SOKOL_ASSERT(!buf->d3d11.buf);
+    const bool injected = (0 != desc->d3d11_buffer);
+    if (injected) {
+        buf->d3d11.buf = (ID3D11Buffer*) desc->d3d11_buffer;
+        _sg_d3d11_AddRef(buf->d3d11.buf);
+        // FIXME: for storage buffers also need to inject resource view
+    } else {
+        D3D11_BUFFER_DESC d3d11_buf_desc;
+        _sg_clear(&d3d11_buf_desc, sizeof(d3d11_buf_desc));
+        d3d11_buf_desc.ByteWidth = (UINT)buf->cmn.size;
+        d3d11_buf_desc.Usage = _sg_d3d11_usage(buf->cmn.usage);
+        d3d11_buf_desc.BindFlags = _sg_d3d11_buffer_bind_flags(buf->cmn.type);
+        d3d11_buf_desc.CPUAccessFlags = _sg_d3d11_cpu_access_flags(buf->cmn.usage);
+        d3d11_buf_desc.MiscFlags = _sg_d3d11_buffer_misc_flags(buf->cmn.type);
+        D3D11_SUBRESOURCE_DATA* init_data_ptr = 0;
+        D3D11_SUBRESOURCE_DATA init_data;
+        _sg_clear(&init_data, sizeof(init_data));
+        if (buf->cmn.usage == SG_USAGE_IMMUTABLE) {
+            SOKOL_ASSERT(desc->data.ptr);
+            init_data.pSysMem = desc->data.ptr;
+            init_data_ptr = &init_data;
+        }
+        HRESULT hr = _sg_d3d11_CreateBuffer(_sg.d3d11.dev, &d3d11_buf_desc, init_data_ptr, &buf->d3d11.buf);
+        if (!(SUCCEEDED(hr) && buf->d3d11.buf)) {
+            _SG_ERROR(D3D11_CREATE_BUFFER_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+
+        // for storage buffers need to create a view object
+        if (buf->cmn.type == SG_BUFFERTYPE_STORAGEBUFFER) {
+            // FIXME: currently only shader-resource-view, in future also UAV
+            // storage buffer size must be multiple of 4
+            SOKOL_ASSERT(_sg_multiple_u64(buf->cmn.size, 4));
+            D3D11_SHADER_RESOURCE_VIEW_DESC d3d11_srv_desc;
+            _sg_clear(&d3d11_srv_desc, sizeof(d3d11_srv_desc));
+            d3d11_srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+            d3d11_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+            d3d11_srv_desc.BufferEx.FirstElement = 0;
+            d3d11_srv_desc.BufferEx.NumElements = buf->cmn.size / 4;
+            d3d11_srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+            hr = _sg_d3d11_CreateShaderResourceView(_sg.d3d11.dev, (ID3D11Resource*)buf->d3d11.buf, &d3d11_srv_desc, &buf->d3d11.srv);
+            if (!(SUCCEEDED(hr) && buf->d3d11.srv)) {
+                _SG_ERROR(D3D11_CREATE_BUFFER_SRV_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+        }
+        _sg_d3d11_setlabel(buf->d3d11.buf, desc->label);
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_buffer(_sg_buffer_t* buf) {
+    SOKOL_ASSERT(buf);
+    if (buf->d3d11.buf) {
+        _sg_d3d11_Release(buf->d3d11.buf);
+    }
+    if (buf->d3d11.srv) {
+        _sg_d3d11_Release(buf->d3d11.srv);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_fill_subres_data(const _sg_image_t* img, const sg_image_data* data) {
+    const int num_faces = (img->cmn.type == SG_IMAGETYPE_CUBE) ? 6:1;
+    const int num_slices = (img->cmn.type == SG_IMAGETYPE_ARRAY) ? img->cmn.num_slices:1;
+    int subres_index = 0;
+    for (int face_index = 0; face_index < num_faces; face_index++) {
+        for (int slice_index = 0; slice_index < num_slices; slice_index++) {
+            for (int mip_index = 0; mip_index < img->cmn.num_mipmaps; mip_index++, subres_index++) {
+                SOKOL_ASSERT(subres_index < (SG_MAX_MIPMAPS * SG_MAX_TEXTUREARRAY_LAYERS));
+                D3D11_SUBRESOURCE_DATA* subres_data = &_sg.d3d11.subres_data[subres_index];
+                const int mip_width = _sg_miplevel_dim(img->cmn.width, mip_index);
+                const int mip_height = _sg_miplevel_dim(img->cmn.height, mip_index);
+                const sg_range* subimg_data = &(data->subimage[face_index][mip_index]);
+                const size_t slice_size = subimg_data->size / (size_t)num_slices;
+                const size_t slice_offset = slice_size * (size_t)slice_index;
+                const uint8_t* ptr = (const uint8_t*) subimg_data->ptr;
+                subres_data->pSysMem = ptr + slice_offset;
+                subres_data->SysMemPitch = (UINT)_sg_row_pitch(img->cmn.pixel_format, mip_width, 1);
+                if (img->cmn.type == SG_IMAGETYPE_3D) {
+                    // FIXME? const int mip_depth = _sg_miplevel_dim(img->depth, mip_index);
+                    subres_data->SysMemSlicePitch = (UINT)_sg_surface_pitch(img->cmn.pixel_format, mip_width, mip_height, 1);
+                } else {
+                    subres_data->SysMemSlicePitch = 0;
+                }
+            }
+        }
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_image(_sg_image_t* img, const sg_image_desc* desc) {
+    SOKOL_ASSERT(img && desc);
+    SOKOL_ASSERT((0 == img->d3d11.tex2d) && (0 == img->d3d11.tex3d) && (0 == img->d3d11.res) && (0 == img->d3d11.srv));
+    HRESULT hr;
+
+    const bool injected = (0 != desc->d3d11_texture);
+    const bool msaa = (img->cmn.sample_count > 1);
+    img->d3d11.format = _sg_d3d11_texture_pixel_format(img->cmn.pixel_format);
+    if (img->d3d11.format == DXGI_FORMAT_UNKNOWN) {
+        _SG_ERROR(D3D11_CREATE_2D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT);
+        return SG_RESOURCESTATE_FAILED;
+    }
+
+    // prepare initial content pointers
+    D3D11_SUBRESOURCE_DATA* init_data = 0;
+    if (!injected && (img->cmn.usage == SG_USAGE_IMMUTABLE) && !img->cmn.render_target) {
+        _sg_d3d11_fill_subres_data(img, &desc->data);
+        init_data = _sg.d3d11.subres_data;
+    }
+    if (img->cmn.type != SG_IMAGETYPE_3D) {
+        // 2D-, cube- or array-texture
+        // first check for injected texture and/or resource view
+        if (injected) {
+            img->d3d11.tex2d = (ID3D11Texture2D*) desc->d3d11_texture;
+            _sg_d3d11_AddRef(img->d3d11.tex2d);
+            img->d3d11.srv = (ID3D11ShaderResourceView*) desc->d3d11_shader_resource_view;
+            if (img->d3d11.srv) {
+                _sg_d3d11_AddRef(img->d3d11.srv);
+            }
+        } else {
+            // if not injected, create 2D texture
+            D3D11_TEXTURE2D_DESC d3d11_tex_desc;
+            _sg_clear(&d3d11_tex_desc, sizeof(d3d11_tex_desc));
+            d3d11_tex_desc.Width = (UINT)img->cmn.width;
+            d3d11_tex_desc.Height = (UINT)img->cmn.height;
+            d3d11_tex_desc.MipLevels = (UINT)img->cmn.num_mipmaps;
+            switch (img->cmn.type) {
+                case SG_IMAGETYPE_ARRAY:    d3d11_tex_desc.ArraySize = (UINT)img->cmn.num_slices; break;
+                case SG_IMAGETYPE_CUBE:     d3d11_tex_desc.ArraySize = 6; break;
+                default:                    d3d11_tex_desc.ArraySize = 1; break;
+            }
+            d3d11_tex_desc.Format = img->d3d11.format;
+            if (img->cmn.render_target) {
+                d3d11_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                if (_sg_is_depth_or_depth_stencil_format(img->cmn.pixel_format)) {
+                    d3d11_tex_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+                } else {
+                    d3d11_tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+                }
+                if (!msaa) {
+                    d3d11_tex_desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+                }
+                d3d11_tex_desc.CPUAccessFlags = 0;
+            } else {
+                d3d11_tex_desc.Usage = _sg_d3d11_usage(img->cmn.usage);
+                d3d11_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                d3d11_tex_desc.CPUAccessFlags = _sg_d3d11_cpu_access_flags(img->cmn.usage);
+            }
+            d3d11_tex_desc.SampleDesc.Count = (UINT)img->cmn.sample_count;
+            d3d11_tex_desc.SampleDesc.Quality = (UINT) (msaa ? D3D11_STANDARD_MULTISAMPLE_PATTERN : 0);
+            d3d11_tex_desc.MiscFlags = (img->cmn.type == SG_IMAGETYPE_CUBE) ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
+
+            hr = _sg_d3d11_CreateTexture2D(_sg.d3d11.dev, &d3d11_tex_desc, init_data, &img->d3d11.tex2d);
+            if (!(SUCCEEDED(hr) && img->d3d11.tex2d)) {
+                _SG_ERROR(D3D11_CREATE_2D_TEXTURE_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+            _sg_d3d11_setlabel(img->d3d11.tex2d, desc->label);
+
+            // create shader-resource-view for 2D texture
+            // FIXME: currently we don't support setting MSAA texture as shader resource
+            if (!msaa) {
+                D3D11_SHADER_RESOURCE_VIEW_DESC d3d11_srv_desc;
+                _sg_clear(&d3d11_srv_desc, sizeof(d3d11_srv_desc));
+                d3d11_srv_desc.Format = _sg_d3d11_srv_pixel_format(img->cmn.pixel_format);
+                switch (img->cmn.type) {
+                    case SG_IMAGETYPE_2D:
+                        d3d11_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                        d3d11_srv_desc.Texture2D.MipLevels = (UINT)img->cmn.num_mipmaps;
+                        break;
+                    case SG_IMAGETYPE_CUBE:
+                        d3d11_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+                        d3d11_srv_desc.TextureCube.MipLevels = (UINT)img->cmn.num_mipmaps;
+                        break;
+                    case SG_IMAGETYPE_ARRAY:
+                        d3d11_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+                        d3d11_srv_desc.Texture2DArray.MipLevels = (UINT)img->cmn.num_mipmaps;
+                        d3d11_srv_desc.Texture2DArray.ArraySize = (UINT)img->cmn.num_slices;
+                        break;
+                    default:
+                        SOKOL_UNREACHABLE; break;
+                }
+                hr = _sg_d3d11_CreateShaderResourceView(_sg.d3d11.dev, (ID3D11Resource*)img->d3d11.tex2d, &d3d11_srv_desc, &img->d3d11.srv);
+                if (!(SUCCEEDED(hr) && img->d3d11.srv)) {
+                    _SG_ERROR(D3D11_CREATE_2D_SRV_FAILED);
+                    return SG_RESOURCESTATE_FAILED;
+                }
+                _sg_d3d11_setlabel(img->d3d11.srv, desc->label);
+            }
+        }
+        SOKOL_ASSERT(img->d3d11.tex2d);
+        img->d3d11.res = (ID3D11Resource*)img->d3d11.tex2d;
+        _sg_d3d11_AddRef(img->d3d11.res);
+    } else {
+        // 3D texture - same procedure, first check if injected, than create non-injected
+        if (injected) {
+            img->d3d11.tex3d = (ID3D11Texture3D*) desc->d3d11_texture;
+            _sg_d3d11_AddRef(img->d3d11.tex3d);
+            img->d3d11.srv = (ID3D11ShaderResourceView*) desc->d3d11_shader_resource_view;
+            if (img->d3d11.srv) {
+                _sg_d3d11_AddRef(img->d3d11.srv);
+            }
+        } else {
+            // not injected, create 3d texture
+            D3D11_TEXTURE3D_DESC d3d11_tex_desc;
+            _sg_clear(&d3d11_tex_desc, sizeof(d3d11_tex_desc));
+            d3d11_tex_desc.Width = (UINT)img->cmn.width;
+            d3d11_tex_desc.Height = (UINT)img->cmn.height;
+            d3d11_tex_desc.Depth = (UINT)img->cmn.num_slices;
+            d3d11_tex_desc.MipLevels = (UINT)img->cmn.num_mipmaps;
+            d3d11_tex_desc.Format = img->d3d11.format;
+            if (img->cmn.render_target) {
+                d3d11_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                d3d11_tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+                d3d11_tex_desc.CPUAccessFlags = 0;
+            } else {
+                d3d11_tex_desc.Usage = _sg_d3d11_usage(img->cmn.usage);
+                d3d11_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                d3d11_tex_desc.CPUAccessFlags = _sg_d3d11_cpu_access_flags(img->cmn.usage);
+            }
+            if (img->d3d11.format == DXGI_FORMAT_UNKNOWN) {
+                _SG_ERROR(D3D11_CREATE_3D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT);
+                return SG_RESOURCESTATE_FAILED;
+            }
+            hr = _sg_d3d11_CreateTexture3D(_sg.d3d11.dev, &d3d11_tex_desc, init_data, &img->d3d11.tex3d);
+            if (!(SUCCEEDED(hr) && img->d3d11.tex3d)) {
+                _SG_ERROR(D3D11_CREATE_3D_TEXTURE_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+            _sg_d3d11_setlabel(img->d3d11.tex3d, desc->label);
+
+            // create shader-resource-view for 3D texture
+            if (!msaa) {
+                D3D11_SHADER_RESOURCE_VIEW_DESC d3d11_srv_desc;
+                _sg_clear(&d3d11_srv_desc, sizeof(d3d11_srv_desc));
+                d3d11_srv_desc.Format = _sg_d3d11_srv_pixel_format(img->cmn.pixel_format);
+                d3d11_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+                d3d11_srv_desc.Texture3D.MipLevels = (UINT)img->cmn.num_mipmaps;
+                hr = _sg_d3d11_CreateShaderResourceView(_sg.d3d11.dev, (ID3D11Resource*)img->d3d11.tex3d, &d3d11_srv_desc, &img->d3d11.srv);
+                if (!(SUCCEEDED(hr) && img->d3d11.srv)) {
+                    _SG_ERROR(D3D11_CREATE_3D_SRV_FAILED);
+                    return SG_RESOURCESTATE_FAILED;
+                }
+                _sg_d3d11_setlabel(img->d3d11.srv, desc->label);
+            }
+        }
+        SOKOL_ASSERT(img->d3d11.tex3d);
+        img->d3d11.res = (ID3D11Resource*)img->d3d11.tex3d;
+        _sg_d3d11_AddRef(img->d3d11.res);
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_image(_sg_image_t* img) {
+    SOKOL_ASSERT(img);
+    if (img->d3d11.tex2d) {
+        _sg_d3d11_Release(img->d3d11.tex2d);
+    }
+    if (img->d3d11.tex3d) {
+        _sg_d3d11_Release(img->d3d11.tex3d);
+    }
+    if (img->d3d11.res) {
+        _sg_d3d11_Release(img->d3d11.res);
+    }
+    if (img->d3d11.srv) {
+        _sg_d3d11_Release(img->d3d11.srv);
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_sampler(_sg_sampler_t* smp, const sg_sampler_desc* desc) {
+    SOKOL_ASSERT(smp && desc);
+    SOKOL_ASSERT(0 == smp->d3d11.smp);
+    const bool injected = (0 != desc->d3d11_sampler);
+    if (injected) {
+        smp->d3d11.smp = (ID3D11SamplerState*)desc->d3d11_sampler;
+        _sg_d3d11_AddRef(smp->d3d11.smp);
+    } else {
+        D3D11_SAMPLER_DESC d3d11_smp_desc;
+        _sg_clear(&d3d11_smp_desc, sizeof(d3d11_smp_desc));
+        d3d11_smp_desc.Filter = _sg_d3d11_filter(desc->min_filter, desc->mag_filter, desc->mipmap_filter, desc->compare != SG_COMPAREFUNC_NEVER, desc->max_anisotropy);
+        d3d11_smp_desc.AddressU = _sg_d3d11_address_mode(desc->wrap_u);
+        d3d11_smp_desc.AddressV = _sg_d3d11_address_mode(desc->wrap_v);
+        d3d11_smp_desc.AddressW = _sg_d3d11_address_mode(desc->wrap_w);
+        d3d11_smp_desc.MipLODBias = 0.0f; // FIXME?
+        switch (desc->border_color) {
+            case SG_BORDERCOLOR_TRANSPARENT_BLACK:
+                // all 0.0f
+                break;
+            case SG_BORDERCOLOR_OPAQUE_WHITE:
+                for (int i = 0; i < 4; i++) {
+                    d3d11_smp_desc.BorderColor[i] = 1.0f;
+                }
+                break;
+            default:
+                // opaque black
+                d3d11_smp_desc.BorderColor[3] = 1.0f;
+                break;
+        }
+        d3d11_smp_desc.MaxAnisotropy = desc->max_anisotropy;
+        d3d11_smp_desc.ComparisonFunc = _sg_d3d11_compare_func(desc->compare);
+        d3d11_smp_desc.MinLOD = desc->min_lod;
+        d3d11_smp_desc.MaxLOD = desc->max_lod;
+        HRESULT hr = _sg_d3d11_CreateSamplerState(_sg.d3d11.dev, &d3d11_smp_desc, &smp->d3d11.smp);
+        if (!(SUCCEEDED(hr) && smp->d3d11.smp)) {
+            _SG_ERROR(D3D11_CREATE_SAMPLER_STATE_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        _sg_d3d11_setlabel(smp->d3d11.smp, desc->label);
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_sampler(_sg_sampler_t* smp) {
+    SOKOL_ASSERT(smp);
+    if (smp->d3d11.smp) {
+        _sg_d3d11_Release(smp->d3d11.smp);
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_d3d11_load_d3dcompiler_dll(void) {
+    if ((0 == _sg.d3d11.d3dcompiler_dll) && !_sg.d3d11.d3dcompiler_dll_load_failed) {
+        _sg.d3d11.d3dcompiler_dll = LoadLibraryA("d3dcompiler_47.dll");
+        if (0 == _sg.d3d11.d3dcompiler_dll) {
+            // don't attempt to load missing DLL in the future
+            _SG_ERROR(D3D11_LOAD_D3DCOMPILER_47_DLL_FAILED);
+            _sg.d3d11.d3dcompiler_dll_load_failed = true;
+            return false;
+        }
+        // look up function pointers
+        _sg.d3d11.D3DCompile_func = (pD3DCompile)(void*) GetProcAddress(_sg.d3d11.d3dcompiler_dll, "D3DCompile");
+        SOKOL_ASSERT(_sg.d3d11.D3DCompile_func);
+    }
+    return 0 != _sg.d3d11.d3dcompiler_dll;
+}
+
+_SOKOL_PRIVATE ID3DBlob* _sg_d3d11_compile_shader(const sg_shader_stage_desc* stage_desc) {
+    if (!_sg_d3d11_load_d3dcompiler_dll()) {
+        return NULL;
+    }
+    SOKOL_ASSERT(stage_desc->d3d11_target);
+    ID3DBlob* output = NULL;
+    ID3DBlob* errors_or_warnings = NULL;
+    HRESULT hr = _sg.d3d11.D3DCompile_func(
+        stage_desc->source,             // pSrcData
+        strlen(stage_desc->source),     // SrcDataSize
+        NULL,                           // pSourceName
+        NULL,                           // pDefines
+        NULL,                           // pInclude
+        stage_desc->entry ? stage_desc->entry : "main",     // pEntryPoint
+        stage_desc->d3d11_target,       // pTarget
+        D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_OPTIMIZATION_LEVEL3,   // Flags1
+        0,          // Flags2
+        &output,    // ppCode
+        &errors_or_warnings);   // ppErrorMsgs
+    if (FAILED(hr)) {
+        _SG_ERROR(D3D11_SHADER_COMPILATION_FAILED);
+    }
+    if (errors_or_warnings) {
+        _SG_WARN(D3D11_SHADER_COMPILATION_OUTPUT);
+        _SG_LOGMSG(D3D11_SHADER_COMPILATION_OUTPUT, (LPCSTR)_sg_d3d11_GetBufferPointer(errors_or_warnings));
+        _sg_d3d11_Release(errors_or_warnings); errors_or_warnings = NULL;
+    }
+    if (FAILED(hr)) {
+        // just in case, usually output is NULL here
+        if (output) {
+            _sg_d3d11_Release(output);
+            output = NULL;
+        }
+    }
+    return output;
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_shader(_sg_shader_t* shd, const sg_shader_desc* desc) {
+    SOKOL_ASSERT(shd && desc);
+    SOKOL_ASSERT(!shd->d3d11.vs && !shd->d3d11.fs && !shd->d3d11.vs_blob);
+    HRESULT hr;
+
+    // copy vertex attribute semantic names and indices
+    for (int i = 0; i < SG_MAX_VERTEX_ATTRIBUTES; i++) {
+        _sg_strcpy(&shd->d3d11.attrs[i].sem_name, desc->attrs[i].sem_name);
+        shd->d3d11.attrs[i].sem_index = desc->attrs[i].sem_index;
+    }
+
+    // shader stage uniform blocks and image slots
+    for (int stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        _sg_shader_stage_t* cmn_stage = &shd->cmn.stage[stage_index];
+        _sg_d3d11_shader_stage_t* d3d11_stage = &shd->d3d11.stage[stage_index];
+        for (int ub_index = 0; ub_index < cmn_stage->num_uniform_blocks; ub_index++) {
+            const _sg_shader_uniform_block_t* ub = &cmn_stage->uniform_blocks[ub_index];
+
+            // create a D3D constant buffer for each uniform block
+            SOKOL_ASSERT(0 == d3d11_stage->cbufs[ub_index]);
+            D3D11_BUFFER_DESC cb_desc;
+            _sg_clear(&cb_desc, sizeof(cb_desc));
+            cb_desc.ByteWidth = (UINT)_sg_roundup((int)ub->size, 16);
+            cb_desc.Usage = D3D11_USAGE_DEFAULT;
+            cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+            hr = _sg_d3d11_CreateBuffer(_sg.d3d11.dev, &cb_desc, NULL, &d3d11_stage->cbufs[ub_index]);
+            if (!(SUCCEEDED(hr) && d3d11_stage->cbufs[ub_index])) {
+                _SG_ERROR(D3D11_CREATE_CONSTANT_BUFFER_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+            _sg_d3d11_setlabel(d3d11_stage->cbufs[ub_index], desc->label);
+        }
+    }
+
+    const void* vs_ptr = 0, *fs_ptr = 0;
+    SIZE_T vs_length = 0, fs_length = 0;
+    ID3DBlob* vs_blob = 0, *fs_blob = 0;
+    if (desc->vs.bytecode.ptr && desc->fs.bytecode.ptr) {
+        // create from shader byte code
+        vs_ptr = desc->vs.bytecode.ptr;
+        fs_ptr = desc->fs.bytecode.ptr;
+        vs_length = desc->vs.bytecode.size;
+        fs_length = desc->fs.bytecode.size;
+    } else {
+        // compile from shader source code
+        vs_blob = _sg_d3d11_compile_shader(&desc->vs);
+        fs_blob = _sg_d3d11_compile_shader(&desc->fs);
+        if (vs_blob && fs_blob) {
+            vs_ptr = _sg_d3d11_GetBufferPointer(vs_blob);
+            vs_length = _sg_d3d11_GetBufferSize(vs_blob);
+            fs_ptr = _sg_d3d11_GetBufferPointer(fs_blob);
+            fs_length = _sg_d3d11_GetBufferSize(fs_blob);
+        }
+    }
+    sg_resource_state result = SG_RESOURCESTATE_FAILED;
+    if (vs_ptr && fs_ptr && (vs_length > 0) && (fs_length > 0)) {
+        // create the D3D vertex- and pixel-shader objects
+        hr = _sg_d3d11_CreateVertexShader(_sg.d3d11.dev, vs_ptr, vs_length, NULL, &shd->d3d11.vs);
+        bool vs_succeeded = SUCCEEDED(hr) && shd->d3d11.vs;
+        hr = _sg_d3d11_CreatePixelShader(_sg.d3d11.dev, fs_ptr, fs_length, NULL, &shd->d3d11.fs);
+        bool fs_succeeded = SUCCEEDED(hr) && shd->d3d11.fs;
+
+        // need to store the vertex shader byte code, this is needed later in sg_create_pipeline
+        if (vs_succeeded && fs_succeeded) {
+            shd->d3d11.vs_blob_length = vs_length;
+            shd->d3d11.vs_blob = _sg_malloc((size_t)vs_length);
+            SOKOL_ASSERT(shd->d3d11.vs_blob);
+            memcpy(shd->d3d11.vs_blob, vs_ptr, vs_length);
+            result = SG_RESOURCESTATE_VALID;
+            _sg_d3d11_setlabel(shd->d3d11.vs, desc->label);
+            _sg_d3d11_setlabel(shd->d3d11.fs, desc->label);
+        }
+    }
+    if (vs_blob) {
+        _sg_d3d11_Release(vs_blob); vs_blob = 0;
+    }
+    if (fs_blob) {
+        _sg_d3d11_Release(fs_blob); fs_blob = 0;
+    }
+    return result;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_shader(_sg_shader_t* shd) {
+    SOKOL_ASSERT(shd);
+    if (shd->d3d11.vs) {
+        _sg_d3d11_Release(shd->d3d11.vs);
+    }
+    if (shd->d3d11.fs) {
+        _sg_d3d11_Release(shd->d3d11.fs);
+    }
+    if (shd->d3d11.vs_blob) {
+        _sg_free(shd->d3d11.vs_blob);
+    }
+    for (int stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        _sg_shader_stage_t* cmn_stage = &shd->cmn.stage[stage_index];
+        _sg_d3d11_shader_stage_t* d3d11_stage = &shd->d3d11.stage[stage_index];
+        for (int ub_index = 0; ub_index < cmn_stage->num_uniform_blocks; ub_index++) {
+            if (d3d11_stage->cbufs[ub_index]) {
+                _sg_d3d11_Release(d3d11_stage->cbufs[ub_index]);
+            }
+        }
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_pipeline(_sg_pipeline_t* pip, _sg_shader_t* shd, const sg_pipeline_desc* desc) {
+    SOKOL_ASSERT(pip && shd && desc);
+    SOKOL_ASSERT(desc->shader.id == shd->slot.id);
+    SOKOL_ASSERT(shd->slot.state == SG_RESOURCESTATE_VALID);
+    SOKOL_ASSERT(shd->d3d11.vs_blob && shd->d3d11.vs_blob_length > 0);
+    SOKOL_ASSERT(!pip->d3d11.il && !pip->d3d11.rs && !pip->d3d11.dss && !pip->d3d11.bs);
+
+    pip->shader = shd;
+    pip->d3d11.index_format = _sg_d3d11_index_format(pip->cmn.index_type);
+    pip->d3d11.topology = _sg_d3d11_primitive_topology(desc->primitive_type);
+    pip->d3d11.stencil_ref = desc->stencil.ref;
+
+    // create input layout object
+    HRESULT hr;
+    D3D11_INPUT_ELEMENT_DESC d3d11_comps[SG_MAX_VERTEX_ATTRIBUTES];
+    _sg_clear(d3d11_comps, sizeof(d3d11_comps));
+    int attr_index = 0;
+    for (; attr_index < SG_MAX_VERTEX_ATTRIBUTES; attr_index++) {
+        const sg_vertex_attr_state* a_state = &desc->layout.attrs[attr_index];
+        if (a_state->format == SG_VERTEXFORMAT_INVALID) {
+            break;
+        }
+        SOKOL_ASSERT(a_state->buffer_index < SG_MAX_VERTEX_BUFFERS);
+        const sg_vertex_buffer_layout_state* l_state = &desc->layout.buffers[a_state->buffer_index];
+        const sg_vertex_step step_func = l_state->step_func;
+        const int step_rate = l_state->step_rate;
+        D3D11_INPUT_ELEMENT_DESC* d3d11_comp = &d3d11_comps[attr_index];
+        d3d11_comp->SemanticName = _sg_strptr(&shd->d3d11.attrs[attr_index].sem_name);
+        d3d11_comp->SemanticIndex = (UINT)shd->d3d11.attrs[attr_index].sem_index;
+        d3d11_comp->Format = _sg_d3d11_vertex_format(a_state->format);
+        d3d11_comp->InputSlot = (UINT)a_state->buffer_index;
+        d3d11_comp->AlignedByteOffset = (UINT)a_state->offset;
+        d3d11_comp->InputSlotClass = _sg_d3d11_input_classification(step_func);
+        if (SG_VERTEXSTEP_PER_INSTANCE == step_func) {
+            d3d11_comp->InstanceDataStepRate = (UINT)step_rate;
+            pip->cmn.use_instanced_draw = true;
+        }
+        pip->cmn.vertex_buffer_layout_active[a_state->buffer_index] = true;
+    }
+    for (int layout_index = 0; layout_index < SG_MAX_VERTEX_BUFFERS; layout_index++) {
+        if (pip->cmn.vertex_buffer_layout_active[layout_index]) {
+            const sg_vertex_buffer_layout_state* l_state = &desc->layout.buffers[layout_index];
+            SOKOL_ASSERT(l_state->stride > 0);
+            pip->d3d11.vb_strides[layout_index] = (UINT)l_state->stride;
+        } else {
+            pip->d3d11.vb_strides[layout_index] = 0;
+        }
+    }
+    if (attr_index > 0) {
+        hr = _sg_d3d11_CreateInputLayout(_sg.d3d11.dev,
+            d3d11_comps,                // pInputElementDesc
+            (UINT)attr_index,           // NumElements
+            shd->d3d11.vs_blob,         // pShaderByteCodeWithInputSignature
+            shd->d3d11.vs_blob_length,  // BytecodeLength
+            &pip->d3d11.il);
+        if (!(SUCCEEDED(hr) && pip->d3d11.il)) {
+            _SG_ERROR(D3D11_CREATE_INPUT_LAYOUT_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        _sg_d3d11_setlabel(pip->d3d11.il, desc->label);
+    }
+
+    // create rasterizer state
+    D3D11_RASTERIZER_DESC rs_desc;
+    _sg_clear(&rs_desc, sizeof(rs_desc));
+    rs_desc.FillMode = D3D11_FILL_SOLID;
+    rs_desc.CullMode = _sg_d3d11_cull_mode(desc->cull_mode);
+    rs_desc.FrontCounterClockwise = desc->face_winding == SG_FACEWINDING_CCW;
+    rs_desc.DepthBias = (INT) pip->cmn.depth.bias;
+    rs_desc.DepthBiasClamp = pip->cmn.depth.bias_clamp;
+    rs_desc.SlopeScaledDepthBias = pip->cmn.depth.bias_slope_scale;
+    rs_desc.DepthClipEnable = TRUE;
+    rs_desc.ScissorEnable = TRUE;
+    rs_desc.MultisampleEnable = desc->sample_count > 1;
+    rs_desc.AntialiasedLineEnable = FALSE;
+    hr = _sg_d3d11_CreateRasterizerState(_sg.d3d11.dev, &rs_desc, &pip->d3d11.rs);
+    if (!(SUCCEEDED(hr) && pip->d3d11.rs)) {
+        _SG_ERROR(D3D11_CREATE_RASTERIZER_STATE_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    _sg_d3d11_setlabel(pip->d3d11.rs, desc->label);
+
+    // create depth-stencil state
+    D3D11_DEPTH_STENCIL_DESC dss_desc;
+    _sg_clear(&dss_desc, sizeof(dss_desc));
+    dss_desc.DepthEnable = TRUE;
+    dss_desc.DepthWriteMask = desc->depth.write_enabled ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+    dss_desc.DepthFunc = _sg_d3d11_compare_func(desc->depth.compare);
+    dss_desc.StencilEnable = desc->stencil.enabled;
+    dss_desc.StencilReadMask = desc->stencil.read_mask;
+    dss_desc.StencilWriteMask = desc->stencil.write_mask;
+    const sg_stencil_face_state* sf = &desc->stencil.front;
+    dss_desc.FrontFace.StencilFailOp = _sg_d3d11_stencil_op(sf->fail_op);
+    dss_desc.FrontFace.StencilDepthFailOp = _sg_d3d11_stencil_op(sf->depth_fail_op);
+    dss_desc.FrontFace.StencilPassOp = _sg_d3d11_stencil_op(sf->pass_op);
+    dss_desc.FrontFace.StencilFunc = _sg_d3d11_compare_func(sf->compare);
+    const sg_stencil_face_state* sb = &desc->stencil.back;
+    dss_desc.BackFace.StencilFailOp = _sg_d3d11_stencil_op(sb->fail_op);
+    dss_desc.BackFace.StencilDepthFailOp = _sg_d3d11_stencil_op(sb->depth_fail_op);
+    dss_desc.BackFace.StencilPassOp = _sg_d3d11_stencil_op(sb->pass_op);
+    dss_desc.BackFace.StencilFunc = _sg_d3d11_compare_func(sb->compare);
+    hr = _sg_d3d11_CreateDepthStencilState(_sg.d3d11.dev, &dss_desc, &pip->d3d11.dss);
+    if (!(SUCCEEDED(hr) && pip->d3d11.dss)) {
+        _SG_ERROR(D3D11_CREATE_DEPTH_STENCIL_STATE_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    _sg_d3d11_setlabel(pip->d3d11.dss, desc->label);
+
+    // create blend state
+    D3D11_BLEND_DESC bs_desc;
+    _sg_clear(&bs_desc, sizeof(bs_desc));
+    bs_desc.AlphaToCoverageEnable = desc->alpha_to_coverage_enabled;
+    bs_desc.IndependentBlendEnable = TRUE;
+    {
+        int i = 0;
+        for (i = 0; i < desc->color_count; i++) {
+            const sg_blend_state* src = &desc->colors[i].blend;
+            D3D11_RENDER_TARGET_BLEND_DESC* dst = &bs_desc.RenderTarget[i];
+            dst->BlendEnable = src->enabled;
+            dst->SrcBlend = _sg_d3d11_blend_factor(src->src_factor_rgb);
+            dst->DestBlend = _sg_d3d11_blend_factor(src->dst_factor_rgb);
+            dst->BlendOp = _sg_d3d11_blend_op(src->op_rgb);
+            dst->SrcBlendAlpha = _sg_d3d11_blend_factor(src->src_factor_alpha);
+            dst->DestBlendAlpha = _sg_d3d11_blend_factor(src->dst_factor_alpha);
+            dst->BlendOpAlpha = _sg_d3d11_blend_op(src->op_alpha);
+            dst->RenderTargetWriteMask = _sg_d3d11_color_write_mask(desc->colors[i].write_mask);
+        }
+        for (; i < 8; i++) {
+            D3D11_RENDER_TARGET_BLEND_DESC* dst = &bs_desc.RenderTarget[i];
+            dst->BlendEnable = FALSE;
+            dst->SrcBlend = dst->SrcBlendAlpha = D3D11_BLEND_ONE;
+            dst->DestBlend = dst->DestBlendAlpha = D3D11_BLEND_ZERO;
+            dst->BlendOp = dst->BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            dst->RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        }
+    }
+    hr = _sg_d3d11_CreateBlendState(_sg.d3d11.dev, &bs_desc, &pip->d3d11.bs);
+    if (!(SUCCEEDED(hr) && pip->d3d11.bs)) {
+        _SG_ERROR(D3D11_CREATE_BLEND_STATE_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    _sg_d3d11_setlabel(pip->d3d11.bs, desc->label);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    if (pip == _sg.d3d11.cur_pipeline) {
+        _sg.d3d11.cur_pipeline = 0;
+        _sg.d3d11.cur_pipeline_id.id = SG_INVALID_ID;
+    }
+    if (pip->d3d11.il) {
+        _sg_d3d11_Release(pip->d3d11.il);
+    }
+    if (pip->d3d11.rs) {
+        _sg_d3d11_Release(pip->d3d11.rs);
+    }
+    if (pip->d3d11.dss) {
+        _sg_d3d11_Release(pip->d3d11.dss);
+    }
+    if (pip->d3d11.bs) {
+        _sg_d3d11_Release(pip->d3d11.bs);
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_d3d11_create_attachments(_sg_attachments_t* atts, _sg_image_t** color_images, _sg_image_t** resolve_images, _sg_image_t* ds_img, const sg_attachments_desc* desc) {
+    SOKOL_ASSERT(atts && desc);
+    SOKOL_ASSERT(color_images && resolve_images);
+    SOKOL_ASSERT(_sg.d3d11.dev);
+
+    // copy image pointers
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        const sg_attachment_desc* color_desc = &desc->colors[i];
+        _SOKOL_UNUSED(color_desc);
+        SOKOL_ASSERT(color_desc->image.id != SG_INVALID_ID);
+        SOKOL_ASSERT(0 == atts->d3d11.colors[i].image);
+        SOKOL_ASSERT(color_images[i] && (color_images[i]->slot.id == color_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_color_format(color_images[i]->cmn.pixel_format));
+        atts->d3d11.colors[i].image = color_images[i];
+
+        const sg_attachment_desc* resolve_desc = &desc->resolves[i];
+        if (resolve_desc->image.id != SG_INVALID_ID) {
+            SOKOL_ASSERT(0 == atts->d3d11.resolves[i].image);
+            SOKOL_ASSERT(resolve_images[i] && (resolve_images[i]->slot.id == resolve_desc->image.id));
+            SOKOL_ASSERT(color_images[i] && (color_images[i]->cmn.pixel_format == resolve_images[i]->cmn.pixel_format));
+            atts->d3d11.resolves[i].image = resolve_images[i];
+        }
+    }
+    SOKOL_ASSERT(0 == atts->d3d11.depth_stencil.image);
+    const sg_attachment_desc* ds_desc = &desc->depth_stencil;
+    if (ds_desc->image.id != SG_INVALID_ID) {
+        SOKOL_ASSERT(ds_img && (ds_img->slot.id == ds_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_depth_format(ds_img->cmn.pixel_format));
+        atts->d3d11.depth_stencil.image = ds_img;
+    }
+
+    // create render-target views
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        const _sg_attachment_common_t* cmn_color_att = &atts->cmn.colors[i];
+        const _sg_image_t* color_img = color_images[i];
+        SOKOL_ASSERT(0 == atts->d3d11.colors[i].view.rtv);
+        const bool msaa = color_img->cmn.sample_count > 1;
+        D3D11_RENDER_TARGET_VIEW_DESC d3d11_rtv_desc;
+        _sg_clear(&d3d11_rtv_desc, sizeof(d3d11_rtv_desc));
+        d3d11_rtv_desc.Format = _sg_d3d11_rtv_pixel_format(color_img->cmn.pixel_format);
+        if (color_img->cmn.type == SG_IMAGETYPE_2D) {
+            if (msaa) {
+                d3d11_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
+            } else {
+                d3d11_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+                d3d11_rtv_desc.Texture2D.MipSlice = (UINT)cmn_color_att->mip_level;
+            }
+        } else if ((color_img->cmn.type == SG_IMAGETYPE_CUBE) || (color_img->cmn.type == SG_IMAGETYPE_ARRAY)) {
+            if (msaa) {
+                d3d11_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
+                d3d11_rtv_desc.Texture2DMSArray.FirstArraySlice = (UINT)cmn_color_att->slice;
+                d3d11_rtv_desc.Texture2DMSArray.ArraySize = 1;
+            } else {
+                d3d11_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+                d3d11_rtv_desc.Texture2DArray.MipSlice = (UINT)cmn_color_att->mip_level;
+                d3d11_rtv_desc.Texture2DArray.FirstArraySlice = (UINT)cmn_color_att->slice;
+                d3d11_rtv_desc.Texture2DArray.ArraySize = 1;
+            }
+        } else {
+            SOKOL_ASSERT(color_img->cmn.type == SG_IMAGETYPE_3D);
+            SOKOL_ASSERT(!msaa);
+            d3d11_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+            d3d11_rtv_desc.Texture3D.MipSlice = (UINT)cmn_color_att->mip_level;
+            d3d11_rtv_desc.Texture3D.FirstWSlice = (UINT)cmn_color_att->slice;
+            d3d11_rtv_desc.Texture3D.WSize = 1;
+        }
+        SOKOL_ASSERT(color_img->d3d11.res);
+        HRESULT hr = _sg_d3d11_CreateRenderTargetView(_sg.d3d11.dev, color_img->d3d11.res, &d3d11_rtv_desc, &atts->d3d11.colors[i].view.rtv);
+        if (!(SUCCEEDED(hr) && atts->d3d11.colors[i].view.rtv)) {
+            _SG_ERROR(D3D11_CREATE_RTV_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        _sg_d3d11_setlabel(atts->d3d11.colors[i].view.rtv, desc->label);
+    }
+    SOKOL_ASSERT(0 == atts->d3d11.depth_stencil.view.dsv);
+    if (ds_desc->image.id != SG_INVALID_ID) {
+        const _sg_attachment_common_t* cmn_ds_att = &atts->cmn.depth_stencil;
+        const bool msaa = ds_img->cmn.sample_count > 1;
+        D3D11_DEPTH_STENCIL_VIEW_DESC d3d11_dsv_desc;
+        _sg_clear(&d3d11_dsv_desc, sizeof(d3d11_dsv_desc));
+        d3d11_dsv_desc.Format = _sg_d3d11_dsv_pixel_format(ds_img->cmn.pixel_format);
+        SOKOL_ASSERT(ds_img && ds_img->cmn.type != SG_IMAGETYPE_3D);
+        if (ds_img->cmn.type == SG_IMAGETYPE_2D) {
+            if (msaa) {
+                d3d11_dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+            } else {
+                d3d11_dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+                d3d11_dsv_desc.Texture2D.MipSlice = (UINT)cmn_ds_att->mip_level;
+            }
+        } else if ((ds_img->cmn.type == SG_IMAGETYPE_CUBE) || (ds_img->cmn.type == SG_IMAGETYPE_ARRAY)) {
+            if (msaa) {
+                d3d11_dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
+                d3d11_dsv_desc.Texture2DMSArray.FirstArraySlice = (UINT)cmn_ds_att->slice;
+                d3d11_dsv_desc.Texture2DMSArray.ArraySize = 1;
+            } else {
+                d3d11_dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+                d3d11_dsv_desc.Texture2DArray.MipSlice = (UINT)cmn_ds_att->mip_level;
+                d3d11_dsv_desc.Texture2DArray.FirstArraySlice = (UINT)cmn_ds_att->slice;
+                d3d11_dsv_desc.Texture2DArray.ArraySize = 1;
+            }
+        }
+        SOKOL_ASSERT(ds_img->d3d11.res);
+        HRESULT hr = _sg_d3d11_CreateDepthStencilView(_sg.d3d11.dev, ds_img->d3d11.res, &d3d11_dsv_desc, &atts->d3d11.depth_stencil.view.dsv);
+        if (!(SUCCEEDED(hr) && atts->d3d11.depth_stencil.view.dsv)) {
+            _SG_ERROR(D3D11_CREATE_DSV_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        _sg_d3d11_setlabel(atts->d3d11.depth_stencil.view.dsv, desc->label);
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_discard_attachments(_sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    for (int i = 0; i < SG_MAX_COLOR_ATTACHMENTS; i++) {
+        if (atts->d3d11.colors[i].view.rtv) {
+            _sg_d3d11_Release(atts->d3d11.colors[i].view.rtv);
+        }
+        if (atts->d3d11.resolves[i].view.rtv) {
+            _sg_d3d11_Release(atts->d3d11.resolves[i].view.rtv);
+        }
+    }
+    if (atts->d3d11.depth_stencil.view.dsv) {
+        _sg_d3d11_Release(atts->d3d11.depth_stencil.view.dsv);
+    }
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_d3d11_attachments_color_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->d3d11.colors[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_d3d11_attachments_resolve_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->d3d11.resolves[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_d3d11_attachments_ds_image(const _sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    return atts->d3d11.depth_stencil.image;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_begin_pass(const sg_pass* pass) {
+    SOKOL_ASSERT(pass);
+
+    const _sg_attachments_t* atts = _sg.cur_pass.atts;
+    const sg_swapchain* swapchain = &pass->swapchain;
+    const sg_pass_action* action = &pass->action;
+
+    int num_rtvs = 0;
+    ID3D11RenderTargetView* rtvs[SG_MAX_COLOR_ATTACHMENTS] = { 0 };
+    ID3D11DepthStencilView* dsv = 0;
+    _sg.d3d11.cur_pass.render_view = 0;
+    _sg.d3d11.cur_pass.resolve_view = 0;
+    if (atts) {
+        num_rtvs = atts->cmn.num_colors;
+        for (int i = 0; i < SG_MAX_COLOR_ATTACHMENTS; i++) {
+            rtvs[i] = atts->d3d11.colors[i].view.rtv;
+        }
+        dsv = atts->d3d11.depth_stencil.view.dsv;
+    } else {
+        // NOTE: depth-stencil-view is optional
+        SOKOL_ASSERT(swapchain->d3d11.render_view);
+        num_rtvs = 1;
+        rtvs[0] = (ID3D11RenderTargetView*) swapchain->d3d11.render_view;
+        dsv = (ID3D11DepthStencilView*) swapchain->d3d11.depth_stencil_view;
+        _sg.d3d11.cur_pass.render_view = (ID3D11RenderTargetView*) swapchain->d3d11.render_view;
+        _sg.d3d11.cur_pass.resolve_view = (ID3D11RenderTargetView*) swapchain->d3d11.resolve_view;
+    }
+    // apply the render-target- and depth-stencil-views
+    _sg_d3d11_OMSetRenderTargets(_sg.d3d11.ctx, SG_MAX_COLOR_ATTACHMENTS, rtvs, dsv);
+    _sg_stats_add(d3d11.pass.num_om_set_render_targets, 1);
+
+    // set viewport and scissor rect to cover whole screen
+    D3D11_VIEWPORT vp;
+    _sg_clear(&vp, sizeof(vp));
+    vp.Width = (FLOAT) _sg.cur_pass.width;
+    vp.Height = (FLOAT) _sg.cur_pass.height;
+    vp.MaxDepth = 1.0f;
+    _sg_d3d11_RSSetViewports(_sg.d3d11.ctx, 1, &vp);
+    D3D11_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = _sg.cur_pass.width;
+    rect.bottom = _sg.cur_pass.height;
+    _sg_d3d11_RSSetScissorRects(_sg.d3d11.ctx, 1, &rect);
+
+    // perform clear action
+    for (int i = 0; i < num_rtvs; i++) {
+        if (action->colors[i].load_action == SG_LOADACTION_CLEAR) {
+            _sg_d3d11_ClearRenderTargetView(_sg.d3d11.ctx, rtvs[i], (float*)&action->colors[i].clear_value);
+            _sg_stats_add(d3d11.pass.num_clear_render_target_view, 1);
+        }
+    }
+    UINT ds_flags = 0;
+    if (action->depth.load_action == SG_LOADACTION_CLEAR) {
+        ds_flags |= D3D11_CLEAR_DEPTH;
+    }
+    if (action->stencil.load_action == SG_LOADACTION_CLEAR) {
+        ds_flags |= D3D11_CLEAR_STENCIL;
+    }
+    if ((0 != ds_flags) && dsv) {
+        _sg_d3d11_ClearDepthStencilView(_sg.d3d11.ctx, dsv, ds_flags, action->depth.clear_value, action->stencil.clear_value);
+        _sg_stats_add(d3d11.pass.num_clear_depth_stencil_view, 1);
+    }
+}
+
+// D3D11CalcSubresource only exists for C++
+_SOKOL_PRIVATE UINT _sg_d3d11_calcsubresource(UINT mip_slice, UINT array_slice, UINT mip_levels) {
+    return mip_slice + array_slice * mip_levels;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_end_pass(void) {
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+
+    // need to resolve MSAA render attachments into texture?
+    if (_sg.cur_pass.atts_id.id != SG_INVALID_ID) {
+        // ...for offscreen pass...
+        SOKOL_ASSERT(_sg.cur_pass.atts && _sg.cur_pass.atts->slot.id == _sg.cur_pass.atts_id.id);
+        for (int i = 0; i < _sg.cur_pass.atts->cmn.num_colors; i++) {
+            const _sg_image_t* resolve_img = _sg.cur_pass.atts->d3d11.resolves[i].image;
+            if (resolve_img) {
+                const _sg_image_t* color_img = _sg.cur_pass.atts->d3d11.colors[i].image;
+                const _sg_attachment_common_t* cmn_color_att = &_sg.cur_pass.atts->cmn.colors[i];
+                const _sg_attachment_common_t* cmn_resolve_att = &_sg.cur_pass.atts->cmn.resolves[i];
+                SOKOL_ASSERT(resolve_img->slot.id == cmn_resolve_att->image_id.id);
+                SOKOL_ASSERT(color_img && (color_img->slot.id == cmn_color_att->image_id.id));
+                SOKOL_ASSERT(color_img->cmn.sample_count > 1);
+                SOKOL_ASSERT(resolve_img->cmn.sample_count == 1);
+                const UINT src_subres = _sg_d3d11_calcsubresource(
+                    (UINT)cmn_color_att->mip_level,
+                    (UINT)cmn_color_att->slice,
+                    (UINT)color_img->cmn.num_mipmaps);
+                const UINT dst_subres = _sg_d3d11_calcsubresource(
+                    (UINT)cmn_resolve_att->mip_level,
+                    (UINT)cmn_resolve_att->slice,
+                    (UINT)resolve_img->cmn.num_mipmaps);
+                _sg_d3d11_ResolveSubresource(_sg.d3d11.ctx,
+                    resolve_img->d3d11.res,
+                    dst_subres,
+                    color_img->d3d11.res,
+                    src_subres,
+                    color_img->d3d11.format);
+                _sg_stats_add(d3d11.pass.num_resolve_subresource, 1);
+            }
+        }
+    } else {
+        // ...for swapchain pass...
+        if (_sg.d3d11.cur_pass.resolve_view) {
+            SOKOL_ASSERT(_sg.d3d11.cur_pass.render_view);
+            SOKOL_ASSERT(_sg.cur_pass.swapchain.sample_count > 1);
+            SOKOL_ASSERT(_sg.cur_pass.swapchain.color_fmt > SG_PIXELFORMAT_NONE);
+            ID3D11Resource* d3d11_render_res = 0;
+            ID3D11Resource* d3d11_resolve_res = 0;
+            _sg_d3d11_GetResource((ID3D11View*)_sg.d3d11.cur_pass.render_view, &d3d11_render_res);
+            _sg_d3d11_GetResource((ID3D11View*)_sg.d3d11.cur_pass.resolve_view, &d3d11_resolve_res);
+            SOKOL_ASSERT(d3d11_render_res);
+            SOKOL_ASSERT(d3d11_resolve_res);
+            const sg_pixel_format color_fmt = _sg.cur_pass.swapchain.color_fmt;
+            _sg_d3d11_ResolveSubresource(_sg.d3d11.ctx, d3d11_resolve_res, 0, d3d11_render_res, 0, _sg_d3d11_rtv_pixel_format(color_fmt));
+            _sg_d3d11_Release(d3d11_render_res);
+            _sg_d3d11_Release(d3d11_resolve_res);
+            _sg_stats_add(d3d11.pass.num_resolve_subresource, 1);
+        }
+    }
+    _sg.d3d11.cur_pass.render_view = 0;
+    _sg.d3d11.cur_pass.resolve_view = 0;
+    _sg.d3d11.cur_pipeline = 0;
+    _sg.d3d11.cur_pipeline_id.id = SG_INVALID_ID;
+    _sg_d3d11_clear_state();
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_apply_viewport(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    D3D11_VIEWPORT vp;
+    vp.TopLeftX = (FLOAT) x;
+    vp.TopLeftY = (FLOAT) (origin_top_left ? y : (_sg.cur_pass.height - (y + h)));
+    vp.Width = (FLOAT) w;
+    vp.Height = (FLOAT) h;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    _sg_d3d11_RSSetViewports(_sg.d3d11.ctx, 1, &vp);
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_apply_scissor_rect(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    D3D11_RECT rect;
+    rect.left = x;
+    rect.top = (origin_top_left ? y : (_sg.cur_pass.height - (y + h)));
+    rect.right = x + w;
+    rect.bottom = origin_top_left ? (y + h) : (_sg.cur_pass.height - y);
+    _sg_d3d11_RSSetScissorRects(_sg.d3d11.ctx, 1, &rect);
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_apply_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    SOKOL_ASSERT(pip->shader && (pip->cmn.shader_id.id == pip->shader->slot.id));
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(pip->d3d11.rs && pip->d3d11.bs && pip->d3d11.dss);
+
+    _sg.d3d11.cur_pipeline = pip;
+    _sg.d3d11.cur_pipeline_id.id = pip->slot.id;
+    _sg.d3d11.use_indexed_draw = (pip->d3d11.index_format != DXGI_FORMAT_UNKNOWN);
+    _sg.d3d11.use_instanced_draw = pip->cmn.use_instanced_draw;
+
+    _sg_d3d11_RSSetState(_sg.d3d11.ctx, pip->d3d11.rs);
+    _sg_d3d11_OMSetDepthStencilState(_sg.d3d11.ctx, pip->d3d11.dss, pip->d3d11.stencil_ref);
+    _sg_d3d11_OMSetBlendState(_sg.d3d11.ctx, pip->d3d11.bs, (float*)&pip->cmn.blend_color, 0xFFFFFFFF);
+    _sg_d3d11_IASetPrimitiveTopology(_sg.d3d11.ctx, pip->d3d11.topology);
+    _sg_d3d11_IASetInputLayout(_sg.d3d11.ctx, pip->d3d11.il);
+    _sg_d3d11_VSSetShader(_sg.d3d11.ctx, pip->shader->d3d11.vs, NULL, 0);
+    _sg_d3d11_VSSetConstantBuffers(_sg.d3d11.ctx, 0, SG_MAX_SHADERSTAGE_UBS, pip->shader->d3d11.stage[SG_SHADERSTAGE_VS].cbufs);
+    _sg_d3d11_PSSetShader(_sg.d3d11.ctx, pip->shader->d3d11.fs, NULL, 0);
+    _sg_d3d11_PSSetConstantBuffers(_sg.d3d11.ctx, 0, SG_MAX_SHADERSTAGE_UBS, pip->shader->d3d11.stage[SG_SHADERSTAGE_FS].cbufs);
+    _sg_stats_add(d3d11.pipeline.num_rs_set_state, 1);
+    _sg_stats_add(d3d11.pipeline.num_om_set_depth_stencil_state, 1);
+    _sg_stats_add(d3d11.pipeline.num_om_set_blend_state, 1);
+    _sg_stats_add(d3d11.pipeline.num_ia_set_primitive_topology, 1);
+    _sg_stats_add(d3d11.pipeline.num_ia_set_input_layout, 1);
+    _sg_stats_add(d3d11.pipeline.num_vs_set_shader, 1);
+    _sg_stats_add(d3d11.pipeline.num_vs_set_constant_buffers, 1);
+    _sg_stats_add(d3d11.pipeline.num_ps_set_shader, 1);
+    _sg_stats_add(d3d11.pipeline.num_ps_set_constant_buffers, 1);
+}
+
+_SOKOL_PRIVATE bool _sg_d3d11_apply_bindings(_sg_bindings_t* bnd) {
+    SOKOL_ASSERT(bnd);
+    SOKOL_ASSERT(bnd->pip);
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+
+    // gather all the D3D11 resources into arrays
+    ID3D11Buffer* d3d11_ib = bnd->ib ? bnd->ib->d3d11.buf : 0;
+    ID3D11Buffer* d3d11_vbs[SG_MAX_VERTEX_BUFFERS] = {0};
+    UINT d3d11_vb_offsets[SG_MAX_VERTEX_BUFFERS] = {0};
+    ID3D11ShaderResourceView* d3d11_vs_srvs[_SG_D3D11_MAX_SHADERSTAGE_SRVS] = {0};
+    ID3D11ShaderResourceView* d3d11_fs_srvs[_SG_D3D11_MAX_SHADERSTAGE_SRVS] = {0};
+    ID3D11SamplerState* d3d11_vs_smps[SG_MAX_SHADERSTAGE_SAMPLERS] = {0};
+    ID3D11SamplerState* d3d11_fs_smps[SG_MAX_SHADERSTAGE_SAMPLERS] = {0};
+    for (int i = 0; i < bnd->num_vbs; i++) {
+        SOKOL_ASSERT(bnd->vbs[i]->d3d11.buf);
+        d3d11_vbs[i] = bnd->vbs[i]->d3d11.buf;
+        d3d11_vb_offsets[i] = (UINT)bnd->vb_offsets[i];
+    }
+    for (int i = 0; i < bnd->num_vs_imgs; i++) {
+        SOKOL_ASSERT(bnd->vs_imgs[i]->d3d11.srv);
+        d3d11_vs_srvs[_SG_D3D11_SHADERSTAGE_IMAGE_SRV_OFFSET + i] = bnd->vs_imgs[i]->d3d11.srv;
+    }
+    for (int i = 0; i < bnd->num_vs_sbufs; i++) {
+        SOKOL_ASSERT(bnd->vs_sbufs[i]->d3d11.srv);
+        d3d11_vs_srvs[_SG_D3D11_SHADERSTAGE_BUFFER_SRV_OFFSET + i] = bnd->vs_sbufs[i]->d3d11.srv;
+    }
+    for (int i = 0; i < bnd->num_fs_imgs; i++) {
+        SOKOL_ASSERT(bnd->fs_imgs[i]->d3d11.srv);
+        d3d11_fs_srvs[_SG_D3D11_SHADERSTAGE_IMAGE_SRV_OFFSET + i] = bnd->fs_imgs[i]->d3d11.srv;
+    }
+    for (int i = 0; i < bnd->num_fs_sbufs; i++) {
+        SOKOL_ASSERT(bnd->fs_sbufs[i]->d3d11.srv);
+        d3d11_fs_srvs[_SG_D3D11_SHADERSTAGE_BUFFER_SRV_OFFSET + i] = bnd->fs_sbufs[i]->d3d11.srv;
+    }
+    for (int i = 0; i < bnd->num_vs_smps; i++) {
+        SOKOL_ASSERT(bnd->vs_smps[i]->d3d11.smp);
+        d3d11_vs_smps[i] = bnd->vs_smps[i]->d3d11.smp;
+    }
+    for (int i = 0; i < bnd->num_fs_smps; i++) {
+        SOKOL_ASSERT(bnd->fs_smps[i]->d3d11.smp);
+        d3d11_fs_smps[i] = bnd->fs_smps[i]->d3d11.smp;
+    }
+    _sg_d3d11_IASetVertexBuffers(_sg.d3d11.ctx, 0, SG_MAX_VERTEX_BUFFERS, d3d11_vbs, bnd->pip->d3d11.vb_strides, d3d11_vb_offsets);
+    _sg_d3d11_IASetIndexBuffer(_sg.d3d11.ctx, d3d11_ib, bnd->pip->d3d11.index_format, (UINT)bnd->ib_offset);
+    _sg_d3d11_VSSetShaderResources(_sg.d3d11.ctx, 0, _SG_D3D11_MAX_SHADERSTAGE_SRVS, d3d11_vs_srvs);
+    _sg_d3d11_PSSetShaderResources(_sg.d3d11.ctx, 0, _SG_D3D11_MAX_SHADERSTAGE_SRVS, d3d11_fs_srvs);
+    _sg_d3d11_VSSetSamplers(_sg.d3d11.ctx, 0, SG_MAX_SHADERSTAGE_SAMPLERS, d3d11_vs_smps);
+    _sg_d3d11_PSSetSamplers(_sg.d3d11.ctx, 0, SG_MAX_SHADERSTAGE_SAMPLERS, d3d11_fs_smps);
+    _sg_stats_add(d3d11.bindings.num_ia_set_vertex_buffers, 1);
+    _sg_stats_add(d3d11.bindings.num_ia_set_index_buffer, 1);
+    _sg_stats_add(d3d11.bindings.num_vs_set_shader_resources, 1);
+    _sg_stats_add(d3d11.bindings.num_ps_set_shader_resources, 1);
+    _sg_stats_add(d3d11.bindings.num_vs_set_samplers, 1);
+    _sg_stats_add(d3d11.bindings.num_ps_set_samplers, 1);
+    return true;
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_apply_uniforms(sg_shader_stage stage_index, int ub_index, const sg_range* data) {
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(_sg.d3d11.cur_pipeline && _sg.d3d11.cur_pipeline->slot.id == _sg.d3d11.cur_pipeline_id.id);
+    SOKOL_ASSERT(_sg.d3d11.cur_pipeline->shader && _sg.d3d11.cur_pipeline->shader->slot.id == _sg.d3d11.cur_pipeline->cmn.shader_id.id);
+    SOKOL_ASSERT(ub_index < _sg.d3d11.cur_pipeline->shader->cmn.stage[stage_index].num_uniform_blocks);
+    SOKOL_ASSERT(data->size == _sg.d3d11.cur_pipeline->shader->cmn.stage[stage_index].uniform_blocks[ub_index].size);
+    ID3D11Buffer* cb = _sg.d3d11.cur_pipeline->shader->d3d11.stage[stage_index].cbufs[ub_index];
+    SOKOL_ASSERT(cb);
+    _sg_d3d11_UpdateSubresource(_sg.d3d11.ctx, (ID3D11Resource*)cb, 0, NULL, data->ptr, 0, 0);
+    _sg_stats_add(d3d11.uniforms.num_update_subresource, 1);
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_draw(int base_element, int num_elements, int num_instances) {
+    const bool use_instanced_draw = (num_instances > 1) || (_sg.d3d11.use_instanced_draw);
+    if (_sg.d3d11.use_indexed_draw) {
+        if (use_instanced_draw) {
+            _sg_d3d11_DrawIndexedInstanced(_sg.d3d11.ctx, (UINT)num_elements, (UINT)num_instances, (UINT)base_element, 0, 0);
+            _sg_stats_add(d3d11.draw.num_draw_indexed_instanced, 1);
+        } else {
+            _sg_d3d11_DrawIndexed(_sg.d3d11.ctx, (UINT)num_elements, (UINT)base_element, 0);
+            _sg_stats_add(d3d11.draw.num_draw_indexed, 1);
+        }
+    } else {
+        if (use_instanced_draw) {
+            _sg_d3d11_DrawInstanced(_sg.d3d11.ctx, (UINT)num_elements, (UINT)num_instances, (UINT)base_element, 0);
+            _sg_stats_add(d3d11.draw.num_draw_instanced, 1);
+        } else {
+            _sg_d3d11_Draw(_sg.d3d11.ctx, (UINT)num_elements, (UINT)base_element);
+            _sg_stats_add(d3d11.draw.num_draw, 1);
+        }
+    }
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_commit(void) {
+    // empty
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_update_buffer(_sg_buffer_t* buf, const sg_range* data) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(buf->d3d11.buf);
+    D3D11_MAPPED_SUBRESOURCE d3d11_msr;
+    HRESULT hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)buf->d3d11.buf, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d11_msr);
+    _sg_stats_add(d3d11.num_map, 1);
+    if (SUCCEEDED(hr)) {
+        memcpy(d3d11_msr.pData, data->ptr, data->size);
+        _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)buf->d3d11.buf, 0);
+        _sg_stats_add(d3d11.num_unmap, 1);
+    } else {
+        _SG_ERROR(D3D11_MAP_FOR_UPDATE_BUFFER_FAILED);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_append_buffer(_sg_buffer_t* buf, const sg_range* data, bool new_frame) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(buf->d3d11.buf);
+    D3D11_MAP map_type = new_frame ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE;
+    D3D11_MAPPED_SUBRESOURCE d3d11_msr;
+    HRESULT hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)buf->d3d11.buf, 0, map_type, 0, &d3d11_msr);
+    _sg_stats_add(d3d11.num_map, 1);
+    if (SUCCEEDED(hr)) {
+        uint8_t* dst_ptr = (uint8_t*)d3d11_msr.pData + buf->cmn.append_pos;
+        memcpy(dst_ptr, data->ptr, data->size);
+        _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)buf->d3d11.buf, 0);
+        _sg_stats_add(d3d11.num_unmap, 1);
+    } else {
+        _SG_ERROR(D3D11_MAP_FOR_APPEND_BUFFER_FAILED);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_d3d11_update_image(_sg_image_t* img, const sg_image_data* data) {
+    SOKOL_ASSERT(img && data);
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(img->d3d11.res);
+    const int num_faces = (img->cmn.type == SG_IMAGETYPE_CUBE) ? 6:1;
+    const int num_slices = (img->cmn.type == SG_IMAGETYPE_ARRAY) ? img->cmn.num_slices:1;
+    UINT subres_index = 0;
+    HRESULT hr;
+    D3D11_MAPPED_SUBRESOURCE d3d11_msr;
+    for (int face_index = 0; face_index < num_faces; face_index++) {
+        for (int slice_index = 0; slice_index < num_slices; slice_index++) {
+            for (int mip_index = 0; mip_index < img->cmn.num_mipmaps; mip_index++, subres_index++) {
+                SOKOL_ASSERT(subres_index < (SG_MAX_MIPMAPS * SG_MAX_TEXTUREARRAY_LAYERS));
+                const int mip_width = _sg_miplevel_dim(img->cmn.width, mip_index);
+                const int mip_height = _sg_miplevel_dim(img->cmn.height, mip_index);
+                const int src_pitch = _sg_row_pitch(img->cmn.pixel_format, mip_width, 1);
+                const sg_range* subimg_data = &(data->subimage[face_index][mip_index]);
+                const size_t slice_size = subimg_data->size / (size_t)num_slices;
+                const size_t slice_offset = slice_size * (size_t)slice_index;
+                const uint8_t* slice_ptr = ((const uint8_t*)subimg_data->ptr) + slice_offset;
+                hr = _sg_d3d11_Map(_sg.d3d11.ctx, img->d3d11.res, subres_index, D3D11_MAP_WRITE_DISCARD, 0, &d3d11_msr);
+                _sg_stats_add(d3d11.num_map, 1);
+                if (SUCCEEDED(hr)) {
+                    // FIXME: need to handle difference in depth-pitch for 3D textures as well!
+                    if (src_pitch == (int)d3d11_msr.RowPitch) {
+                        memcpy(d3d11_msr.pData, slice_ptr, slice_size);
+                    } else {
+                        SOKOL_ASSERT(src_pitch < (int)d3d11_msr.RowPitch);
+                        const uint8_t* src_ptr = slice_ptr;
+                        uint8_t* dst_ptr = (uint8_t*) d3d11_msr.pData;
+                        for (int row_index = 0; row_index < mip_height; row_index++) {
+                            memcpy(dst_ptr, src_ptr, (size_t)src_pitch);
+                            src_ptr += src_pitch;
+                            dst_ptr += d3d11_msr.RowPitch;
+                        }
+                    }
+                    _sg_d3d11_Unmap(_sg.d3d11.ctx, img->d3d11.res, subres_index);
+                    _sg_stats_add(d3d11.num_unmap, 1);
+                } else {
+                    _SG_ERROR(D3D11_MAP_FOR_UPDATE_IMAGE_FAILED);
+                }
+            }
+        }
+    }
+}
+
+// ███    ███ ███████ ████████  █████  ██          ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
+// ████  ████ ██         ██    ██   ██ ██          ██   ██ ██   ██ ██      ██  ██  ██      ████   ██ ██   ██
+// ██ ████ ██ █████      ██    ███████ ██          ██████  ███████ ██      █████   █████   ██ ██  ██ ██   ██
+// ██  ██  ██ ██         ██    ██   ██ ██          ██   ██ ██   ██ ██      ██  ██  ██      ██  ██ ██ ██   ██
+// ██      ██ ███████    ██    ██   ██ ███████     ██████  ██   ██  ██████ ██   ██ ███████ ██   ████ ██████
+//
+// >>metal backend
+#elif defined(SOKOL_METAL)
+
+#if __has_feature(objc_arc)
+#define _SG_OBJC_RETAIN(obj) { }
+#define _SG_OBJC_RELEASE(obj) { obj = nil; }
+#else
+#define _SG_OBJC_RETAIN(obj) { [obj retain]; }
+#define _SG_OBJC_RELEASE(obj) { [obj release]; obj = nil; }
+#endif
+
+//-- enum translation functions ------------------------------------------------
+_SOKOL_PRIVATE MTLLoadAction _sg_mtl_load_action(sg_load_action a) {
+    switch (a) {
+        case SG_LOADACTION_CLEAR:       return MTLLoadActionClear;
+        case SG_LOADACTION_LOAD:        return MTLLoadActionLoad;
+        case SG_LOADACTION_DONTCARE:    return MTLLoadActionDontCare;
+        default: SOKOL_UNREACHABLE;     return (MTLLoadAction)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLStoreAction _sg_mtl_store_action(sg_store_action a, bool resolve) {
+    switch (a) {
+        case SG_STOREACTION_STORE:
+            if (resolve) {
+                return MTLStoreActionStoreAndMultisampleResolve;
+            } else {
+                return MTLStoreActionStore;
+            }
+            break;
+        case SG_STOREACTION_DONTCARE:
+            if (resolve) {
+                return MTLStoreActionMultisampleResolve;
+            } else {
+                return MTLStoreActionDontCare;
+            }
+            break;
+        default: SOKOL_UNREACHABLE; return (MTLStoreAction)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLResourceOptions _sg_mtl_resource_options_storage_mode_managed_or_shared(void) {
+    #if defined(_SG_TARGET_MACOS)
+    if (_sg.mtl.use_shared_storage_mode) {
+        return MTLResourceStorageModeShared;
+    } else {
+        return MTLResourceStorageModeManaged;
+    }
+    #else
+        // MTLResourceStorageModeManaged is not even defined on iOS SDK
+        return MTLResourceStorageModeShared;
+    #endif
+}
+
+_SOKOL_PRIVATE MTLResourceOptions _sg_mtl_buffer_resource_options(sg_usage usg) {
+    switch (usg) {
+        case SG_USAGE_IMMUTABLE:
+            return _sg_mtl_resource_options_storage_mode_managed_or_shared();
+        case SG_USAGE_DYNAMIC:
+        case SG_USAGE_STREAM:
+            return MTLResourceCPUCacheModeWriteCombined | _sg_mtl_resource_options_storage_mode_managed_or_shared();
+        default:
+            SOKOL_UNREACHABLE;
+            return 0;
+    }
+}
+
+_SOKOL_PRIVATE MTLVertexStepFunction _sg_mtl_step_function(sg_vertex_step step) {
+    switch (step) {
+        case SG_VERTEXSTEP_PER_VERTEX:      return MTLVertexStepFunctionPerVertex;
+        case SG_VERTEXSTEP_PER_INSTANCE:    return MTLVertexStepFunctionPerInstance;
+        default: SOKOL_UNREACHABLE; return (MTLVertexStepFunction)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLVertexFormat _sg_mtl_vertex_format(sg_vertex_format fmt) {
+    switch (fmt) {
+        case SG_VERTEXFORMAT_FLOAT:     return MTLVertexFormatFloat;
+        case SG_VERTEXFORMAT_FLOAT2:    return MTLVertexFormatFloat2;
+        case SG_VERTEXFORMAT_FLOAT3:    return MTLVertexFormatFloat3;
+        case SG_VERTEXFORMAT_FLOAT4:    return MTLVertexFormatFloat4;
+        case SG_VERTEXFORMAT_BYTE4:     return MTLVertexFormatChar4;
+        case SG_VERTEXFORMAT_BYTE4N:    return MTLVertexFormatChar4Normalized;
+        case SG_VERTEXFORMAT_UBYTE4:    return MTLVertexFormatUChar4;
+        case SG_VERTEXFORMAT_UBYTE4N:   return MTLVertexFormatUChar4Normalized;
+        case SG_VERTEXFORMAT_SHORT2:    return MTLVertexFormatShort2;
+        case SG_VERTEXFORMAT_SHORT2N:   return MTLVertexFormatShort2Normalized;
+        case SG_VERTEXFORMAT_USHORT2N:  return MTLVertexFormatUShort2Normalized;
+        case SG_VERTEXFORMAT_SHORT4:    return MTLVertexFormatShort4;
+        case SG_VERTEXFORMAT_SHORT4N:   return MTLVertexFormatShort4Normalized;
+        case SG_VERTEXFORMAT_USHORT4N:  return MTLVertexFormatUShort4Normalized;
+        case SG_VERTEXFORMAT_UINT10_N2: return MTLVertexFormatUInt1010102Normalized;
+        case SG_VERTEXFORMAT_HALF2:     return MTLVertexFormatHalf2;
+        case SG_VERTEXFORMAT_HALF4:     return MTLVertexFormatHalf4;
+        default: SOKOL_UNREACHABLE; return (MTLVertexFormat)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLPrimitiveType _sg_mtl_primitive_type(sg_primitive_type t) {
+    switch (t) {
+        case SG_PRIMITIVETYPE_POINTS:           return MTLPrimitiveTypePoint;
+        case SG_PRIMITIVETYPE_LINES:            return MTLPrimitiveTypeLine;
+        case SG_PRIMITIVETYPE_LINE_STRIP:       return MTLPrimitiveTypeLineStrip;
+        case SG_PRIMITIVETYPE_TRIANGLES:        return MTLPrimitiveTypeTriangle;
+        case SG_PRIMITIVETYPE_TRIANGLE_STRIP:   return MTLPrimitiveTypeTriangleStrip;
+        default: SOKOL_UNREACHABLE; return (MTLPrimitiveType)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLPixelFormat _sg_mtl_pixel_format(sg_pixel_format fmt) {
+    switch (fmt) {
+        case SG_PIXELFORMAT_R8:                     return MTLPixelFormatR8Unorm;
+        case SG_PIXELFORMAT_R8SN:                   return MTLPixelFormatR8Snorm;
+        case SG_PIXELFORMAT_R8UI:                   return MTLPixelFormatR8Uint;
+        case SG_PIXELFORMAT_R8SI:                   return MTLPixelFormatR8Sint;
+        case SG_PIXELFORMAT_R16:                    return MTLPixelFormatR16Unorm;
+        case SG_PIXELFORMAT_R16SN:                  return MTLPixelFormatR16Snorm;
+        case SG_PIXELFORMAT_R16UI:                  return MTLPixelFormatR16Uint;
+        case SG_PIXELFORMAT_R16SI:                  return MTLPixelFormatR16Sint;
+        case SG_PIXELFORMAT_R16F:                   return MTLPixelFormatR16Float;
+        case SG_PIXELFORMAT_RG8:                    return MTLPixelFormatRG8Unorm;
+        case SG_PIXELFORMAT_RG8SN:                  return MTLPixelFormatRG8Snorm;
+        case SG_PIXELFORMAT_RG8UI:                  return MTLPixelFormatRG8Uint;
+        case SG_PIXELFORMAT_RG8SI:                  return MTLPixelFormatRG8Sint;
+        case SG_PIXELFORMAT_R32UI:                  return MTLPixelFormatR32Uint;
+        case SG_PIXELFORMAT_R32SI:                  return MTLPixelFormatR32Sint;
+        case SG_PIXELFORMAT_R32F:                   return MTLPixelFormatR32Float;
+        case SG_PIXELFORMAT_RG16:                   return MTLPixelFormatRG16Unorm;
+        case SG_PIXELFORMAT_RG16SN:                 return MTLPixelFormatRG16Snorm;
+        case SG_PIXELFORMAT_RG16UI:                 return MTLPixelFormatRG16Uint;
+        case SG_PIXELFORMAT_RG16SI:                 return MTLPixelFormatRG16Sint;
+        case SG_PIXELFORMAT_RG16F:                  return MTLPixelFormatRG16Float;
+        case SG_PIXELFORMAT_RGBA8:                  return MTLPixelFormatRGBA8Unorm;
+        case SG_PIXELFORMAT_SRGB8A8:                return MTLPixelFormatRGBA8Unorm_sRGB;
+        case SG_PIXELFORMAT_RGBA8SN:                return MTLPixelFormatRGBA8Snorm;
+        case SG_PIXELFORMAT_RGBA8UI:                return MTLPixelFormatRGBA8Uint;
+        case SG_PIXELFORMAT_RGBA8SI:                return MTLPixelFormatRGBA8Sint;
+        case SG_PIXELFORMAT_BGRA8:                  return MTLPixelFormatBGRA8Unorm;
+        case SG_PIXELFORMAT_RGB10A2:                return MTLPixelFormatRGB10A2Unorm;
+        case SG_PIXELFORMAT_RG11B10F:               return MTLPixelFormatRG11B10Float;
+        case SG_PIXELFORMAT_RGB9E5:                 return MTLPixelFormatRGB9E5Float;
+        case SG_PIXELFORMAT_RG32UI:                 return MTLPixelFormatRG32Uint;
+        case SG_PIXELFORMAT_RG32SI:                 return MTLPixelFormatRG32Sint;
+        case SG_PIXELFORMAT_RG32F:                  return MTLPixelFormatRG32Float;
+        case SG_PIXELFORMAT_RGBA16:                 return MTLPixelFormatRGBA16Unorm;
+        case SG_PIXELFORMAT_RGBA16SN:               return MTLPixelFormatRGBA16Snorm;
+        case SG_PIXELFORMAT_RGBA16UI:               return MTLPixelFormatRGBA16Uint;
+        case SG_PIXELFORMAT_RGBA16SI:               return MTLPixelFormatRGBA16Sint;
+        case SG_PIXELFORMAT_RGBA16F:                return MTLPixelFormatRGBA16Float;
+        case SG_PIXELFORMAT_RGBA32UI:               return MTLPixelFormatRGBA32Uint;
+        case SG_PIXELFORMAT_RGBA32SI:               return MTLPixelFormatRGBA32Sint;
+        case SG_PIXELFORMAT_RGBA32F:                return MTLPixelFormatRGBA32Float;
+        case SG_PIXELFORMAT_DEPTH:                  return MTLPixelFormatDepth32Float;
+        case SG_PIXELFORMAT_DEPTH_STENCIL:          return MTLPixelFormatDepth32Float_Stencil8;
+        #if defined(_SG_TARGET_MACOS)
+        case SG_PIXELFORMAT_BC1_RGBA:               return MTLPixelFormatBC1_RGBA;
+        case SG_PIXELFORMAT_BC2_RGBA:               return MTLPixelFormatBC2_RGBA;
+        case SG_PIXELFORMAT_BC3_RGBA:               return MTLPixelFormatBC3_RGBA;
+        case SG_PIXELFORMAT_BC3_SRGBA:              return MTLPixelFormatBC3_RGBA_sRGB;
+        case SG_PIXELFORMAT_BC4_R:                  return MTLPixelFormatBC4_RUnorm;
+        case SG_PIXELFORMAT_BC4_RSN:                return MTLPixelFormatBC4_RSnorm;
+        case SG_PIXELFORMAT_BC5_RG:                 return MTLPixelFormatBC5_RGUnorm;
+        case SG_PIXELFORMAT_BC5_RGSN:               return MTLPixelFormatBC5_RGSnorm;
+        case SG_PIXELFORMAT_BC6H_RGBF:              return MTLPixelFormatBC6H_RGBFloat;
+        case SG_PIXELFORMAT_BC6H_RGBUF:             return MTLPixelFormatBC6H_RGBUfloat;
+        case SG_PIXELFORMAT_BC7_RGBA:               return MTLPixelFormatBC7_RGBAUnorm;
+        case SG_PIXELFORMAT_BC7_SRGBA:              return MTLPixelFormatBC7_RGBAUnorm_sRGB;
+        #else
+        case SG_PIXELFORMAT_PVRTC_RGB_2BPP:         return MTLPixelFormatPVRTC_RGB_2BPP;
+        case SG_PIXELFORMAT_PVRTC_RGB_4BPP:         return MTLPixelFormatPVRTC_RGB_4BPP;
+        case SG_PIXELFORMAT_PVRTC_RGBA_2BPP:        return MTLPixelFormatPVRTC_RGBA_2BPP;
+        case SG_PIXELFORMAT_PVRTC_RGBA_4BPP:        return MTLPixelFormatPVRTC_RGBA_4BPP;
+        case SG_PIXELFORMAT_ETC2_RGB8:              return MTLPixelFormatETC2_RGB8;
+        case SG_PIXELFORMAT_ETC2_SRGB8:             return MTLPixelFormatETC2_RGB8_sRGB;
+        case SG_PIXELFORMAT_ETC2_RGB8A1:            return MTLPixelFormatETC2_RGB8A1;
+        case SG_PIXELFORMAT_ETC2_RGBA8:             return MTLPixelFormatEAC_RGBA8;
+        case SG_PIXELFORMAT_ETC2_SRGB8A8:           return MTLPixelFormatEAC_RGBA8_sRGB;
+        case SG_PIXELFORMAT_EAC_R11:                return MTLPixelFormatEAC_R11Unorm;
+        case SG_PIXELFORMAT_EAC_R11SN:              return MTLPixelFormatEAC_R11Snorm;
+        case SG_PIXELFORMAT_EAC_RG11:               return MTLPixelFormatEAC_RG11Unorm;
+        case SG_PIXELFORMAT_EAC_RG11SN:             return MTLPixelFormatEAC_RG11Snorm;
+        case SG_PIXELFORMAT_ASTC_4x4_RGBA:          return MTLPixelFormatASTC_4x4_LDR;
+        case SG_PIXELFORMAT_ASTC_4x4_SRGBA:         return MTLPixelFormatASTC_4x4_sRGB;
+        #endif
+        default: return MTLPixelFormatInvalid;
+    }
+}
+
+_SOKOL_PRIVATE MTLColorWriteMask _sg_mtl_color_write_mask(sg_color_mask m) {
+    MTLColorWriteMask mtl_mask = MTLColorWriteMaskNone;
+    if (m & SG_COLORMASK_R) {
+        mtl_mask |= MTLColorWriteMaskRed;
+    }
+    if (m & SG_COLORMASK_G) {
+        mtl_mask |= MTLColorWriteMaskGreen;
+    }
+    if (m & SG_COLORMASK_B) {
+        mtl_mask |= MTLColorWriteMaskBlue;
+    }
+    if (m & SG_COLORMASK_A) {
+        mtl_mask |= MTLColorWriteMaskAlpha;
+    }
+    return mtl_mask;
+}
+
+_SOKOL_PRIVATE MTLBlendOperation _sg_mtl_blend_op(sg_blend_op op) {
+    switch (op) {
+        case SG_BLENDOP_ADD:                return MTLBlendOperationAdd;
+        case SG_BLENDOP_SUBTRACT:           return MTLBlendOperationSubtract;
+        case SG_BLENDOP_REVERSE_SUBTRACT:   return MTLBlendOperationReverseSubtract;
+        default: SOKOL_UNREACHABLE; return (MTLBlendOperation)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLBlendFactor _sg_mtl_blend_factor(sg_blend_factor f) {
+    switch (f) {
+        case SG_BLENDFACTOR_ZERO:                   return MTLBlendFactorZero;
+        case SG_BLENDFACTOR_ONE:                    return MTLBlendFactorOne;
+        case SG_BLENDFACTOR_SRC_COLOR:              return MTLBlendFactorSourceColor;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_COLOR:    return MTLBlendFactorOneMinusSourceColor;
+        case SG_BLENDFACTOR_SRC_ALPHA:              return MTLBlendFactorSourceAlpha;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:    return MTLBlendFactorOneMinusSourceAlpha;
+        case SG_BLENDFACTOR_DST_COLOR:              return MTLBlendFactorDestinationColor;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_COLOR:    return MTLBlendFactorOneMinusDestinationColor;
+        case SG_BLENDFACTOR_DST_ALPHA:              return MTLBlendFactorDestinationAlpha;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA:    return MTLBlendFactorOneMinusDestinationAlpha;
+        case SG_BLENDFACTOR_SRC_ALPHA_SATURATED:    return MTLBlendFactorSourceAlphaSaturated;
+        case SG_BLENDFACTOR_BLEND_COLOR:            return MTLBlendFactorBlendColor;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_COLOR:  return MTLBlendFactorOneMinusBlendColor;
+        case SG_BLENDFACTOR_BLEND_ALPHA:            return MTLBlendFactorBlendAlpha;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA:  return MTLBlendFactorOneMinusBlendAlpha;
+        default: SOKOL_UNREACHABLE; return (MTLBlendFactor)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLCompareFunction _sg_mtl_compare_func(sg_compare_func f) {
+    switch (f) {
+        case SG_COMPAREFUNC_NEVER:          return MTLCompareFunctionNever;
+        case SG_COMPAREFUNC_LESS:           return MTLCompareFunctionLess;
+        case SG_COMPAREFUNC_EQUAL:          return MTLCompareFunctionEqual;
+        case SG_COMPAREFUNC_LESS_EQUAL:     return MTLCompareFunctionLessEqual;
+        case SG_COMPAREFUNC_GREATER:        return MTLCompareFunctionGreater;
+        case SG_COMPAREFUNC_NOT_EQUAL:      return MTLCompareFunctionNotEqual;
+        case SG_COMPAREFUNC_GREATER_EQUAL:  return MTLCompareFunctionGreaterEqual;
+        case SG_COMPAREFUNC_ALWAYS:         return MTLCompareFunctionAlways;
+        default: SOKOL_UNREACHABLE; return (MTLCompareFunction)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLStencilOperation _sg_mtl_stencil_op(sg_stencil_op op) {
+    switch (op) {
+        case SG_STENCILOP_KEEP:         return MTLStencilOperationKeep;
+        case SG_STENCILOP_ZERO:         return MTLStencilOperationZero;
+        case SG_STENCILOP_REPLACE:      return MTLStencilOperationReplace;
+        case SG_STENCILOP_INCR_CLAMP:   return MTLStencilOperationIncrementClamp;
+        case SG_STENCILOP_DECR_CLAMP:   return MTLStencilOperationDecrementClamp;
+        case SG_STENCILOP_INVERT:       return MTLStencilOperationInvert;
+        case SG_STENCILOP_INCR_WRAP:    return MTLStencilOperationIncrementWrap;
+        case SG_STENCILOP_DECR_WRAP:    return MTLStencilOperationDecrementWrap;
+        default: SOKOL_UNREACHABLE; return (MTLStencilOperation)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLCullMode _sg_mtl_cull_mode(sg_cull_mode m) {
+    switch (m) {
+        case SG_CULLMODE_NONE:  return MTLCullModeNone;
+        case SG_CULLMODE_FRONT: return MTLCullModeFront;
+        case SG_CULLMODE_BACK:  return MTLCullModeBack;
+        default: SOKOL_UNREACHABLE; return (MTLCullMode)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLWinding _sg_mtl_winding(sg_face_winding w) {
+    switch (w) {
+        case SG_FACEWINDING_CW:     return MTLWindingClockwise;
+        case SG_FACEWINDING_CCW:    return MTLWindingCounterClockwise;
+        default: SOKOL_UNREACHABLE; return (MTLWinding)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLIndexType _sg_mtl_index_type(sg_index_type t) {
+    switch (t) {
+        case SG_INDEXTYPE_UINT16:   return MTLIndexTypeUInt16;
+        case SG_INDEXTYPE_UINT32:   return MTLIndexTypeUInt32;
+        default: SOKOL_UNREACHABLE; return (MTLIndexType)0;
+    }
+}
+
+_SOKOL_PRIVATE int _sg_mtl_index_size(sg_index_type t) {
+    switch (t) {
+        case SG_INDEXTYPE_NONE:     return 0;
+        case SG_INDEXTYPE_UINT16:   return 2;
+        case SG_INDEXTYPE_UINT32:   return 4;
+        default: SOKOL_UNREACHABLE; return 0;
+    }
+}
+
+_SOKOL_PRIVATE MTLTextureType _sg_mtl_texture_type(sg_image_type t) {
+    switch (t) {
+        case SG_IMAGETYPE_2D:       return MTLTextureType2D;
+        case SG_IMAGETYPE_CUBE:     return MTLTextureTypeCube;
+        case SG_IMAGETYPE_3D:       return MTLTextureType3D;
+        case SG_IMAGETYPE_ARRAY:    return MTLTextureType2DArray;
+        default: SOKOL_UNREACHABLE; return (MTLTextureType)0;
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_mtl_is_pvrtc(sg_pixel_format fmt) {
+    switch (fmt) {
+        case SG_PIXELFORMAT_PVRTC_RGB_2BPP:
+        case SG_PIXELFORMAT_PVRTC_RGB_4BPP:
+        case SG_PIXELFORMAT_PVRTC_RGBA_2BPP:
+        case SG_PIXELFORMAT_PVRTC_RGBA_4BPP:
+            return true;
+        default:
+            return false;
+    }
+}
+
+_SOKOL_PRIVATE MTLSamplerAddressMode _sg_mtl_address_mode(sg_wrap w) {
+    if (_sg.features.image_clamp_to_border) {
+        if (@available(macOS 12.0, iOS 14.0, *)) {
+            // border color feature available
+            switch (w) {
+                case SG_WRAP_REPEAT:            return MTLSamplerAddressModeRepeat;
+                case SG_WRAP_CLAMP_TO_EDGE:     return MTLSamplerAddressModeClampToEdge;
+                case SG_WRAP_CLAMP_TO_BORDER:   return MTLSamplerAddressModeClampToBorderColor;
+                case SG_WRAP_MIRRORED_REPEAT:   return MTLSamplerAddressModeMirrorRepeat;
+                default: SOKOL_UNREACHABLE; return (MTLSamplerAddressMode)0;
+            }
+        }
+    }
+    // fallthrough: clamp to border no supported
+    switch (w) {
+        case SG_WRAP_REPEAT:            return MTLSamplerAddressModeRepeat;
+        case SG_WRAP_CLAMP_TO_EDGE:     return MTLSamplerAddressModeClampToEdge;
+        case SG_WRAP_CLAMP_TO_BORDER:   return MTLSamplerAddressModeClampToEdge;
+        case SG_WRAP_MIRRORED_REPEAT:   return MTLSamplerAddressModeMirrorRepeat;
+        default: SOKOL_UNREACHABLE; return (MTLSamplerAddressMode)0;
+    }
+}
+
+_SOKOL_PRIVATE API_AVAILABLE(ios(14.0), macos(12.0)) MTLSamplerBorderColor _sg_mtl_border_color(sg_border_color c) {
+    switch (c) {
+        case SG_BORDERCOLOR_TRANSPARENT_BLACK: return MTLSamplerBorderColorTransparentBlack;
+        case SG_BORDERCOLOR_OPAQUE_BLACK: return MTLSamplerBorderColorOpaqueBlack;
+        case SG_BORDERCOLOR_OPAQUE_WHITE: return MTLSamplerBorderColorOpaqueWhite;
+        default: SOKOL_UNREACHABLE; return (MTLSamplerBorderColor)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLSamplerMinMagFilter _sg_mtl_minmag_filter(sg_filter f) {
+    switch (f) {
+        case SG_FILTER_NEAREST:
+            return MTLSamplerMinMagFilterNearest;
+        case SG_FILTER_LINEAR:
+            return MTLSamplerMinMagFilterLinear;
+        default:
+            SOKOL_UNREACHABLE; return (MTLSamplerMinMagFilter)0;
+    }
+}
+
+_SOKOL_PRIVATE MTLSamplerMipFilter _sg_mtl_mipmap_filter(sg_filter f) {
+    switch (f) {
+        case SG_FILTER_NONE:
+            return MTLSamplerMipFilterNotMipmapped;
+        case SG_FILTER_NEAREST:
+            return MTLSamplerMipFilterNearest;
+        case SG_FILTER_LINEAR:
+            return MTLSamplerMipFilterLinear;
+        default:
+            SOKOL_UNREACHABLE; return (MTLSamplerMipFilter)0;
+    }
+}
+
+//-- a pool for all Metal resource objects, with deferred release queue ---------
+_SOKOL_PRIVATE void _sg_mtl_init_pool(const sg_desc* desc) {
+    _sg.mtl.idpool.num_slots = 2 *
+        (
+            2 * desc->buffer_pool_size +
+            4 * desc->image_pool_size +
+            1 * desc->sampler_pool_size +
+            4 * desc->shader_pool_size +
+            2 * desc->pipeline_pool_size +
+            desc->attachments_pool_size +
+            128
+        );
+    _sg.mtl.idpool.pool = [NSMutableArray arrayWithCapacity:(NSUInteger)_sg.mtl.idpool.num_slots];
+    _SG_OBJC_RETAIN(_sg.mtl.idpool.pool);
+    NSNull* null = [NSNull null];
+    for (int i = 0; i < _sg.mtl.idpool.num_slots; i++) {
+        [_sg.mtl.idpool.pool addObject:null];
+    }
+    SOKOL_ASSERT([_sg.mtl.idpool.pool count] == (NSUInteger)_sg.mtl.idpool.num_slots);
+    // a queue of currently free slot indices
+    _sg.mtl.idpool.free_queue_top = 0;
+    _sg.mtl.idpool.free_queue = (int*)_sg_malloc_clear((size_t)_sg.mtl.idpool.num_slots * sizeof(int));
+    // pool slot 0 is reserved!
+    for (int i = _sg.mtl.idpool.num_slots-1; i >= 1; i--) {
+        _sg.mtl.idpool.free_queue[_sg.mtl.idpool.free_queue_top++] = i;
+    }
+    // a circular queue which holds release items (frame index when a resource is to be released, and the resource's pool index
+    _sg.mtl.idpool.release_queue_front = 0;
+    _sg.mtl.idpool.release_queue_back = 0;
+    _sg.mtl.idpool.release_queue = (_sg_mtl_release_item_t*)_sg_malloc_clear((size_t)_sg.mtl.idpool.num_slots * sizeof(_sg_mtl_release_item_t));
+    for (int i = 0; i < _sg.mtl.idpool.num_slots; i++) {
+        _sg.mtl.idpool.release_queue[i].frame_index = 0;
+        _sg.mtl.idpool.release_queue[i].slot_index = _SG_MTL_INVALID_SLOT_INDEX;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_destroy_pool(void) {
+    _sg_free(_sg.mtl.idpool.release_queue);  _sg.mtl.idpool.release_queue = 0;
+    _sg_free(_sg.mtl.idpool.free_queue);     _sg.mtl.idpool.free_queue = 0;
+    _SG_OBJC_RELEASE(_sg.mtl.idpool.pool);
+}
+
+// get a new free resource pool slot
+_SOKOL_PRIVATE int _sg_mtl_alloc_pool_slot(void) {
+    SOKOL_ASSERT(_sg.mtl.idpool.free_queue_top > 0);
+    const int slot_index = _sg.mtl.idpool.free_queue[--_sg.mtl.idpool.free_queue_top];
+    SOKOL_ASSERT((slot_index > 0) && (slot_index < _sg.mtl.idpool.num_slots));
+    return slot_index;
+}
+
+// put a free resource pool slot back into the free-queue
+_SOKOL_PRIVATE void _sg_mtl_free_pool_slot(int slot_index) {
+    SOKOL_ASSERT(_sg.mtl.idpool.free_queue_top < _sg.mtl.idpool.num_slots);
+    SOKOL_ASSERT((slot_index > 0) && (slot_index < _sg.mtl.idpool.num_slots));
+    _sg.mtl.idpool.free_queue[_sg.mtl.idpool.free_queue_top++] = slot_index;
+}
+
+// add an MTLResource to the pool, return pool index or 0 if input was 'nil'
+_SOKOL_PRIVATE int _sg_mtl_add_resource(id res) {
+    if (nil == res) {
+        return _SG_MTL_INVALID_SLOT_INDEX;
+    }
+    _sg_stats_add(metal.idpool.num_added, 1);
+    const int slot_index = _sg_mtl_alloc_pool_slot();
+    // NOTE: the NSMutableArray will take ownership of its items
+    SOKOL_ASSERT([NSNull null] == _sg.mtl.idpool.pool[(NSUInteger)slot_index]);
+    _sg.mtl.idpool.pool[(NSUInteger)slot_index] = res;
+    return slot_index;
+}
+
+/*  mark an MTLResource for release, this will put the resource into the
+    deferred-release queue, and the resource will then be released N frames later,
+    the special pool index 0 will be ignored (this means that a nil
+    value was provided to _sg_mtl_add_resource()
+*/
+_SOKOL_PRIVATE void _sg_mtl_release_resource(uint32_t frame_index, int slot_index) {
+    if (slot_index == _SG_MTL_INVALID_SLOT_INDEX) {
+        return;
+    }
+    _sg_stats_add(metal.idpool.num_released, 1);
+    SOKOL_ASSERT((slot_index > 0) && (slot_index < _sg.mtl.idpool.num_slots));
+    SOKOL_ASSERT([NSNull null] != _sg.mtl.idpool.pool[(NSUInteger)slot_index]);
+    int release_index = _sg.mtl.idpool.release_queue_front++;
+    if (_sg.mtl.idpool.release_queue_front >= _sg.mtl.idpool.num_slots) {
+        // wrap-around
+        _sg.mtl.idpool.release_queue_front = 0;
+    }
+    // release queue full?
+    SOKOL_ASSERT(_sg.mtl.idpool.release_queue_front != _sg.mtl.idpool.release_queue_back);
+    SOKOL_ASSERT(0 == _sg.mtl.idpool.release_queue[release_index].frame_index);
+    const uint32_t safe_to_release_frame_index = frame_index + SG_NUM_INFLIGHT_FRAMES + 1;
+    _sg.mtl.idpool.release_queue[release_index].frame_index = safe_to_release_frame_index;
+    _sg.mtl.idpool.release_queue[release_index].slot_index = slot_index;
+}
+
+// run garbage-collection pass on all resources in the release-queue
+_SOKOL_PRIVATE void _sg_mtl_garbage_collect(uint32_t frame_index) {
+    while (_sg.mtl.idpool.release_queue_back != _sg.mtl.idpool.release_queue_front) {
+        if (frame_index < _sg.mtl.idpool.release_queue[_sg.mtl.idpool.release_queue_back].frame_index) {
+            // don't need to check further, release-items past this are too young
+            break;
+        }
+        _sg_stats_add(metal.idpool.num_garbage_collected, 1);
+        // safe to release this resource
+        const int slot_index = _sg.mtl.idpool.release_queue[_sg.mtl.idpool.release_queue_back].slot_index;
+        SOKOL_ASSERT((slot_index > 0) && (slot_index < _sg.mtl.idpool.num_slots));
+        // note: the NSMutableArray takes ownership of its items, assigning an NSNull object will
+        // release the object, no matter if using ARC or not
+        SOKOL_ASSERT(_sg.mtl.idpool.pool[(NSUInteger)slot_index] != [NSNull null]);
+        _sg.mtl.idpool.pool[(NSUInteger)slot_index] = [NSNull null];
+        // put the now free pool index back on the free queue
+        _sg_mtl_free_pool_slot(slot_index);
+        // reset the release queue slot and advance the back index
+        _sg.mtl.idpool.release_queue[_sg.mtl.idpool.release_queue_back].frame_index = 0;
+        _sg.mtl.idpool.release_queue[_sg.mtl.idpool.release_queue_back].slot_index = _SG_MTL_INVALID_SLOT_INDEX;
+        _sg.mtl.idpool.release_queue_back++;
+        if (_sg.mtl.idpool.release_queue_back >= _sg.mtl.idpool.num_slots) {
+            // wrap-around
+            _sg.mtl.idpool.release_queue_back = 0;
+        }
+    }
+}
+
+_SOKOL_PRIVATE id _sg_mtl_id(int slot_index) {
+    return _sg.mtl.idpool.pool[(NSUInteger)slot_index];
+}
+
+_SOKOL_PRIVATE void _sg_mtl_clear_state_cache(void) {
+    _sg_clear(&_sg.mtl.state_cache, sizeof(_sg.mtl.state_cache));
+}
+
+// https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+_SOKOL_PRIVATE void _sg_mtl_init_caps(void) {
+    #if defined(_SG_TARGET_MACOS)
+        _sg.backend = SG_BACKEND_METAL_MACOS;
+    #elif defined(_SG_TARGET_IOS)
+        #if defined(_SG_TARGET_IOS_SIMULATOR)
+            _sg.backend = SG_BACKEND_METAL_SIMULATOR;
+        #else
+            _sg.backend = SG_BACKEND_METAL_IOS;
+        #endif
+    #endif
+    _sg.features.origin_top_left = true;
+    _sg.features.mrt_independent_blend_state = true;
+    _sg.features.mrt_independent_write_mask = true;
+    _sg.features.storage_buffer = true;
+
+    _sg.features.image_clamp_to_border = false;
+    #if (MAC_OS_X_VERSION_MAX_ALLOWED >= 120000) || (__IPHONE_OS_VERSION_MAX_ALLOWED >= 140000)
+    if (@available(macOS 12.0, iOS 14.0, *)) {
+        _sg.features.image_clamp_to_border = [_sg.mtl.device supportsFamily:MTLGPUFamilyApple7]
+                                             || [_sg.mtl.device supportsFamily:MTLGPUFamilyMac2];
+        #if (MAC_OS_X_VERSION_MAX_ALLOWED >= 130000) || (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
+        if (!_sg.features.image_clamp_to_border) {
+            if (@available(macOS 13.0, iOS 16.0, *)) {
+                _sg.features.image_clamp_to_border = [_sg.mtl.device supportsFamily:MTLGPUFamilyMetal3];
+            }
+        }
+        #endif
+    }
+    #endif
+
+    #if defined(_SG_TARGET_MACOS)
+        _sg.limits.max_image_size_2d = 16 * 1024;
+        _sg.limits.max_image_size_cube = 16 * 1024;
+        _sg.limits.max_image_size_3d = 2 * 1024;
+        _sg.limits.max_image_size_array = 16 * 1024;
+        _sg.limits.max_image_array_layers = 2 * 1024;
+    #else
+        // FIXME: newer iOS devices support 16k textures
+        _sg.limits.max_image_size_2d = 8 * 1024;
+        _sg.limits.max_image_size_cube = 8 * 1024;
+        _sg.limits.max_image_size_3d = 2 * 1024;
+        _sg.limits.max_image_size_array = 8 * 1024;
+        _sg.limits.max_image_array_layers = 2 * 1024;
+    #endif
+    _sg.limits.max_vertex_attrs = SG_MAX_VERTEX_ATTRIBUTES;
+
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R8SN]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_R8UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_R8SI]);
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R16]);
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R16SN]);
+    #else
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_R16]);
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_R16SN]);
+    #endif
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_R16UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_R16SI]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R16F]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG8SN]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG8UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG8SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R32UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R32SI]);
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R32F]);
+    #else
+        _sg_pixelformat_sbr(&_sg.formats[SG_PIXELFORMAT_R32F]);
+    #endif
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG16]);
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG16SN]);
+    #else
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_RG16]);
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_RG16SN]);
+    #endif
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG16UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG16SI]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG16F]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_SRGB8A8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA8SN]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA8UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA8SI]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_BGRA8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGB10A2]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG11B10F]);
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_RGB9E5]);
+        _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG32UI]);
+        _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RG32SI]);
+    #else
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGB9E5]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG32UI]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG32SI]);
+    #endif
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG32F]);
+    #else
+        _sg_pixelformat_sbr(&_sg.formats[SG_PIXELFORMAT_RG32F]);
+    #endif
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA16]);
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA16SN]);
+    #else
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_RGBA16]);
+        _sg_pixelformat_sfbr(&_sg.formats[SG_PIXELFORMAT_RGBA16SN]);
+    #endif
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA16UI]);
+    _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA16SI]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA16F]);
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA32UI]);
+        _sg_pixelformat_srm(&_sg.formats[SG_PIXELFORMAT_RGBA32SI]);
+        _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA32F]);
+    #else
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32UI]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32SI]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32F]);
+    #endif
+    _sg_pixelformat_srmd(&_sg.formats[SG_PIXELFORMAT_DEPTH]);
+    _sg_pixelformat_srmd(&_sg.formats[SG_PIXELFORMAT_DEPTH_STENCIL]);
+    #if defined(_SG_TARGET_MACOS)
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC1_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC2_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC3_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC3_SRGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC4_R]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC4_RSN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC5_RG]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC5_RGSN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC6H_RGBF]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC6H_RGBUF]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC7_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC7_SRGBA]);
+    #else
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_PVRTC_RGB_2BPP]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_PVRTC_RGB_4BPP]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_PVRTC_RGBA_2BPP]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_PVRTC_RGBA_4BPP]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGB8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_SRGB8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGB8A1]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGBA8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_SRGB8A8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_R11]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_R11SN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_RG11]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_RG11SN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ASTC_4x4_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ASTC_4x4_SRGBA]);
+
+    #endif
+}
+
+//-- main Metal backend state and functions ------------------------------------
+_SOKOL_PRIVATE void _sg_mtl_setup_backend(const sg_desc* desc) {
+    // assume already zero-initialized
+    SOKOL_ASSERT(desc);
+    SOKOL_ASSERT(desc->environment.metal.device);
+    SOKOL_ASSERT(desc->uniform_buffer_size > 0);
+    _sg_mtl_init_pool(desc);
+    _sg_mtl_clear_state_cache();
+    _sg.mtl.valid = true;
+    _sg.mtl.ub_size = desc->uniform_buffer_size;
+    _sg.mtl.sem = dispatch_semaphore_create(SG_NUM_INFLIGHT_FRAMES);
+    _sg.mtl.device = (__bridge id<MTLDevice>) desc->environment.metal.device;
+    _sg.mtl.cmd_queue = [_sg.mtl.device newCommandQueue];
+
+    for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+        _sg.mtl.uniform_buffers[i] = [_sg.mtl.device
+            newBufferWithLength:(NSUInteger)_sg.mtl.ub_size
+            options:MTLResourceCPUCacheModeWriteCombined|MTLResourceStorageModeShared
+        ];
+        #if defined(SOKOL_DEBUG)
+            _sg.mtl.uniform_buffers[i].label = [NSString stringWithFormat:@"sg-uniform-buffer.%d", i];
+        #endif
+    }
+
+    if (desc->mtl_force_managed_storage_mode) {
+        _sg.mtl.use_shared_storage_mode = false;
+    } else if (@available(macOS 10.15, iOS 13.0, *)) {
+        // on Intel Macs, always use managed resources even though the
+        // device says it supports unified memory (because of texture restrictions)
+        const bool is_apple_gpu = [_sg.mtl.device supportsFamily:MTLGPUFamilyApple1];
+        if (!is_apple_gpu) {
+            _sg.mtl.use_shared_storage_mode = false;
+        } else {
+            _sg.mtl.use_shared_storage_mode = true;
+        }
+    } else {
+        #if defined(_SG_TARGET_MACOS)
+            _sg.mtl.use_shared_storage_mode = false;
+        #else
+            _sg.mtl.use_shared_storage_mode = true;
+        #endif
+    }
+    _sg_mtl_init_caps();
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_backend(void) {
+    SOKOL_ASSERT(_sg.mtl.valid);
+    // wait for the last frame to finish
+    for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+        dispatch_semaphore_wait(_sg.mtl.sem, DISPATCH_TIME_FOREVER);
+    }
+    // semaphore must be "relinquished" before destruction
+    for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+        dispatch_semaphore_signal(_sg.mtl.sem);
+    }
+    _sg_mtl_garbage_collect(_sg.frame_index + SG_NUM_INFLIGHT_FRAMES + 2);
+    _sg_mtl_destroy_pool();
+    _sg.mtl.valid = false;
+
+    _SG_OBJC_RELEASE(_sg.mtl.sem);
+    _SG_OBJC_RELEASE(_sg.mtl.device);
+    _SG_OBJC_RELEASE(_sg.mtl.cmd_queue);
+    for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+        _SG_OBJC_RELEASE(_sg.mtl.uniform_buffers[i]);
+    }
+    // NOTE: MTLCommandBuffer and MTLRenderCommandEncoder are auto-released
+    _sg.mtl.cmd_buffer = nil;
+    _sg.mtl.cmd_encoder = nil;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_bind_uniform_buffers(void) {
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+    for (int slot = 0; slot < SG_MAX_SHADERSTAGE_UBS; slot++) {
+        [_sg.mtl.cmd_encoder
+            setVertexBuffer:_sg.mtl.uniform_buffers[_sg.mtl.cur_frame_rotate_index]
+            offset:0
+            atIndex:(NSUInteger)slot];
+        [_sg.mtl.cmd_encoder
+            setFragmentBuffer:_sg.mtl.uniform_buffers[_sg.mtl.cur_frame_rotate_index]
+            offset:0
+            atIndex:(NSUInteger)slot];
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_reset_state_cache(void) {
+    _sg_mtl_clear_state_cache();
+    // need to restore the uniform buffer binding (normally happens in _sg_mtl_begin_pass()
+    if (nil != _sg.mtl.cmd_encoder) {
+        _sg_mtl_bind_uniform_buffers();
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_buffer(_sg_buffer_t* buf, const sg_buffer_desc* desc) {
+    SOKOL_ASSERT(buf && desc);
+    const bool injected = (0 != desc->mtl_buffers[0]);
+    MTLResourceOptions mtl_options = _sg_mtl_buffer_resource_options(buf->cmn.usage);
+    for (int slot = 0; slot < buf->cmn.num_slots; slot++) {
+        id<MTLBuffer> mtl_buf;
+        if (injected) {
+            SOKOL_ASSERT(desc->mtl_buffers[slot]);
+            mtl_buf = (__bridge id<MTLBuffer>) desc->mtl_buffers[slot];
+        } else {
+            if (buf->cmn.usage == SG_USAGE_IMMUTABLE) {
+                SOKOL_ASSERT(desc->data.ptr);
+                mtl_buf = [_sg.mtl.device newBufferWithBytes:desc->data.ptr length:(NSUInteger)buf->cmn.size options:mtl_options];
+            } else {
+                mtl_buf = [_sg.mtl.device newBufferWithLength:(NSUInteger)buf->cmn.size options:mtl_options];
+            }
+            if (nil == mtl_buf) {
+                _SG_ERROR(METAL_CREATE_BUFFER_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+        }
+        #if defined(SOKOL_DEBUG)
+            if (desc->label) {
+                mtl_buf.label = [NSString stringWithFormat:@"%s.%d", desc->label, slot];
+            }
+        #endif
+        buf->mtl.buf[slot] = _sg_mtl_add_resource(mtl_buf);
+        _SG_OBJC_RELEASE(mtl_buf);
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_buffer(_sg_buffer_t* buf) {
+    SOKOL_ASSERT(buf);
+    for (int slot = 0; slot < buf->cmn.num_slots; slot++) {
+        // it's valid to call release resource with '0'
+        _sg_mtl_release_resource(_sg.frame_index, buf->mtl.buf[slot]);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_copy_image_data(const _sg_image_t* img, __unsafe_unretained id<MTLTexture> mtl_tex, const sg_image_data* data) {
+    const int num_faces = (img->cmn.type == SG_IMAGETYPE_CUBE) ? 6:1;
+    const int num_slices = (img->cmn.type == SG_IMAGETYPE_ARRAY) ? img->cmn.num_slices : 1;
+    for (int face_index = 0; face_index < num_faces; face_index++) {
+        for (int mip_index = 0; mip_index < img->cmn.num_mipmaps; mip_index++) {
+            SOKOL_ASSERT(data->subimage[face_index][mip_index].ptr);
+            SOKOL_ASSERT(data->subimage[face_index][mip_index].size > 0);
+            const uint8_t* data_ptr = (const uint8_t*)data->subimage[face_index][mip_index].ptr;
+            const int mip_width = _sg_miplevel_dim(img->cmn.width, mip_index);
+            const int mip_height = _sg_miplevel_dim(img->cmn.height, mip_index);
+            // special case PVRTC formats: bytePerRow and bytesPerImage must be 0
+            int bytes_per_row = 0;
+            int bytes_per_slice = 0;
+            if (!_sg_mtl_is_pvrtc(img->cmn.pixel_format)) {
+                bytes_per_row = _sg_row_pitch(img->cmn.pixel_format, mip_width, 1);
+                bytes_per_slice = _sg_surface_pitch(img->cmn.pixel_format, mip_width, mip_height, 1);
+            }
+            /* bytesPerImage special case: https://developer.apple.com/documentation/metal/mtltexture/1515679-replaceregion
+
+                "Supply a nonzero value only when you copy data to a MTLTextureType3D type texture"
+            */
+            MTLRegion region;
+            int bytes_per_image;
+            if (img->cmn.type == SG_IMAGETYPE_3D) {
+                const int mip_depth = _sg_miplevel_dim(img->cmn.num_slices, mip_index);
+                region = MTLRegionMake3D(0, 0, 0, (NSUInteger)mip_width, (NSUInteger)mip_height, (NSUInteger)mip_depth);
+                bytes_per_image = bytes_per_slice;
+                // FIXME: apparently the minimal bytes_per_image size for 3D texture is 4 KByte... somehow need to handle this
+            } else {
+                region = MTLRegionMake2D(0, 0, (NSUInteger)mip_width, (NSUInteger)mip_height);
+                bytes_per_image = 0;
+            }
+
+            for (int slice_index = 0; slice_index < num_slices; slice_index++) {
+                const int mtl_slice_index = (img->cmn.type == SG_IMAGETYPE_CUBE) ? face_index : slice_index;
+                const int slice_offset = slice_index * bytes_per_slice;
+                SOKOL_ASSERT((slice_offset + bytes_per_slice) <= (int)data->subimage[face_index][mip_index].size);
+                [mtl_tex replaceRegion:region
+                    mipmapLevel:(NSUInteger)mip_index
+                    slice:(NSUInteger)mtl_slice_index
+                    withBytes:data_ptr + slice_offset
+                    bytesPerRow:(NSUInteger)bytes_per_row
+                    bytesPerImage:(NSUInteger)bytes_per_image];
+            }
+        }
+    }
+}
+
+// initialize MTLTextureDescriptor with common attributes
+_SOKOL_PRIVATE bool _sg_mtl_init_texdesc_common(MTLTextureDescriptor* mtl_desc, _sg_image_t* img) {
+    mtl_desc.textureType = _sg_mtl_texture_type(img->cmn.type);
+    mtl_desc.pixelFormat = _sg_mtl_pixel_format(img->cmn.pixel_format);
+    if (MTLPixelFormatInvalid == mtl_desc.pixelFormat) {
+        _SG_ERROR(METAL_TEXTURE_FORMAT_NOT_SUPPORTED);
+        return false;
+    }
+    mtl_desc.width = (NSUInteger)img->cmn.width;
+    mtl_desc.height = (NSUInteger)img->cmn.height;
+    if (SG_IMAGETYPE_3D == img->cmn.type) {
+        mtl_desc.depth = (NSUInteger)img->cmn.num_slices;
+    } else {
+        mtl_desc.depth = 1;
+    }
+    mtl_desc.mipmapLevelCount = (NSUInteger)img->cmn.num_mipmaps;
+    if (SG_IMAGETYPE_ARRAY == img->cmn.type) {
+        mtl_desc.arrayLength = (NSUInteger)img->cmn.num_slices;
+    } else {
+        mtl_desc.arrayLength = 1;
+    }
+    mtl_desc.usage = MTLTextureUsageShaderRead;
+    MTLResourceOptions res_options = 0;
+    if (img->cmn.usage != SG_USAGE_IMMUTABLE) {
+        res_options |= MTLResourceCPUCacheModeWriteCombined;
+    }
+    res_options |= _sg_mtl_resource_options_storage_mode_managed_or_shared();
+    mtl_desc.resourceOptions = res_options;
+    return true;
+}
+
+// initialize MTLTextureDescriptor with rendertarget attributes
+_SOKOL_PRIVATE void _sg_mtl_init_texdesc_rt(MTLTextureDescriptor* mtl_desc, _sg_image_t* img) {
+    SOKOL_ASSERT(img->cmn.render_target);
+    _SOKOL_UNUSED(img);
+    mtl_desc.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+    mtl_desc.resourceOptions = MTLResourceStorageModePrivate;
+}
+
+// initialize MTLTextureDescriptor with MSAA attributes
+_SOKOL_PRIVATE void _sg_mtl_init_texdesc_rt_msaa(MTLTextureDescriptor* mtl_desc, _sg_image_t* img) {
+    SOKOL_ASSERT(img->cmn.sample_count > 1);
+    mtl_desc.usage = MTLTextureUsageRenderTarget;
+    mtl_desc.resourceOptions = MTLResourceStorageModePrivate;
+    mtl_desc.textureType = MTLTextureType2DMultisample;
+    mtl_desc.sampleCount = (NSUInteger)img->cmn.sample_count;
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_image(_sg_image_t* img, const sg_image_desc* desc) {
+    SOKOL_ASSERT(img && desc);
+    const bool injected = (0 != desc->mtl_textures[0]);
+
+    // first initialize all Metal resource pool slots to 'empty'
+    for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+        img->mtl.tex[i] = _sg_mtl_add_resource(nil);
+    }
+
+    // initialize a Metal texture descriptor
+    MTLTextureDescriptor* mtl_desc = [[MTLTextureDescriptor alloc] init];
+    if (!_sg_mtl_init_texdesc_common(mtl_desc, img)) {
+        _SG_OBJC_RELEASE(mtl_desc);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    if (img->cmn.render_target) {
+        if (img->cmn.sample_count > 1) {
+            _sg_mtl_init_texdesc_rt_msaa(mtl_desc, img);
+        } else {
+            _sg_mtl_init_texdesc_rt(mtl_desc, img);
+        }
+    }
+    for (int slot = 0; slot < img->cmn.num_slots; slot++) {
+        id<MTLTexture> mtl_tex;
+        if (injected) {
+            SOKOL_ASSERT(desc->mtl_textures[slot]);
+            mtl_tex = (__bridge id<MTLTexture>) desc->mtl_textures[slot];
+        } else {
+            mtl_tex = [_sg.mtl.device newTextureWithDescriptor:mtl_desc];
+            if (nil == mtl_tex) {
+                _SG_OBJC_RELEASE(mtl_desc);
+                _SG_ERROR(METAL_CREATE_TEXTURE_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+            if ((img->cmn.usage == SG_USAGE_IMMUTABLE) && !img->cmn.render_target) {
+                _sg_mtl_copy_image_data(img, mtl_tex, &desc->data);
+            }
+        }
+        #if defined(SOKOL_DEBUG)
+            if (desc->label) {
+                mtl_tex.label = [NSString stringWithFormat:@"%s.%d", desc->label, slot];
+            }
+        #endif
+        img->mtl.tex[slot] = _sg_mtl_add_resource(mtl_tex);
+        _SG_OBJC_RELEASE(mtl_tex);
+    }
+    _SG_OBJC_RELEASE(mtl_desc);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_image(_sg_image_t* img) {
+    SOKOL_ASSERT(img);
+    // it's valid to call release resource with a 'null resource'
+    for (int slot = 0; slot < img->cmn.num_slots; slot++) {
+        _sg_mtl_release_resource(_sg.frame_index, img->mtl.tex[slot]);
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_sampler(_sg_sampler_t* smp, const sg_sampler_desc* desc) {
+    SOKOL_ASSERT(smp && desc);
+    id<MTLSamplerState> mtl_smp;
+    const bool injected = (0 != desc->mtl_sampler);
+    if (injected) {
+        SOKOL_ASSERT(desc->mtl_sampler);
+        mtl_smp = (__bridge id<MTLSamplerState>) desc->mtl_sampler;
+    } else {
+        MTLSamplerDescriptor* mtl_desc = [[MTLSamplerDescriptor alloc] init];
+        mtl_desc.sAddressMode = _sg_mtl_address_mode(desc->wrap_u);
+        mtl_desc.tAddressMode = _sg_mtl_address_mode(desc->wrap_v);
+        mtl_desc.rAddressMode = _sg_mtl_address_mode(desc->wrap_w);
+        if (_sg.features.image_clamp_to_border) {
+            if (@available(macOS 12.0, iOS 14.0, *)) {
+                mtl_desc.borderColor  = _sg_mtl_border_color(desc->border_color);
+            }
+        }
+        mtl_desc.minFilter = _sg_mtl_minmag_filter(desc->min_filter);
+        mtl_desc.magFilter = _sg_mtl_minmag_filter(desc->mag_filter);
+        mtl_desc.mipFilter = _sg_mtl_mipmap_filter(desc->mipmap_filter);
+        mtl_desc.lodMinClamp = desc->min_lod;
+        mtl_desc.lodMaxClamp = desc->max_lod;
+        // FIXME: lodAverage?
+        mtl_desc.maxAnisotropy = desc->max_anisotropy;
+        mtl_desc.normalizedCoordinates = YES;
+        mtl_desc.compareFunction = _sg_mtl_compare_func(desc->compare);
+        #if defined(SOKOL_DEBUG)
+            if (desc->label) {
+                mtl_desc.label = [NSString stringWithUTF8String:desc->label];
+            }
+        #endif
+        mtl_smp = [_sg.mtl.device newSamplerStateWithDescriptor:mtl_desc];
+        _SG_OBJC_RELEASE(mtl_desc);
+        if (nil == mtl_smp) {
+            _SG_ERROR(METAL_CREATE_SAMPLER_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+    }
+    smp->mtl.sampler_state = _sg_mtl_add_resource(mtl_smp);
+    _SG_OBJC_RELEASE(mtl_smp);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_sampler(_sg_sampler_t* smp) {
+    SOKOL_ASSERT(smp);
+    // it's valid to call release resource with a 'null resource'
+    _sg_mtl_release_resource(_sg.frame_index, smp->mtl.sampler_state);
+}
+
+_SOKOL_PRIVATE id<MTLLibrary> _sg_mtl_compile_library(const char* src) {
+    NSError* err = NULL;
+    id<MTLLibrary> lib = [_sg.mtl.device
+        newLibraryWithSource:[NSString stringWithUTF8String:src]
+        options:nil
+        error:&err
+    ];
+    if (err) {
+        _SG_ERROR(METAL_SHADER_COMPILATION_FAILED);
+        _SG_LOGMSG(METAL_SHADER_COMPILATION_OUTPUT, [err.localizedDescription UTF8String]);
+    }
+    return lib;
+}
+
+_SOKOL_PRIVATE id<MTLLibrary> _sg_mtl_library_from_bytecode(const void* ptr, size_t num_bytes) {
+    NSError* err = NULL;
+    dispatch_data_t lib_data = dispatch_data_create(ptr, num_bytes, NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+    id<MTLLibrary> lib = [_sg.mtl.device newLibraryWithData:lib_data error:&err];
+    if (err) {
+        _SG_ERROR(METAL_SHADER_CREATION_FAILED);
+        _SG_LOGMSG(METAL_SHADER_COMPILATION_OUTPUT, [err.localizedDescription UTF8String]);
+    }
+    _SG_OBJC_RELEASE(lib_data);
+    return lib;
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_shader(_sg_shader_t* shd, const sg_shader_desc* desc) {
+    SOKOL_ASSERT(shd && desc);
+
+    // create metal library objects and lookup entry functions
+    id<MTLLibrary> vs_lib = nil;
+    id<MTLLibrary> fs_lib = nil;
+    id<MTLFunction> vs_func = nil;
+    id<MTLFunction> fs_func = nil;
+    const char* vs_entry = desc->vs.entry;
+    const char* fs_entry = desc->fs.entry;
+    if (desc->vs.bytecode.ptr && desc->fs.bytecode.ptr) {
+        // separate byte code provided
+        vs_lib = _sg_mtl_library_from_bytecode(desc->vs.bytecode.ptr, desc->vs.bytecode.size);
+        fs_lib = _sg_mtl_library_from_bytecode(desc->fs.bytecode.ptr, desc->fs.bytecode.size);
+        if ((nil == vs_lib) || (nil == fs_lib)) {
+            goto failed;
+        }
+        vs_func = [vs_lib newFunctionWithName:[NSString stringWithUTF8String:vs_entry]];
+        fs_func = [fs_lib newFunctionWithName:[NSString stringWithUTF8String:fs_entry]];
+    } else if (desc->vs.source && desc->fs.source) {
+        // separate sources provided
+        vs_lib = _sg_mtl_compile_library(desc->vs.source);
+        fs_lib = _sg_mtl_compile_library(desc->fs.source);
+        if ((nil == vs_lib) || (nil == fs_lib)) {
+            goto failed;
+        }
+        vs_func = [vs_lib newFunctionWithName:[NSString stringWithUTF8String:vs_entry]];
+        fs_func = [fs_lib newFunctionWithName:[NSString stringWithUTF8String:fs_entry]];
+    } else {
+        goto failed;
+    }
+    if (nil == vs_func) {
+        _SG_ERROR(METAL_VERTEX_SHADER_ENTRY_NOT_FOUND);
+        goto failed;
+    }
+    if (nil == fs_func) {
+        _SG_ERROR(METAL_FRAGMENT_SHADER_ENTRY_NOT_FOUND);
+        goto failed;
+    }
+    #if defined(SOKOL_DEBUG)
+        if (desc->label) {
+            vs_lib.label = [NSString stringWithFormat:@"%s.vs", desc->label];
+            fs_lib.label = [NSString stringWithFormat:@"%s.fs", desc->label];
+        }
+    #endif
+    // it is legal to call _sg_mtl_add_resource with a nil value, this will return a special 0xFFFFFFFF index
+    shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_lib  = _sg_mtl_add_resource(vs_lib);
+    _SG_OBJC_RELEASE(vs_lib);
+    shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_lib  = _sg_mtl_add_resource(fs_lib);
+    _SG_OBJC_RELEASE(fs_lib);
+    shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_func = _sg_mtl_add_resource(vs_func);
+    _SG_OBJC_RELEASE(vs_func);
+    shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_func = _sg_mtl_add_resource(fs_func);
+    _SG_OBJC_RELEASE(fs_func);
+    return SG_RESOURCESTATE_VALID;
+failed:
+    if (vs_lib != nil) {
+        _SG_OBJC_RELEASE(vs_lib);
+    }
+    if (fs_lib != nil) {
+        _SG_OBJC_RELEASE(fs_lib);
+    }
+    if (vs_func != nil) {
+        _SG_OBJC_RELEASE(vs_func);
+    }
+    if (fs_func != nil) {
+        _SG_OBJC_RELEASE(fs_func);
+    }
+    return SG_RESOURCESTATE_FAILED;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_shader(_sg_shader_t* shd) {
+    SOKOL_ASSERT(shd);
+    // it is valid to call _sg_mtl_release_resource with a 'null resource'
+    _sg_mtl_release_resource(_sg.frame_index, shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_func);
+    _sg_mtl_release_resource(_sg.frame_index, shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_lib);
+    _sg_mtl_release_resource(_sg.frame_index, shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_func);
+    _sg_mtl_release_resource(_sg.frame_index, shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_lib);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_pipeline(_sg_pipeline_t* pip, _sg_shader_t* shd, const sg_pipeline_desc* desc) {
+    SOKOL_ASSERT(pip && shd && desc);
+    SOKOL_ASSERT(desc->shader.id == shd->slot.id);
+
+    pip->shader = shd;
+
+    sg_primitive_type prim_type = desc->primitive_type;
+    pip->mtl.prim_type = _sg_mtl_primitive_type(prim_type);
+    pip->mtl.index_size = _sg_mtl_index_size(pip->cmn.index_type);
+    if (SG_INDEXTYPE_NONE != pip->cmn.index_type) {
+        pip->mtl.index_type = _sg_mtl_index_type(pip->cmn.index_type);
+    }
+    pip->mtl.cull_mode = _sg_mtl_cull_mode(desc->cull_mode);
+    pip->mtl.winding = _sg_mtl_winding(desc->face_winding);
+    pip->mtl.stencil_ref = desc->stencil.ref;
+
+    // create vertex-descriptor
+    MTLVertexDescriptor* vtx_desc = [MTLVertexDescriptor vertexDescriptor];
+    for (NSUInteger attr_index = 0; attr_index < SG_MAX_VERTEX_ATTRIBUTES; attr_index++) {
+        const sg_vertex_attr_state* a_state = &desc->layout.attrs[attr_index];
+        if (a_state->format == SG_VERTEXFORMAT_INVALID) {
+            break;
+        }
+        SOKOL_ASSERT(a_state->buffer_index < SG_MAX_VERTEX_BUFFERS);
+        vtx_desc.attributes[attr_index].format = _sg_mtl_vertex_format(a_state->format);
+        vtx_desc.attributes[attr_index].offset = (NSUInteger)a_state->offset;
+        vtx_desc.attributes[attr_index].bufferIndex = (NSUInteger)(a_state->buffer_index + SG_MAX_SHADERSTAGE_UBS);
+        pip->cmn.vertex_buffer_layout_active[a_state->buffer_index] = true;
+    }
+    for (NSUInteger layout_index = 0; layout_index < SG_MAX_VERTEX_BUFFERS; layout_index++) {
+        if (pip->cmn.vertex_buffer_layout_active[layout_index]) {
+            const sg_vertex_buffer_layout_state* l_state = &desc->layout.buffers[layout_index];
+            const NSUInteger mtl_vb_slot = layout_index + SG_MAX_SHADERSTAGE_UBS;
+            SOKOL_ASSERT(l_state->stride > 0);
+            vtx_desc.layouts[mtl_vb_slot].stride = (NSUInteger)l_state->stride;
+            vtx_desc.layouts[mtl_vb_slot].stepFunction = _sg_mtl_step_function(l_state->step_func);
+            vtx_desc.layouts[mtl_vb_slot].stepRate = (NSUInteger)l_state->step_rate;
+            if (SG_VERTEXSTEP_PER_INSTANCE == l_state->step_func) {
+                // NOTE: not actually used in _sg_mtl_draw()
+                pip->cmn.use_instanced_draw = true;
+            }
+        }
+    }
+
+    // render-pipeline descriptor
+    MTLRenderPipelineDescriptor* rp_desc = [[MTLRenderPipelineDescriptor alloc] init];
+    rp_desc.vertexDescriptor = vtx_desc;
+    SOKOL_ASSERT(shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_func != _SG_MTL_INVALID_SLOT_INDEX);
+    rp_desc.vertexFunction = _sg_mtl_id(shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_func);
+    SOKOL_ASSERT(shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_func != _SG_MTL_INVALID_SLOT_INDEX);
+    rp_desc.fragmentFunction = _sg_mtl_id(shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_func);
+    rp_desc.rasterSampleCount = (NSUInteger)desc->sample_count;
+    rp_desc.alphaToCoverageEnabled = desc->alpha_to_coverage_enabled;
+    rp_desc.alphaToOneEnabled = NO;
+    rp_desc.rasterizationEnabled = YES;
+    rp_desc.depthAttachmentPixelFormat = _sg_mtl_pixel_format(desc->depth.pixel_format);
+    if (desc->depth.pixel_format == SG_PIXELFORMAT_DEPTH_STENCIL) {
+        rp_desc.stencilAttachmentPixelFormat = _sg_mtl_pixel_format(desc->depth.pixel_format);
+    }
+    if (@available(macOS 10.13, iOS 11.0, *)) {
+        for (NSUInteger i = 0; i < (SG_MAX_SHADERSTAGE_UBS+SG_MAX_VERTEX_BUFFERS); i++) {
+            rp_desc.vertexBuffers[i].mutability = MTLMutabilityImmutable;
+        }
+        for (NSUInteger i = 0; i < SG_MAX_SHADERSTAGE_UBS; i++) {
+            rp_desc.fragmentBuffers[i].mutability = MTLMutabilityImmutable;
+        }
+    }
+    for (NSUInteger i = 0; i < (NSUInteger)desc->color_count; i++) {
+        SOKOL_ASSERT(i < SG_MAX_COLOR_ATTACHMENTS);
+        const sg_color_target_state* cs = &desc->colors[i];
+        rp_desc.colorAttachments[i].pixelFormat = _sg_mtl_pixel_format(cs->pixel_format);
+        rp_desc.colorAttachments[i].writeMask = _sg_mtl_color_write_mask(cs->write_mask);
+        rp_desc.colorAttachments[i].blendingEnabled = cs->blend.enabled;
+        rp_desc.colorAttachments[i].alphaBlendOperation = _sg_mtl_blend_op(cs->blend.op_alpha);
+        rp_desc.colorAttachments[i].rgbBlendOperation = _sg_mtl_blend_op(cs->blend.op_rgb);
+        rp_desc.colorAttachments[i].destinationAlphaBlendFactor = _sg_mtl_blend_factor(cs->blend.dst_factor_alpha);
+        rp_desc.colorAttachments[i].destinationRGBBlendFactor = _sg_mtl_blend_factor(cs->blend.dst_factor_rgb);
+        rp_desc.colorAttachments[i].sourceAlphaBlendFactor = _sg_mtl_blend_factor(cs->blend.src_factor_alpha);
+        rp_desc.colorAttachments[i].sourceRGBBlendFactor = _sg_mtl_blend_factor(cs->blend.src_factor_rgb);
+    }
+    #if defined(SOKOL_DEBUG)
+        if (desc->label) {
+            rp_desc.label = [NSString stringWithFormat:@"%s", desc->label];
+        }
+    #endif
+    NSError* err = NULL;
+    id<MTLRenderPipelineState> mtl_rps = [_sg.mtl.device newRenderPipelineStateWithDescriptor:rp_desc error:&err];
+    _SG_OBJC_RELEASE(rp_desc);
+    if (nil == mtl_rps) {
+        SOKOL_ASSERT(err);
+        _SG_ERROR(METAL_CREATE_RPS_FAILED);
+        _SG_LOGMSG(METAL_CREATE_RPS_OUTPUT, [err.localizedDescription UTF8String]);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    pip->mtl.rps = _sg_mtl_add_resource(mtl_rps);
+    _SG_OBJC_RELEASE(mtl_rps);
+
+    // depth-stencil-state
+    MTLDepthStencilDescriptor* ds_desc = [[MTLDepthStencilDescriptor alloc] init];
+    ds_desc.depthCompareFunction = _sg_mtl_compare_func(desc->depth.compare);
+    ds_desc.depthWriteEnabled = desc->depth.write_enabled;
+    if (desc->stencil.enabled) {
+        const sg_stencil_face_state* sb = &desc->stencil.back;
+        ds_desc.backFaceStencil = [[MTLStencilDescriptor alloc] init];
+        ds_desc.backFaceStencil.stencilFailureOperation = _sg_mtl_stencil_op(sb->fail_op);
+        ds_desc.backFaceStencil.depthFailureOperation = _sg_mtl_stencil_op(sb->depth_fail_op);
+        ds_desc.backFaceStencil.depthStencilPassOperation = _sg_mtl_stencil_op(sb->pass_op);
+        ds_desc.backFaceStencil.stencilCompareFunction = _sg_mtl_compare_func(sb->compare);
+        ds_desc.backFaceStencil.readMask = desc->stencil.read_mask;
+        ds_desc.backFaceStencil.writeMask = desc->stencil.write_mask;
+        const sg_stencil_face_state* sf = &desc->stencil.front;
+        ds_desc.frontFaceStencil = [[MTLStencilDescriptor alloc] init];
+        ds_desc.frontFaceStencil.stencilFailureOperation = _sg_mtl_stencil_op(sf->fail_op);
+        ds_desc.frontFaceStencil.depthFailureOperation = _sg_mtl_stencil_op(sf->depth_fail_op);
+        ds_desc.frontFaceStencil.depthStencilPassOperation = _sg_mtl_stencil_op(sf->pass_op);
+        ds_desc.frontFaceStencil.stencilCompareFunction = _sg_mtl_compare_func(sf->compare);
+        ds_desc.frontFaceStencil.readMask = desc->stencil.read_mask;
+        ds_desc.frontFaceStencil.writeMask = desc->stencil.write_mask;
+    }
+    #if defined(SOKOL_DEBUG)
+        if (desc->label) {
+            ds_desc.label = [NSString stringWithFormat:@"%s.dss", desc->label];
+        }
+    #endif
+    id<MTLDepthStencilState> mtl_dss = [_sg.mtl.device newDepthStencilStateWithDescriptor:ds_desc];
+    _SG_OBJC_RELEASE(ds_desc);
+    if (nil == mtl_dss) {
+        _SG_ERROR(METAL_CREATE_DSS_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    pip->mtl.dss = _sg_mtl_add_resource(mtl_dss);
+    _SG_OBJC_RELEASE(mtl_dss);
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    // it's valid to call release resource with a 'null resource'
+    _sg_mtl_release_resource(_sg.frame_index, pip->mtl.rps);
+    _sg_mtl_release_resource(_sg.frame_index, pip->mtl.dss);
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_mtl_create_attachments(_sg_attachments_t* atts, _sg_image_t** color_images, _sg_image_t** resolve_images, _sg_image_t* ds_img, const sg_attachments_desc* desc) {
+    SOKOL_ASSERT(atts && desc);
+    SOKOL_ASSERT(color_images && resolve_images);
+
+    // copy image pointers
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        const sg_attachment_desc* color_desc = &desc->colors[i];
+        _SOKOL_UNUSED(color_desc);
+        SOKOL_ASSERT(color_desc->image.id != SG_INVALID_ID);
+        SOKOL_ASSERT(0 == atts->mtl.colors[i].image);
+        SOKOL_ASSERT(color_images[i] && (color_images[i]->slot.id == color_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_color_format(color_images[i]->cmn.pixel_format));
+        atts->mtl.colors[i].image = color_images[i];
+
+        const sg_attachment_desc* resolve_desc = &desc->resolves[i];
+        if (resolve_desc->image.id != SG_INVALID_ID) {
+            SOKOL_ASSERT(0 == atts->mtl.resolves[i].image);
+            SOKOL_ASSERT(resolve_images[i] && (resolve_images[i]->slot.id == resolve_desc->image.id));
+            SOKOL_ASSERT(color_images[i] && (color_images[i]->cmn.pixel_format == resolve_images[i]->cmn.pixel_format));
+            atts->mtl.resolves[i].image = resolve_images[i];
+        }
+    }
+    SOKOL_ASSERT(0 == atts->mtl.depth_stencil.image);
+    const sg_attachment_desc* ds_desc = &desc->depth_stencil;
+    if (ds_desc->image.id != SG_INVALID_ID) {
+        SOKOL_ASSERT(ds_img && (ds_img->slot.id == ds_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_depth_format(ds_img->cmn.pixel_format));
+        atts->mtl.depth_stencil.image = ds_img;
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_discard_attachments(_sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    _SOKOL_UNUSED(atts);
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_mtl_attachments_color_image(const _sg_attachments_t* atts, int index) {
+    // NOTE: may return null
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->mtl.colors[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_mtl_attachments_resolve_image(const _sg_attachments_t* atts, int index) {
+    // NOTE: may return null
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    return atts->mtl.resolves[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_mtl_attachments_ds_image(const _sg_attachments_t* atts) {
+    // NOTE: may return null
+    SOKOL_ASSERT(atts);
+    return atts->mtl.depth_stencil.image;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_begin_pass(const sg_pass* pass) {
+    SOKOL_ASSERT(pass);
+    SOKOL_ASSERT(_sg.mtl.cmd_queue);
+    SOKOL_ASSERT(nil == _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(nil == _sg.mtl.cur_drawable);
+    _sg_mtl_clear_state_cache();
+
+    const _sg_attachments_t* atts = _sg.cur_pass.atts;
+    const sg_swapchain* swapchain = &pass->swapchain;
+    const sg_pass_action* action = &pass->action;
+
+    /*
+        if this is the first pass in the frame, create command buffers
+
+        NOTE: we're creating two command buffers here, one with unretained references
+        for storing the regular commands, and one with retained references for
+        storing the presentDrawable call (this needs to hold on the drawable until
+        presentation has happened - and the easiest way to do this is to let the
+        command buffer manage the lifetime of the drawable).
+
+        Also see: https://github.com/floooh/sokol/issues/762
+    */
+    if (nil == _sg.mtl.cmd_buffer) {
+        // block until the oldest frame in flight has finished
+        dispatch_semaphore_wait(_sg.mtl.sem, DISPATCH_TIME_FOREVER);
+        if (_sg.desc.mtl_use_command_buffer_with_retained_references) {
+            _sg.mtl.cmd_buffer = [_sg.mtl.cmd_queue commandBuffer];
+        } else {
+            _sg.mtl.cmd_buffer = [_sg.mtl.cmd_queue commandBufferWithUnretainedReferences];
+        }
+        [_sg.mtl.cmd_buffer enqueue];
+        [_sg.mtl.cmd_buffer addCompletedHandler:^(id<MTLCommandBuffer> cmd_buf) {
+            // NOTE: this code is called on a different thread!
+            _SOKOL_UNUSED(cmd_buf);
+            dispatch_semaphore_signal(_sg.mtl.sem);
+        }];
+    }
+
+    // if this is first pass in frame, get uniform buffer base pointer
+    if (0 == _sg.mtl.cur_ub_base_ptr) {
+        _sg.mtl.cur_ub_base_ptr = (uint8_t*)[_sg.mtl.uniform_buffers[_sg.mtl.cur_frame_rotate_index] contents];
+    }
+
+    MTLRenderPassDescriptor* pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
+    SOKOL_ASSERT(pass_desc);
+    if (atts) {
+        // setup pass descriptor for offscreen rendering
+        SOKOL_ASSERT(atts->slot.state == SG_RESOURCESTATE_VALID);
+        for (NSUInteger i = 0; i < (NSUInteger)atts->cmn.num_colors; i++) {
+            const _sg_attachment_common_t* cmn_color_att = &atts->cmn.colors[i];
+            const _sg_mtl_attachment_t* mtl_color_att = &atts->mtl.colors[i];
+            const _sg_image_t* color_att_img = mtl_color_att->image;
+            const _sg_attachment_common_t* cmn_resolve_att = &atts->cmn.resolves[i];
+            const _sg_mtl_attachment_t* mtl_resolve_att = &atts->mtl.resolves[i];
+            const _sg_image_t* resolve_att_img = mtl_resolve_att->image;
+            SOKOL_ASSERT(color_att_img->slot.state == SG_RESOURCESTATE_VALID);
+            SOKOL_ASSERT(color_att_img->slot.id == cmn_color_att->image_id.id);
+            SOKOL_ASSERT(color_att_img->mtl.tex[color_att_img->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            pass_desc.colorAttachments[i].loadAction = _sg_mtl_load_action(action->colors[i].load_action);
+            pass_desc.colorAttachments[i].storeAction = _sg_mtl_store_action(action->colors[i].store_action, resolve_att_img != 0);
+            sg_color c = action->colors[i].clear_value;
+            pass_desc.colorAttachments[i].clearColor = MTLClearColorMake(c.r, c.g, c.b, c.a);
+            pass_desc.colorAttachments[i].texture = _sg_mtl_id(color_att_img->mtl.tex[color_att_img->cmn.active_slot]);
+            pass_desc.colorAttachments[i].level = (NSUInteger)cmn_color_att->mip_level;
+            switch (color_att_img->cmn.type) {
+                case SG_IMAGETYPE_CUBE:
+                case SG_IMAGETYPE_ARRAY:
+                    pass_desc.colorAttachments[i].slice = (NSUInteger)cmn_color_att->slice;
+                    break;
+                case SG_IMAGETYPE_3D:
+                    pass_desc.colorAttachments[i].depthPlane = (NSUInteger)cmn_color_att->slice;
+                    break;
+                default: break;
+            }
+            if (resolve_att_img) {
+                SOKOL_ASSERT(resolve_att_img->slot.state == SG_RESOURCESTATE_VALID);
+                SOKOL_ASSERT(resolve_att_img->slot.id == cmn_resolve_att->image_id.id);
+                SOKOL_ASSERT(resolve_att_img->mtl.tex[resolve_att_img->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+                pass_desc.colorAttachments[i].resolveTexture = _sg_mtl_id(resolve_att_img->mtl.tex[resolve_att_img->cmn.active_slot]);
+                pass_desc.colorAttachments[i].resolveLevel = (NSUInteger)cmn_resolve_att->mip_level;
+                switch (resolve_att_img->cmn.type) {
+                    case SG_IMAGETYPE_CUBE:
+                    case SG_IMAGETYPE_ARRAY:
+                        pass_desc.colorAttachments[i].resolveSlice = (NSUInteger)cmn_resolve_att->slice;
+                        break;
+                    case SG_IMAGETYPE_3D:
+                        pass_desc.colorAttachments[i].resolveDepthPlane = (NSUInteger)cmn_resolve_att->slice;
+                        break;
+                    default: break;
+                }
+            }
+        }
+        const _sg_image_t* ds_att_img = atts->mtl.depth_stencil.image;
+        if (0 != ds_att_img) {
+            SOKOL_ASSERT(ds_att_img->slot.state == SG_RESOURCESTATE_VALID);
+            SOKOL_ASSERT(ds_att_img->slot.id == atts->cmn.depth_stencil.image_id.id);
+            SOKOL_ASSERT(ds_att_img->mtl.tex[ds_att_img->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            pass_desc.depthAttachment.texture = _sg_mtl_id(ds_att_img->mtl.tex[ds_att_img->cmn.active_slot]);
+            pass_desc.depthAttachment.loadAction = _sg_mtl_load_action(action->depth.load_action);
+            pass_desc.depthAttachment.storeAction = _sg_mtl_store_action(action->depth.store_action, false);
+            pass_desc.depthAttachment.clearDepth = action->depth.clear_value;
+            const _sg_attachment_common_t* cmn_ds_att = &atts->cmn.depth_stencil;
+            switch (ds_att_img->cmn.type) {
+                case SG_IMAGETYPE_CUBE:
+                case SG_IMAGETYPE_ARRAY:
+                    pass_desc.depthAttachment.slice = (NSUInteger)cmn_ds_att->slice;
+                    break;
+                case SG_IMAGETYPE_3D:
+                    pass_desc.depthAttachment.resolveDepthPlane = (NSUInteger)cmn_ds_att->slice;
+                    break;
+                default: break;
+            }
+            if (_sg_is_depth_stencil_format(ds_att_img->cmn.pixel_format)) {
+                pass_desc.stencilAttachment.texture = _sg_mtl_id(ds_att_img->mtl.tex[ds_att_img->cmn.active_slot]);
+                pass_desc.stencilAttachment.loadAction = _sg_mtl_load_action(action->stencil.load_action);
+                pass_desc.stencilAttachment.storeAction = _sg_mtl_store_action(action->depth.store_action, false);
+                pass_desc.stencilAttachment.clearStencil = action->stencil.clear_value;
+                switch (ds_att_img->cmn.type) {
+                    case SG_IMAGETYPE_CUBE:
+                    case SG_IMAGETYPE_ARRAY:
+                        pass_desc.stencilAttachment.slice = (NSUInteger)cmn_ds_att->slice;
+                        break;
+                    case SG_IMAGETYPE_3D:
+                        pass_desc.stencilAttachment.resolveDepthPlane = (NSUInteger)cmn_ds_att->slice;
+                        break;
+                    default: break;
+                }
+            }
+        }
+    } else {
+        // setup pass descriptor for swapchain rendering
+        //
+        // NOTE: at least in macOS Sonoma this no longer seems to be the case, the
+        // current drawable is also valid in a minimized window
+        // ===
+        // an MTKView current_drawable will not be valid if window is minimized, don't do any rendering in this case
+        if (0 == swapchain->metal.current_drawable) {
+            _sg.cur_pass.valid = false;
+            return;
+        }
+        // pin the swapchain resources into memory so that they outlive their command buffer
+        // (this is necessary because the command buffer doesn't retain references)
+        int pass_desc_ref = _sg_mtl_add_resource(pass_desc);
+        _sg_mtl_release_resource(_sg.frame_index, pass_desc_ref);
+
+        _sg.mtl.cur_drawable = (__bridge id<CAMetalDrawable>) swapchain->metal.current_drawable;
+        if (swapchain->sample_count > 1) {
+            // multi-sampling: render into msaa texture, resolve into drawable texture
+            id<MTLTexture> msaa_tex = (__bridge id<MTLTexture>) swapchain->metal.msaa_color_texture;
+            SOKOL_ASSERT(msaa_tex != nil);
+            pass_desc.colorAttachments[0].texture = msaa_tex;
+            pass_desc.colorAttachments[0].resolveTexture = _sg.mtl.cur_drawable.texture;
+            pass_desc.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+        } else {
+            // non-msaa: render into current_drawable
+            pass_desc.colorAttachments[0].texture = _sg.mtl.cur_drawable.texture;
+            pass_desc.colorAttachments[0].storeAction = MTLStoreActionStore;
+        }
+        pass_desc.colorAttachments[0].loadAction = _sg_mtl_load_action(action->colors[0].load_action);
+        const sg_color c = action->colors[0].clear_value;
+        pass_desc.colorAttachments[0].clearColor = MTLClearColorMake(c.r, c.g, c.b, c.a);
+
+        // optional depth-stencil texture
+        if (swapchain->metal.depth_stencil_texture) {
+            id<MTLTexture> ds_tex = (__bridge id<MTLTexture>) swapchain->metal.depth_stencil_texture;
+            SOKOL_ASSERT(ds_tex != nil);
+            pass_desc.depthAttachment.texture = ds_tex;
+            pass_desc.depthAttachment.storeAction = MTLStoreActionDontCare;
+            pass_desc.depthAttachment.loadAction = _sg_mtl_load_action(action->depth.load_action);
+            pass_desc.depthAttachment.clearDepth = action->depth.clear_value;
+            if (_sg_is_depth_stencil_format(swapchain->depth_format)) {
+                pass_desc.stencilAttachment.texture = ds_tex;
+                pass_desc.stencilAttachment.storeAction = MTLStoreActionDontCare;
+                pass_desc.stencilAttachment.loadAction = _sg_mtl_load_action(action->stencil.load_action);
+                pass_desc.stencilAttachment.clearStencil = action->stencil.clear_value;
+            }
+        }
+    }
+
+    // NOTE: at least in macOS Sonoma, the following is no longer the case, a valid
+    // render command encoder is also returned in a minimized window
+    // ===
+    // create a render command encoder, this might return nil if window is minimized
+    _sg.mtl.cmd_encoder = [_sg.mtl.cmd_buffer renderCommandEncoderWithDescriptor:pass_desc];
+    if (nil == _sg.mtl.cmd_encoder) {
+        _sg.cur_pass.valid = false;
+        return;
+    }
+
+    #if defined(SOKOL_DEBUG)
+        if (pass->label) {
+            _sg.mtl.cmd_encoder.label = [NSString stringWithUTF8String:pass->label];
+        }
+    #endif
+
+    // bind the global uniform buffer, this only happens once per pass
+    _sg_mtl_bind_uniform_buffers();
+}
+
+_SOKOL_PRIVATE void _sg_mtl_end_pass(void) {
+    if (nil != _sg.mtl.cmd_encoder) {
+        [_sg.mtl.cmd_encoder endEncoding];
+        // NOTE: MTLRenderCommandEncoder is autoreleased
+        _sg.mtl.cmd_encoder = nil;
+    }
+    // if this is a swapchain pass, present the drawable
+    if (nil != _sg.mtl.cur_drawable) {
+        [_sg.mtl.cmd_buffer presentDrawable:_sg.mtl.cur_drawable];
+        _sg.mtl.cur_drawable = nil;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_commit(void) {
+    SOKOL_ASSERT(nil == _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_buffer);
+
+    // commit the frame's command buffer
+    [_sg.mtl.cmd_buffer commit];
+
+    // garbage-collect resources pending for release
+    _sg_mtl_garbage_collect(_sg.frame_index);
+
+    // rotate uniform buffer slot
+    if (++_sg.mtl.cur_frame_rotate_index >= SG_NUM_INFLIGHT_FRAMES) {
+        _sg.mtl.cur_frame_rotate_index = 0;
+    }
+    _sg.mtl.cur_ub_offset = 0;
+    _sg.mtl.cur_ub_base_ptr = 0;
+    // NOTE: MTLCommandBuffer is autoreleased
+    _sg.mtl.cmd_buffer = nil;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_apply_viewport(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(_sg.cur_pass.height > 0);
+    MTLViewport vp;
+    vp.originX = (double) x;
+    vp.originY = (double) (origin_top_left ? y : (_sg.cur_pass.height - (y + h)));
+    vp.width   = (double) w;
+    vp.height  = (double) h;
+    vp.znear   = 0.0;
+    vp.zfar    = 1.0;
+    [_sg.mtl.cmd_encoder setViewport:vp];
+}
+
+_SOKOL_PRIVATE void _sg_mtl_apply_scissor_rect(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(_sg.cur_pass.width > 0);
+    SOKOL_ASSERT(_sg.cur_pass.height > 0);
+    // clip against framebuffer rect
+    const _sg_recti_t clip = _sg_clipi(x, y, w, h, _sg.cur_pass.width, _sg.cur_pass.height);
+    MTLScissorRect r;
+    r.x = (NSUInteger)clip.x;
+    r.y = (NSUInteger) (origin_top_left ? clip.y : (_sg.cur_pass.height - (clip.y + clip.h)));
+    r.width = (NSUInteger)clip.w;
+    r.height = (NSUInteger)clip.h;
+    [_sg.mtl.cmd_encoder setScissorRect:r];
+}
+
+_SOKOL_PRIVATE void _sg_mtl_apply_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    SOKOL_ASSERT(pip->shader && (pip->cmn.shader_id.id == pip->shader->slot.id));
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+
+    if (_sg.mtl.state_cache.cur_pipeline_id.id != pip->slot.id) {
+        _sg.mtl.state_cache.cur_pipeline = pip;
+        _sg.mtl.state_cache.cur_pipeline_id.id = pip->slot.id;
+        sg_color c = pip->cmn.blend_color;
+        [_sg.mtl.cmd_encoder setBlendColorRed:c.r green:c.g blue:c.b alpha:c.a];
+        _sg_stats_add(metal.pipeline.num_set_blend_color, 1);
+        [_sg.mtl.cmd_encoder setCullMode:pip->mtl.cull_mode];
+        _sg_stats_add(metal.pipeline.num_set_cull_mode, 1);
+        [_sg.mtl.cmd_encoder setFrontFacingWinding:pip->mtl.winding];
+        _sg_stats_add(metal.pipeline.num_set_front_facing_winding, 1);
+        [_sg.mtl.cmd_encoder setStencilReferenceValue:pip->mtl.stencil_ref];
+        _sg_stats_add(metal.pipeline.num_set_stencil_reference_value, 1);
+        [_sg.mtl.cmd_encoder setDepthBias:pip->cmn.depth.bias slopeScale:pip->cmn.depth.bias_slope_scale clamp:pip->cmn.depth.bias_clamp];
+        _sg_stats_add(metal.pipeline.num_set_depth_bias, 1);
+        SOKOL_ASSERT(pip->mtl.rps != _SG_MTL_INVALID_SLOT_INDEX);
+        [_sg.mtl.cmd_encoder setRenderPipelineState:_sg_mtl_id(pip->mtl.rps)];
+        _sg_stats_add(metal.pipeline.num_set_render_pipeline_state, 1);
+        SOKOL_ASSERT(pip->mtl.dss != _SG_MTL_INVALID_SLOT_INDEX);
+        [_sg.mtl.cmd_encoder setDepthStencilState:_sg_mtl_id(pip->mtl.dss)];
+        _sg_stats_add(metal.pipeline.num_set_depth_stencil_state, 1);
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_mtl_apply_bindings(_sg_bindings_t* bnd) {
+    SOKOL_ASSERT(bnd);
+    SOKOL_ASSERT(bnd->pip);
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+
+    // store index buffer binding, this will be needed later in sg_draw()
+    _sg.mtl.state_cache.cur_indexbuffer = bnd->ib;
+    _sg.mtl.state_cache.cur_indexbuffer_offset = bnd->ib_offset;
+    if (bnd->ib) {
+        SOKOL_ASSERT(bnd->pip->cmn.index_type != SG_INDEXTYPE_NONE);
+        _sg.mtl.state_cache.cur_indexbuffer_id.id = bnd->ib->slot.id;
+    } else {
+        SOKOL_ASSERT(bnd->pip->cmn.index_type == SG_INDEXTYPE_NONE);
+        _sg.mtl.state_cache.cur_indexbuffer_id.id = SG_INVALID_ID;
+    }
+
+    // apply vertex buffers
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_vbs; slot++) {
+        const _sg_buffer_t* vb = bnd->vbs[slot];
+        const int vb_offset = bnd->vb_offsets[slot];
+        if ((_sg.mtl.state_cache.cur_vertexbuffer_ids[slot].id != vb->slot.id) ||
+            (_sg.mtl.state_cache.cur_vertexbuffer_offsets[slot] != vb_offset))
+        {
+            _sg.mtl.state_cache.cur_vertexbuffer_offsets[slot] = vb_offset;
+            const NSUInteger mtl_slot = SG_MAX_SHADERSTAGE_UBS + slot;
+            if (_sg.mtl.state_cache.cur_vertexbuffer_ids[slot].id != vb->slot.id) {
+                _sg.mtl.state_cache.cur_vertexbuffer_ids[slot].id = vb->slot.id;
+                SOKOL_ASSERT(vb->mtl.buf[vb->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+                [_sg.mtl.cmd_encoder setVertexBuffer:_sg_mtl_id(vb->mtl.buf[vb->cmn.active_slot])
+                    offset:(NSUInteger)vb_offset
+                    atIndex:mtl_slot];
+            } else {
+                [_sg.mtl.cmd_encoder setVertexBufferOffset:(NSUInteger)vb_offset atIndex:mtl_slot];
+            }
+            _sg_stats_add(metal.bindings.num_set_vertex_buffer, 1);
+        }
+    }
+
+    // apply vertex stage images
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_vs_imgs; slot++) {
+        const _sg_image_t* img = bnd->vs_imgs[slot];
+        if (_sg.mtl.state_cache.cur_vs_image_ids[slot].id != img->slot.id) {
+            _sg.mtl.state_cache.cur_vs_image_ids[slot].id = img->slot.id;
+            SOKOL_ASSERT(img->mtl.tex[img->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            [_sg.mtl.cmd_encoder setVertexTexture:_sg_mtl_id(img->mtl.tex[img->cmn.active_slot]) atIndex:slot];
+            _sg_stats_add(metal.bindings.num_set_vertex_texture, 1);
+        }
+    }
+
+    // apply vertex stage samplers
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_vs_smps; slot++) {
+        const _sg_sampler_t* smp = bnd->vs_smps[slot];
+        if (_sg.mtl.state_cache.cur_vs_sampler_ids[slot].id != smp->slot.id) {
+            _sg.mtl.state_cache.cur_vs_sampler_ids[slot].id = smp->slot.id;
+            SOKOL_ASSERT(smp->mtl.sampler_state != _SG_MTL_INVALID_SLOT_INDEX);
+            [_sg.mtl.cmd_encoder setVertexSamplerState:_sg_mtl_id(smp->mtl.sampler_state) atIndex:slot];
+            _sg_stats_add(metal.bindings.num_set_vertex_sampler_state, 1);
+        }
+    }
+
+    // apply vertex stage storage buffers
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_vs_sbufs; slot++) {
+        const _sg_buffer_t* sbuf = bnd->vs_sbufs[slot];
+        if (_sg.mtl.state_cache.cur_vs_storagebuffer_ids[slot].id != sbuf->slot.id) {
+            _sg.mtl.state_cache.cur_vs_storagebuffer_ids[slot].id = sbuf->slot.id;
+            SOKOL_ASSERT(sbuf->mtl.buf[sbuf->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            const NSUInteger mtl_slot = SG_MAX_SHADERSTAGE_UBS + SG_MAX_VERTEX_BUFFERS + slot;
+            [_sg.mtl.cmd_encoder setVertexBuffer:_sg_mtl_id(sbuf->mtl.buf[sbuf->cmn.active_slot]) offset:0 atIndex:mtl_slot];
+            _sg_stats_add(metal.bindings.num_set_vertex_buffer, 1);
+        }
+    }
+
+    // apply fragment stage images
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_fs_imgs; slot++) {
+        const _sg_image_t* img = bnd->fs_imgs[slot];
+        if (_sg.mtl.state_cache.cur_fs_image_ids[slot].id != img->slot.id) {
+            _sg.mtl.state_cache.cur_fs_image_ids[slot].id = img->slot.id;
+            SOKOL_ASSERT(img->mtl.tex[img->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            [_sg.mtl.cmd_encoder setFragmentTexture:_sg_mtl_id(img->mtl.tex[img->cmn.active_slot]) atIndex:slot];
+            _sg_stats_add(metal.bindings.num_set_fragment_texture, 1);
+        }
+    }
+
+    // apply fragment stage samplers
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_fs_smps; slot++) {
+        const _sg_sampler_t* smp = bnd->fs_smps[slot];
+        if (_sg.mtl.state_cache.cur_fs_sampler_ids[slot].id != smp->slot.id) {
+            _sg.mtl.state_cache.cur_fs_sampler_ids[slot].id = smp->slot.id;
+            SOKOL_ASSERT(smp->mtl.sampler_state != _SG_MTL_INVALID_SLOT_INDEX);
+            [_sg.mtl.cmd_encoder setFragmentSamplerState:_sg_mtl_id(smp->mtl.sampler_state) atIndex:slot];
+            _sg_stats_add(metal.bindings.num_set_fragment_sampler_state, 1);
+        }
+    }
+
+    // apply fragment stage storage buffers
+    for (NSUInteger slot = 0; slot < (NSUInteger)bnd->num_fs_sbufs; slot++) {
+        const _sg_buffer_t* sbuf = bnd->fs_sbufs[slot];
+        if (_sg.mtl.state_cache.cur_fs_storagebuffer_ids[slot].id != sbuf->slot.id) {
+            _sg.mtl.state_cache.cur_fs_storagebuffer_ids[slot].id = sbuf->slot.id;
+            SOKOL_ASSERT(sbuf->mtl.buf[sbuf->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+            const NSUInteger mtl_slot = SG_MAX_SHADERSTAGE_UBS + slot;
+            [_sg.mtl.cmd_encoder setFragmentBuffer:_sg_mtl_id(sbuf->mtl.buf[sbuf->cmn.active_slot]) offset:0 atIndex:mtl_slot];
+            _sg_stats_add(metal.bindings.num_set_fragment_buffer, 1);
+        }
+    }
+
+    return true;
+}
+
+_SOKOL_PRIVATE void _sg_mtl_apply_uniforms(sg_shader_stage stage_index, int ub_index, const sg_range* data) {
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(((size_t)_sg.mtl.cur_ub_offset + data->size) <= (size_t)_sg.mtl.ub_size);
+    SOKOL_ASSERT((_sg.mtl.cur_ub_offset & (_SG_MTL_UB_ALIGN-1)) == 0);
+    SOKOL_ASSERT(_sg.mtl.state_cache.cur_pipeline && _sg.mtl.state_cache.cur_pipeline->shader);
+    SOKOL_ASSERT(_sg.mtl.state_cache.cur_pipeline->slot.id == _sg.mtl.state_cache.cur_pipeline_id.id);
+    SOKOL_ASSERT(_sg.mtl.state_cache.cur_pipeline->shader->slot.id == _sg.mtl.state_cache.cur_pipeline->cmn.shader_id.id);
+    SOKOL_ASSERT(ub_index < _sg.mtl.state_cache.cur_pipeline->shader->cmn.stage[stage_index].num_uniform_blocks);
+    SOKOL_ASSERT(data->size == _sg.mtl.state_cache.cur_pipeline->shader->cmn.stage[stage_index].uniform_blocks[ub_index].size);
+
+    // copy to global uniform buffer, record offset into cmd encoder, and advance offset
+    uint8_t* dst = &_sg.mtl.cur_ub_base_ptr[_sg.mtl.cur_ub_offset];
+    memcpy(dst, data->ptr, data->size);
+    if (stage_index == SG_SHADERSTAGE_VS) {
+        [_sg.mtl.cmd_encoder setVertexBufferOffset:(NSUInteger)_sg.mtl.cur_ub_offset atIndex:(NSUInteger)ub_index];
+        _sg_stats_add(metal.uniforms.num_set_vertex_buffer_offset, 1);
+    } else {
+        [_sg.mtl.cmd_encoder setFragmentBufferOffset:(NSUInteger)_sg.mtl.cur_ub_offset atIndex:(NSUInteger)ub_index];
+        _sg_stats_add(metal.uniforms.num_set_fragment_buffer_offset, 1);
+    }
+    _sg.mtl.cur_ub_offset = _sg_roundup(_sg.mtl.cur_ub_offset + (int)data->size, _SG_MTL_UB_ALIGN);
+}
+
+_SOKOL_PRIVATE void _sg_mtl_draw(int base_element, int num_elements, int num_instances) {
+    SOKOL_ASSERT(nil != _sg.mtl.cmd_encoder);
+    SOKOL_ASSERT(_sg.mtl.state_cache.cur_pipeline && (_sg.mtl.state_cache.cur_pipeline->slot.id == _sg.mtl.state_cache.cur_pipeline_id.id));
+    if (SG_INDEXTYPE_NONE != _sg.mtl.state_cache.cur_pipeline->cmn.index_type) {
+        // indexed rendering
+        SOKOL_ASSERT(_sg.mtl.state_cache.cur_indexbuffer && (_sg.mtl.state_cache.cur_indexbuffer->slot.id == _sg.mtl.state_cache.cur_indexbuffer_id.id));
+        const _sg_buffer_t* ib = _sg.mtl.state_cache.cur_indexbuffer;
+        SOKOL_ASSERT(ib->mtl.buf[ib->cmn.active_slot] != _SG_MTL_INVALID_SLOT_INDEX);
+        const NSUInteger index_buffer_offset = (NSUInteger) (_sg.mtl.state_cache.cur_indexbuffer_offset + base_element * _sg.mtl.state_cache.cur_pipeline->mtl.index_size);
+        [_sg.mtl.cmd_encoder drawIndexedPrimitives:_sg.mtl.state_cache.cur_pipeline->mtl.prim_type
+            indexCount:(NSUInteger)num_elements
+            indexType:_sg.mtl.state_cache.cur_pipeline->mtl.index_type
+            indexBuffer:_sg_mtl_id(ib->mtl.buf[ib->cmn.active_slot])
+            indexBufferOffset:index_buffer_offset
+            instanceCount:(NSUInteger)num_instances];
+    } else {
+        // non-indexed rendering
+        [_sg.mtl.cmd_encoder drawPrimitives:_sg.mtl.state_cache.cur_pipeline->mtl.prim_type
+            vertexStart:(NSUInteger)base_element
+            vertexCount:(NSUInteger)num_elements
+            instanceCount:(NSUInteger)num_instances];
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_update_buffer(_sg_buffer_t* buf, const sg_range* data) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    if (++buf->cmn.active_slot >= buf->cmn.num_slots) {
+        buf->cmn.active_slot = 0;
+    }
+    __unsafe_unretained id<MTLBuffer> mtl_buf = _sg_mtl_id(buf->mtl.buf[buf->cmn.active_slot]);
+    void* dst_ptr = [mtl_buf contents];
+    memcpy(dst_ptr, data->ptr, data->size);
+    #if defined(_SG_TARGET_MACOS)
+    if (_sg_mtl_resource_options_storage_mode_managed_or_shared() == MTLResourceStorageModeManaged) {
+        [mtl_buf didModifyRange:NSMakeRange(0, data->size)];
+    }
+    #endif
+}
+
+_SOKOL_PRIVATE void _sg_mtl_append_buffer(_sg_buffer_t* buf, const sg_range* data, bool new_frame) {
+    SOKOL_ASSERT(buf && data && data->ptr && (data->size > 0));
+    if (new_frame) {
+        if (++buf->cmn.active_slot >= buf->cmn.num_slots) {
+            buf->cmn.active_slot = 0;
+        }
+    }
+    __unsafe_unretained id<MTLBuffer> mtl_buf = _sg_mtl_id(buf->mtl.buf[buf->cmn.active_slot]);
+    uint8_t* dst_ptr = (uint8_t*) [mtl_buf contents];
+    dst_ptr += buf->cmn.append_pos;
+    memcpy(dst_ptr, data->ptr, data->size);
+    #if defined(_SG_TARGET_MACOS)
+    if (_sg_mtl_resource_options_storage_mode_managed_or_shared() == MTLResourceStorageModeManaged) {
+        [mtl_buf didModifyRange:NSMakeRange((NSUInteger)buf->cmn.append_pos, (NSUInteger)data->size)];
+    }
+    #endif
+}
+
+_SOKOL_PRIVATE void _sg_mtl_update_image(_sg_image_t* img, const sg_image_data* data) {
+    SOKOL_ASSERT(img && data);
+    if (++img->cmn.active_slot >= img->cmn.num_slots) {
+        img->cmn.active_slot = 0;
+    }
+    __unsafe_unretained id<MTLTexture> mtl_tex = _sg_mtl_id(img->mtl.tex[img->cmn.active_slot]);
+    _sg_mtl_copy_image_data(img, mtl_tex, data);
+}
+
+_SOKOL_PRIVATE void _sg_mtl_push_debug_group(const char* name) {
+    SOKOL_ASSERT(name);
+    if (_sg.mtl.cmd_encoder) {
+        [_sg.mtl.cmd_encoder pushDebugGroup:[NSString stringWithUTF8String:name]];
+    }
+}
+
+_SOKOL_PRIVATE void _sg_mtl_pop_debug_group(void) {
+    if (_sg.mtl.cmd_encoder) {
+        [_sg.mtl.cmd_encoder popDebugGroup];
+    }
+}
+
+// ██     ██ ███████ ██████   ██████  ██████  ██    ██     ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
+// ██     ██ ██      ██   ██ ██       ██   ██ ██    ██     ██   ██ ██   ██ ██      ██  ██  ██      ████   ██ ██   ██
+// ██  █  ██ █████   ██████  ██   ███ ██████  ██    ██     ██████  ███████ ██      █████   █████   ██ ██  ██ ██   ██
+// ██ ███ ██ ██      ██   ██ ██    ██ ██      ██    ██     ██   ██ ██   ██ ██      ██  ██  ██      ██  ██ ██ ██   ██
+//  ███ ███  ███████ ██████   ██████  ██       ██████      ██████  ██   ██  ██████ ██   ██ ███████ ██   ████ ██████
+//
+// >>webgpu
+// >>wgpu
+#elif defined(SOKOL_WGPU)
+
+_SOKOL_PRIVATE WGPUBufferUsageFlags _sg_wgpu_buffer_usage(sg_buffer_type t, sg_usage u) {
+    WGPUBufferUsageFlags res = 0;
+    if (SG_BUFFERTYPE_VERTEXBUFFER == t) {
+        res = WGPUBufferUsage_Vertex;
+    } else if (SG_BUFFERTYPE_STORAGEBUFFER == t) {
+        res = WGPUBufferUsage_Storage;
+    } else {
+        res = WGPUBufferUsage_Index;
+    }
+    if (SG_USAGE_IMMUTABLE != u) {
+        res |= WGPUBufferUsage_CopyDst;
+    }
+    return res;
+}
+
+_SOKOL_PRIVATE WGPULoadOp _sg_wgpu_load_op(WGPUTextureView view, sg_load_action a) {
+    if (0 == view) {
+        return WGPULoadOp_Undefined;
+    } else switch (a) {
+        case SG_LOADACTION_CLEAR:
+        case SG_LOADACTION_DONTCARE:
+            return WGPULoadOp_Clear;
+        case SG_LOADACTION_LOAD:
+            return WGPULoadOp_Load;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPULoadOp_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUStoreOp _sg_wgpu_store_op(WGPUTextureView view, sg_store_action a) {
+    if (0 == view) {
+        return WGPUStoreOp_Undefined;
+    } else switch (a) {
+        case SG_STOREACTION_STORE:
+            return WGPUStoreOp_Store;
+        case SG_STOREACTION_DONTCARE:
+            return WGPUStoreOp_Discard;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUStoreOp_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUTextureViewDimension _sg_wgpu_texture_view_dimension(sg_image_type t) {
+    switch (t) {
+        case SG_IMAGETYPE_2D:       return WGPUTextureViewDimension_2D;
+        case SG_IMAGETYPE_CUBE:     return WGPUTextureViewDimension_Cube;
+        case SG_IMAGETYPE_3D:       return WGPUTextureViewDimension_3D;
+        case SG_IMAGETYPE_ARRAY:    return WGPUTextureViewDimension_2DArray;
+        default: SOKOL_UNREACHABLE; return WGPUTextureViewDimension_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUTextureDimension _sg_wgpu_texture_dimension(sg_image_type t) {
+    if (SG_IMAGETYPE_3D == t) {
+        return WGPUTextureDimension_3D;
+    } else {
+        return WGPUTextureDimension_2D;
+    }
+}
+
+_SOKOL_PRIVATE WGPUTextureSampleType _sg_wgpu_texture_sample_type(sg_image_sample_type t) {
+    switch (t) {
+        case SG_IMAGESAMPLETYPE_FLOAT:  return WGPUTextureSampleType_Float;
+        case SG_IMAGESAMPLETYPE_DEPTH:  return WGPUTextureSampleType_Depth;
+        case SG_IMAGESAMPLETYPE_SINT:   return WGPUTextureSampleType_Sint;
+        case SG_IMAGESAMPLETYPE_UINT:   return WGPUTextureSampleType_Uint;
+        case SG_IMAGESAMPLETYPE_UNFILTERABLE_FLOAT: return WGPUTextureSampleType_UnfilterableFloat;
+        default: SOKOL_UNREACHABLE;     return WGPUTextureSampleType_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUSamplerBindingType _sg_wgpu_sampler_binding_type(sg_sampler_type t) {
+    switch (t) {
+        case SG_SAMPLERTYPE_FILTERING: return WGPUSamplerBindingType_Filtering;
+        case SG_SAMPLERTYPE_COMPARISON: return WGPUSamplerBindingType_Comparison;
+        case SG_SAMPLERTYPE_NONFILTERING: return WGPUSamplerBindingType_NonFiltering;
+        default: SOKOL_UNREACHABLE; return WGPUSamplerBindingType_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUAddressMode _sg_wgpu_sampler_address_mode(sg_wrap m) {
+    switch (m) {
+        case SG_WRAP_REPEAT:
+            return WGPUAddressMode_Repeat;
+        case SG_WRAP_CLAMP_TO_EDGE:
+        case SG_WRAP_CLAMP_TO_BORDER:
+            return WGPUAddressMode_ClampToEdge;
+        case SG_WRAP_MIRRORED_REPEAT:
+            return WGPUAddressMode_MirrorRepeat;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUAddressMode_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUFilterMode _sg_wgpu_sampler_minmag_filter(sg_filter f) {
+    switch (f) {
+        case SG_FILTER_NEAREST:
+            return WGPUFilterMode_Nearest;
+        case SG_FILTER_LINEAR:
+            return WGPUFilterMode_Linear;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUFilterMode_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUMipmapFilterMode _sg_wgpu_sampler_mipmap_filter(sg_filter f) {
+    switch (f) {
+        case SG_FILTER_NONE:
+        case SG_FILTER_NEAREST:
+            return WGPUMipmapFilterMode_Nearest;
+        case SG_FILTER_LINEAR:
+            return WGPUMipmapFilterMode_Linear;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUMipmapFilterMode_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUIndexFormat _sg_wgpu_indexformat(sg_index_type t) {
+    // NOTE: there's no WGPUIndexFormat_None
+    return (t == SG_INDEXTYPE_UINT16) ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32;
+}
+
+_SOKOL_PRIVATE WGPUIndexFormat _sg_wgpu_stripindexformat(sg_primitive_type prim_type, sg_index_type idx_type) {
+    if (idx_type == SG_INDEXTYPE_NONE) {
+        return WGPUIndexFormat_Undefined;
+    } else if ((prim_type == SG_PRIMITIVETYPE_LINE_STRIP) || (prim_type == SG_PRIMITIVETYPE_TRIANGLE_STRIP)) {
+        return _sg_wgpu_indexformat(idx_type);
+    } else {
+        return WGPUIndexFormat_Undefined;
+    }
+}
+
+_SOKOL_PRIVATE WGPUVertexStepMode _sg_wgpu_stepmode(sg_vertex_step s) {
+    return (s == SG_VERTEXSTEP_PER_VERTEX) ? WGPUVertexStepMode_Vertex : WGPUVertexStepMode_Instance;
+}
+
+_SOKOL_PRIVATE WGPUVertexFormat _sg_wgpu_vertexformat(sg_vertex_format f) {
+    switch (f) {
+        case SG_VERTEXFORMAT_FLOAT:         return WGPUVertexFormat_Float32;
+        case SG_VERTEXFORMAT_FLOAT2:        return WGPUVertexFormat_Float32x2;
+        case SG_VERTEXFORMAT_FLOAT3:        return WGPUVertexFormat_Float32x3;
+        case SG_VERTEXFORMAT_FLOAT4:        return WGPUVertexFormat_Float32x4;
+        case SG_VERTEXFORMAT_BYTE4:         return WGPUVertexFormat_Sint8x4;
+        case SG_VERTEXFORMAT_BYTE4N:        return WGPUVertexFormat_Snorm8x4;
+        case SG_VERTEXFORMAT_UBYTE4:        return WGPUVertexFormat_Uint8x4;
+        case SG_VERTEXFORMAT_UBYTE4N:       return WGPUVertexFormat_Unorm8x4;
+        case SG_VERTEXFORMAT_SHORT2:        return WGPUVertexFormat_Sint16x2;
+        case SG_VERTEXFORMAT_SHORT2N:       return WGPUVertexFormat_Snorm16x2;
+        case SG_VERTEXFORMAT_USHORT2N:      return WGPUVertexFormat_Unorm16x2;
+        case SG_VERTEXFORMAT_SHORT4:        return WGPUVertexFormat_Sint16x4;
+        case SG_VERTEXFORMAT_SHORT4N:       return WGPUVertexFormat_Snorm16x4;
+        case SG_VERTEXFORMAT_USHORT4N:      return WGPUVertexFormat_Unorm16x4;
+        case SG_VERTEXFORMAT_HALF2:         return WGPUVertexFormat_Float16x2;
+        case SG_VERTEXFORMAT_HALF4:         return WGPUVertexFormat_Float16x4;
+        // FIXME! UINT10_N2 (see https://github.com/gpuweb/gpuweb/issues/4275)
+        case SG_VERTEXFORMAT_UINT10_N2:     return WGPUVertexFormat_Undefined;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUVertexFormat_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUPrimitiveTopology _sg_wgpu_topology(sg_primitive_type t) {
+    switch (t) {
+        case SG_PRIMITIVETYPE_POINTS:           return WGPUPrimitiveTopology_PointList;
+        case SG_PRIMITIVETYPE_LINES:            return WGPUPrimitiveTopology_LineList;
+        case SG_PRIMITIVETYPE_LINE_STRIP:       return WGPUPrimitiveTopology_LineStrip;
+        case SG_PRIMITIVETYPE_TRIANGLES:        return WGPUPrimitiveTopology_TriangleList;
+        case SG_PRIMITIVETYPE_TRIANGLE_STRIP:   return WGPUPrimitiveTopology_TriangleStrip;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUPrimitiveTopology_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUFrontFace _sg_wgpu_frontface(sg_face_winding fw) {
+    return (fw == SG_FACEWINDING_CCW) ? WGPUFrontFace_CCW : WGPUFrontFace_CW;
+}
+
+_SOKOL_PRIVATE WGPUCullMode _sg_wgpu_cullmode(sg_cull_mode cm) {
+    switch (cm) {
+        case SG_CULLMODE_NONE:      return WGPUCullMode_None;
+        case SG_CULLMODE_FRONT:     return WGPUCullMode_Front;
+        case SG_CULLMODE_BACK:      return WGPUCullMode_Back;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUCullMode_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUTextureFormat _sg_wgpu_textureformat(sg_pixel_format p) {
+    switch (p) {
+        case SG_PIXELFORMAT_NONE:           return WGPUTextureFormat_Undefined;
+        case SG_PIXELFORMAT_R8:             return WGPUTextureFormat_R8Unorm;
+        case SG_PIXELFORMAT_R8SN:           return WGPUTextureFormat_R8Snorm;
+        case SG_PIXELFORMAT_R8UI:           return WGPUTextureFormat_R8Uint;
+        case SG_PIXELFORMAT_R8SI:           return WGPUTextureFormat_R8Sint;
+        case SG_PIXELFORMAT_R16UI:          return WGPUTextureFormat_R16Uint;
+        case SG_PIXELFORMAT_R16SI:          return WGPUTextureFormat_R16Sint;
+        case SG_PIXELFORMAT_R16F:           return WGPUTextureFormat_R16Float;
+        case SG_PIXELFORMAT_RG8:            return WGPUTextureFormat_RG8Unorm;
+        case SG_PIXELFORMAT_RG8SN:          return WGPUTextureFormat_RG8Snorm;
+        case SG_PIXELFORMAT_RG8UI:          return WGPUTextureFormat_RG8Uint;
+        case SG_PIXELFORMAT_RG8SI:          return WGPUTextureFormat_RG8Sint;
+        case SG_PIXELFORMAT_R32UI:          return WGPUTextureFormat_R32Uint;
+        case SG_PIXELFORMAT_R32SI:          return WGPUTextureFormat_R32Sint;
+        case SG_PIXELFORMAT_R32F:           return WGPUTextureFormat_R32Float;
+        case SG_PIXELFORMAT_RG16UI:         return WGPUTextureFormat_RG16Uint;
+        case SG_PIXELFORMAT_RG16SI:         return WGPUTextureFormat_RG16Sint;
+        case SG_PIXELFORMAT_RG16F:          return WGPUTextureFormat_RG16Float;
+        case SG_PIXELFORMAT_RGBA8:          return WGPUTextureFormat_RGBA8Unorm;
+        case SG_PIXELFORMAT_SRGB8A8:        return WGPUTextureFormat_RGBA8UnormSrgb;
+        case SG_PIXELFORMAT_RGBA8SN:        return WGPUTextureFormat_RGBA8Snorm;
+        case SG_PIXELFORMAT_RGBA8UI:        return WGPUTextureFormat_RGBA8Uint;
+        case SG_PIXELFORMAT_RGBA8SI:        return WGPUTextureFormat_RGBA8Sint;
+        case SG_PIXELFORMAT_BGRA8:          return WGPUTextureFormat_BGRA8Unorm;
+        case SG_PIXELFORMAT_RGB10A2:        return WGPUTextureFormat_RGB10A2Unorm;
+        case SG_PIXELFORMAT_RG11B10F:       return WGPUTextureFormat_RG11B10Ufloat;
+        case SG_PIXELFORMAT_RG32UI:         return WGPUTextureFormat_RG32Uint;
+        case SG_PIXELFORMAT_RG32SI:         return WGPUTextureFormat_RG32Sint;
+        case SG_PIXELFORMAT_RG32F:          return WGPUTextureFormat_RG32Float;
+        case SG_PIXELFORMAT_RGBA16UI:       return WGPUTextureFormat_RGBA16Uint;
+        case SG_PIXELFORMAT_RGBA16SI:       return WGPUTextureFormat_RGBA16Sint;
+        case SG_PIXELFORMAT_RGBA16F:        return WGPUTextureFormat_RGBA16Float;
+        case SG_PIXELFORMAT_RGBA32UI:       return WGPUTextureFormat_RGBA32Uint;
+        case SG_PIXELFORMAT_RGBA32SI:       return WGPUTextureFormat_RGBA32Sint;
+        case SG_PIXELFORMAT_RGBA32F:        return WGPUTextureFormat_RGBA32Float;
+        case SG_PIXELFORMAT_DEPTH:          return WGPUTextureFormat_Depth32Float;
+        case SG_PIXELFORMAT_DEPTH_STENCIL:  return WGPUTextureFormat_Depth32FloatStencil8;
+        case SG_PIXELFORMAT_BC1_RGBA:       return WGPUTextureFormat_BC1RGBAUnorm;
+        case SG_PIXELFORMAT_BC2_RGBA:       return WGPUTextureFormat_BC2RGBAUnorm;
+        case SG_PIXELFORMAT_BC3_RGBA:       return WGPUTextureFormat_BC3RGBAUnorm;
+        case SG_PIXELFORMAT_BC3_SRGBA:      return WGPUTextureFormat_BC3RGBAUnormSrgb;
+        case SG_PIXELFORMAT_BC4_R:          return WGPUTextureFormat_BC4RUnorm;
+        case SG_PIXELFORMAT_BC4_RSN:        return WGPUTextureFormat_BC4RSnorm;
+        case SG_PIXELFORMAT_BC5_RG:         return WGPUTextureFormat_BC5RGUnorm;
+        case SG_PIXELFORMAT_BC5_RGSN:       return WGPUTextureFormat_BC5RGSnorm;
+        case SG_PIXELFORMAT_BC6H_RGBF:      return WGPUTextureFormat_BC6HRGBFloat;
+        case SG_PIXELFORMAT_BC6H_RGBUF:     return WGPUTextureFormat_BC6HRGBUfloat;
+        case SG_PIXELFORMAT_BC7_RGBA:       return WGPUTextureFormat_BC7RGBAUnorm;
+        case SG_PIXELFORMAT_BC7_SRGBA:      return WGPUTextureFormat_BC7RGBAUnormSrgb;
+        case SG_PIXELFORMAT_ETC2_RGB8:      return WGPUTextureFormat_ETC2RGB8Unorm;
+        case SG_PIXELFORMAT_ETC2_RGB8A1:    return WGPUTextureFormat_ETC2RGB8A1Unorm;
+        case SG_PIXELFORMAT_ETC2_RGBA8:     return WGPUTextureFormat_ETC2RGBA8Unorm;
+        case SG_PIXELFORMAT_ETC2_SRGB8:     return WGPUTextureFormat_ETC2RGB8UnormSrgb;
+        case SG_PIXELFORMAT_ETC2_SRGB8A8:   return WGPUTextureFormat_ETC2RGBA8UnormSrgb;
+        case SG_PIXELFORMAT_EAC_R11:        return WGPUTextureFormat_EACR11Unorm;
+        case SG_PIXELFORMAT_EAC_R11SN:      return WGPUTextureFormat_EACR11Snorm;
+        case SG_PIXELFORMAT_EAC_RG11:       return WGPUTextureFormat_EACRG11Unorm;
+        case SG_PIXELFORMAT_EAC_RG11SN:     return WGPUTextureFormat_EACRG11Snorm;
+        case SG_PIXELFORMAT_RGB9E5:         return WGPUTextureFormat_RGB9E5Ufloat;
+        case SG_PIXELFORMAT_ASTC_4x4_RGBA:  return WGPUTextureFormat_ASTC4x4Unorm;
+        case SG_PIXELFORMAT_ASTC_4x4_SRGBA: return WGPUTextureFormat_ASTC4x4UnormSrgb;
+        // NOT SUPPORTED
+        case SG_PIXELFORMAT_R16:
+        case SG_PIXELFORMAT_R16SN:
+        case SG_PIXELFORMAT_RG16:
+        case SG_PIXELFORMAT_RG16SN:
+        case SG_PIXELFORMAT_RGBA16:
+        case SG_PIXELFORMAT_RGBA16SN:
+        case SG_PIXELFORMAT_PVRTC_RGB_2BPP:
+        case SG_PIXELFORMAT_PVRTC_RGB_4BPP:
+        case SG_PIXELFORMAT_PVRTC_RGBA_2BPP:
+        case SG_PIXELFORMAT_PVRTC_RGBA_4BPP:
+            return WGPUTextureFormat_Undefined;
+
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUTextureFormat_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUCompareFunction _sg_wgpu_comparefunc(sg_compare_func f) {
+    switch (f) {
+        case SG_COMPAREFUNC_NEVER:          return WGPUCompareFunction_Never;
+        case SG_COMPAREFUNC_LESS:           return WGPUCompareFunction_Less;
+        case SG_COMPAREFUNC_EQUAL:          return WGPUCompareFunction_Equal;
+        case SG_COMPAREFUNC_LESS_EQUAL:     return WGPUCompareFunction_LessEqual;
+        case SG_COMPAREFUNC_GREATER:        return WGPUCompareFunction_Greater;
+        case SG_COMPAREFUNC_NOT_EQUAL:      return WGPUCompareFunction_NotEqual;
+        case SG_COMPAREFUNC_GREATER_EQUAL:  return WGPUCompareFunction_GreaterEqual;
+        case SG_COMPAREFUNC_ALWAYS:         return WGPUCompareFunction_Always;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUCompareFunction_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUStencilOperation _sg_wgpu_stencilop(sg_stencil_op op) {
+    switch (op) {
+        case SG_STENCILOP_KEEP:         return WGPUStencilOperation_Keep;
+        case SG_STENCILOP_ZERO:         return WGPUStencilOperation_Zero;
+        case SG_STENCILOP_REPLACE:      return WGPUStencilOperation_Replace;
+        case SG_STENCILOP_INCR_CLAMP:   return WGPUStencilOperation_IncrementClamp;
+        case SG_STENCILOP_DECR_CLAMP:   return WGPUStencilOperation_DecrementClamp;
+        case SG_STENCILOP_INVERT:       return WGPUStencilOperation_Invert;
+        case SG_STENCILOP_INCR_WRAP:    return WGPUStencilOperation_IncrementWrap;
+        case SG_STENCILOP_DECR_WRAP:    return WGPUStencilOperation_DecrementWrap;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUStencilOperation_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUBlendOperation _sg_wgpu_blendop(sg_blend_op op) {
+    switch (op) {
+        case SG_BLENDOP_ADD:                return WGPUBlendOperation_Add;
+        case SG_BLENDOP_SUBTRACT:           return WGPUBlendOperation_Subtract;
+        case SG_BLENDOP_REVERSE_SUBTRACT:   return WGPUBlendOperation_ReverseSubtract;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUBlendOperation_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUBlendFactor _sg_wgpu_blendfactor(sg_blend_factor f) {
+    switch (f) {
+        case SG_BLENDFACTOR_ZERO:                   return WGPUBlendFactor_Zero;
+        case SG_BLENDFACTOR_ONE:                    return WGPUBlendFactor_One;
+        case SG_BLENDFACTOR_SRC_COLOR:              return WGPUBlendFactor_Src;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_COLOR:    return WGPUBlendFactor_OneMinusSrc;
+        case SG_BLENDFACTOR_SRC_ALPHA:              return WGPUBlendFactor_SrcAlpha;
+        case SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:    return WGPUBlendFactor_OneMinusSrcAlpha;
+        case SG_BLENDFACTOR_DST_COLOR:              return WGPUBlendFactor_Dst;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_COLOR:    return WGPUBlendFactor_OneMinusDst;
+        case SG_BLENDFACTOR_DST_ALPHA:              return WGPUBlendFactor_DstAlpha;
+        case SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA:    return WGPUBlendFactor_OneMinusDstAlpha;
+        case SG_BLENDFACTOR_SRC_ALPHA_SATURATED:    return WGPUBlendFactor_SrcAlphaSaturated;
+        case SG_BLENDFACTOR_BLEND_COLOR:            return WGPUBlendFactor_Constant;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_COLOR:  return WGPUBlendFactor_OneMinusConstant;
+        // FIXME: separate blend alpha value not supported?
+        case SG_BLENDFACTOR_BLEND_ALPHA:            return WGPUBlendFactor_Constant;
+        case SG_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA:  return WGPUBlendFactor_OneMinusConstant;
+        default:
+            SOKOL_UNREACHABLE;
+            return WGPUBlendFactor_Force32;
+    }
+}
+
+_SOKOL_PRIVATE WGPUColorWriteMaskFlags _sg_wgpu_colorwritemask(uint8_t m) {
+    WGPUColorWriteMaskFlags res = 0;
+    if (0 != (m & SG_COLORMASK_R)) {
+        res |= WGPUColorWriteMask_Red;
+    }
+    if (0 != (m & SG_COLORMASK_G)) {
+        res |= WGPUColorWriteMask_Green;
+    }
+    if (0 != (m & SG_COLORMASK_B)) {
+        res |= WGPUColorWriteMask_Blue;
+    }
+    if (0 != (m & SG_COLORMASK_A)) {
+        res |= WGPUColorWriteMask_Alpha;
+    }
+    return res;
+}
+
+// image/sampler binding on wgpu follows this convention:
+//
+//  - all images and sampler are in @group(1)
+//  - vertex stage images start at @binding(0)
+//  - vertex stage samplers start at @binding(16)
+//  - vertex stage storage buffers start at @binding(32)
+//  - fragment stage images start at @binding(48)
+//  - fragment stage samplers start at @binding(64)
+//  - fragment stage storage buffers start at @binding(80)
+//
+_SOKOL_PRIVATE uint32_t _sg_wgpu_image_binding(sg_shader_stage stage, int img_slot) {
+    SOKOL_ASSERT((img_slot >= 0) && (img_slot < 16));
+    if (SG_SHADERSTAGE_VS == stage) {
+        return 0 + (uint32_t)img_slot;
+    } else {
+        return 48 + (uint32_t)img_slot;
+    }
+}
+
+_SOKOL_PRIVATE uint32_t _sg_wgpu_sampler_binding(sg_shader_stage stage, int smp_slot) {
+    SOKOL_ASSERT((smp_slot >= 0) && (smp_slot < 16));
+    if (SG_SHADERSTAGE_VS == stage) {
+        return 16 + (uint32_t)smp_slot;
+    } else {
+        return 64 + (uint32_t)smp_slot;
+    }
+}
+
+_SOKOL_PRIVATE uint32_t _sg_wgpu_storagebuffer_binding(sg_shader_stage stage, int sbuf_slot) {
+    SOKOL_ASSERT((sbuf_slot >= 0) && (sbuf_slot < 16));
+    if (SG_SHADERSTAGE_VS == stage) {
+        return 32 + (uint32_t)sbuf_slot;
+    } else {
+        return 80 + (uint32_t)sbuf_slot;
+    }
+}
+
+_SOKOL_PRIVATE WGPUShaderStage _sg_wgpu_shader_stage(sg_shader_stage stage) {
+    switch (stage) {
+        case SG_SHADERSTAGE_VS: return WGPUShaderStage_Vertex;
+        case SG_SHADERSTAGE_FS: return WGPUShaderStage_Fragment;
+        default: SOKOL_UNREACHABLE; return WGPUShaderStage_None;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_init_caps(void) {
+    _sg.backend = SG_BACKEND_WGPU;
+    _sg.features.origin_top_left = true;
+    _sg.features.image_clamp_to_border = false;
+    _sg.features.mrt_independent_blend_state = true;
+    _sg.features.mrt_independent_write_mask = true;
+    _sg.features.storage_buffer = true;
+
+    wgpuDeviceGetLimits(_sg.wgpu.dev, &_sg.wgpu.limits);
+
+    const WGPULimits* l = &_sg.wgpu.limits.limits;
+    _sg.limits.max_image_size_2d = (int) l->maxTextureDimension2D;
+    _sg.limits.max_image_size_cube = (int) l->maxTextureDimension2D; // not a bug, see: https://github.com/gpuweb/gpuweb/issues/1327
+    _sg.limits.max_image_size_3d = (int) l->maxTextureDimension3D;
+    _sg.limits.max_image_size_array = (int) l->maxTextureDimension2D;
+    _sg.limits.max_image_array_layers = (int) l->maxTextureArrayLayers;
+    _sg.limits.max_vertex_attrs = SG_MAX_VERTEX_ATTRIBUTES;
+
+    // NOTE: no WGPUTextureFormat_R16Unorm
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_SRGB8A8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_BGRA8]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_R16F]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RG16F]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGBA16F]);
+    _sg_pixelformat_all(&_sg.formats[SG_PIXELFORMAT_RGB10A2]);
+
+    _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_R8SN]);
+    _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_RG8SN]);
+    _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_RGBA8SN]);
+
+    // FIXME: can be made renderable via extension
+    _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_RG11B10F]);
+
+    // NOTE: msaa rendering is possible in WebGPU, but no resolve
+    // which is a combination that's not currently supported in sokol-gfx
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R8UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R8SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG8UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG8SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA8UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA8SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R16UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R16SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG16UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG16SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA16UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA16SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R32UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R32SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG32UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG32SI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32UI]);
+    _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32SI]);
+
+    if (wgpuDeviceHasFeature(_sg.wgpu.dev, WGPUFeatureName_Float32Filterable)) {
+        _sg_pixelformat_sfr(&_sg.formats[SG_PIXELFORMAT_R32F]);
+        _sg_pixelformat_sfr(&_sg.formats[SG_PIXELFORMAT_RG32F]);
+        _sg_pixelformat_sfr(&_sg.formats[SG_PIXELFORMAT_RGBA32F]);
+    } else {
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_R32F]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RG32F]);
+        _sg_pixelformat_sr(&_sg.formats[SG_PIXELFORMAT_RGBA32F]);
+    }
+
+    _sg_pixelformat_srmd(&_sg.formats[SG_PIXELFORMAT_DEPTH]);
+    _sg_pixelformat_srmd(&_sg.formats[SG_PIXELFORMAT_DEPTH_STENCIL]);
+
+    _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_RGB9E5]);
+
+    if (wgpuDeviceHasFeature(_sg.wgpu.dev, WGPUFeatureName_TextureCompressionBC)) {
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC1_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC2_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC3_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC3_SRGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC4_R]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC4_RSN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC5_RG]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC5_RGSN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC6H_RGBF]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC6H_RGBUF]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC7_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_BC7_SRGBA]);
+    }
+    if (wgpuDeviceHasFeature(_sg.wgpu.dev, WGPUFeatureName_TextureCompressionETC2)) {
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGB8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_SRGB8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGB8A1]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_RGBA8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ETC2_SRGB8A8]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_R11]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_R11SN]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_RG11]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_EAC_RG11SN]);
+    }
+
+    if (wgpuDeviceHasFeature(_sg.wgpu.dev, WGPUFeatureName_TextureCompressionASTC)) {
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ASTC_4x4_RGBA]);
+        _sg_pixelformat_sf(&_sg.formats[SG_PIXELFORMAT_ASTC_4x4_SRGBA]);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_uniform_buffer_init(const sg_desc* desc) {
+    SOKOL_ASSERT(0 == _sg.wgpu.uniform.staging);
+    SOKOL_ASSERT(0 == _sg.wgpu.uniform.buf);
+    SOKOL_ASSERT(0 == _sg.wgpu.uniform.bind.group_layout);
+    SOKOL_ASSERT(0 == _sg.wgpu.uniform.bind.group);
+
+    // Add the max-uniform-update size (64 KB) to the requested buffer size,
+    // this is to prevent validation errors in the WebGPU implementation
+    // if the entire buffer size is used per frame. 64 KB is the allowed
+    // max uniform update size on NVIDIA
+    //
+    // FIXME: is this still needed?
+    _sg.wgpu.uniform.num_bytes = (uint32_t)(desc->uniform_buffer_size + _SG_WGPU_MAX_UNIFORM_UPDATE_SIZE);
+    _sg.wgpu.uniform.staging = (uint8_t*)_sg_malloc(_sg.wgpu.uniform.num_bytes);
+
+    WGPUBufferDescriptor ub_desc;
+    _sg_clear(&ub_desc, sizeof(ub_desc));
+    ub_desc.size = _sg.wgpu.uniform.num_bytes;
+    ub_desc.usage = WGPUBufferUsage_Uniform|WGPUBufferUsage_CopyDst;
+    _sg.wgpu.uniform.buf = wgpuDeviceCreateBuffer(_sg.wgpu.dev, &ub_desc);
+    SOKOL_ASSERT(_sg.wgpu.uniform.buf);
+
+    WGPUBindGroupLayoutEntry ub_bgle_desc[SG_NUM_SHADER_STAGES][SG_MAX_SHADERSTAGE_UBS];
+    _sg_clear(ub_bgle_desc, sizeof(ub_bgle_desc));
+    for (uint32_t stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        WGPUShaderStage vis = (stage_index == SG_SHADERSTAGE_VS) ? WGPUShaderStage_Vertex : WGPUShaderStage_Fragment;
+        for (uint32_t ub_index = 0; ub_index < SG_MAX_SHADERSTAGE_UBS; ub_index++) {
+            uint32_t bind_index = stage_index * SG_MAX_SHADERSTAGE_UBS + ub_index;
+            ub_bgle_desc[stage_index][ub_index].binding = bind_index;
+            ub_bgle_desc[stage_index][ub_index].visibility = vis;
+            ub_bgle_desc[stage_index][ub_index].buffer.type = WGPUBufferBindingType_Uniform;
+            ub_bgle_desc[stage_index][ub_index].buffer.hasDynamicOffset = true;
+        }
+    }
+
+    WGPUBindGroupLayoutDescriptor ub_bgl_desc;
+    _sg_clear(&ub_bgl_desc, sizeof(ub_bgl_desc));
+    ub_bgl_desc.entryCount = SG_NUM_SHADER_STAGES * SG_MAX_SHADERSTAGE_UBS;
+    ub_bgl_desc.entries = &ub_bgle_desc[0][0];
+    _sg.wgpu.uniform.bind.group_layout = wgpuDeviceCreateBindGroupLayout(_sg.wgpu.dev, &ub_bgl_desc);
+    SOKOL_ASSERT(_sg.wgpu.uniform.bind.group_layout);
+
+    WGPUBindGroupEntry ub_bge[SG_NUM_SHADER_STAGES][SG_MAX_SHADERSTAGE_UBS];
+    _sg_clear(ub_bge, sizeof(ub_bge));
+    for (uint32_t stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        for (uint32_t ub_index = 0; ub_index < SG_MAX_SHADERSTAGE_UBS; ub_index++) {
+            uint32_t bind_index = stage_index * SG_MAX_SHADERSTAGE_UBS + ub_index;
+            ub_bge[stage_index][ub_index].binding = bind_index;
+            ub_bge[stage_index][ub_index].buffer = _sg.wgpu.uniform.buf;
+            ub_bge[stage_index][ub_index].size = _SG_WGPU_MAX_UNIFORM_UPDATE_SIZE;
+        }
+    }
+    WGPUBindGroupDescriptor bg_desc;
+    _sg_clear(&bg_desc, sizeof(bg_desc));
+    bg_desc.layout = _sg.wgpu.uniform.bind.group_layout;
+    bg_desc.entryCount = SG_NUM_SHADER_STAGES * SG_MAX_SHADERSTAGE_UBS;
+    bg_desc.entries = &ub_bge[0][0];
+    _sg.wgpu.uniform.bind.group = wgpuDeviceCreateBindGroup(_sg.wgpu.dev, &bg_desc);
+    SOKOL_ASSERT(_sg.wgpu.uniform.bind.group);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_uniform_buffer_discard(void) {
+    if (_sg.wgpu.uniform.buf) {
+        wgpuBufferRelease(_sg.wgpu.uniform.buf);
+        _sg.wgpu.uniform.buf = 0;
+    }
+    if (_sg.wgpu.uniform.bind.group) {
+        wgpuBindGroupRelease(_sg.wgpu.uniform.bind.group);
+        _sg.wgpu.uniform.bind.group = 0;
+    }
+    if (_sg.wgpu.uniform.bind.group_layout) {
+        wgpuBindGroupLayoutRelease(_sg.wgpu.uniform.bind.group_layout);
+        _sg.wgpu.uniform.bind.group_layout = 0;
+    }
+    if (_sg.wgpu.uniform.staging) {
+        _sg_free(_sg.wgpu.uniform.staging);
+        _sg.wgpu.uniform.staging = 0;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_uniform_buffer_on_begin_pass(void) {
+    wgpuRenderPassEncoderSetBindGroup(_sg.wgpu.pass_enc,
+                                      0, // groupIndex 0 is reserved for uniform buffers
+                                      _sg.wgpu.uniform.bind.group,
+                                      SG_NUM_SHADER_STAGES * SG_MAX_SHADERSTAGE_UBS,
+                                      &_sg.wgpu.uniform.bind.offsets[0][0]);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_uniform_buffer_on_commit(void) {
+    wgpuQueueWriteBuffer(_sg.wgpu.queue, _sg.wgpu.uniform.buf, 0, _sg.wgpu.uniform.staging, _sg.wgpu.uniform.offset);
+    _sg_stats_add(wgpu.uniforms.size_write_buffer, _sg.wgpu.uniform.offset);
+    _sg.wgpu.uniform.offset = 0;
+    _sg_clear(&_sg.wgpu.uniform.bind.offsets[0][0], sizeof(_sg.wgpu.uniform.bind.offsets));
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindgroups_pool_init(const sg_desc* desc) {
+    SOKOL_ASSERT((desc->wgpu_bindgroups_cache_size > 0) && (desc->wgpu_bindgroups_cache_size < _SG_MAX_POOL_SIZE));
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    SOKOL_ASSERT(0 == p->bindgroups);
+    const int pool_size = desc->wgpu_bindgroups_cache_size;
+    _sg_init_pool(&p->pool, pool_size);
+    size_t pool_byte_size = sizeof(_sg_wgpu_bindgroup_t) * (size_t)p->pool.size;
+    p->bindgroups = (_sg_wgpu_bindgroup_t*) _sg_malloc_clear(pool_byte_size);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindgroups_pool_discard(void) {
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    SOKOL_ASSERT(p->bindgroups);
+    _sg_free(p->bindgroups); p->bindgroups = 0;
+    _sg_discard_pool(&p->pool);
+}
+
+_SOKOL_PRIVATE _sg_wgpu_bindgroup_t* _sg_wgpu_bindgroup_at(uint32_t bg_id) {
+    SOKOL_ASSERT(SG_INVALID_ID != bg_id);
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    int slot_index = _sg_slot_index(bg_id);
+    SOKOL_ASSERT((slot_index > _SG_INVALID_SLOT_INDEX) && (slot_index < p->pool.size));
+    return &p->bindgroups[slot_index];
+}
+
+_SOKOL_PRIVATE _sg_wgpu_bindgroup_t* _sg_wgpu_lookup_bindgroup(uint32_t bg_id) {
+    if (SG_INVALID_ID != bg_id) {
+        _sg_wgpu_bindgroup_t* bg = _sg_wgpu_bindgroup_at(bg_id);
+        if (bg->slot.id == bg_id) {
+            return bg;
+        }
+    }
+    return 0;
+}
+
+_SOKOL_PRIVATE _sg_wgpu_bindgroup_handle_t _sg_wgpu_alloc_bindgroup(void) {
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    _sg_wgpu_bindgroup_handle_t res;
+    int slot_index = _sg_pool_alloc_index(&p->pool);
+    if (_SG_INVALID_SLOT_INDEX != slot_index) {
+        res.id = _sg_slot_alloc(&p->pool, &p->bindgroups[slot_index].slot, slot_index);
+    } else {
+        res.id = SG_INVALID_ID;
+        _SG_ERROR(WGPU_BINDGROUPS_POOL_EXHAUSTED);
+    }
+    return res;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_dealloc_bindgroup(_sg_wgpu_bindgroup_t* bg) {
+    SOKOL_ASSERT(bg && (bg->slot.state == SG_RESOURCESTATE_ALLOC) && (bg->slot.id != SG_INVALID_ID));
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    _sg_pool_free_index(&p->pool, _sg_slot_index(bg->slot.id));
+    _sg_reset_slot(&bg->slot);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_reset_bindgroup_to_alloc_state(_sg_wgpu_bindgroup_t* bg) {
+    SOKOL_ASSERT(bg);
+    _sg_slot_t slot = bg->slot;
+    _sg_clear(bg, sizeof(_sg_wgpu_bindgroup_t));
+    bg->slot = slot;
+    bg->slot.state = SG_RESOURCESTATE_ALLOC;
+}
+
+// MurmurHash64B (see: https://github.com/aappleby/smhasher/blob/61a0530f28277f2e850bfc39600ce61d02b518de/src/MurmurHash2.cpp#L142)
+_SOKOL_PRIVATE uint64_t _sg_wgpu_hash(const void* key, int len, uint64_t seed) {
+    const uint32_t m = 0x5bd1e995;
+    const int r = 24;
+    uint32_t h1 = (uint32_t)seed ^ (uint32_t)len;
+    uint32_t h2 = (uint32_t)(seed >> 32);
+    const uint32_t * data = (const uint32_t *)key;
+    while (len >= 8) {
+        uint32_t k1 = *data++;
+        k1 *= m; k1 ^= k1 >> r; k1 *= m;
+        h1 *= m; h1 ^= k1;
+        len -= 4;
+        uint32_t k2 = *data++;
+        k2 *= m; k2 ^= k2 >> r; k2 *= m;
+        h2 *= m; h2 ^= k2;
+        len -= 4;
+    }
+    if (len >= 4) {
+        uint32_t k1 = *data++;
+        k1 *= m; k1 ^= k1 >> r; k1 *= m;
+        h1 *= m; h1 ^= k1;
+        len -= 4;
+    }
+    switch(len) {
+        case 3: h2 ^= (uint32_t)(((unsigned char*)data)[2] << 16);
+        case 2: h2 ^= (uint32_t)(((unsigned char*)data)[1] << 8);
+        case 1: h2 ^= ((unsigned char*)data)[0];
+        h2 *= m;
+    };
+    h1 ^= h2 >> 18; h1 *= m;
+    h2 ^= h1 >> 22; h2 *= m;
+    h1 ^= h2 >> 17; h1 *= m;
+    h2 ^= h1 >> 19; h2 *= m;
+    uint64_t h = h1;
+    h = (h << 32) | h2;
+    return h;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_init_bindgroups_cache_key(_sg_wgpu_bindgroups_cache_key_t* key, const _sg_bindings_t* bnd) {
+    SOKOL_ASSERT(bnd);
+    SOKOL_ASSERT(bnd->pip);
+    SOKOL_ASSERT(bnd->num_vs_imgs <= SG_MAX_SHADERSTAGE_IMAGES);
+    SOKOL_ASSERT(bnd->num_vs_smps <= SG_MAX_SHADERSTAGE_SAMPLERS);
+    SOKOL_ASSERT(bnd->num_vs_sbufs <= SG_MAX_SHADERSTAGE_STORAGEBUFFERS);
+    SOKOL_ASSERT(bnd->num_fs_imgs <= SG_MAX_SHADERSTAGE_IMAGES);
+    SOKOL_ASSERT(bnd->num_fs_smps <= SG_MAX_SHADERSTAGE_SAMPLERS);
+    SOKOL_ASSERT(bnd->num_fs_sbufs <= SG_MAX_SHADERSTAGE_STORAGEBUFFERS);
+
+    _sg_clear(key->items, sizeof(key->items));
+    key->items[0] = bnd->pip->slot.id;
+    const int vs_imgs_offset = 1;
+    const int vs_smps_offset = vs_imgs_offset + SG_MAX_SHADERSTAGE_IMAGES;
+    const int vs_sbufs_offset = vs_smps_offset + SG_MAX_SHADERSTAGE_SAMPLERS;
+    const int fs_imgs_offset = vs_sbufs_offset + SG_MAX_SHADERSTAGE_STORAGEBUFFERS;
+    const int fs_smps_offset = fs_imgs_offset + SG_MAX_SHADERSTAGE_IMAGES;
+    const int fs_sbufs_offset = fs_smps_offset + SG_MAX_SHADERSTAGE_SAMPLERS;
+    SOKOL_ASSERT((fs_sbufs_offset + SG_MAX_SHADERSTAGE_STORAGEBUFFERS) == _SG_WGPU_BINDGROUPSCACHE_NUM_ITEMS);
+    for (int i = 0; i < bnd->num_vs_imgs; i++) {
+        SOKOL_ASSERT(bnd->vs_imgs[i]);
+        key->items[vs_imgs_offset + i] = bnd->vs_imgs[i]->slot.id;
+    }
+    for (int i = 0; i < bnd->num_vs_smps; i++) {
+        SOKOL_ASSERT(bnd->vs_smps[i]);
+        key->items[vs_smps_offset + i] = bnd->vs_smps[i]->slot.id;
+    }
+    for (int i = 0; i < bnd->num_vs_sbufs; i++) {
+        SOKOL_ASSERT(bnd->vs_sbufs[i]);
+        key->items[vs_sbufs_offset + i] = bnd->vs_sbufs[i]->slot.id;
+    }
+    for (int i = 0; i < bnd->num_fs_imgs; i++) {
+        SOKOL_ASSERT(bnd->fs_imgs[i]);
+        key->items[fs_imgs_offset + i] = bnd->fs_imgs[i]->slot.id;
+    }
+    for (int i = 0; i < bnd->num_fs_smps; i++) {
+        SOKOL_ASSERT(bnd->fs_smps[i]);
+        key->items[fs_smps_offset + i] = bnd->fs_smps[i]->slot.id;
+    }
+    for (int i = 0; i < bnd->num_fs_sbufs; i++) {
+        SOKOL_ASSERT(bnd->fs_sbufs[i]);
+        key->items[fs_sbufs_offset + i] = bnd->fs_sbufs[i]->slot.id;
+    }
+    key->hash = _sg_wgpu_hash(&key->items, (int)sizeof(key->items), 0x1234567887654321);
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_compare_bindgroups_cache_key(_sg_wgpu_bindgroups_cache_key_t* k0, _sg_wgpu_bindgroups_cache_key_t* k1) {
+    SOKOL_ASSERT(k0 && k1);
+    if (k0->hash != k1->hash) {
+        return false;
+    }
+    if (memcmp(&k0->items, &k1->items, sizeof(k0->items)) != 0) {
+        _sg_stats_add(wgpu.bindings.num_bindgroup_cache_hash_vs_key_mismatch, 1);
+        return false;
+    }
+    return true;
+}
+
+_SOKOL_PRIVATE _sg_wgpu_bindgroup_t* _sg_wgpu_create_bindgroup(_sg_bindings_t* bnd) {
+    SOKOL_ASSERT(_sg.wgpu.dev);
+    SOKOL_ASSERT(bnd->pip);
+    SOKOL_ASSERT(bnd->pip->shader && (bnd->pip->cmn.shader_id.id == bnd->pip->shader->slot.id));
+    _sg_stats_add(wgpu.bindings.num_create_bindgroup, 1);
+    _sg_wgpu_bindgroup_handle_t bg_id = _sg_wgpu_alloc_bindgroup();
+    if (bg_id.id == SG_INVALID_ID) {
+        return 0;
+    }
+    _sg_wgpu_bindgroup_t* bg = _sg_wgpu_bindgroup_at(bg_id.id);
+    SOKOL_ASSERT(bg && (bg->slot.state == SG_RESOURCESTATE_ALLOC));
+
+    // create wgpu bindgroup object
+    WGPUBindGroupLayout bgl = bnd->pip->shader->wgpu.bind_group_layout;
+    SOKOL_ASSERT(bgl);
+    WGPUBindGroupEntry wgpu_entries[_SG_WGPU_MAX_BINDGROUP_ENTRIES];
+    _sg_clear(&wgpu_entries, sizeof(wgpu_entries));
+    int bge_index = 0;
+    for (int i = 0; i < bnd->num_vs_imgs; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_image_binding(SG_SHADERSTAGE_VS, i);
+        wgpu_entry->textureView = bnd->vs_imgs[i]->wgpu.view;
+    }
+    for (int i = 0; i < bnd->num_vs_smps; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_sampler_binding(SG_SHADERSTAGE_VS, i);
+        wgpu_entry->sampler = bnd->vs_smps[i]->wgpu.smp;
+    }
+    for (int i = 0; i < bnd->num_vs_sbufs; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_storagebuffer_binding(SG_SHADERSTAGE_VS, i);
+        wgpu_entry->buffer = bnd->vs_sbufs[i]->wgpu.buf;
+        wgpu_entry->size = (uint64_t) bnd->vs_sbufs[i]->cmn.size;
+    }
+    for (int i = 0; i < bnd->num_fs_imgs; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_image_binding(SG_SHADERSTAGE_FS, i);
+        wgpu_entry->textureView = bnd->fs_imgs[i]->wgpu.view;
+    }
+    for (int i = 0; i < bnd->num_fs_smps; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_sampler_binding(SG_SHADERSTAGE_FS, i);
+        wgpu_entry->sampler = bnd->fs_smps[i]->wgpu.smp;
+    }
+    for (int i = 0; i < bnd->num_fs_sbufs; i++) {
+        WGPUBindGroupEntry* wgpu_entry = &wgpu_entries[bge_index++];
+        wgpu_entry->binding = _sg_wgpu_storagebuffer_binding(SG_SHADERSTAGE_FS, i);
+        wgpu_entry->buffer = bnd->fs_sbufs[i]->wgpu.buf;
+        wgpu_entry->size = (uint64_t) bnd->fs_sbufs[i]->cmn.size;
+    }
+    WGPUBindGroupDescriptor bg_desc;
+    _sg_clear(&bg_desc, sizeof(bg_desc));
+    bg_desc.layout = bgl;
+    bg_desc.entryCount = (size_t)bge_index;
+    bg_desc.entries = &wgpu_entries[0];
+    bg->bindgroup = wgpuDeviceCreateBindGroup(_sg.wgpu.dev, &bg_desc);
+    if (bg->bindgroup == 0) {
+        _SG_ERROR(WGPU_CREATEBINDGROUP_FAILED);
+        bg->slot.state = SG_RESOURCESTATE_FAILED;
+        return bg;
+    }
+
+    _sg_wgpu_init_bindgroups_cache_key(&bg->key, bnd);
+
+    bg->slot.state = SG_RESOURCESTATE_VALID;
+    return bg;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_bindgroup(_sg_wgpu_bindgroup_t* bg) {
+    SOKOL_ASSERT(bg);
+    _sg_stats_add(wgpu.bindings.num_discard_bindgroup, 1);
+    if (bg->slot.state == SG_RESOURCESTATE_VALID) {
+        if (bg->bindgroup) {
+            wgpuBindGroupRelease(bg->bindgroup);
+            bg->bindgroup = 0;
+        }
+        _sg_wgpu_reset_bindgroup_to_alloc_state(bg);
+        SOKOL_ASSERT(bg->slot.state == SG_RESOURCESTATE_ALLOC);
+    }
+    if (bg->slot.state == SG_RESOURCESTATE_ALLOC) {
+        _sg_wgpu_dealloc_bindgroup(bg);
+        SOKOL_ASSERT(bg->slot.state == SG_RESOURCESTATE_INITIAL);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_all_bindgroups(void) {
+    _sg_wgpu_bindgroups_pool_t* p = &_sg.wgpu.bindgroups_pool;
+    for (int i = 0; i < p->pool.size; i++) {
+        sg_resource_state state = p->bindgroups[i].slot.state;
+        if ((state == SG_RESOURCESTATE_VALID) || (state == SG_RESOURCESTATE_FAILED)) {
+            _sg_wgpu_discard_bindgroup(&p->bindgroups[i]);
+        }
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindgroups_cache_init(const sg_desc* desc) {
+    SOKOL_ASSERT(desc);
+    SOKOL_ASSERT(_sg.wgpu.bindgroups_cache.num == 0);
+    SOKOL_ASSERT(_sg.wgpu.bindgroups_cache.index_mask == 0);
+    SOKOL_ASSERT(_sg.wgpu.bindgroups_cache.items == 0);
+    const int num = desc->wgpu_bindgroups_cache_size;
+    if (num <= 1) {
+        _SG_PANIC(WGPU_BINDGROUPSCACHE_SIZE_GREATER_ONE);
+    }
+    if (!_sg_ispow2(num)) {
+        _SG_PANIC(WGPU_BINDGROUPSCACHE_SIZE_POW2);
+    }
+    _sg.wgpu.bindgroups_cache.num = (uint32_t)desc->wgpu_bindgroups_cache_size;
+    _sg.wgpu.bindgroups_cache.index_mask = _sg.wgpu.bindgroups_cache.num - 1;
+    size_t size_in_bytes = sizeof(_sg_wgpu_bindgroup_handle_t) * (size_t)num;
+    _sg.wgpu.bindgroups_cache.items = (_sg_wgpu_bindgroup_handle_t*)_sg_malloc_clear(size_in_bytes);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindgroups_cache_discard(void) {
+    if (_sg.wgpu.bindgroups_cache.items) {
+        _sg_free(_sg.wgpu.bindgroups_cache.items);
+        _sg.wgpu.bindgroups_cache.items = 0;
+    }
+    _sg.wgpu.bindgroups_cache.num = 0;
+    _sg.wgpu.bindgroups_cache.index_mask = 0;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindgroups_cache_set(uint64_t hash, uint32_t bg_id) {
+    uint32_t index = hash & _sg.wgpu.bindgroups_cache.index_mask;
+    SOKOL_ASSERT(index < _sg.wgpu.bindgroups_cache.num);
+    SOKOL_ASSERT(_sg.wgpu.bindgroups_cache.items);
+    _sg.wgpu.bindgroups_cache.items[index].id = bg_id;
+}
+
+_SOKOL_PRIVATE uint32_t _sg_wgpu_bindgroups_cache_get(uint64_t hash) {
+    uint32_t index = hash & _sg.wgpu.bindgroups_cache.index_mask;
+    SOKOL_ASSERT(index < _sg.wgpu.bindgroups_cache.num);
+    SOKOL_ASSERT(_sg.wgpu.bindgroups_cache.items);
+    return _sg.wgpu.bindgroups_cache.items[index].id;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindings_cache_clear(void) {
+    memset(&_sg.wgpu.bindings_cache, 0, sizeof(_sg.wgpu.bindings_cache));
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_bindings_cache_vb_dirty(int index, const _sg_buffer_t* vb, int offset) {
+    SOKOL_ASSERT((index >= 0) && (index < SG_MAX_VERTEX_BUFFERS));
+    if (vb) {
+        return (_sg.wgpu.bindings_cache.vbs[index].buffer.id != vb->slot.id)
+            || (_sg.wgpu.bindings_cache.vbs[index].offset != offset);
+    } else {
+        return _sg.wgpu.bindings_cache.vbs[index].buffer.id != SG_INVALID_ID;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindings_cache_vb_update(int index, const _sg_buffer_t* vb, int offset) {
+    SOKOL_ASSERT((index >= 0) && (index < SG_MAX_VERTEX_BUFFERS));
+    if (vb) {
+        _sg.wgpu.bindings_cache.vbs[index].buffer.id = vb->slot.id;
+        _sg.wgpu.bindings_cache.vbs[index].offset = offset;
+    } else {
+        _sg.wgpu.bindings_cache.vbs[index].buffer.id = SG_INVALID_ID;
+        _sg.wgpu.bindings_cache.vbs[index].offset = 0;
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_bindings_cache_ib_dirty(const _sg_buffer_t* ib, int offset) {
+    if (ib) {
+        return (_sg.wgpu.bindings_cache.ib.buffer.id != ib->slot.id)
+            || (_sg.wgpu.bindings_cache.ib.offset != offset);
+    } else {
+        return _sg.wgpu.bindings_cache.ib.buffer.id != SG_INVALID_ID;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindings_cache_ib_update(const _sg_buffer_t* ib, int offset) {
+    if (ib) {
+        _sg.wgpu.bindings_cache.ib.buffer.id = ib->slot.id;
+        _sg.wgpu.bindings_cache.ib.offset = offset;
+    } else {
+        _sg.wgpu.bindings_cache.ib.buffer.id = SG_INVALID_ID;
+        _sg.wgpu.bindings_cache.ib.offset = 0;
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_bindings_cache_bg_dirty(const _sg_wgpu_bindgroup_t* bg) {
+    if (bg) {
+        return _sg.wgpu.bindings_cache.bg.id != bg->slot.id;
+    } else {
+        return _sg.wgpu.bindings_cache.bg.id != SG_INVALID_ID;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_bindings_cache_bg_update(const _sg_wgpu_bindgroup_t* bg) {
+    if (bg) {
+        _sg.wgpu.bindings_cache.bg.id = bg->slot.id;
+    } else {
+        _sg.wgpu.bindings_cache.bg.id = SG_INVALID_ID;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_set_bindings_bindgroup(_sg_wgpu_bindgroup_t* bg) {
+    if (_sg_wgpu_bindings_cache_bg_dirty(bg)) {
+        _sg_wgpu_bindings_cache_bg_update(bg);
+        _sg_stats_add(wgpu.bindings.num_set_bindgroup, 1);
+        if (bg) {
+            SOKOL_ASSERT(bg->slot.state == SG_RESOURCESTATE_VALID);
+            SOKOL_ASSERT(bg->bindgroup);
+            wgpuRenderPassEncoderSetBindGroup(_sg.wgpu.pass_enc, _SG_WGPU_IMAGE_SAMPLER_BINDGROUP_INDEX, bg->bindgroup, 0, 0);
+        } else {
+            // a nullptr bindgroup means setting the empty bindgroup
+            wgpuRenderPassEncoderSetBindGroup(_sg.wgpu.pass_enc, _SG_WGPU_IMAGE_SAMPLER_BINDGROUP_INDEX, _sg.wgpu.empty_bind_group, 0, 0);
+        }
+    } else {
+        _sg_stats_add(wgpu.bindings.num_skip_redundant_bindgroup, 1);
+    }
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_apply_bindgroup(_sg_bindings_t* bnd) {
+    if ((bnd->num_vs_imgs + bnd->num_vs_smps + bnd->num_vs_sbufs + bnd->num_fs_imgs + bnd->num_fs_smps + bnd->num_fs_sbufs) > 0) {
+        if (!_sg.desc.wgpu_disable_bindgroups_cache) {
+            _sg_wgpu_bindgroup_t* bg = 0;
+            _sg_wgpu_bindgroups_cache_key_t key;
+            _sg_wgpu_init_bindgroups_cache_key(&key, bnd);
+            uint32_t bg_id = _sg_wgpu_bindgroups_cache_get(key.hash);
+            if (bg_id != SG_INVALID_ID) {
+                // potential cache hit
+                bg = _sg_wgpu_lookup_bindgroup(bg_id);
+                SOKOL_ASSERT(bg && (bg->slot.state == SG_RESOURCESTATE_VALID));
+                if (!_sg_wgpu_compare_bindgroups_cache_key(&key, &bg->key)) {
+                    // cache collision, need to delete cached bindgroup
+                    _sg_stats_add(wgpu.bindings.num_bindgroup_cache_collisions, 1);
+                    _sg_wgpu_discard_bindgroup(bg);
+                    _sg_wgpu_bindgroups_cache_set(key.hash, SG_INVALID_ID);
+                    bg = 0;
+                } else {
+                    _sg_stats_add(wgpu.bindings.num_bindgroup_cache_hits, 1);
+                }
+            } else {
+                _sg_stats_add(wgpu.bindings.num_bindgroup_cache_misses, 1);
+            }
+            if (bg == 0) {
+                // either no cache entry yet, or cache collision, create new bindgroup and store in cache
+                bg = _sg_wgpu_create_bindgroup(bnd);
+                _sg_wgpu_bindgroups_cache_set(key.hash, bg->slot.id);
+            }
+            if (bg && bg->slot.state == SG_RESOURCESTATE_VALID) {
+                _sg_wgpu_set_bindings_bindgroup(bg);
+            } else {
+                return false;
+            }
+        } else {
+            // bindgroups cache disabled, create and destroy bindgroup on the fly (expensive!)
+            _sg_wgpu_bindgroup_t* bg = _sg_wgpu_create_bindgroup(bnd);
+            if (bg) {
+                if (bg->slot.state == SG_RESOURCESTATE_VALID) {
+                    _sg_wgpu_set_bindings_bindgroup(bg);
+                }
+                _sg_wgpu_discard_bindgroup(bg);
+            } else {
+                return false;
+            }
+        }
+    } else {
+        _sg_wgpu_set_bindings_bindgroup(0);
+    }
+    return true;
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_apply_index_buffer(_sg_bindings_t* bnd) {
+    if (_sg_wgpu_bindings_cache_ib_dirty(bnd->ib, bnd->ib_offset)) {
+        _sg_wgpu_bindings_cache_ib_update(bnd->ib, bnd->ib_offset);
+        if (bnd->ib) {
+            const WGPUIndexFormat format = _sg_wgpu_indexformat(bnd->pip->cmn.index_type);
+            const uint64_t buf_size = (uint64_t)bnd->ib->cmn.size;
+            const uint64_t offset = (uint64_t)bnd->ib_offset;
+            SOKOL_ASSERT(buf_size > offset);
+            const uint64_t max_bytes = buf_size - offset;
+            wgpuRenderPassEncoderSetIndexBuffer(_sg.wgpu.pass_enc, bnd->ib->wgpu.buf, format, offset, max_bytes);
+            _sg_stats_add(wgpu.bindings.num_set_index_buffer, 1);
+        }
+        // FIXME: else-path should actually set a null index buffer (this was just recently implemented in WebGPU)
+    } else {
+        _sg_stats_add(wgpu.bindings.num_skip_redundant_index_buffer, 1);
+    }
+    return true;
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_apply_vertex_buffers(_sg_bindings_t* bnd) {
+    for (int slot = 0; slot < bnd->num_vbs; slot++) {
+        if (_sg_wgpu_bindings_cache_vb_dirty(slot, bnd->vbs[slot], bnd->vb_offsets[slot])) {
+            _sg_wgpu_bindings_cache_vb_update(slot, bnd->vbs[slot], bnd->vb_offsets[slot]);
+            const uint64_t buf_size = (uint64_t)bnd->vbs[slot]->cmn.size;
+            const uint64_t offset = (uint64_t)bnd->vb_offsets[slot];
+            SOKOL_ASSERT(buf_size > offset);
+            const uint64_t max_bytes = buf_size - offset;
+            wgpuRenderPassEncoderSetVertexBuffer(_sg.wgpu.pass_enc, (uint32_t)slot, bnd->vbs[slot]->wgpu.buf, offset, max_bytes);
+            _sg_stats_add(wgpu.bindings.num_set_vertex_buffer, 1);
+        } else {
+            _sg_stats_add(wgpu.bindings.num_skip_redundant_vertex_buffer, 1);
+        }
+    }
+    // FIXME: remaining vb slots should actually set a null vertex buffer (this was just recently implemented in WebGPU)
+    return true;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_setup_backend(const sg_desc* desc) {
+    SOKOL_ASSERT(desc);
+    SOKOL_ASSERT(desc->environment.wgpu.device);
+    SOKOL_ASSERT(desc->uniform_buffer_size > 0);
+    _sg.backend = SG_BACKEND_WGPU;
+    _sg.wgpu.valid = true;
+    _sg.wgpu.dev = (WGPUDevice) desc->environment.wgpu.device;
+    _sg.wgpu.queue = wgpuDeviceGetQueue(_sg.wgpu.dev);
+    SOKOL_ASSERT(_sg.wgpu.queue);
+
+    _sg_wgpu_init_caps();
+    _sg_wgpu_uniform_buffer_init(desc);
+    _sg_wgpu_bindgroups_pool_init(desc);
+    _sg_wgpu_bindgroups_cache_init(desc);
+    _sg_wgpu_bindings_cache_clear();
+
+    // create an empty bind group for shader stages without bound images
+    // FIXME: once WebGPU supports setting null objects, this can be removed
+    WGPUBindGroupLayoutDescriptor bgl_desc;
+    _sg_clear(&bgl_desc, sizeof(bgl_desc));
+    WGPUBindGroupLayout empty_bgl = wgpuDeviceCreateBindGroupLayout(_sg.wgpu.dev, &bgl_desc);
+    SOKOL_ASSERT(empty_bgl);
+    WGPUBindGroupDescriptor bg_desc;
+    _sg_clear(&bg_desc, sizeof(bg_desc));
+    bg_desc.layout = empty_bgl;
+    _sg.wgpu.empty_bind_group = wgpuDeviceCreateBindGroup(_sg.wgpu.dev, &bg_desc);
+    SOKOL_ASSERT(_sg.wgpu.empty_bind_group);
+    wgpuBindGroupLayoutRelease(empty_bgl);
+
+    // create initial per-frame command encoder
+    WGPUCommandEncoderDescriptor cmd_enc_desc;
+    _sg_clear(&cmd_enc_desc, sizeof(cmd_enc_desc));
+    _sg.wgpu.cmd_enc = wgpuDeviceCreateCommandEncoder(_sg.wgpu.dev, &cmd_enc_desc);
+    SOKOL_ASSERT(_sg.wgpu.cmd_enc);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_backend(void) {
+    SOKOL_ASSERT(_sg.wgpu.valid);
+    SOKOL_ASSERT(_sg.wgpu.cmd_enc);
+    _sg.wgpu.valid = false;
+    _sg_wgpu_discard_all_bindgroups();
+    _sg_wgpu_bindgroups_cache_discard();
+    _sg_wgpu_bindgroups_pool_discard();
+    _sg_wgpu_uniform_buffer_discard();
+    wgpuBindGroupRelease(_sg.wgpu.empty_bind_group); _sg.wgpu.empty_bind_group = 0;
+    wgpuCommandEncoderRelease(_sg.wgpu.cmd_enc); _sg.wgpu.cmd_enc = 0;
+    wgpuQueueRelease(_sg.wgpu.queue); _sg.wgpu.queue = 0;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_reset_state_cache(void) {
+    _sg_wgpu_bindings_cache_clear();
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_buffer(_sg_buffer_t* buf, const sg_buffer_desc* desc) {
+    SOKOL_ASSERT(buf && desc);
+    const bool injected = (0 != desc->wgpu_buffer);
+    if (injected) {
+        buf->wgpu.buf = (WGPUBuffer) desc->wgpu_buffer;
+        wgpuBufferReference(buf->wgpu.buf);
+    } else {
+        // buffer mapping size must be multiple of 4, so round up buffer size (only a problem
+        // with index buffers containing odd number of indices)
+        const uint64_t wgpu_buf_size = _sg_roundup_u64((uint64_t)buf->cmn.size, 4);
+        const bool map_at_creation = (SG_USAGE_IMMUTABLE == buf->cmn.usage);
+
+        WGPUBufferDescriptor wgpu_buf_desc;
+        _sg_clear(&wgpu_buf_desc, sizeof(wgpu_buf_desc));
+        wgpu_buf_desc.usage = _sg_wgpu_buffer_usage(buf->cmn.type, buf->cmn.usage);
+        wgpu_buf_desc.size = wgpu_buf_size;
+        wgpu_buf_desc.mappedAtCreation = map_at_creation;
+        wgpu_buf_desc.label = desc->label;
+        buf->wgpu.buf = wgpuDeviceCreateBuffer(_sg.wgpu.dev, &wgpu_buf_desc);
+        if (0 == buf->wgpu.buf) {
+            _SG_ERROR(WGPU_CREATE_BUFFER_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        if (map_at_creation) {
+            SOKOL_ASSERT(desc->data.ptr && (desc->data.size > 0));
+            SOKOL_ASSERT(desc->data.size <= (size_t)buf->cmn.size);
+            // FIXME: inefficient on WASM
+            void* ptr = wgpuBufferGetMappedRange(buf->wgpu.buf, 0, wgpu_buf_size);
+            SOKOL_ASSERT(ptr);
+            memcpy(ptr, desc->data.ptr, desc->data.size);
+            wgpuBufferUnmap(buf->wgpu.buf);
+        }
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_buffer(_sg_buffer_t* buf) {
+    SOKOL_ASSERT(buf);
+    if (buf->wgpu.buf) {
+        wgpuBufferDestroy(buf->wgpu.buf);
+        wgpuBufferRelease(buf->wgpu.buf);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_copy_buffer_data(const _sg_buffer_t* buf, uint64_t offset, const sg_range* data) {
+    SOKOL_ASSERT((offset + data->size) <= (size_t)buf->cmn.size);
+    // WebGPU's write-buffer requires the size to be a multiple of four, so we may need to split the copy
+    // operation into two writeBuffer calls
+    uint64_t clamped_size = data->size & ~3UL;
+    uint64_t extra_size = data->size & 3UL;
+    SOKOL_ASSERT(extra_size < 4);
+    wgpuQueueWriteBuffer(_sg.wgpu.queue, buf->wgpu.buf, offset, data->ptr, clamped_size);
+    if (extra_size > 0) {
+        const uint64_t extra_src_offset = clamped_size;
+        const uint64_t extra_dst_offset = offset + clamped_size;
+        uint8_t extra_data[4] = { 0 };
+        uint8_t* extra_src_ptr = ((uint8_t*)data->ptr) + extra_src_offset;
+        for (size_t i = 0; i < extra_size; i++) {
+            extra_data[i] = extra_src_ptr[i];
+        }
+        wgpuQueueWriteBuffer(_sg.wgpu.queue, buf->wgpu.buf, extra_dst_offset, extra_src_ptr, 4);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_copy_image_data(const _sg_image_t* img, WGPUTexture wgpu_tex, const sg_image_data* data) {
+    WGPUTextureDataLayout wgpu_layout;
+    _sg_clear(&wgpu_layout, sizeof(wgpu_layout));
+    WGPUImageCopyTexture wgpu_copy_tex;
+    _sg_clear(&wgpu_copy_tex, sizeof(wgpu_copy_tex));
+    wgpu_copy_tex.texture = wgpu_tex;
+    wgpu_copy_tex.aspect = WGPUTextureAspect_All;
+    WGPUExtent3D wgpu_extent;
+    _sg_clear(&wgpu_extent, sizeof(wgpu_extent));
+    const int num_faces = (img->cmn.type == SG_IMAGETYPE_CUBE) ? 6 : 1;
+    for (int face_index = 0; face_index < num_faces; face_index++) {
+        for (int mip_index = 0; mip_index < img->cmn.num_mipmaps; mip_index++) {
+            wgpu_copy_tex.mipLevel = (uint32_t)mip_index;
+            wgpu_copy_tex.origin.z = (uint32_t)face_index;
+            int mip_width = _sg_miplevel_dim(img->cmn.width, mip_index);
+            int mip_height = _sg_miplevel_dim(img->cmn.height, mip_index);
+            int mip_slices;
+            switch (img->cmn.type) {
+                case SG_IMAGETYPE_CUBE:
+                    mip_slices = 1;
+                    break;
+                case SG_IMAGETYPE_3D:
+                    mip_slices = _sg_miplevel_dim(img->cmn.num_slices, mip_index);
+                    break;
+                default:
+                    mip_slices = img->cmn.num_slices;
+                    break;
+            }
+            const int row_pitch = _sg_row_pitch(img->cmn.pixel_format, mip_width, 1);
+            const int num_rows = _sg_num_rows(img->cmn.pixel_format, mip_height);
+            if (_sg_is_compressed_pixel_format(img->cmn.pixel_format)) {
+                mip_width = _sg_roundup(mip_width, 4);
+                mip_height = _sg_roundup(mip_height, 4);
+            }
+            wgpu_layout.offset = 0;
+            wgpu_layout.bytesPerRow = (uint32_t)row_pitch;
+            wgpu_layout.rowsPerImage = (uint32_t)num_rows;
+            wgpu_extent.width = (uint32_t)mip_width;
+            wgpu_extent.height = (uint32_t)mip_height;
+            wgpu_extent.depthOrArrayLayers = (uint32_t)mip_slices;
+            const sg_range* mip_data = &data->subimage[face_index][mip_index];
+            wgpuQueueWriteTexture(_sg.wgpu.queue, &wgpu_copy_tex, mip_data->ptr, mip_data->size, &wgpu_layout, &wgpu_extent);
+        }
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_image(_sg_image_t* img, const sg_image_desc* desc) {
+    SOKOL_ASSERT(img && desc);
+    const bool injected = (0 != desc->wgpu_texture);
+    if (injected) {
+        img->wgpu.tex = (WGPUTexture)desc->wgpu_texture;
+        wgpuTextureReference(img->wgpu.tex);
+        img->wgpu.view = (WGPUTextureView)desc->wgpu_texture_view;
+        if (img->wgpu.view) {
+            wgpuTextureViewReference(img->wgpu.view);
+        }
+    } else {
+        WGPUTextureDescriptor wgpu_tex_desc;
+        _sg_clear(&wgpu_tex_desc, sizeof(wgpu_tex_desc));
+        wgpu_tex_desc.label = desc->label;
+        wgpu_tex_desc.usage = WGPUTextureUsage_TextureBinding|WGPUTextureUsage_CopyDst;
+        if (desc->render_target) {
+            wgpu_tex_desc.usage |= WGPUTextureUsage_RenderAttachment;
+        }
+        wgpu_tex_desc.dimension = _sg_wgpu_texture_dimension(img->cmn.type);
+        wgpu_tex_desc.size.width = (uint32_t) img->cmn.width;
+        wgpu_tex_desc.size.height = (uint32_t) img->cmn.height;
+        if (desc->type == SG_IMAGETYPE_CUBE) {
+            wgpu_tex_desc.size.depthOrArrayLayers = 6;
+        } else {
+            wgpu_tex_desc.size.depthOrArrayLayers = (uint32_t) img->cmn.num_slices;
+        }
+        wgpu_tex_desc.format = _sg_wgpu_textureformat(img->cmn.pixel_format);
+        wgpu_tex_desc.mipLevelCount = (uint32_t) img->cmn.num_mipmaps;
+        wgpu_tex_desc.sampleCount = (uint32_t) img->cmn.sample_count;
+        img->wgpu.tex = wgpuDeviceCreateTexture(_sg.wgpu.dev, &wgpu_tex_desc);
+        if (0 == img->wgpu.tex) {
+            _SG_ERROR(WGPU_CREATE_TEXTURE_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        if ((img->cmn.usage == SG_USAGE_IMMUTABLE) && !img->cmn.render_target) {
+            _sg_wgpu_copy_image_data(img, img->wgpu.tex, &desc->data);
+        }
+        WGPUTextureViewDescriptor wgpu_texview_desc;
+        _sg_clear(&wgpu_texview_desc, sizeof(wgpu_texview_desc));
+        wgpu_texview_desc.label = desc->label;
+        wgpu_texview_desc.dimension = _sg_wgpu_texture_view_dimension(img->cmn.type);
+        wgpu_texview_desc.mipLevelCount = (uint32_t)img->cmn.num_mipmaps;
+        if (img->cmn.type == SG_IMAGETYPE_CUBE) {
+            wgpu_texview_desc.arrayLayerCount = 6;
+        } else if (img->cmn.type == SG_IMAGETYPE_ARRAY) {
+            wgpu_texview_desc.arrayLayerCount = (uint32_t)img->cmn.num_slices;
+        } else {
+            wgpu_texview_desc.arrayLayerCount = 1;
+        }
+        if (_sg_is_depth_or_depth_stencil_format(img->cmn.pixel_format)) {
+            wgpu_texview_desc.aspect = WGPUTextureAspect_DepthOnly;
+        } else {
+            wgpu_texview_desc.aspect = WGPUTextureAspect_All;
+        }
+        img->wgpu.view = wgpuTextureCreateView(img->wgpu.tex, &wgpu_texview_desc);
+        if (0 == img->wgpu.view) {
+            _SG_ERROR(WGPU_CREATE_TEXTURE_VIEW_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_image(_sg_image_t* img) {
+    SOKOL_ASSERT(img);
+    if (img->wgpu.view) {
+        wgpuTextureViewRelease(img->wgpu.view);
+        img->wgpu.view = 0;
+    }
+    if (img->wgpu.tex) {
+        wgpuTextureDestroy(img->wgpu.tex);
+        wgpuTextureRelease(img->wgpu.tex);
+        img->wgpu.tex = 0;
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_sampler(_sg_sampler_t* smp, const sg_sampler_desc* desc) {
+    SOKOL_ASSERT(smp && desc);
+    SOKOL_ASSERT(_sg.wgpu.dev);
+    const bool injected = (0 != desc->wgpu_sampler);
+    if (injected) {
+        smp->wgpu.smp = (WGPUSampler) desc->wgpu_sampler;
+        wgpuSamplerReference(smp->wgpu.smp);
+    } else {
+        WGPUSamplerDescriptor wgpu_desc;
+        _sg_clear(&wgpu_desc, sizeof(wgpu_desc));
+        wgpu_desc.label = desc->label;
+        wgpu_desc.addressModeU = _sg_wgpu_sampler_address_mode(desc->wrap_u);
+        wgpu_desc.addressModeV = _sg_wgpu_sampler_address_mode(desc->wrap_v);
+        wgpu_desc.addressModeW = _sg_wgpu_sampler_address_mode(desc->wrap_w);
+        wgpu_desc.magFilter = _sg_wgpu_sampler_minmag_filter(desc->mag_filter);
+        wgpu_desc.minFilter = _sg_wgpu_sampler_minmag_filter(desc->min_filter);
+        wgpu_desc.mipmapFilter = _sg_wgpu_sampler_mipmap_filter(desc->mipmap_filter);
+        wgpu_desc.lodMinClamp = desc->min_lod;
+        wgpu_desc.lodMaxClamp = desc->max_lod;
+        wgpu_desc.compare = _sg_wgpu_comparefunc(desc->compare);
+        if (wgpu_desc.compare == WGPUCompareFunction_Never) {
+            wgpu_desc.compare = WGPUCompareFunction_Undefined;
+        }
+        wgpu_desc.maxAnisotropy = (uint16_t)desc->max_anisotropy;
+        smp->wgpu.smp = wgpuDeviceCreateSampler(_sg.wgpu.dev, &wgpu_desc);
+        if (0 == smp->wgpu.smp) {
+            _SG_ERROR(WGPU_CREATE_SAMPLER_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_sampler(_sg_sampler_t* smp) {
+    SOKOL_ASSERT(smp);
+    if (smp->wgpu.smp) {
+        wgpuSamplerRelease(smp->wgpu.smp);
+        smp->wgpu.smp = 0;
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_shader(_sg_shader_t* shd, const sg_shader_desc* desc) {
+    SOKOL_ASSERT(shd && desc);
+    SOKOL_ASSERT(desc->vs.source && desc->fs.source);
+
+    WGPUBindGroupLayoutEntry wgpu_bgl_entries[_SG_WGPU_MAX_BINDGROUP_ENTRIES];
+    _sg_clear(wgpu_bgl_entries, sizeof(wgpu_bgl_entries));
+    int bgl_index = 0;
+    for (int stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        const sg_shader_stage_desc* stage_desc = (stage_index == SG_SHADERSTAGE_VS) ? &desc->vs : &desc->fs;
+
+        _sg_shader_stage_t* cmn_stage = &shd->cmn.stage[stage_index];
+        _sg_wgpu_shader_stage_t* wgpu_stage = &shd->wgpu.stage[stage_index];
+        _sg_strcpy(&wgpu_stage->entry, stage_desc->entry);
+
+        WGPUShaderModuleWGSLDescriptor wgpu_shdmod_wgsl_desc;
+        _sg_clear(&wgpu_shdmod_wgsl_desc, sizeof(wgpu_shdmod_wgsl_desc));
+        wgpu_shdmod_wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+        wgpu_shdmod_wgsl_desc.code = stage_desc->source;
+
+        WGPUShaderModuleDescriptor wgpu_shdmod_desc;
+        _sg_clear(&wgpu_shdmod_desc, sizeof(wgpu_shdmod_desc));
+        wgpu_shdmod_desc.nextInChain = &wgpu_shdmod_wgsl_desc.chain;
+        wgpu_shdmod_desc.label = desc->label;
+
+        wgpu_stage->module = wgpuDeviceCreateShaderModule(_sg.wgpu.dev, &wgpu_shdmod_desc);
+        if (0 == wgpu_stage->module) {
+            _SG_ERROR(WGPU_CREATE_SHADER_MODULE_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+
+        const int num_images = cmn_stage->num_images;
+        if (num_images > (int)_sg.wgpu.limits.limits.maxSampledTexturesPerShaderStage) {
+            _SG_ERROR(WGPU_SHADER_TOO_MANY_IMAGES);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        const int num_samplers = cmn_stage->num_samplers;
+        if (num_samplers > (int)_sg.wgpu.limits.limits.maxSamplersPerShaderStage) {
+            _SG_ERROR(WGPU_SHADER_TOO_MANY_SAMPLERS);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        const int num_sbufs = cmn_stage->num_storage_buffers;
+        if  (num_sbufs > (int)_sg.wgpu.limits.limits.maxStorageBuffersPerShaderStage) {
+            _SG_ERROR(WGPU_SHADER_TOO_MANY_STORAGEBUFFERS);
+            return SG_RESOURCESTATE_FAILED;
+        }
+        for (int img_index = 0; img_index < num_images; img_index++) {
+            SOKOL_ASSERT(bgl_index < _SG_WGPU_MAX_BINDGROUP_ENTRIES);
+            WGPUBindGroupLayoutEntry* wgpu_bgl_entry = &wgpu_bgl_entries[bgl_index++];
+            const sg_shader_image_desc* img_desc = &stage_desc->images[img_index];
+            wgpu_bgl_entry->binding = _sg_wgpu_image_binding((sg_shader_stage)stage_index, img_index);
+            wgpu_bgl_entry->visibility = _sg_wgpu_shader_stage((sg_shader_stage)stage_index);
+            wgpu_bgl_entry->texture.viewDimension = _sg_wgpu_texture_view_dimension(img_desc->image_type);
+            wgpu_bgl_entry->texture.sampleType = _sg_wgpu_texture_sample_type(img_desc->sample_type);
+            wgpu_bgl_entry->texture.multisampled = img_desc->multisampled;
+        }
+        for (int smp_index = 0; smp_index < num_samplers; smp_index++) {
+            SOKOL_ASSERT(bgl_index < _SG_WGPU_MAX_BINDGROUP_ENTRIES);
+            WGPUBindGroupLayoutEntry* wgpu_bgl_entry = &wgpu_bgl_entries[bgl_index++];
+            const sg_shader_sampler_desc* smp_desc = &stage_desc->samplers[smp_index];
+            wgpu_bgl_entry->binding = _sg_wgpu_sampler_binding((sg_shader_stage)stage_index, smp_index);
+            wgpu_bgl_entry->visibility = _sg_wgpu_shader_stage((sg_shader_stage)stage_index);
+            wgpu_bgl_entry->sampler.type = _sg_wgpu_sampler_binding_type(smp_desc->sampler_type);
+        }
+        for (int sbuf_index = 0; sbuf_index < num_sbufs; sbuf_index++) {
+            SOKOL_ASSERT(bgl_index < _SG_WGPU_MAX_BINDGROUP_ENTRIES);
+            WGPUBindGroupLayoutEntry* wgpu_bgl_entry = &wgpu_bgl_entries[bgl_index++];
+            const sg_shader_storage_buffer_desc* sbuf_desc = &stage_desc->storage_buffers[sbuf_index];
+            wgpu_bgl_entry->binding = _sg_wgpu_storagebuffer_binding((sg_shader_stage)stage_index, sbuf_index);
+            wgpu_bgl_entry->visibility = _sg_wgpu_shader_stage((sg_shader_stage)stage_index);
+            wgpu_bgl_entry->buffer.type = sbuf_desc->readonly ? WGPUBufferBindingType_ReadOnlyStorage : WGPUBufferBindingType_Storage;
+        }
+    }
+
+    WGPUBindGroupLayoutDescriptor wgpu_bgl_desc;
+    _sg_clear(&wgpu_bgl_desc, sizeof(wgpu_bgl_desc));
+    wgpu_bgl_desc.entryCount = (size_t)bgl_index;
+    wgpu_bgl_desc.entries = &wgpu_bgl_entries[0];
+    shd->wgpu.bind_group_layout = wgpuDeviceCreateBindGroupLayout(_sg.wgpu.dev, &wgpu_bgl_desc);
+    if (shd->wgpu.bind_group_layout == 0) {
+        _SG_ERROR(WGPU_SHADER_CREATE_BINDGROUP_LAYOUT_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_shader(_sg_shader_t* shd) {
+    SOKOL_ASSERT(shd);
+    if (shd->wgpu.bind_group_layout) {
+        wgpuBindGroupLayoutRelease(shd->wgpu.bind_group_layout);
+        shd->wgpu.bind_group_layout = 0;
+    }
+    for (int stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
+        _sg_wgpu_shader_stage_t* wgpu_stage = &shd->wgpu.stage[stage_index];
+        if (wgpu_stage->module) {
+            wgpuShaderModuleRelease(wgpu_stage->module);
+            wgpu_stage->module = 0;
+        }
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_pipeline(_sg_pipeline_t* pip, _sg_shader_t* shd, const sg_pipeline_desc* desc) {
+    SOKOL_ASSERT(pip && shd && desc);
+    SOKOL_ASSERT(desc->shader.id == shd->slot.id);
+    SOKOL_ASSERT(shd->wgpu.bind_group_layout);
+    pip->shader = shd;
+
+    pip->wgpu.blend_color.r = (double) desc->blend_color.r;
+    pip->wgpu.blend_color.g = (double) desc->blend_color.g;
+    pip->wgpu.blend_color.b = (double) desc->blend_color.b;
+    pip->wgpu.blend_color.a = (double) desc->blend_color.a;
+
+    // - @group(0) for uniform blocks
+    // - @group(1) for all image and sampler resources
+    WGPUBindGroupLayout wgpu_bgl[_SG_WGPU_NUM_BINDGROUPS];
+    _sg_clear(&wgpu_bgl, sizeof(wgpu_bgl));
+    wgpu_bgl[_SG_WGPU_UNIFORM_BINDGROUP_INDEX] = _sg.wgpu.uniform.bind.group_layout;
+    wgpu_bgl[_SG_WGPU_IMAGE_SAMPLER_BINDGROUP_INDEX] = shd->wgpu.bind_group_layout;
+    WGPUPipelineLayoutDescriptor wgpu_pl_desc;
+    _sg_clear(&wgpu_pl_desc, sizeof(wgpu_pl_desc));
+    wgpu_pl_desc.bindGroupLayoutCount = _SG_WGPU_NUM_BINDGROUPS;
+    wgpu_pl_desc.bindGroupLayouts = &wgpu_bgl[0];
+    const WGPUPipelineLayout wgpu_pip_layout = wgpuDeviceCreatePipelineLayout(_sg.wgpu.dev, &wgpu_pl_desc);
+    if (0 == wgpu_pip_layout) {
+        _SG_ERROR(WGPU_CREATE_PIPELINE_LAYOUT_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    SOKOL_ASSERT(wgpu_pip_layout);
+
+    WGPUVertexBufferLayout wgpu_vb_layouts[SG_MAX_VERTEX_BUFFERS];
+    _sg_clear(wgpu_vb_layouts, sizeof(wgpu_vb_layouts));
+    WGPUVertexAttribute wgpu_vtx_attrs[SG_MAX_VERTEX_BUFFERS][SG_MAX_VERTEX_ATTRIBUTES];
+    _sg_clear(wgpu_vtx_attrs, sizeof(wgpu_vtx_attrs));
+    int wgpu_vb_num = 0;
+    for (int vb_idx = 0; vb_idx < SG_MAX_VERTEX_BUFFERS; vb_idx++, wgpu_vb_num++) {
+        const sg_vertex_buffer_layout_state* vbl_state = &desc->layout.buffers[vb_idx];
+        if (0 == vbl_state->stride) {
+            break;
+        }
+        wgpu_vb_layouts[vb_idx].arrayStride = (uint64_t)vbl_state->stride;
+        wgpu_vb_layouts[vb_idx].stepMode = _sg_wgpu_stepmode(vbl_state->step_func);
+        wgpu_vb_layouts[vb_idx].attributes = &wgpu_vtx_attrs[vb_idx][0];
+    }
+    for (int va_idx = 0; va_idx < SG_MAX_VERTEX_ATTRIBUTES; va_idx++) {
+        const sg_vertex_attr_state* va_state = &desc->layout.attrs[va_idx];
+        if (SG_VERTEXFORMAT_INVALID == va_state->format) {
+            break;
+        }
+        const int vb_idx = va_state->buffer_index;
+        SOKOL_ASSERT(vb_idx < SG_MAX_VERTEX_BUFFERS);
+        pip->cmn.vertex_buffer_layout_active[vb_idx] = true;
+        const size_t wgpu_attr_idx = wgpu_vb_layouts[vb_idx].attributeCount;
+        wgpu_vb_layouts[vb_idx].attributeCount += 1;
+        wgpu_vtx_attrs[vb_idx][wgpu_attr_idx].format = _sg_wgpu_vertexformat(va_state->format);
+        wgpu_vtx_attrs[vb_idx][wgpu_attr_idx].offset = (uint64_t)va_state->offset;
+        wgpu_vtx_attrs[vb_idx][wgpu_attr_idx].shaderLocation = (uint32_t)va_idx;
+    }
+
+    WGPURenderPipelineDescriptor wgpu_pip_desc;
+    _sg_clear(&wgpu_pip_desc, sizeof(wgpu_pip_desc));
+    WGPUDepthStencilState wgpu_ds_state;
+    _sg_clear(&wgpu_ds_state, sizeof(wgpu_ds_state));
+    WGPUFragmentState wgpu_frag_state;
+    _sg_clear(&wgpu_frag_state, sizeof(wgpu_frag_state));
+    WGPUColorTargetState wgpu_ctgt_state[SG_MAX_COLOR_ATTACHMENTS];
+    _sg_clear(&wgpu_ctgt_state, sizeof(wgpu_ctgt_state));
+    WGPUBlendState wgpu_blend_state[SG_MAX_COLOR_ATTACHMENTS];
+    _sg_clear(&wgpu_blend_state, sizeof(wgpu_blend_state));
+    wgpu_pip_desc.label = desc->label;
+    wgpu_pip_desc.layout = wgpu_pip_layout;
+    wgpu_pip_desc.vertex.module = shd->wgpu.stage[SG_SHADERSTAGE_VS].module;
+    wgpu_pip_desc.vertex.entryPoint = shd->wgpu.stage[SG_SHADERSTAGE_VS].entry.buf;
+    wgpu_pip_desc.vertex.bufferCount = (size_t)wgpu_vb_num;
+    wgpu_pip_desc.vertex.buffers = &wgpu_vb_layouts[0];
+    wgpu_pip_desc.primitive.topology = _sg_wgpu_topology(desc->primitive_type);
+    wgpu_pip_desc.primitive.stripIndexFormat = _sg_wgpu_stripindexformat(desc->primitive_type, desc->index_type);
+    wgpu_pip_desc.primitive.frontFace = _sg_wgpu_frontface(desc->face_winding);
+    wgpu_pip_desc.primitive.cullMode = _sg_wgpu_cullmode(desc->cull_mode);
+    if (SG_PIXELFORMAT_NONE != desc->depth.pixel_format) {
+        wgpu_ds_state.format = _sg_wgpu_textureformat(desc->depth.pixel_format);
+        wgpu_ds_state.depthWriteEnabled = desc->depth.write_enabled;
+        wgpu_ds_state.depthCompare = _sg_wgpu_comparefunc(desc->depth.compare);
+        wgpu_ds_state.stencilFront.compare = _sg_wgpu_comparefunc(desc->stencil.front.compare);
+        wgpu_ds_state.stencilFront.failOp = _sg_wgpu_stencilop(desc->stencil.front.fail_op);
+        wgpu_ds_state.stencilFront.depthFailOp = _sg_wgpu_stencilop(desc->stencil.front.depth_fail_op);
+        wgpu_ds_state.stencilFront.passOp = _sg_wgpu_stencilop(desc->stencil.front.pass_op);
+        wgpu_ds_state.stencilBack.compare = _sg_wgpu_comparefunc(desc->stencil.back.compare);
+        wgpu_ds_state.stencilBack.failOp = _sg_wgpu_stencilop(desc->stencil.back.fail_op);
+        wgpu_ds_state.stencilBack.depthFailOp = _sg_wgpu_stencilop(desc->stencil.back.depth_fail_op);
+        wgpu_ds_state.stencilBack.passOp = _sg_wgpu_stencilop(desc->stencil.back.pass_op);
+        wgpu_ds_state.stencilReadMask = desc->stencil.read_mask;
+        wgpu_ds_state.stencilWriteMask = desc->stencil.write_mask;
+        wgpu_ds_state.depthBias = (int32_t)desc->depth.bias;
+        wgpu_ds_state.depthBiasSlopeScale = desc->depth.bias_slope_scale;
+        wgpu_ds_state.depthBiasClamp = desc->depth.bias_clamp;
+        wgpu_pip_desc.depthStencil = &wgpu_ds_state;
+    }
+    wgpu_pip_desc.multisample.count = (uint32_t)desc->sample_count;
+    wgpu_pip_desc.multisample.mask = 0xFFFFFFFF;
+    wgpu_pip_desc.multisample.alphaToCoverageEnabled = desc->alpha_to_coverage_enabled;
+    if (desc->color_count > 0) {
+        wgpu_frag_state.module = shd->wgpu.stage[SG_SHADERSTAGE_FS].module;
+        wgpu_frag_state.entryPoint = shd->wgpu.stage[SG_SHADERSTAGE_FS].entry.buf;
+        wgpu_frag_state.targetCount = (size_t)desc->color_count;
+        wgpu_frag_state.targets = &wgpu_ctgt_state[0];
+        for (int i = 0; i < desc->color_count; i++) {
+            SOKOL_ASSERT(i < SG_MAX_COLOR_ATTACHMENTS);
+            wgpu_ctgt_state[i].format = _sg_wgpu_textureformat(desc->colors[i].pixel_format);
+            wgpu_ctgt_state[i].writeMask = _sg_wgpu_colorwritemask(desc->colors[i].write_mask);
+            if (desc->colors[i].blend.enabled) {
+                wgpu_ctgt_state[i].blend = &wgpu_blend_state[i];
+                wgpu_blend_state[i].color.operation = _sg_wgpu_blendop(desc->colors[i].blend.op_rgb);
+                wgpu_blend_state[i].color.srcFactor = _sg_wgpu_blendfactor(desc->colors[i].blend.src_factor_rgb);
+                wgpu_blend_state[i].color.dstFactor = _sg_wgpu_blendfactor(desc->colors[i].blend.dst_factor_rgb);
+                wgpu_blend_state[i].alpha.operation = _sg_wgpu_blendop(desc->colors[i].blend.op_alpha);
+                wgpu_blend_state[i].alpha.srcFactor = _sg_wgpu_blendfactor(desc->colors[i].blend.src_factor_alpha);
+                wgpu_blend_state[i].alpha.dstFactor = _sg_wgpu_blendfactor(desc->colors[i].blend.dst_factor_alpha);
+            }
+        }
+        wgpu_pip_desc.fragment = &wgpu_frag_state;
+    }
+    pip->wgpu.pip = wgpuDeviceCreateRenderPipeline(_sg.wgpu.dev, &wgpu_pip_desc);
+    wgpuPipelineLayoutRelease(wgpu_pip_layout);
+    if (0 == pip->wgpu.pip) {
+        _SG_ERROR(WGPU_CREATE_RENDER_PIPELINE_FAILED);
+        return SG_RESOURCESTATE_FAILED;
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    if (pip == _sg.wgpu.cur_pipeline) {
+        _sg.wgpu.cur_pipeline = 0;
+        _sg.wgpu.cur_pipeline_id.id = SG_INVALID_ID;
+    }
+    if (pip->wgpu.pip) {
+        wgpuRenderPipelineRelease(pip->wgpu.pip);
+        pip->wgpu.pip = 0;
+    }
+}
+
+_SOKOL_PRIVATE sg_resource_state _sg_wgpu_create_attachments(_sg_attachments_t* atts, _sg_image_t** color_images, _sg_image_t** resolve_images, _sg_image_t* ds_img, const sg_attachments_desc* desc) {
+    SOKOL_ASSERT(atts && desc);
+    SOKOL_ASSERT(color_images && resolve_images);
+
+    // copy image pointers and create renderable wgpu texture views
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        const sg_attachment_desc* color_desc = &desc->colors[i];
+        _SOKOL_UNUSED(color_desc);
+        SOKOL_ASSERT(color_desc->image.id != SG_INVALID_ID);
+        SOKOL_ASSERT(0 == atts->wgpu.colors[i].image);
+        SOKOL_ASSERT(color_images[i] && (color_images[i]->slot.id == color_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_color_format(color_images[i]->cmn.pixel_format));
+        SOKOL_ASSERT(color_images[i]->wgpu.tex);
+        atts->wgpu.colors[i].image = color_images[i];
+
+        WGPUTextureViewDescriptor wgpu_color_view_desc;
+        _sg_clear(&wgpu_color_view_desc, sizeof(wgpu_color_view_desc));
+        wgpu_color_view_desc.baseMipLevel = (uint32_t) color_desc->mip_level;
+        wgpu_color_view_desc.mipLevelCount = 1;
+        wgpu_color_view_desc.baseArrayLayer = (uint32_t) color_desc->slice;
+        wgpu_color_view_desc.arrayLayerCount = 1;
+        atts->wgpu.colors[i].view = wgpuTextureCreateView(color_images[i]->wgpu.tex, &wgpu_color_view_desc);
+        if (0 == atts->wgpu.colors[i].view) {
+            _SG_ERROR(WGPU_ATTACHMENTS_CREATE_TEXTURE_VIEW_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+
+        const sg_attachment_desc* resolve_desc = &desc->resolves[i];
+        if (resolve_desc->image.id != SG_INVALID_ID) {
+            SOKOL_ASSERT(0 == atts->wgpu.resolves[i].image);
+            SOKOL_ASSERT(resolve_images[i] && (resolve_images[i]->slot.id == resolve_desc->image.id));
+            SOKOL_ASSERT(color_images[i] && (color_images[i]->cmn.pixel_format == resolve_images[i]->cmn.pixel_format));
+            SOKOL_ASSERT(resolve_images[i]->wgpu.tex);
+            atts->wgpu.resolves[i].image = resolve_images[i];
+
+            WGPUTextureViewDescriptor wgpu_resolve_view_desc;
+            _sg_clear(&wgpu_resolve_view_desc, sizeof(wgpu_resolve_view_desc));
+            wgpu_resolve_view_desc.baseMipLevel = (uint32_t) resolve_desc->mip_level;
+            wgpu_resolve_view_desc.mipLevelCount = 1;
+            wgpu_resolve_view_desc.baseArrayLayer = (uint32_t) resolve_desc->slice;
+            wgpu_resolve_view_desc.arrayLayerCount = 1;
+            atts->wgpu.resolves[i].view = wgpuTextureCreateView(resolve_images[i]->wgpu.tex, &wgpu_resolve_view_desc);
+            if (0 == atts->wgpu.resolves[i].view) {
+                _SG_ERROR(WGPU_ATTACHMENTS_CREATE_TEXTURE_VIEW_FAILED);
+                return SG_RESOURCESTATE_FAILED;
+            }
+        }
+    }
+    SOKOL_ASSERT(0 == atts->wgpu.depth_stencil.image);
+    const sg_attachment_desc* ds_desc = &desc->depth_stencil;
+    if (ds_desc->image.id != SG_INVALID_ID) {
+        SOKOL_ASSERT(ds_img && (ds_img->slot.id == ds_desc->image.id));
+        SOKOL_ASSERT(_sg_is_valid_rendertarget_depth_format(ds_img->cmn.pixel_format));
+        SOKOL_ASSERT(ds_img->wgpu.tex);
+        atts->wgpu.depth_stencil.image = ds_img;
+
+        WGPUTextureViewDescriptor wgpu_ds_view_desc;
+        _sg_clear(&wgpu_ds_view_desc, sizeof(wgpu_ds_view_desc));
+        wgpu_ds_view_desc.baseMipLevel = (uint32_t) ds_desc->mip_level;
+        wgpu_ds_view_desc.mipLevelCount = 1;
+        wgpu_ds_view_desc.baseArrayLayer = (uint32_t) ds_desc->slice;
+        wgpu_ds_view_desc.arrayLayerCount = 1;
+        atts->wgpu.depth_stencil.view = wgpuTextureCreateView(ds_img->wgpu.tex, &wgpu_ds_view_desc);
+        if (0 == atts->wgpu.depth_stencil.view) {
+            _SG_ERROR(WGPU_ATTACHMENTS_CREATE_TEXTURE_VIEW_FAILED);
+            return SG_RESOURCESTATE_FAILED;
+        }
+    }
+    return SG_RESOURCESTATE_VALID;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_discard_attachments(_sg_attachments_t* atts) {
+    SOKOL_ASSERT(atts);
+    for (int i = 0; i < atts->cmn.num_colors; i++) {
+        if (atts->wgpu.colors[i].view) {
+            wgpuTextureViewRelease(atts->wgpu.colors[i].view);
+            atts->wgpu.colors[i].view = 0;
+        }
+        if (atts->wgpu.resolves[i].view) {
+            wgpuTextureViewRelease(atts->wgpu.resolves[i].view);
+            atts->wgpu.resolves[i].view = 0;
+        }
+    }
+    if (atts->wgpu.depth_stencil.view) {
+        wgpuTextureViewRelease(atts->wgpu.depth_stencil.view);
+        atts->wgpu.depth_stencil.view = 0;
+    }
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_wgpu_attachments_color_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    // NOTE: may return null
+    return atts->wgpu.colors[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_wgpu_attachments_resolve_image(const _sg_attachments_t* atts, int index) {
+    SOKOL_ASSERT(atts && (index >= 0) && (index < SG_MAX_COLOR_ATTACHMENTS));
+    // NOTE: may return null
+    return atts->wgpu.resolves[index].image;
+}
+
+_SOKOL_PRIVATE _sg_image_t* _sg_wgpu_attachments_ds_image(const _sg_attachments_t* atts) {
+    // NOTE: may return null
+    SOKOL_ASSERT(atts);
+    return atts->wgpu.depth_stencil.image;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_init_color_att(WGPURenderPassColorAttachment* wgpu_att, const sg_color_attachment_action* action, WGPUTextureView color_view, WGPUTextureView resolve_view) {
+    wgpu_att->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+    wgpu_att->view = color_view;
+    wgpu_att->resolveTarget = resolve_view;
+    wgpu_att->loadOp = _sg_wgpu_load_op(color_view, action->load_action);
+    wgpu_att->storeOp = _sg_wgpu_store_op(color_view, action->store_action);
+    wgpu_att->clearValue.r = action->clear_value.r;
+    wgpu_att->clearValue.g = action->clear_value.g;
+    wgpu_att->clearValue.b = action->clear_value.b;
+    wgpu_att->clearValue.a = action->clear_value.a;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_init_ds_att(WGPURenderPassDepthStencilAttachment* wgpu_att, const sg_pass_action* action, sg_pixel_format fmt, WGPUTextureView view) {
+    wgpu_att->view = view;
+    wgpu_att->depthLoadOp = _sg_wgpu_load_op(view, action->depth.load_action);
+    wgpu_att->depthStoreOp = _sg_wgpu_store_op(view, action->depth.store_action);
+    wgpu_att->depthClearValue = action->depth.clear_value;
+    wgpu_att->depthReadOnly = false;
+    if (_sg_is_depth_stencil_format(fmt)) {
+        wgpu_att->stencilLoadOp = _sg_wgpu_load_op(view, action->stencil.load_action);
+        wgpu_att->stencilStoreOp = _sg_wgpu_store_op(view, action->stencil.store_action);
+    } else {
+        wgpu_att->stencilLoadOp = WGPULoadOp_Undefined;
+        wgpu_att->stencilStoreOp = WGPUStoreOp_Undefined;
+    }
+    wgpu_att->stencilClearValue = action->stencil.clear_value;
+    wgpu_att->stencilReadOnly = false;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_begin_pass(const sg_pass* pass) {
+    SOKOL_ASSERT(pass);
+    SOKOL_ASSERT(_sg.wgpu.cmd_enc);
+    SOKOL_ASSERT(_sg.wgpu.dev);
+
+    const _sg_attachments_t* atts = _sg.cur_pass.atts;
+    const sg_swapchain* swapchain = &pass->swapchain;
+    const sg_pass_action* action = &pass->action;
+
+    _sg.wgpu.cur_pipeline = 0;
+    _sg.wgpu.cur_pipeline_id.id = SG_INVALID_ID;
+
+    WGPURenderPassDescriptor wgpu_pass_desc;
+    WGPURenderPassColorAttachment wgpu_color_att[SG_MAX_COLOR_ATTACHMENTS];
+    WGPURenderPassDepthStencilAttachment wgpu_ds_att;
+    _sg_clear(&wgpu_pass_desc, sizeof(wgpu_pass_desc));
+    _sg_clear(&wgpu_color_att, sizeof(wgpu_color_att));
+    _sg_clear(&wgpu_ds_att, sizeof(wgpu_ds_att));
+    wgpu_pass_desc.label = pass->label;
+    if (atts) {
+        SOKOL_ASSERT(atts->slot.state == SG_RESOURCESTATE_VALID);
+        for (int i = 0; i < atts->cmn.num_colors; i++) {
+            _sg_wgpu_init_color_att(&wgpu_color_att[i], &action->colors[i], atts->wgpu.colors[i].view, atts->wgpu.resolves[i].view);
+        }
+        wgpu_pass_desc.colorAttachmentCount = (size_t)atts->cmn.num_colors;
+        wgpu_pass_desc.colorAttachments = &wgpu_color_att[0];
+        if (atts->wgpu.depth_stencil.image) {
+            _sg_wgpu_init_ds_att(&wgpu_ds_att, action, atts->wgpu.depth_stencil.image->cmn.pixel_format, atts->wgpu.depth_stencil.view);
+            wgpu_pass_desc.depthStencilAttachment = &wgpu_ds_att;
+        }
+    } else {
+        WGPUTextureView wgpu_color_view = (WGPUTextureView) swapchain->wgpu.render_view;
+        WGPUTextureView wgpu_resolve_view = (WGPUTextureView) swapchain->wgpu.resolve_view;
+        WGPUTextureView wgpu_depth_stencil_view = (WGPUTextureView) swapchain->wgpu.depth_stencil_view;
+        _sg_wgpu_init_color_att(&wgpu_color_att[0], &action->colors[0], wgpu_color_view, wgpu_resolve_view);
+        wgpu_pass_desc.colorAttachmentCount = 1;
+        wgpu_pass_desc.colorAttachments = &wgpu_color_att[0];
+        if (wgpu_depth_stencil_view) {
+            SOKOL_ASSERT(swapchain->depth_format > SG_PIXELFORMAT_NONE);
+            _sg_wgpu_init_ds_att(&wgpu_ds_att, action, swapchain->depth_format, wgpu_depth_stencil_view);
+            wgpu_pass_desc.depthStencilAttachment = &wgpu_ds_att;
+        }
+    }
+    _sg.wgpu.pass_enc = wgpuCommandEncoderBeginRenderPass(_sg.wgpu.cmd_enc, &wgpu_pass_desc);
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+
+    // clear bindings cache and apply an empty image-sampler bindgroup
+    _sg_wgpu_bindings_cache_clear();
+    wgpuRenderPassEncoderSetBindGroup(_sg.wgpu.pass_enc, _SG_WGPU_IMAGE_SAMPLER_BINDGROUP_INDEX, _sg.wgpu.empty_bind_group, 0, 0);
+    _sg_stats_add(wgpu.bindings.num_set_bindgroup, 1);
+
+    // initial uniform buffer binding (required even if no uniforms are set in the frame)
+    _sg_wgpu_uniform_buffer_on_begin_pass();
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_end_pass(void) {
+    if (_sg.wgpu.pass_enc) {
+        wgpuRenderPassEncoderEnd(_sg.wgpu.pass_enc);
+        wgpuRenderPassEncoderRelease(_sg.wgpu.pass_enc);
+        _sg.wgpu.pass_enc = 0;
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_commit(void) {
+    SOKOL_ASSERT(_sg.wgpu.cmd_enc);
+
+    _sg_wgpu_uniform_buffer_on_commit();
+
+    WGPUCommandBufferDescriptor cmd_buf_desc;
+    _sg_clear(&cmd_buf_desc, sizeof(cmd_buf_desc));
+    WGPUCommandBuffer wgpu_cmd_buf = wgpuCommandEncoderFinish(_sg.wgpu.cmd_enc, &cmd_buf_desc);
+    SOKOL_ASSERT(wgpu_cmd_buf);
+    wgpuCommandEncoderRelease(_sg.wgpu.cmd_enc);
+    _sg.wgpu.cmd_enc = 0;
+
+    wgpuQueueSubmit(_sg.wgpu.queue, 1, &wgpu_cmd_buf);
+    wgpuCommandBufferRelease(wgpu_cmd_buf);
+
+    // create a new render-command-encoder for next frame
+    WGPUCommandEncoderDescriptor cmd_enc_desc;
+    _sg_clear(&cmd_enc_desc, sizeof(cmd_enc_desc));
+    _sg.wgpu.cmd_enc = wgpuDeviceCreateCommandEncoder(_sg.wgpu.dev, &cmd_enc_desc);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_apply_viewport(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    // FIXME FIXME FIXME: CLIPPING THE VIEWPORT HERE IS WRONG!!!
+    // (but currently required because WebGPU insists that the viewport rectangle must be
+    // fully contained inside the framebuffer, but this doesn't make any sense, and also
+    // isn't required by the backend APIs)
+    const _sg_recti_t clip = _sg_clipi(x, y, w, h, _sg.cur_pass.width, _sg.cur_pass.height);
+    float xf = (float) clip.x;
+    float yf = (float) (origin_top_left ? clip.y : (_sg.cur_pass.height - (clip.y + clip.h)));
+    float wf = (float) clip.w;
+    float hf = (float) clip.h;
+    wgpuRenderPassEncoderSetViewport(_sg.wgpu.pass_enc, xf, yf, wf, hf, 0.0f, 1.0f);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_apply_scissor_rect(int x, int y, int w, int h, bool origin_top_left) {
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    const _sg_recti_t clip = _sg_clipi(x, y, w, h, _sg.cur_pass.width, _sg.cur_pass.height);
+    uint32_t sx = (uint32_t) clip.x;
+    uint32_t sy = (uint32_t) (origin_top_left ? clip.y : (_sg.cur_pass.height - (clip.y + clip.h)));
+    uint32_t sw = (uint32_t) clip.w;
+    uint32_t sh = (uint32_t) clip.h;
+    wgpuRenderPassEncoderSetScissorRect(_sg.wgpu.pass_enc, sx, sy, sw, sh);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_apply_pipeline(_sg_pipeline_t* pip) {
+    SOKOL_ASSERT(pip);
+    SOKOL_ASSERT(pip->wgpu.pip);
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    _sg.wgpu.use_indexed_draw = (pip->cmn.index_type != SG_INDEXTYPE_NONE);
+    _sg.wgpu.cur_pipeline = pip;
+    _sg.wgpu.cur_pipeline_id.id = pip->slot.id;
+    wgpuRenderPassEncoderSetPipeline(_sg.wgpu.pass_enc, pip->wgpu.pip);
+    wgpuRenderPassEncoderSetBlendConstant(_sg.wgpu.pass_enc, &pip->wgpu.blend_color);
+    wgpuRenderPassEncoderSetStencilReference(_sg.wgpu.pass_enc, pip->cmn.stencil.ref);
+}
+
+_SOKOL_PRIVATE bool _sg_wgpu_apply_bindings(_sg_bindings_t* bnd) {
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    SOKOL_ASSERT(bnd);
+    SOKOL_ASSERT(bnd->pip->shader && (bnd->pip->cmn.shader_id.id == bnd->pip->shader->slot.id));
+    bool retval = true;
+    retval &= _sg_wgpu_apply_index_buffer(bnd);
+    retval &= _sg_wgpu_apply_vertex_buffers(bnd);
+    retval &= _sg_wgpu_apply_bindgroup(bnd);
+    return retval;
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_apply_uniforms(sg_shader_stage stage_index, int ub_index, const sg_range* data) {
+    const uint32_t alignment = _sg.wgpu.limits.limits.minUniformBufferOffsetAlignment;
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    SOKOL_ASSERT(_sg.wgpu.uniform.staging);
+    SOKOL_ASSERT((_sg.wgpu.uniform.offset + data->size) <= _sg.wgpu.uniform.num_bytes);
+    SOKOL_ASSERT((_sg.wgpu.uniform.offset & (alignment - 1)) == 0);
+    SOKOL_ASSERT(_sg.wgpu.cur_pipeline && _sg.wgpu.cur_pipeline->shader);
+    SOKOL_ASSERT(_sg.wgpu.cur_pipeline->slot.id == _sg.wgpu.cur_pipeline_id.id);
+    SOKOL_ASSERT(_sg.wgpu.cur_pipeline->shader->slot.id == _sg.wgpu.cur_pipeline->cmn.shader_id.id);
+    SOKOL_ASSERT(ub_index < _sg.wgpu.cur_pipeline->shader->cmn.stage[stage_index].num_uniform_blocks);
+    SOKOL_ASSERT(data->size <= _sg.wgpu.cur_pipeline->shader->cmn.stage[stage_index].uniform_blocks[ub_index].size);
+    SOKOL_ASSERT(data->size <= _SG_WGPU_MAX_UNIFORM_UPDATE_SIZE);
+
+    _sg_stats_add(wgpu.uniforms.num_set_bindgroup, 1);
+    memcpy(_sg.wgpu.uniform.staging + _sg.wgpu.uniform.offset, data->ptr, data->size);
+    _sg.wgpu.uniform.bind.offsets[stage_index][ub_index] = _sg.wgpu.uniform.offset;
+    _sg.wgpu.uniform.offset = _sg_roundup_u32(_sg.wgpu.uniform.offset + (uint32_t)data->size, alignment);
+    wgpuRenderPassEncoderSetBindGroup(_sg.wgpu.pass_enc,
+                                      _SG_WGPU_UNIFORM_BINDGROUP_INDEX,
+                                      _sg.wgpu.uniform.bind.group,
+                                      SG_NUM_SHADER_STAGES * SG_MAX_SHADERSTAGE_UBS,
+                                      &_sg.wgpu.uniform.bind.offsets[0][0]);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_draw(int base_element, int num_elements, int num_instances) {
+    SOKOL_ASSERT(_sg.wgpu.pass_enc);
+    SOKOL_ASSERT(_sg.wgpu.cur_pipeline && (_sg.wgpu.cur_pipeline->slot.id == _sg.wgpu.cur_pipeline_id.id));
+    if (SG_INDEXTYPE_NONE != _sg.wgpu.cur_pipeline->cmn.index_type) {
+        wgpuRenderPassEncoderDrawIndexed(_sg.wgpu.pass_enc, (uint32_t)num_elements, (uint32_t)num_instances, (uint32_t)base_element, 0, 0);
+    } else {
+        wgpuRenderPassEncoderDraw(_sg.wgpu.pass_enc, (uint32_t)num_elements, (uint32_t)num_instances, (uint32_t)base_element, 0);
+    }
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_update_buffer(_sg_buffer_t* buf, const sg_range* data) {
+    SOKOL_ASSERT(data && data->ptr && (data->size > 0));
+    SOKOL_ASSERT(buf);
+    _sg_wgpu_copy_buffer_data(buf, 0, data);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_append_buffer(_sg_buffer_t* buf, const sg_range* data, bool new_frame) {
+    SOKOL_ASSERT(data && data->ptr && (data->size > 0));
+    _SOKOL_UNUSED(new_frame);
+    _sg_wgpu_copy_buffer_data(buf, (uint64_t)buf->cmn.append_pos, data);
+}
+
+_SOKOL_PRIVATE void _sg_wgpu_update_image(_sg_image_t* img, const sg_image_data* data) {
+    SOKOL_ASSERT(img && data);
+    _sg_wgpu_copy_image_data(img, img->wgpu.tex, data);
+}
 #endif
 
 //  ██████  ███████ ███    ██ ███████ ██████  ██  ██████     ██████   █████   ██████ ██   ██ ███████ ███    ██ ██████
@@ -8291,130 +15220,497 @@ _SOKOL_PRIVATE void _sg_gl_update_image(_sg_image_t* img, const sg_image_data* d
 //
 // >>generic backend
 static inline void _sg_setup_backend(const sg_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_setup_backend(desc);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_setup_backend(desc);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_setup_backend(desc);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_setup_backend(desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_setup_backend(desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_backend(void) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_backend();
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_backend();
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_backend();
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_backend();
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_backend();
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_reset_state_cache(void) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_reset_state_cache();
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_reset_state_cache();
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_reset_state_cache();
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_reset_state_cache();
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_reset_state_cache();
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_buffer(_sg_buffer_t* buf, const sg_buffer_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_buffer(buf, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_buffer(buf, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_buffer(buf, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_buffer(buf, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_buffer(buf, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_buffer(_sg_buffer_t* buf) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_buffer(buf);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_buffer(buf);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_buffer(buf);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_buffer(buf);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_buffer(buf);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_image(_sg_image_t* img, const sg_image_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_image(img, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_image(img, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_image(img, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_image(img, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_image(img, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_image(_sg_image_t* img) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_image(img);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_image(img);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_image(img);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_image(img);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_image(img);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_sampler(_sg_sampler_t* smp, const sg_sampler_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_sampler(smp, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_sampler(smp, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_sampler(smp, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_sampler(smp, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_sampler(smp, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_sampler(_sg_sampler_t* smp) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_sampler(smp);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_sampler(smp);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_sampler(smp);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_sampler(smp);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_sampler(smp);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_shader(_sg_shader_t* shd, const sg_shader_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_shader(shd, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_shader(shd, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_shader(shd, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_shader(shd, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_shader(shd, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_shader(_sg_shader_t* shd) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_shader(shd);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_shader(shd);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_shader(shd);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_shader(shd);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_shader(shd);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_pipeline(_sg_pipeline_t* pip, _sg_shader_t* shd, const sg_pipeline_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_pipeline(pip, shd, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_pipeline(pip, shd, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_pipeline(pip, shd, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_pipeline(pip, shd, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_pipeline(pip, shd, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_pipeline(_sg_pipeline_t* pip) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_pipeline(pip);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_pipeline(pip);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_pipeline(pip);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_discard_pipeline(pip);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_pipeline(pip);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline sg_resource_state _sg_create_attachments(_sg_attachments_t* atts, _sg_image_t** color_images, _sg_image_t** resolve_images, _sg_image_t* ds_image, const sg_attachments_desc* desc) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_create_attachments(atts, color_images, resolve_images, ds_image, desc);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_create_attachments(atts, color_images, resolve_images, ds_image, desc);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_create_attachments(atts, color_images, resolve_images, ds_image, desc);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_create_attachments(atts, color_images, resolve_images, ds_image, desc);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_create_attachments(atts, color_images, resolve_images, ds_image, desc);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_discard_attachments(_sg_attachments_t* atts) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_discard_attachments(atts);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_discard_attachments(atts);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_discard_attachments(atts);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_discard_attachments(atts);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_discard_attachments(atts);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline _sg_image_t* _sg_attachments_color_image(const _sg_attachments_t* atts, int index) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_attachments_color_image(atts, index);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_attachments_color_image(atts, index);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_attachments_color_image(atts, index);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_attachments_color_image(atts, index);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_attachments_color_image(atts, index);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline _sg_image_t* _sg_attachments_resolve_image(const _sg_attachments_t* atts, int index) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_attachments_resolve_image(atts, index);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_attachments_resolve_image(atts, index);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_attachments_resolve_image(atts, index);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_attachments_resolve_image(atts, index);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_attachments_resolve_image(atts, index);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline _sg_image_t* _sg_attachments_ds_image(const _sg_attachments_t* atts) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_attachments_ds_image(atts);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_attachments_ds_image(atts);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_attachments_ds_image(atts);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_attachments_ds_image(atts);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_attachments_ds_image(atts);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_begin_pass(const sg_pass* pass) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_begin_pass(pass);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_begin_pass(pass);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_begin_pass(pass);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_begin_pass(pass);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_begin_pass(pass);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_end_pass(void) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_end_pass();
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_end_pass();
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_end_pass();
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_end_pass();
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_end_pass();
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_apply_viewport(int x, int y, int w, int h, bool origin_top_left) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_apply_viewport(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_apply_viewport(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_apply_viewport(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_apply_viewport(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_apply_viewport(x, y, w, h, origin_top_left);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_apply_scissor_rect(int x, int y, int w, int h, bool origin_top_left) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_apply_scissor_rect(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_apply_scissor_rect(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_apply_scissor_rect(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_apply_scissor_rect(x, y, w, h, origin_top_left);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_apply_scissor_rect(x, y, w, h, origin_top_left);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_apply_pipeline(_sg_pipeline_t* pip) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_apply_pipeline(pip);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_apply_pipeline(pip);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_apply_pipeline(pip);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_apply_pipeline(pip);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_apply_pipeline(pip);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline bool _sg_apply_bindings(_sg_bindings_t* bnd) {
+    #if defined(_SOKOL_ANY_GL)
     return _sg_gl_apply_bindings(bnd);
+    #elif defined(SOKOL_METAL)
+    return _sg_mtl_apply_bindings(bnd);
+    #elif defined(SOKOL_D3D11)
+    return _sg_d3d11_apply_bindings(bnd);
+    #elif defined(SOKOL_WGPU)
+    return _sg_wgpu_apply_bindings(bnd);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    return _sg_dummy_apply_bindings(bnd);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_apply_uniforms(sg_shader_stage stage_index, int ub_index, const sg_range* data) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_apply_uniforms(stage_index, ub_index, data);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_apply_uniforms(stage_index, ub_index, data);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_apply_uniforms(stage_index, ub_index, data);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_apply_uniforms(stage_index, ub_index, data);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_apply_uniforms(stage_index, ub_index, data);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_draw(int base_element, int num_elements, int num_instances) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_draw(base_element, num_elements, num_instances);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_draw(base_element, num_elements, num_instances);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_draw(base_element, num_elements, num_instances);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_draw(base_element, num_elements, num_instances);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_draw(base_element, num_elements, num_instances);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_commit(void) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_commit();
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_commit();
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_commit();
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_commit();
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_commit();
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_update_buffer(_sg_buffer_t* buf, const sg_range* data) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_update_buffer(buf, data);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_update_buffer(buf, data);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_update_buffer(buf, data);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_update_buffer(buf, data);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_update_buffer(buf, data);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_append_buffer(_sg_buffer_t* buf, const sg_range* data, bool new_frame) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_append_buffer(buf, data, new_frame);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_append_buffer(buf, data, new_frame);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_append_buffer(buf, data, new_frame);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_append_buffer(buf, data, new_frame);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_append_buffer(buf, data, new_frame);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_update_image(_sg_image_t* img, const sg_image_data* data) {
+    #if defined(_SOKOL_ANY_GL)
     _sg_gl_update_image(img, data);
+    #elif defined(SOKOL_METAL)
+    _sg_mtl_update_image(img, data);
+    #elif defined(SOKOL_D3D11)
+    _sg_d3d11_update_image(img, data);
+    #elif defined(SOKOL_WGPU)
+    _sg_wgpu_update_image(img, data);
+    #elif defined(SOKOL_DUMMY_BACKEND)
+    _sg_dummy_update_image(img, data);
+    #else
+    #error("INVALID BACKEND");
+    #endif
 }
 
 static inline void _sg_push_debug_group(const char* name) {
+    #if defined(SOKOL_METAL)
+    _sg_mtl_push_debug_group(name);
+    #else
     _SOKOL_UNUSED(name);
+    #endif
 }
 
 static inline void _sg_pop_debug_group(void) {
+    #if defined(SOKOL_METAL)
+    _sg_mtl_pop_debug_group();
+    #endif
 }
 
 // ██████   ██████   ██████  ██
@@ -8805,7 +16101,10 @@ _SOKOL_PRIVATE bool _sg_validate_buffer_desc(const sg_buffer_desc* desc) {
         _SG_VALIDATE(desc->_start_canary == 0, VALIDATE_BUFFERDESC_CANARY);
         _SG_VALIDATE(desc->_end_canary == 0, VALIDATE_BUFFERDESC_CANARY);
         _SG_VALIDATE(desc->size > 0, VALIDATE_BUFFERDESC_SIZE);
-        bool injected = (0 != desc->gl_buffers[0]);
+        bool injected = (0 != desc->gl_buffers[0]) ||
+                        (0 != desc->mtl_buffers[0]) ||
+                        (0 != desc->d3d11_buffer) ||
+                        (0 != desc->wgpu_buffer);
         if (!injected && (desc->usage == SG_USAGE_IMMUTABLE)) {
             _SG_VALIDATE((0 != desc->data.ptr) && (desc->data.size > 0), VALIDATE_BUFFERDESC_DATA);
             _SG_VALIDATE(desc->size == desc->data.size, VALIDATE_BUFFERDESC_DATA_SIZE);
@@ -8861,7 +16160,10 @@ _SOKOL_PRIVATE bool _sg_validate_image_desc(const sg_image_desc* desc) {
         _SG_VALIDATE(desc->height > 0, VALIDATE_IMAGEDESC_HEIGHT);
         const sg_pixel_format fmt = desc->pixel_format;
         const sg_usage usage = desc->usage;
-        const bool injected = (0 != desc->gl_textures[0]);
+        const bool injected = (0 != desc->gl_textures[0]) ||
+                              (0 != desc->mtl_textures[0]) ||
+                              (0 != desc->d3d11_texture) ||
+                              (0 != desc->wgpu_texture);
         if (_sg_is_depth_or_depth_stencil_format(fmt)) {
             _SG_VALIDATE(desc->type != SG_IMAGETYPE_3D, VALIDATE_IMAGEDESC_DEPTH_3D_IMAGE);
         }
@@ -9138,6 +16440,10 @@ _SOKOL_PRIVATE bool _sg_validate_pipeline_desc(const sg_pipeline_desc* desc) {
                 }
                 _SG_VALIDATE(attrs_cont, VALIDATE_PIPELINEDESC_NO_CONT_ATTRS);
                 SOKOL_ASSERT(a_state->buffer_index < SG_MAX_VERTEX_BUFFERS);
+                #if defined(SOKOL_D3D11)
+                // on D3D11, semantic names (and semantic indices) must be provided
+                _SG_VALIDATE(!_sg_strempty(&shd->d3d11.attrs[attr_index].sem_name), VALIDATE_PIPELINEDESC_ATTR_SEMANTICS);
+                #endif
             }
         }
         return _sg_validate_end();
@@ -9265,6 +16571,43 @@ _SOKOL_PRIVATE bool _sg_validate_begin_pass(const sg_pass* pass) {
             _SG_VALIDATE(pass->swapchain.color_format > SG_PIXELFORMAT_NONE, VALIDATE_BEGINPASS_SWAPCHAIN_EXPECT_COLORFORMAT);
             // NOTE: depth buffer is optional, so depth_format is allowed to be invalid
             // NOTE: the GL framebuffer handle may actually be 0
+            #if defined(SOKOL_METAL)
+                _SG_VALIDATE(pass->swapchain.metal.current_drawable != 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_CURRENTDRAWABLE);
+                if (pass->swapchain.depth_format == SG_PIXELFORMAT_NONE) {
+                    _SG_VALIDATE(pass->swapchain.metal.depth_stencil_texture == 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_DEPTHSTENCILTEXTURE_NOTSET);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.metal.depth_stencil_texture != 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_DEPTHSTENCILTEXTURE);
+                }
+                if (pass->swapchain.sample_count > 1) {
+                    _SG_VALIDATE(pass->swapchain.metal.msaa_color_texture != 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_MSAACOLORTEXTURE);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.metal.msaa_color_texture == 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_MSAACOLORTEXTURE_NOTSET);
+                }
+            #elif defined(SOKOL_D3D11)
+                _SG_VALIDATE(pass->swapchain.d3d11.render_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_RENDERVIEW);
+                if (pass->swapchain.depth_format == SG_PIXELFORMAT_NONE) {
+                    _SG_VALIDATE(pass->swapchain.d3d11.depth_stencil_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_DEPTHSTENCILVIEW_NOTSET);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.d3d11.depth_stencil_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_DEPTHSTENCILVIEW);
+                }
+                if (pass->swapchain.sample_count > 1) {
+                    _SG_VALIDATE(pass->swapchain.d3d11.resolve_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_RESOLVEVIEW);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.d3d11.resolve_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_RESOLVEVIEW_NOTSET);
+                }
+            #elif defined(SOKOL_WGPU)
+                _SG_VALIDATE(pass->swapchain.wgpu.render_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_RENDERVIEW);
+                if (pass->swapchain.depth_format == SG_PIXELFORMAT_NONE) {
+                    _SG_VALIDATE(pass->swapchain.wgpu.depth_stencil_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_DEPTHSTENCILVIEW_NOTSET);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.wgpu.depth_stencil_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_DEPTHSTENCILVIEW);
+                }
+                if (pass->swapchain.sample_count > 1) {
+                    _SG_VALIDATE(pass->swapchain.wgpu.resolve_view != 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_RESOLVEVIEW);
+                } else {
+                    _SG_VALIDATE(pass->swapchain.wgpu.resolve_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_RESOLVEVIEW_NOTSET);
+                }
+            #endif
         } else {
             // this is an 'offscreen pass'
             const _sg_attachments_t* atts = _sg_lookup_attachments(&_sg.pools, pass->attachments.id);
@@ -9299,7 +16642,21 @@ _SOKOL_PRIVATE bool _sg_validate_begin_pass(const sg_pass* pass) {
             _SG_VALIDATE(pass->swapchain.sample_count == 0, VALIDATE_BEGINPASS_SWAPCHAIN_EXPECT_SAMPLECOUNT_NOTSET);
             _SG_VALIDATE(pass->swapchain.color_format == _SG_PIXELFORMAT_DEFAULT, VALIDATE_BEGINPASS_SWAPCHAIN_EXPECT_COLORFORMAT_NOTSET);
             _SG_VALIDATE(pass->swapchain.depth_format == _SG_PIXELFORMAT_DEFAULT, VALIDATE_BEGINPASS_SWAPCHAIN_EXPECT_DEPTHFORMAT_NOTSET);
+            #if defined(SOKOL_METAL)
+                _SG_VALIDATE(pass->swapchain.metal.current_drawable == 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_CURRENTDRAWABLE_NOTSET);
+                _SG_VALIDATE(pass->swapchain.metal.depth_stencil_texture == 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_DEPTHSTENCILTEXTURE_NOTSET);
+                _SG_VALIDATE(pass->swapchain.metal.msaa_color_texture == 0, VALIDATE_BEGINPASS_SWAPCHAIN_METAL_EXPECT_MSAACOLORTEXTURE_NOTSET);
+            #elif defined(SOKOL_D3D11)
+                _SG_VALIDATE(pass->swapchain.d3d11.render_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_RENDERVIEW_NOTSET);
+                _SG_VALIDATE(pass->swapchain.d3d11.depth_stencil_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_DEPTHSTENCILVIEW_NOTSET);
+                _SG_VALIDATE(pass->swapchain.d3d11.resolve_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_D3D11_EXPECT_RESOLVEVIEW_NOTSET);
+            #elif defined(SOKOL_WGPU)
+                _SG_VALIDATE(pass->swapchain.wgpu.render_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_RENDERVIEW_NOTSET);
+                _SG_VALIDATE(pass->swapchain.wgpu.depth_stencil_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_DEPTHSTENCILVIEW_NOTSET);
+                _SG_VALIDATE(pass->swapchain.wgpu.resolve_view == 0, VALIDATE_BEGINPASS_SWAPCHAIN_WGPU_EXPECT_RESOLVEVIEW_NOTSET);
+            #elif defined(_SOKOL_ANY_GL)
                 _SG_VALIDATE(pass->swapchain.gl.framebuffer == 0, VALIDATE_BEGINPASS_SWAPCHAIN_GL_EXPECT_FRAMEBUFFER_NOTSET);
+            #endif
         }
         return _sg_validate_end();
     #endif
@@ -9704,8 +17061,21 @@ _SOKOL_PRIVATE sg_sampler_desc _sg_sampler_desc_defaults(const sg_sampler_desc* 
 
 _SOKOL_PRIVATE sg_shader_desc _sg_shader_desc_defaults(const sg_shader_desc* desc) {
     sg_shader_desc def = *desc;
+    #if defined(SOKOL_METAL)
+        def.vs.entry = _sg_def(def.vs.entry, "_main");
+        def.fs.entry = _sg_def(def.fs.entry, "_main");
+    #else
         def.vs.entry = _sg_def(def.vs.entry, "main");
         def.fs.entry = _sg_def(def.fs.entry, "main");
+    #endif
+    #if defined(SOKOL_D3D11)
+        if (def.vs.source) {
+            def.vs.d3d11_target = _sg_def(def.vs.d3d11_target, "vs_4_0");
+        }
+        if (def.fs.source) {
+            def.fs.d3d11_target = _sg_def(def.fs.d3d11_target, "ps_4_0");
+        }
+    #endif
     for (int stage_index = 0; stage_index < SG_NUM_SHADER_STAGES; stage_index++) {
         sg_shader_stage_desc* stage_desc = (stage_index == SG_SHADERSTAGE_VS)? &def.vs : &def.fs;
         for (int ub_index = 0; ub_index < SG_MAX_SHADERSTAGE_UBS; ub_index++) {
@@ -10187,6 +17557,7 @@ _SOKOL_PRIVATE sg_desc _sg_desc_defaults(const sg_desc* desc) {
     res.attachments_pool_size = _sg_def(res.attachments_pool_size, _SG_DEFAULT_ATTACHMENTS_POOL_SIZE);
     res.uniform_buffer_size = _sg_def(res.uniform_buffer_size, _SG_DEFAULT_UB_SIZE);
     res.max_commit_listeners = _sg_def(res.max_commit_listeners, _SG_DEFAULT_MAX_COMMIT_LISTENERS);
+    res.wgpu_bindgroups_cache_size = _sg_def(res.wgpu_bindgroups_cache_size, _SG_DEFAULT_WGPU_BINDGROUP_CACHE_SIZE);
     return res;
 }
 
@@ -11603,6 +18974,387 @@ SOKOL_API_IMPL sg_pipeline_desc sg_query_pipeline_defaults(const sg_pipeline_des
 SOKOL_API_IMPL sg_attachments_desc sg_query_attachments_defaults(const sg_attachments_desc* desc) {
     SOKOL_ASSERT(_sg.valid && desc);
     return _sg_attachments_desc_defaults(desc);
+}
+
+SOKOL_API_IMPL const void* sg_d3d11_device(void) {
+    #if defined(SOKOL_D3D11)
+        return (const void*) _sg.d3d11.dev;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL const void* sg_d3d11_device_context(void) {
+    #if defined(SOKOL_D3D11)
+        return (const void*) _sg.d3d11.ctx;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL sg_d3d11_buffer_info sg_d3d11_query_buffer_info(sg_buffer buf_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_buffer_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_buffer_t* buf = _sg_lookup_buffer(&_sg.pools, buf_id.id);
+        if (buf) {
+            res.buf = (const void*) buf->d3d11.buf;
+        }
+    #else
+        _SOKOL_UNUSED(buf_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_d3d11_image_info sg_d3d11_query_image_info(sg_image img_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_image_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+        if (img) {
+            res.tex2d = (const void*) img->d3d11.tex2d;
+            res.tex3d = (const void*) img->d3d11.tex3d;
+            res.res = (const void*) img->d3d11.res;
+            res.srv = (const void*) img->d3d11.srv;
+        }
+    #else
+        _SOKOL_UNUSED(img_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_d3d11_sampler_info sg_d3d11_query_sampler_info(sg_sampler smp_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_sampler_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_sampler_t* smp = _sg_lookup_sampler(&_sg.pools, smp_id.id);
+        if (smp) {
+            res.smp = (const void*) smp->d3d11.smp;
+        }
+    #else
+        _SOKOL_UNUSED(smp_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_d3d11_shader_info sg_d3d11_query_shader_info(sg_shader shd_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_shader_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_shader_t* shd = _sg_lookup_shader(&_sg.pools, shd_id.id);
+        if (shd) {
+            for (int i = 0; i < SG_MAX_SHADERSTAGE_UBS; i++) {
+                res.vs_cbufs[i] = (const void*) shd->d3d11.stage[SG_SHADERSTAGE_VS].cbufs[i];
+                res.fs_cbufs[i] = (const void*) shd->d3d11.stage[SG_SHADERSTAGE_FS].cbufs[i];
+            }
+            res.vs = (const void*) shd->d3d11.vs;
+            res.fs = (const void*) shd->d3d11.fs;
+        }
+    #else
+        _SOKOL_UNUSED(shd_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_d3d11_pipeline_info sg_d3d11_query_pipeline_info(sg_pipeline pip_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_pipeline_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_pipeline_t* pip = _sg_lookup_pipeline(&_sg.pools, pip_id.id);
+        if (pip) {
+            res.il = (const void*) pip->d3d11.il;
+            res.rs = (const void*) pip->d3d11.rs;
+            res.dss = (const void*) pip->d3d11.dss;
+            res.bs = (const void*) pip->d3d11.bs;
+        }
+    #else
+        _SOKOL_UNUSED(pip_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_d3d11_attachments_info sg_d3d11_query_attachments_info(sg_attachments atts_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_d3d11_attachments_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_D3D11)
+        const _sg_attachments_t* atts = _sg_lookup_attachments(&_sg.pools, atts_id.id);
+        if (atts) {
+            for (int i = 0; i < SG_MAX_COLOR_ATTACHMENTS; i++) {
+                res.color_rtv[i] = (const void*) atts->d3d11.colors[i].view.rtv;
+                res.resolve_rtv[i] = (const void*) atts->d3d11.resolves[i].view.rtv;
+            }
+            res.dsv = (const void*) atts->d3d11.depth_stencil.view.dsv;
+        }
+    #else
+        _SOKOL_UNUSED(atts_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL const void* sg_mtl_device(void) {
+    #if defined(SOKOL_METAL)
+        if (nil != _sg.mtl.device) {
+            return (__bridge const void*) _sg.mtl.device;
+        } else {
+            return 0;
+        }
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL const void* sg_mtl_render_command_encoder(void) {
+    #if defined(SOKOL_METAL)
+        if (nil != _sg.mtl.cmd_encoder) {
+            return (__bridge const void*) _sg.mtl.cmd_encoder;
+        } else {
+            return 0;
+        }
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL sg_mtl_buffer_info sg_mtl_query_buffer_info(sg_buffer buf_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_mtl_buffer_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_METAL)
+        const _sg_buffer_t* buf = _sg_lookup_buffer(&_sg.pools, buf_id.id);
+        if (buf) {
+            for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+                if (buf->mtl.buf[i] != 0) {
+                    res.buf[i] = (__bridge void*) _sg_mtl_id(buf->mtl.buf[i]);
+                }
+            }
+            res.active_slot = buf->cmn.active_slot;
+        }
+    #else
+        _SOKOL_UNUSED(buf_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_mtl_image_info sg_mtl_query_image_info(sg_image img_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_mtl_image_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_METAL)
+        const _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+        if (img) {
+            for (int i = 0; i < SG_NUM_INFLIGHT_FRAMES; i++) {
+                if (img->mtl.tex[i] != 0) {
+                    res.tex[i] = (__bridge void*) _sg_mtl_id(img->mtl.tex[i]);
+                }
+            }
+            res.active_slot = img->cmn.active_slot;
+        }
+    #else
+        _SOKOL_UNUSED(img_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_mtl_sampler_info sg_mtl_query_sampler_info(sg_sampler smp_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_mtl_sampler_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_METAL)
+        const _sg_sampler_t* smp = _sg_lookup_sampler(&_sg.pools, smp_id.id);
+        if (smp) {
+            if (smp->mtl.sampler_state != 0) {
+                res.smp = (__bridge void*) _sg_mtl_id(smp->mtl.sampler_state);
+            }
+        }
+    #else
+        _SOKOL_UNUSED(smp_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_mtl_shader_info sg_mtl_query_shader_info(sg_shader shd_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_mtl_shader_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_METAL)
+        const _sg_shader_t* shd = _sg_lookup_shader(&_sg.pools, shd_id.id);
+        if (shd) {
+            const int vs_lib  = shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_lib;
+            const int vs_func = shd->mtl.stage[SG_SHADERSTAGE_VS].mtl_func;
+            const int fs_lib  = shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_lib;
+            const int fs_func = shd->mtl.stage[SG_SHADERSTAGE_FS].mtl_func;
+            if (vs_lib != 0) {
+                res.vs_lib = (__bridge void*) _sg_mtl_id(vs_lib);
+            }
+            if (fs_lib != 0) {
+                res.fs_lib = (__bridge void*) _sg_mtl_id(fs_lib);
+            }
+            if (vs_func != 0) {
+                res.vs_func = (__bridge void*) _sg_mtl_id(vs_func);
+            }
+            if (fs_func != 0) {
+                res.fs_func = (__bridge void*) _sg_mtl_id(fs_func);
+            }
+        }
+    #else
+        _SOKOL_UNUSED(shd_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_mtl_pipeline_info sg_mtl_query_pipeline_info(sg_pipeline pip_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_mtl_pipeline_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_METAL)
+        const _sg_pipeline_t* pip = _sg_lookup_pipeline(&_sg.pools, pip_id.id);
+        if (pip) {
+            if (pip->mtl.rps != 0) {
+                res.rps = (__bridge void*) _sg_mtl_id(pip->mtl.rps);
+            }
+            if (pip->mtl.dss != 0) {
+                res.dss = (__bridge void*) _sg_mtl_id(pip->mtl.dss);
+            }
+        }
+    #else
+        _SOKOL_UNUSED(pip_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL const void* sg_wgpu_device(void) {
+    #if defined(SOKOL_WGPU)
+        return (const void*) _sg.wgpu.dev;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL const void* sg_wgpu_queue(void) {
+    #if defined(SOKOL_WGPU)
+        return (const void*) _sg.wgpu.queue;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL const void* sg_wgpu_command_encoder(void) {
+    #if defined(SOKOL_WGPU)
+        return (const void*) _sg.wgpu.cmd_enc;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL const void* sg_wgpu_render_pass_encoder(void) {
+    #if defined(SOKOL_WGPU)
+        return (const void*) _sg.wgpu.pass_enc;
+    #else
+        return 0;
+    #endif
+}
+
+SOKOL_API_IMPL sg_wgpu_buffer_info sg_wgpu_query_buffer_info(sg_buffer buf_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_buffer_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_buffer_t* buf = _sg_lookup_buffer(&_sg.pools, buf_id.id);
+        if (buf) {
+            res.buf = (const void*) buf->wgpu.buf;
+        }
+    #else
+        _SOKOL_UNUSED(buf_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_wgpu_image_info sg_wgpu_query_image_info(sg_image img_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_image_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+        if (img) {
+            res.tex = (const void*) img->wgpu.tex;
+            res.view = (const void*) img->wgpu.view;
+        }
+    #else
+        _SOKOL_UNUSED(img_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_wgpu_sampler_info sg_wgpu_query_sampler_info(sg_sampler smp_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_sampler_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_sampler_t* smp = _sg_lookup_sampler(&_sg.pools, smp_id.id);
+        if (smp) {
+            res.smp = (const void*) smp->wgpu.smp;
+        }
+    #else
+        _SOKOL_UNUSED(smp_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_wgpu_shader_info sg_wgpu_query_shader_info(sg_shader shd_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_shader_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_shader_t* shd = _sg_lookup_shader(&_sg.pools, shd_id.id);
+        if (shd) {
+            res.vs_mod = (const void*) shd->wgpu.stage[SG_SHADERSTAGE_VS].module;
+            res.fs_mod = (const void*) shd->wgpu.stage[SG_SHADERSTAGE_FS].module;
+            res.bgl = (const void*) shd->wgpu.bind_group_layout;
+        }
+    #else
+        _SOKOL_UNUSED(shd_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_wgpu_pipeline_info sg_wgpu_query_pipeline_info(sg_pipeline pip_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_pipeline_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_pipeline_t* pip = _sg_lookup_pipeline(&_sg.pools, pip_id.id);
+        if (pip) {
+            res.pip = (const void*) pip->wgpu.pip;
+        }
+    #else
+        _SOKOL_UNUSED(pip_id);
+    #endif
+    return res;
+}
+
+SOKOL_API_IMPL sg_wgpu_attachments_info sg_wgpu_query_attachments_info(sg_attachments atts_id) {
+    SOKOL_ASSERT(_sg.valid);
+    sg_wgpu_attachments_info res;
+    _sg_clear(&res, sizeof(res));
+    #if defined(SOKOL_WGPU)
+        const _sg_attachments_t* atts = _sg_lookup_attachments(&_sg.pools, atts_id.id);
+        if (atts) {
+            for (int i = 0; i < SG_MAX_COLOR_ATTACHMENTS; i++) {
+                res.color_view[i] = (const void*) atts->wgpu.colors[i].view;
+                res.resolve_view[i] = (const void*) atts->wgpu.resolves[i].view;
+            }
+            res.ds_view = (const void*) atts->wgpu.depth_stencil.view;
+        }
+    #else
+        _SOKOL_UNUSED(atts_id);
+    #endif
+    return res;
 }
 
 SOKOL_API_IMPL sg_gl_buffer_info sg_gl_query_buffer_info(sg_buffer buf_id) {

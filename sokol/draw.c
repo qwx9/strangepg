@@ -85,7 +85,7 @@ typedef struct GLEdge GLEdge;
 #define	hjdicks __attribute((packed))
 struct hjdicks Params{
 	HMM_Mat4 mvp;
-	//HMM_Vec4 scale;	/* FIXME */
+	HMM_Vec2 scale;	/* FIXME */
 };
 struct hjdicks GLNode{
 	HMM_Vec2 pos;
@@ -351,7 +351,7 @@ flush(void)
 
 	p = (Params){
 		.mvp = mvp,
-		//.scale = HMM_V4(FNodesz, FNodesz),
+		.scale = HMM_V2(FNodesz, FNodesz),
 	};
 	if(dylen(nodev) > 0){
 		renderedges(p);
@@ -456,11 +456,6 @@ frame(void)
 	CLK1(fclk);
 }
 
-#define SOKOL_SHDC_IMPL
-#include "gl/screen.c"
-#include "gl/node.c"
-#include "gl/edge.c"
-
 static void
 initgl(void)
 {
@@ -513,64 +508,89 @@ initgl(void)
 		}),
 	};
 	sg_shader nodesh = sg_make_shader(&(sg_shader_desc){
-		.vs = {
-			.source = vs_node_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
-			.uniform_blocks = {
-				[0] {
-					.size = sizeof(Params),
-					.uniforms = {
-						[0] = {
-							.name = "un",
-							.type = SG_UNIFORMTYPE_FLOAT4,
-							.array_count = 4,
-						},
-					},
-				},
+		.vs.uniform_blocks[0] = {
+			.size = sizeof(Params),
+			.uniforms = {
+				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
 			},
 		},
-		.fs = {
-			.source = fs_node_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
-		},
+		/* FIXME: mvp and s: redundancy, s should be part of mvp or w/e */
+		.vs.source =
+			"#version 330\n"
+			"//precision mediump float;\n"
+			"precision lowp float;\n"
+			"uniform mat4 mvp;\n"
+			"uniform vec2 s;\n"
+			"layout(location=0) in vec2 geom;\n"
+			"layout(location=1) in vec2 pos;\n"
+			"layout(location=2) in vec3 col0;\n"
+			"layout(location=3) in float theta;\n"
+			"layout(location=4) in uint idx0;\n"
+			"out vec3 col;\n"
+			"flat out uint idx;\n"
+			"vec2 rotatez(vec2 v, float angle){\n"
+			"  float s = sin(angle);\n"
+			"  float c = cos(angle);\n"
+			"  //return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) * v;\n"
+			"  return mat2(c, -s, s, c) * v;\n"
+			"}\n"
+			"void main() {\n"
+			"  float z = gl_InstanceID * 0.000001;\n"
+			"  gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
+			"  col = col0;\n"
+			"  idx = idx0;\n"
+			"  //idx = uint(gl_InstanceID);\n"
+			"}\n",
+		.fs.source =
+			"#version 330\n"
+			"in vec3 col;\n"
+			"flat in uint idx;\n"
+			"layout(location=0) out vec4 c0;\n"
+			"layout(location=1) out uint c1;\n"
+			"void main() {\n"
+			"  c0 = vec4(col, 0.6);\n"
+			"  c1 = idx;\n"
+			"}\n",
 	});
 	sg_shader edgesh = sg_make_shader(&(sg_shader_desc){
-		.vs = {
-			.source = vs_edge_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
-			.uniform_blocks = {
-				[0] {
-					.size = sizeof(Params),
-					.uniforms = {
-						[0] = {
-							.name = "ue",
-							.type = SG_UNIFORMTYPE_FLOAT4,
-							.array_count = 4,
-						},
-					},
-				},
+		.vs.uniform_blocks[0] = {
+			.size = sizeof(Params),
+			.uniforms = {
+				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
 			},
 		},
-		.fs = {
-			.source = fs_edge_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
-		},
+		.vs.source =
+			"#version 330\n"
+			"//precision mediump float;\n"
+			"precision lowp float;\n"
+			"uniform mat4 mvp;\n"
+			"uniform vec2 s;\n"
+			"layout(location=0) in vec2 v;\n"
+			"layout(location=1) in vec2 p1;\n"
+			"layout(location=2) in vec2 p2;\n"
+			"layout(location=3) in vec3 col0;\n"
+			"layout(location=4) in uint idx0;\n"
+			"out vec3 col;\n"
+			"flat out uint idx;\n"
+			"void main() {\n"
+			"  vec2 p = gl_VertexID == 0 ? p1 : p2;\n"
+			"  float z = gl_InstanceID * -0.000001;\n"
+			"  gl_Position = mvp * vec4(p / s, z, 1.0);\n"
+			"  col = col0;\n"
+			"  idx = idx0;\n"
+			"}\n",
+		.fs.source =
+			"#version 330\n"
+			"in vec3 col;\n"
+			"flat in uint idx;\n"
+			"layout(location=0) out vec4 c0;\n"
+			"layout(location=1) out uint c1;\n"
+			"void main() {\n"
+			"  c0 = vec4(col, 0.25);\n"
+			"  c1 = idx;\n"
+			"}\n",
 	});
 
 	c = color(theme[Cbg]);
@@ -758,41 +778,37 @@ initgl(void)
 	};
 	sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
 		.vs = {
-			.source = vs_screen_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
+			.source =
+				"#version 330\n"
+				"layout(location=0) in vec2 pos;\n"
+				"out vec2 uv0;\n"
+				"void main() {\n"
+				"  gl_Position = vec4(pos*2.0-1.0, 0.5, 1.0);\n"
+				"  uv0 = pos;\n"
+				"}\n",
 		},
 		.fs = {
-			.source = fs_screen_glsl430,
-			.bytecode = {
-				.ptr = 0,
-				.size = 0,
-			},
-			.entry = "main",
 			.images = {
-				[0] {
-					.used = true,
-					.image_type = SG_IMAGETYPE_2D,
-					.sample_type = SG_IMAGESAMPLETYPE_FLOAT,
-				},
+				[0].used = true,
 			},
-			.samplers = {
-				[0] {
-					.used = true,
-					.sampler_type = SG_SAMPLERTYPE_FILTERING,
-				},
-			},
+			.samplers[0].used = true,
 			.image_sampler_pairs = {
 				[0] {
 					.used = true,
-					.glsl_name = "tx_sx",
+					.glsl_name = "tex0",
 					.image_slot = 0,
 					.sampler_slot = 0
 				},
 			},
+			.source =
+				"#version 330\n"
+				"uniform sampler2D tex0;\n"
+				"in vec2 uv0;\n"
+				"out vec4 frag_color;\n"
+				"void main() {\n"
+				"  vec3 c0 = texture(tex0, uv0).xyz;\n"
+				"  frag_color = vec4(c0, 1.0);\n"
+				"}\n"
 		}
 	});
 	fsq_pip = sg_make_pipeline(&(sg_pipeline_desc){
@@ -859,6 +875,7 @@ evloop(void)
 		.height = Vdefh,
 		.enable_clipboard = true,
 		.window_title = "strangepg",
+		.ios_keyboard_resizes_canvas = true,
 		.icon.sokol_default = true,
 		.logger.func = slog_func,
 	});

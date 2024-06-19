@@ -1853,6 +1853,50 @@ SOKOL_APP_API_DECL const void* sapp_egl_get_display(void);
 /* EGL: get EGLContext object */
 SOKOL_APP_API_DECL const void* sapp_egl_get_context(void);
 
+/* HTML5: enable or disable the hardwired "Leave Site?" dialog box */
+SOKOL_APP_API_DECL void sapp_html5_ask_leave_site(bool ask);
+/* HTML5: get byte size of a dropped file */
+SOKOL_APP_API_DECL uint32_t sapp_html5_get_dropped_file_size(int index);
+/* HTML5: asynchronously load the content of a dropped file */
+SOKOL_APP_API_DECL void sapp_html5_fetch_dropped_file(const sapp_html5_fetch_request* request);
+
+/* Metal: get bridged pointer to Metal device object */
+SOKOL_APP_API_DECL const void* sapp_metal_get_device(void);
+/* Metal: get bridged pointer to MTKView's current drawable of type CAMetalDrawable */
+SOKOL_APP_API_DECL const void* sapp_metal_get_current_drawable(void);
+/* Metal: get bridged pointer to MTKView's depth-stencil texture of type MTLTexture */
+SOKOL_APP_API_DECL const void* sapp_metal_get_depth_stencil_texture(void);
+/* Metal: get bridged pointer to MTKView's msaa-color-texture of type MTLTexture (may be null) */
+SOKOL_APP_API_DECL const void* sapp_metal_get_msaa_color_texture(void);
+/* macOS: get bridged pointer to macOS NSWindow */
+SOKOL_APP_API_DECL const void* sapp_macos_get_window(void);
+/* iOS: get bridged pointer to iOS UIWindow */
+SOKOL_APP_API_DECL const void* sapp_ios_get_window(void);
+
+/* D3D11: get pointer to ID3D11Device object */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_device(void);
+/* D3D11: get pointer to ID3D11DeviceContext object */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_device_context(void);
+/* D3D11: get pointer to IDXGISwapChain object */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_swap_chain(void);
+/* D3D11: get pointer to ID3D11RenderTargetView object for rendering */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_render_view(void);
+/* D3D11: get pointer ID3D11RenderTargetView object for msaa-resolve (may return null) */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_resolve_view(void);
+/* D3D11: get pointer ID3D11DepthStencilView */
+SOKOL_APP_API_DECL const void* sapp_d3d11_get_depth_stencil_view(void);
+/* Win32: get the HWND window handle */
+SOKOL_APP_API_DECL const void* sapp_win32_get_hwnd(void);
+
+/* WebGPU: get WGPUDevice handle */
+SOKOL_APP_API_DECL const void* sapp_wgpu_get_device(void);
+/* WebGPU: get swapchain's WGPUTextureView handle for rendering */
+SOKOL_APP_API_DECL const void* sapp_wgpu_get_render_view(void);
+/* WebGPU: get swapchain's MSAA-resolve WGPUTextureView (may return null) */
+SOKOL_APP_API_DECL const void* sapp_wgpu_get_resolve_view(void);
+/* WebGPU: get swapchain's WGPUTextureView for the depth-stencil surface */
+SOKOL_APP_API_DECL const void* sapp_wgpu_get_depth_stencil_view(void);
+
 /* GL: get framebuffer object */
 SOKOL_APP_API_DECL uint32_t sapp_gl_get_framebuffer(void);
 /* GL: get major version (only valid for desktop GL) */
