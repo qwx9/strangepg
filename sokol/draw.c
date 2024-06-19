@@ -148,21 +148,31 @@ showobj(Obj *o)
 	char s[128];
 	Node *n;
 	Edge *e;
+	static Edge *ee;
+	static Node *nn;
 
 	if(selected.type == Onil)
 		return;
 	switch(selected.type){
 	case Oedge:
 		e = o->g->edges + o->idx;
+		if(e == ee)
+			return;
 		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
+		ee = e;
+		pushcmd("print %d, ledge[%d]", e->id, e->id);
 		break;
 	case Onode:
 		n = o->g->nodes + o->idx;
+		if(n == nn)
+			return;
 		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
+		nn = n;
+		pushcmd("print %d, lnode[%d]", n->id, n->id);
 		break;
 	}
 	//string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
-	//warn("selected: %s\n", s);
+	warn("selected: %s\n", s);
 }
 
 int
@@ -444,6 +454,7 @@ frame(void)
 		resetui();
 		updateview();
 	}
+	pollcmd();
 	// FIXME: actually implement shallow redraw, etc.
 	if(req != Reqshallowdraw){
 		if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
@@ -588,7 +599,7 @@ initgl(void)
 			"layout(location=0) out vec4 c0;\n"
 			"layout(location=1) out uint c1;\n"
 			"void main() {\n"
-			"  c0 = vec4(col, 0.25);\n"
+			"  c0 = vec4(col, 0.2);\n"
 			"  c1 = idx;\n"
 			"}\n",
 	});
