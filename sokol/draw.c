@@ -27,6 +27,11 @@
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
+#include "cmd.h"
+
+extern char *node_vertsh, *node_fragsh;
+extern char *edge_vertsh, *edge_fragsh;
+extern char *scr_vertsh, *scr_fragsh;
 
 void	event(const sapp_event*);
 void	_drawui(struct nk_context*);
@@ -43,31 +48,15 @@ struct Color{
  * - resize: compensate for different viewsize == different gl coordinate system
  *	by moving eye (zoom + pan)
  * - debug node angle and scale, offset edge control points
- * - don't clear/push instance data each frame: that data is already there, operate
- *	directly on the instance data and render the draw*() functions nops
- *	ie. decouple geometry Node/Edge from the rest of their data, mirror ds
- *	=> don't clear on every frame unless we get a re-render ctl
  */
 /* FIXME: blackjack and hookers:
  * - switch to opengl4, add tesselation, generalize nodes as thick lines, shape
  *	nodes and edges during tesselation stage, store shape params, implement beziers
  *		.. see discussion on tesselation: mesh shaders instead?
- * - shader benchmarking? flush is fast but what happens on the gpu side? why
- *	is it not smooth even though flush is fast? because of rend stalling mouse
- *	events? is it even on the same thread? lockgraphs?
- *	=> draw thread calls draw, then rerender, then flushes; both draw and rerender
- *	become expensive; improvements: pass by ref, don't use geom, use floats, hmm
- *	simplify rend; make sure it doesn't modify state that others use and maybe
- *	move to its own thread as well, it should really only set angle...
  * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
  *	redraw only, not re-render etc; or rather toggle continuous redraw?
  *	does performance/load suffer?
- * - compiled shaders: better performance? just push source and compiled
- *   ones to the repo, use sokol-tools
  * - draw labels, arrows
- * - another layer: arrange nodes and edges in a grid matrix => easy coarsening based on position + chunking, occlusion maybe
- *	unnecessary for drawing, gl can do it on its own via the depth buffer
- *	SO: geometry + compute shaders for layouting
  * - beziers, thickness: https://thebookofshaders.com/05/
  * - extend for 3d vis and navigation, later port to plan9
  * - 3d layout algo on top of this, would be nice to have by may
@@ -527,42 +516,8 @@ initgl(void)
 			},
 		},
 		/* FIXME: mvp and s: redundancy, s should be part of mvp or w/e */
-		.vs.source =
-			"#version 330\n"
-			"//precision mediump float;\n"
-			"precision lowp float;\n"
-			"uniform mat4 mvp;\n"
-			"uniform vec2 s;\n"
-			"layout(location=0) in vec2 geom;\n"
-			"layout(location=1) in vec2 pos;\n"
-			"layout(location=2) in vec3 col0;\n"
-			"layout(location=3) in float theta;\n"
-			"layout(location=4) in uint idx0;\n"
-			"out vec3 col;\n"
-			"flat out uint idx;\n"
-			"vec2 rotatez(vec2 v, float angle){\n"
-			"  float s = sin(angle);\n"
-			"  float c = cos(angle);\n"
-			"  //return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) * v;\n"
-			"  return mat2(c, -s, s, c) * v;\n"
-			"}\n"
-			"void main() {\n"
-			"  float z = gl_InstanceID * 0.000001;\n"
-			"  gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
-			"  col = col0;\n"
-			"  idx = idx0;\n"
-			"  //idx = uint(gl_InstanceID);\n"
-			"}\n",
-		.fs.source =
-			"#version 330\n"
-			"in vec3 col;\n"
-			"flat in uint idx;\n"
-			"layout(location=0) out vec4 c0;\n"
-			"layout(location=1) out uint c1;\n"
-			"void main() {\n"
-			"  c0 = vec4(col, 0.6);\n"
-			"  c1 = idx;\n"
-			"}\n",
+		.vs.source = node_vertsh,
+		.fs.source = node_fragsh,
 	});
 	sg_shader edgesh = sg_make_shader(&(sg_shader_desc){
 		.vs.uniform_blocks[0] = {
@@ -572,36 +527,8 @@ initgl(void)
 				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
 			},
 		},
-		.vs.source =
-			"#version 330\n"
-			"//precision mediump float;\n"
-			"precision lowp float;\n"
-			"uniform mat4 mvp;\n"
-			"uniform vec2 s;\n"
-			"layout(location=0) in vec2 v;\n"
-			"layout(location=1) in vec2 p1;\n"
-			"layout(location=2) in vec2 p2;\n"
-			"layout(location=3) in vec3 col0;\n"
-			"layout(location=4) in uint idx0;\n"
-			"out vec3 col;\n"
-			"flat out uint idx;\n"
-			"void main() {\n"
-			"  vec2 p = gl_VertexID == 0 ? p1 : p2;\n"
-			"  float z = gl_InstanceID * -0.000001;\n"
-			"  gl_Position = mvp * vec4(p / s, z, 1.0);\n"
-			"  col = col0;\n"
-			"  idx = idx0;\n"
-			"}\n",
-		.fs.source =
-			"#version 330\n"
-			"in vec3 col;\n"
-			"flat in uint idx;\n"
-			"layout(location=0) out vec4 c0;\n"
-			"layout(location=1) out uint c1;\n"
-			"void main() {\n"
-			"  c0 = vec4(col, 0.2);\n"
-			"  c1 = idx;\n"
-			"}\n",
+		.vs.source = edge_vertsh,
+		.fs.source = edge_fragsh,
 	});
 
 	c = color(theme[Cbg]);
@@ -789,14 +716,7 @@ initgl(void)
 	};
 	sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
 		.vs = {
-			.source =
-				"#version 330\n"
-				"layout(location=0) in vec2 pos;\n"
-				"out vec2 uv0;\n"
-				"void main() {\n"
-				"  gl_Position = vec4(pos*2.0-1.0, 0.5, 1.0);\n"
-				"  uv0 = pos;\n"
-				"}\n",
+			.source = scr_vertsh,
 		},
 		.fs = {
 			.images = {
@@ -811,15 +731,7 @@ initgl(void)
 					.sampler_slot = 0
 				},
 			},
-			.source =
-				"#version 330\n"
-				"uniform sampler2D tex0;\n"
-				"in vec2 uv0;\n"
-				"out vec4 frag_color;\n"
-				"void main() {\n"
-				"  vec3 c0 = texture(tex0, uv0).xyz;\n"
-				"  frag_color = vec4(c0, 1.0);\n"
-				"}\n"
+			.source = scr_fragsh,
 		}
 	});
 	fsq_pip = sg_make_pipeline(&(sg_pipeline_desc){

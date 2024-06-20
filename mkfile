@@ -40,6 +40,12 @@ OFILES=\
 	plan9/ui.$O\
 	ui/ui.$O\
 	util/print.$O\
+	glsl/node.vert.$O\
+	glsl/node.frag.$O\
+	glsl/edge.vert.$O\
+	glsl/edge.frag.$O\
+	glsl/scr.vert.$O\
+	glsl/scr.frag.$O\
 
 OCOARSEN=\
 	coarsen.$O\
@@ -82,6 +88,9 @@ $O.coarsen: $OCOARSEN
 
 cmd/awkprog.c:	cmd/main.awk
 	n/awk2c.rc <$prereq >$target
+
+glsl/%.c: glsl/%
+	n/glsl2c.rc $prereq <$prereq >$target
 
 CLEANFILES=$OFILES
 

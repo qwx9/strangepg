@@ -16,6 +16,12 @@ BINDIR:= $(PREFIX)/bin
 OBJS:=\
 	sokol/draw.o\
 	sokol/ui.o\
+	glsl/node.vert.o\
+	glsl/node.frag.o\
+	glsl/edge.vert.o\
+	glsl/edge.frag.o\
+	glsl/scr.vert.o\
+	glsl/scr.frag.o\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
 	lib/queue.o\

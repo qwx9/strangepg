@@ -1,0 +1,11 @@
+#!/bin/rc
+rfork ne
+f=`{}
+echo 'char *'^`{echo $1 | sed 's,^glsl\/,,;s,\.([^\.]+)$),_\1sh,'}^' = \'
+ssam -n '
+,s,^$\n,,g
+,s,.*,	"&\\n",g
+x/^	"\\n"/d
+$-1s/$/;/
+,p
+'
