@@ -32,6 +32,7 @@
 extern char *node_vertsh, *node_fragsh;
 extern char *edge_vertsh, *edge_fragsh;
 extern char *scr_vertsh, *scr_fragsh;
+extern char *bezier_vertsh, *bezier_tcssh, *bezier_tessh, *bezier_geomsh, *bezier_fragsh;
 
 void	event(const sapp_event*);
 void	_drawui(struct nk_context*);
@@ -50,9 +51,6 @@ struct Color{
  * - debug node angle and scale, offset edge control points
  */
 /* FIXME: blackjack and hookers:
- * - switch to opengl4, add tesselation, generalize nodes as thick lines, shape
- *	nodes and edges during tesselation stage, store shape params, implement beziers
- *		.. see discussion on tesselation: mesh shaders instead?
  * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
  *	redraw only, not re-render etc; or rather toggle continuous redraw?
  *	does performance/load suffer?
@@ -70,7 +68,9 @@ struct Color{
 typedef struct Params Params;
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
+typedef struct Shader Shader;
 
+/* FIXME: provide aligned data as per std140 instead of this shit */
 #define	hjdicks __attribute((packed))
 struct hjdicks Params{
 	HMM_Mat4 mvp;
@@ -92,6 +92,12 @@ static GLNode *nodev;
 static GLEdge *edgev;
 static HMM_Mat4 mvp;
 
+struct Shader{
+	char *name;
+	GLenum type;
+	char **src;
+};
+
 static sg_pass_action offscreen_pass_action, offscreen_pass_action2;
 static sg_pass_action default_pass_action;
 static sg_attachments offscreen_attachments;
@@ -104,6 +110,8 @@ static sg_bindings fsq_bind;
 static sg_image fb, pickfb, zfb;
 
 static Channel *drawc;
+
+static GLuint stupid, stupidvao, stupidvbo;
 
 Color *
 newcolor(u32int v)
@@ -330,6 +338,23 @@ rendernodes(Params p)
 }
 
 static inline void
+renderstupid(Params p)
+{
+	GLuint pmvp;
+
+	sg_begin_pass(&(sg_pass){
+		.action = offscreen_pass_action2,
+		.attachments = offscreen_attachments,
+	});
+	glUseProgram(stupid);
+	pmvp = glGetUniformLocation(stupid, "mvp");
+	glUniformMatrix4fv(pmvp, 1, GL_FALSE, &mvp);
+	glBindVertexArray(stupidvao);
+	glDrawArrays(GL_PATCHES, 0, 4);
+	sg_end_pass();
+}
+
+static inline void
 renderscreen(Params p)
 {
 	sg_begin_pass(&(sg_pass){
@@ -356,6 +381,7 @@ flush(void)
 		renderedges(p);
 		rendernodes(p);
 	}
+	//renderstupid(p);
 	renderscreen(p);
 	sg_commit();
 }
@@ -456,6 +482,87 @@ frame(void)
 	CLK1(fclk);
 }
 
+static int
+loadshader(GLuint pgm, GLenum type, char **src, char *name)
+{
+	GLint r;
+	GLuint s;
+
+	s = glCreateShader(type);
+	glShaderSource(s, 1, src, NULL);
+	glCompileShader(s);
+	glGetShaderiv(s, GL_COMPILE_STATUS, &r);
+	if(!r){
+		werrstr("shader %s: compilation failed", name);
+		return -1;
+	}
+	glAttachShader(pgm, s);
+	return 0;
+}
+
+static int
+linkshader(GLuint pgm)
+{
+	GLint r;
+
+	glLinkProgram(pgm);
+	glGetProgramiv(pgm, GL_LINK_STATUS, &r);
+	if(!r){
+		werrstr("shader linking failed");
+		return -1;
+	}
+	return 0;
+}
+
+static int
+newshader(Shader *s, GLuint *pgm)
+{
+	GLuint p;
+
+	if(s == nil){
+		warn("newshader: nothing");
+		return -1;
+	}
+	p = glCreateProgram();
+	for(; s->src!=nil; s++)
+		if(loadshader(p, s->type, s->src, s->name) < 0)
+			return -1;
+	if(linkshader(p) < 0)
+		return -1;
+	*pgm = p;
+	return 0;
+}
+
+static void
+initbullshit(void)
+{
+	static GLfloat cp[][2] = {
+		{-10.5f, -10.5f},
+		{-10.5f,  10.5f},
+		{ 10.5f,  10.5f},
+		{ 10.5f, -10.5f},
+	};
+	static Shader sh[] = {
+		{"bezier vert", GL_VERTEX_SHADER, &bezier_vertsh},
+		{"bezier tcs", GL_TESS_CONTROL_SHADER, &bezier_tcssh},
+		{"bezier tes", GL_TESS_EVALUATION_SHADER, &bezier_tessh},
+		{"bezier geom", GL_GEOMETRY_SHADER, &bezier_geomsh},
+		{"bezier frag", GL_FRAGMENT_SHADER, &bezier_fragsh},
+		{nil, -1, nil},
+	};
+
+	if(newshader(sh, &stupid) < 0)
+		sysfatal("initgl: bezier shader: %s", error());
+	glGenVertexArrays(1, &stupidvao);
+	glBindVertexArray(stupidvao);
+	glGenBuffers(1, &stupidvbo);
+	glBindBuffer(GL_ARRAY_BUFFER, stupidvbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof cp, cp, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+	glPatchParameteri(GL_PATCH_VERTICES, 4);
+}
+
 static void
 initgl(void)
 {
@@ -469,8 +576,8 @@ initgl(void)
 		-FNodesz/2.0f, -Nodethiccc/2.0f,
 	};
 	u16int nodeidx[] = {
-		0, 1, 2,	// first triangle
-		0, 2, 3,	// second triangle
+		0, 2, 1,	// first triangle
+		0, 3, 2,	// second triangle
 	};
 	float edgevert[] = { -FNodesz/2.0f, 0, +FNodesz/2.0f, 0 };
 	u16int edgeidx[] = { 0, 1 };
@@ -601,6 +708,9 @@ initgl(void)
 			}
 		},
 		.shader = nodesh,
+		.primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
 		.index_type = SG_INDEXTYPE_UINT16,
 		.depth = {
 			.pixel_format = SG_PIXELFORMAT_DEPTH,
@@ -668,6 +778,8 @@ initgl(void)
 		},
 		.shader = edgesh,
 		.primitive_type = SG_PRIMITIVETYPE_LINES,
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
 		.index_type = SG_INDEXTYPE_UINT16,
 		.depth = {
 			.pixel_format = SG_PIXELFORMAT_DEPTH,
@@ -761,6 +873,7 @@ init(void)
 	});
 	assert(sg_isvalid());
 	initgl();
+	initbullshit();
 	snk_setup(&(snk_desc_t){
 		.dpi_scale = sapp_dpi_scale(),
 		.logger.func = slog_func,

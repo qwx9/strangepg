@@ -22,6 +22,11 @@ OBJS:=\
 	glsl/edge.frag.o\
 	glsl/scr.vert.o\
 	glsl/scr.frag.o\
+	glsl/bezier.vert.o\
+	glsl/bezier.tcs.o\
+	glsl/bezier.tes.o\
+	glsl/bezier.geom.o\
+	glsl/bezier.frag.o\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
 	lib/queue.o\

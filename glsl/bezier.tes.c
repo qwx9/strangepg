@@ -1,0 +1,18 @@
+char *bezier_tessh = \
+	"#version 430\n"
+	"layout(isolines, fractional_odd_spacing, ccw) in;\n"
+	"vec2 bezier(){\n"
+	"	float u = gl_TessCoord.x;\n"
+	"	float u1 = 1.0 - u;\n"
+	"	float u2 = u * u;\n"
+	"	float b0 = u1 * u1 * u1;\n"
+	"	float b1 = 3.0 * u * u1 * u1;\n"
+	"	float b2 = 3.0 * u2 * u1;\n"
+	"	float b3 = u2 * u;\n"
+	"	vec2 p = b0 * gl_in[0].gl_Position.xy + b1 * gl_in[1].gl_Position.xy + b2 * gl_in[2].gl_Position.xy + b3 * gl_in[3].gl_Position.xy;\n"
+	"	return p;\n"
+	"}\n"
+	"void\n"
+	"main(){\n"
+	"	gl_Position = vec4(bezier(), gl_in[0].gl_Position.zw);\n"
+	"}\n";
