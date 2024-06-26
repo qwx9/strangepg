@@ -4,73 +4,7 @@
 #include "drw.h"
 #include "threads.h"
 
-static inline int
-faceyourfears(Graph *g, Node *u, ssize *ep, float *res, int rev)
-{
-	int n;
-	float θ;
-	ssize *ee;
-	Edge *e;
-	Node *v;
-	Vertex Δ;
-
-	ee = ep + dylen(ep);
-	if(ep >= ee)
-		return -1;
-	for(n=0, θ=0.; ep<ee; ep++){
-		if((e = getedge(g, *ep)) == nil){
-			warn("rend: dangling edge reference in adjacency array\n");
-			continue;
-		}
-		v = getnode(g, e->v >> 1);
-		assert(v != nil);
-		if(u == v){
-			u = v;
-			v = getnode(g, e->u >> 1);
-			if(u == v)
-				continue;
-		}
-		Δ = rev ? subv(u->pos, v->pos) : subv(v->pos, u->pos);
-		θ += atan2(Δ.y, Δ.x);
-		n++;
-	}
-	if(n == 0)
-		return -1;
-	*res = (rev ? -θ : θ) / n;
-	return 0;
-}
-
-static inline float
-setzangle(Graph *g, Node *u)
-{
-	float θ;
-
-	/* face outgoing */
-	if(faceyourfears(g, u, u->out, &θ, 0) < 0
-	/* face away from incoming */
-	&& faceyourfears(g, u, u->in, &θ, 1) < 0)
-		return 0.0f;
-	return θ;
-}
-
-static inline void
-shapenode(Graph *g, Node *u)
-{
-	u->rot.z = setzangle(g, u);
-}
-
-static void
-shapegraph(Graph *g)
-{
-	ssize i;
-	Node *u;
-
-	for(i=g->node0.next; i>=0; i=u->next){
-		u = g->nodes + i;
-		shapenode(g, u);
-	}
-}
-
+/* FIXME: get rid of this */
 int
 reshape(int force)
 {
@@ -93,8 +27,6 @@ reshape(int force)
 				DPRINT(Debugrender, "reshape: empty graph");
 				continue;
 			}
-			/* FIXME: now no-op */
-			//shapegraph(g);
 			r = 1;
 		}
 	}

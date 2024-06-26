@@ -46,7 +46,6 @@ struct Node{
 	int length;
 	Vertex pos;
 	Vertex pos0;
-	Vertex rot;
 	Vertex dir;
 	Color *col;
 	u32int flags;
