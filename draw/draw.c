@@ -40,25 +40,58 @@ drawguides(void)
 }
 
 static inline int
-drawedge(Graph *g, Node *u, Node *v, double w, ssize idx)
+drawedge(Graph *g, Node *u, Node *v, int urev, int vrev, ssize idx)
 {
 	u32int i;
+	float m;
+	Vertex du, dv;
 
 	i = mapvis(g, Oedge, idx);
-	return drawbezier(u->pos, v->pos, w, i, color(theme[Cedge]));
+	/* FIXME: just compute angle then length vector based on that */
+	/* FIXME: occasional fp errors, fixed with x≠0? */
+	du = u->dir;
+	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
+	du = divv(du, m);
+	//du = mulv(du, Nodesz * u->length / 2);
+	du = mulv(du, Nodesz / 2);
+	du = urev ? subv(u->pos, du) : addv(u->pos, du);
+	dv = v->dir;
+	m = sqrt(dv.x * dv.x + dv.y * dv.y) + 0.000001;
+	dv = divv(dv, m);
+	//dv = mulv(dv, Nodesz * v->length / 2);
+	dv = mulv(dv, Nodesz / 2);
+	dv = vrev ? addv(v->pos, dv) : subv(v->pos, dv);
+	return drawbezier(du, dv, i, color(theme[Cedge]));
 }
 
 static inline int
 drawnode(Graph *g, Node *n, ssize idx)
 {
 	u32int i;
+	float m;
+	Vertex v;
 
 	i = mapvis(g, Onode, idx);
+	v = n->dir;
 	if((view.flags & VFdrawarrows) == 0){
-		if(drawquad(n->pos, n->rot, i, n->col) < 0)
+		v = n->dir;
+		/*
+		m = sqrt(v.x * v.x + v.y * v.y);
+		v.x /= m;
+		v.y /= m;
+		m = Nodesz * n->length / 2.0f;
+		v = mulv(v, m);
+		*/
+		if(drawquad(n->pos, v, i, n->col) < 0)
 			return -1;
-	}else if(drawline(n->pos, addv(n->pos, n->dir), MAX(0., view.zoom/5), 1, -1, color(theme[Cemph])) < 0)
-		return -1;
+	/* FIXME */
+	}else{
+		m = atan2(n->dir.y, n->dir.x);
+		v.x = Nodesz * cos(m);
+		v.y = Nodesz * sin(m);
+		if(drawline(n->pos, addv(n->pos, v), 1, 1, -1, color(theme[Cemph])) < 0)
+			return -1;
+	}
 	if((view.flags & VFdrawlabels) != 0 && drawlabel(n, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
@@ -76,8 +109,7 @@ drawedges(Graph *g)
 		u = getnode(g, e->u >> 1);
 		v = getnode(g, e->v >> 1);
 		assert(u != nil && v != nil);
-		// FIXME: honor w param
-		drawedge(g, u, v, MAX(0., view.zoom/5), i);
+		drawedge(g, u, v, e->u & 1, e->v & 1, i);
 	}
 	return 0;
 }

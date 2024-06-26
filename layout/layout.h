@@ -42,10 +42,7 @@ int	haltlayout(Graph*);
 int	updatelayout(Graph*);
 int	togglelayout(Graph*);
 
-#define ROTATENODE(rot, dir, dx, dy)	do{\
-	float θ; \
-	θ = atan2((dy), (dx)); \
-	(rot)->z = θ; \
-	(dir)->x = cos(θ); \
-	(dir)->y = -sin(θ); \
+#define SETDIR(dir, dx, dy)	do{\
+	if((dx) != 0.0f) \
+		(dir) = V((dx), (dy), 0.0f); \
 }while(0)

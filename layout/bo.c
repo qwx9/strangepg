@@ -13,7 +13,6 @@ struct P{
 	Vertex xyz;
 	Vertex *pos;
 	Vertex *dir;
-	Vertex *rot;
 	ssize i;
 	ssize e;
 	int nin;
@@ -49,7 +48,6 @@ new(Graph *g)
 		p.i = i;
 		p.pos = &u->pos;
 		p.dir = &u->dir;
-		p.rot = &u->rot;
 		dypush(ptab, p);
 		if(u->pos0.x < min)
 			min = u->pos0.x;
@@ -168,7 +166,7 @@ compute(void *arg, volatile int *stat, int i)
 			u->xyz.x = x;
 			u->xyz.y = y;
 			*u->pos = u->xyz;
-			ROTATENODE(u->rot, u->dir, δx, δy);
+			SETDIR(*u->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}

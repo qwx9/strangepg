@@ -50,8 +50,14 @@ alloccolor(u32int col)
 
 	c = emalloc(sizeof *c);
 	c->col = col;
-	c->i = eallocimage(Rect(0,0,1,1), (view.flags & VFhaxx0rz) != 0 ? screen->chan : ARGB32, 1, col);
-	c->shad = eallocimage(Rect(0,0,1,1), XRGB32, 1, setalpha(col, 0x7f));
+	if(col == DWhite)
+		c->i = c->shad = display->white;
+	else if(col == DBlack)
+		c->i = c->shad = display->black;
+	else{
+		c->i = eallocimage(Rect(0,0,1,1), (view.flags & VFhaxx0rz) != 0 ? screen->chan : ARGB32, 1, setalpha(col, 0x9f));
+		c->shad = eallocimage(Rect(0,0,1,1), XRGB32, 1, col);
+	}
 	return c;
 }
 
@@ -158,13 +164,14 @@ drawlabel(Node *n, Color *c)
 /* FIXME: no prior screen intersection test */
 
 int
-drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
 {
-	float cθ, sθ;
+	float θ, cθ, sθ;
 	Point p[5];
 
-	cθ = cos(rot.z);
-	sθ = sin(rot.z);
+	θ = atan2(dir.y, dir.x);
+	cθ = cos(θ);
+	sθ = sin(θ);
 	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
@@ -180,24 +187,30 @@ drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
 }
 
 int
-drawbezier(Vertex a, Vertex b, double w, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
 {
+	int w;
+	float Δx, Δy;
 	double θ;
 	Point p[4];
 
-	θ = atan2(a.x - b.x, a.y - b.y);
+	Δx = b.x - a.x;
+	Δy = b.y - a.y;
+	//θ = atan2(a.x - b.x, a.y - b.y);
+	θ = atan2(Δy, Δx);
 	p[0] = v2p(centerscalev(a));
 	p[3] = v2p(centerscalev(b));
-	/* FIXME: unstackenblochen bezier math and *post* centerscale */
-	/* FIXME: adjustments for short edges and rotation */
-	if(a.x - b.x > ceil(4 * Nodesz * view.zoom))
-		p[1] = subpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
-	else
+	/* FIXME: doesn't take into account opposite direction */
+	if(Δx > 0.f)
 		p[1] = addpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
-	if(a.y - b.y > ceil(4 * Nodesz * view.zoom))
+	else
+		p[1] = subpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
+	if(Δy > 0.f)
 		p[2] = addpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
 	else
 		p[2] = subpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
+	//w = MAX(0., view.zoom/5);
+	w = 0;
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
 		(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,

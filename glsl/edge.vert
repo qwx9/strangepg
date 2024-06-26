@@ -4,12 +4,12 @@ precision lowp float;
 
 uniform mat4 mvp;
 uniform vec2 s;
-layout(location=0) in vec2 v;
+layout(location=0) in float v;
 layout(location=1) in vec2 p1;
 layout(location=2) in vec2 p2;
-layout(location=3) in vec3 col0;
+layout(location=3) in vec4 col0;
 layout(location=4) in uint idx0;
-out vec3 col;
+out vec4 col;
 flat out uint idx;
 
 void main(){

@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "layout.h"
 #include "graph.h"
+#include "drw.h"
 
 /* fruchterman and reingold 91, with small modifications */
 
@@ -91,6 +92,7 @@ compute(void *arg, volatile int *stat, int idx)
 		}
 		for(i=g->edge0.next; i>=0; i=e->next){
 			e = g->edges + i;
+			/* FIXME: expensive? avoid this, just set at index? */
 			nu = getnode(g, e->u >> 1);
 			nv = getnode(g, e->v >> 1);
 			if(nu == nv)
@@ -122,7 +124,7 @@ compute(void *arg, volatile int *stat, int idx)
 			nu = g->nodes + u->i;
 			nu->pos.x = x;
 			nu->pos.y = y;
-			ROTATENODE(&nu->rot, &nu->dir, δx, δy);
+			SETDIR(nu->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}

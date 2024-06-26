@@ -55,10 +55,7 @@ struct Color{
  *	redraw only, not re-render etc; or rather toggle continuous redraw?
  *	does performance/load suffer?
  * - draw labels, arrows
- * - beziers, thickness: https://thebookofshaders.com/05/
  * - extend for 3d vis and navigation, later port to plan9
- * - 3d layout algo on top of this, would be nice to have by may
- *	zoom will just become z-panning
  */
 
 #define	FNodesz	((float)Nodesz)
@@ -78,14 +75,14 @@ struct hjdicks Params{
 };
 struct hjdicks GLNode{
 	HMM_Vec2 pos;
-	HMM_Vec3 col;
-	float θ;
+	HMM_Vec2 dir;
+	HMM_Vec4 col;
 	u32int idx;
 };
 struct hjdicks GLEdge{
 	HMM_Vec2 pos1;
 	HMM_Vec2 pos2;
-	HMM_Vec3 col;
+	HMM_Vec4 col;
 	u32int idx;
 };
 static GLNode *nodev;
@@ -157,6 +154,7 @@ showobj(Obj *o)
 			return;
 		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
 		ee = e;
+		nn = nil;
 		pushcmd("print %d, ledge[%d]", e->id, e->id);
 		break;
 	case Onode:
@@ -165,6 +163,7 @@ showobj(Obj *o)
 			return;
 		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
 		nn = n;
+		ee = nil;
 		pushcmd("print %d, lnode[%d]", n->id, n->id);
 		break;
 	}
@@ -178,7 +177,6 @@ drawlabel(Node *, Color *)
 	return 0;
 }
 
-// FIXME: generalize drawbezier, merge to drawline?
 int
 drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 {
@@ -195,6 +193,7 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 			.X = c->r,
 			.Y = c->g,
 			.Z = c->b,
+			.W = 0.6f,
 		},
 		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
@@ -204,26 +203,48 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 }
 
 int
-drawbezier(Vertex a, Vertex b, double w, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
 {
-	// FIXME
-	return drawline(a, b, w, 0, idx, c);
+	GLEdge e = {
+		.pos1 = {
+			.X = a.x,
+			.Y = a.y,
+		},
+		.pos2 = {
+			.X = b.x,
+			.Y = b.y,
+		},
+		.col = {
+			.X = c->r,
+			.Y = c->g,
+			.Z = c->b,
+			.W = 0.2f,
+		},
+		.idx = idx < 0 ? 0 : (u32int)idx + 1,
+	};
+
+	dypush(edgev, e);
+	return 0;
 }
 
 int
-drawquad(Vertex pos, Vertex rot, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
 {
 	GLNode v = {
 		.pos = {
 			.X = pos.x,
 			.Y = pos.y,
 		},
+		.dir = {
+			.X = dir.x,
+			.Y = dir.y,
+		},
 		.col = {
 			.X = c->r,
 			.Y = c->g,
 			.Z = c->b,
+			.W = 0.6f,
 		},
-		.θ = rot.z,
 		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
@@ -579,7 +600,7 @@ initgl(void)
 		0, 2, 1,	// first triangle
 		0, 3, 2,	// second triangle
 	};
-	float edgevert[] = { -FNodesz/2.0f, 0, +FNodesz/2.0f, 0 };
+	float edgevert[] = { -1, 1 };
 	u16int edgeidx[] = { 0, 1 };
 
 	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
@@ -691,13 +712,13 @@ initgl(void)
 					.buffer_index = 1,
 				},
 				[2] {
-					.offset = offsetof(GLNode, col),
-					.format = SG_VERTEXFORMAT_FLOAT3,
+					.offset = offsetof(GLNode, dir),
+					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
 				[3] {
-					.offset = offsetof(GLNode, θ),
-					.format = SG_VERTEXFORMAT_FLOAT,
+					.offset = offsetof(GLNode, col),
+					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
 				[4] {
@@ -741,7 +762,7 @@ initgl(void)
 		.layout = {
 			.buffers = {
 				[0] {
-					.stride = 2 * sizeof(float),
+					.stride = sizeof(float),
 				},
 				[1] {
 					.stride = sizeof(GLEdge),
@@ -751,7 +772,7 @@ initgl(void)
 			.attrs = {
 				[0] {
 					.offset = 0,
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 0,
 				},
 				[1] {
@@ -766,7 +787,7 @@ initgl(void)
 				},
 				[3] {
 					.offset = offsetof(GLEdge, col),
-					.format = SG_VERTEXFORMAT_FLOAT3,
+					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
 				[4] {

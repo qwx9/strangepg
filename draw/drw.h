@@ -53,7 +53,7 @@ void	zoomdraw(float);
 void	pandraw(float, float);
 
 int	drawline(Vertex, Vertex, double, int, s32int, Color*);
-int	drawbezier(Vertex, Vertex, double, s32int, Color*);
+int	drawbezier(Vertex, Vertex, s32int, Color*);
 int	drawquad(Vertex, Vertex, s32int, Color*);
 int	drawlabel(Node*, Color*);
 void	drawui(void);
