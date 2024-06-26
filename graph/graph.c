@@ -258,7 +258,9 @@ newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
 	}
 	n.id = id;
 	n.pid = pid;
+	n.dir = V(1.0f, 0.0f, 0.0f);
 	n.idx = idx;
+	n.length = 1;
 	n.weight = w;
 	n.ch = -1;
 	n.col = somecolor(g);
