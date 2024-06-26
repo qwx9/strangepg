@@ -36,7 +36,7 @@ struct D{
 static void *
 new(Graph *g)
 {
-	int fx;
+	int fx, min, max;
 	ssize nf, nm, i, *e, *ee, *etab;
 	float n, m, r, r1, r2, θ;
 	Node *u, *v;
@@ -45,6 +45,8 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
+	max = 0;
+	min = -1UL;
 	for(i=g->node0.next, nf=nm=0; i>=0; i=u->next){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
@@ -58,24 +60,38 @@ new(Graph *g)
 				nf++;
 			else
 				nm++;
+			if(max < p.x)
+				max = p.x;
+			if(min > p.x)
+				min = p.x;
 		}
 		dypush(ptab, p);
 	}
-	r1 = view.w / 1.5f - Nodesz / 2;
-	r2 = r1 - 4 * Nodesz;
+	r1 = Vdefw / 1.5f - Nodesz / 2;
+	//r2 = r1 - 4 * Nodesz;
+	// FIXME: problem here, getting stuck??
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			fx = (u->flags & FNfixed);
+			// FIXME: use minx - maxx as [0,1]
+			//n = pp->x / (max - min);
 			n = pp->x;
 			r = r1;
+			//r = max - min;
+			#ifdef fuck
 			for(;;){
+				// FIXME: not scalable, must depend on nnodes
 				m = r * 2 * PI / (Nodesz / 2);
 				if(n < m)
 					break;
-				n -= m;
-				r -= Nodesz;
+				//n -= m;
+				n--;
+				//r -= Nodesz;	// FIXME: ouch inefficient
+				r--;
+				warn("%.f < %.f?\n", n, m);
 			}
+			#endif
 			θ = n * Nodesz / r;
 			if(!fx)
 				r = r1 - r;
@@ -117,7 +133,7 @@ new(Graph *g)
 	ptab = nil;
 	/* one ring for fixed, one ring for free, one arc increment to
 	 * find them */
-	r1 = view.w / 2 - Nodesz;
+	r1 = Vdefw / 2 - Nodesz;
 	r2 = r1 - 2 * Nodesz;
 	dθ = 2 * PI / g->nnodes;	/* approx; start from -π */
 	//d = r1|r2 * θ;
@@ -126,7 +142,7 @@ new(Graph *g)
 		p.nx = &u->pos.x;
 		p.ny = &u->pos.y;
 		if((u->flags & (FNfixed|FNinitpos)) == FNfixed){
-			n = u->fixpos.x;
+			n = u->pos0.x;
 			r = r1;
 			for(;;){
 				m = r * 2 * PI / Nodesz;
@@ -176,6 +192,8 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	P *pp, *p0, *p1, *u, *v;
+	int c;
+	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
 	ssize *e, *ee;
 	D *d;
@@ -188,7 +206,7 @@ compute(void *arg, volatile int *stat, int i)
 	p1 = pp + dylen(pp);
 	if(p1 > pp + dylen(pp))
 		p1 = pp + dylen(pp);
-	for(;;){
+	for(c=0;; c++){
 		Δr = 0;
 		/* not the best way to do this, but skipping through the array
 		 * approximately gives a view over the entire graph, not just
@@ -250,7 +268,9 @@ compute(void *arg, volatile int *stat, int i)
 		}
 		if(Δr < 1.0)
 			break;
-		t = cool(t);
+		/* y = 1 - (x/Nrep)^4 */
+		dt = c * (1.0 / 100000.0);
+		t = 1.0 - dt * dt * dt * dt;
 	}
 	return 0;
 }

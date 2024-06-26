@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "layout.h"
 #include "graph.h"
+#include "drw.h"
 
 /* FIXME: just set constant link length between fixed and movable? */
 /* FIXME: chrona/other layout */
@@ -17,7 +18,6 @@ struct P{
 	Vertex xyz;
 	Vertex *pos;
 	Vertex *dir;
-	Vertex *rot;
 	ssize i;
 	ssize e;
 	int nin;
@@ -30,7 +30,7 @@ struct D{
 	float k;
 };
 
-#define Fa(x, k)	((x) * (x) / (k))
+#define Fa(x, k)	((x) * (x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
 
@@ -48,21 +48,21 @@ new(Graph *g)
 		u = g->nodes + i;
 		p.i = i;
 		p.pos = &u->pos;
-		p.rot = &u->rot;
 		p.dir = &u->dir;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			p.xyz.x = u->pos0.x;
-			p.xyz.y = u->pos0.y;
+			p.xyz.x = u->pos0.x * Nodesz * 2;
+			p.xyz.y = u->pos0.y + (-4 + (i % 8)) * Nodesz;
 			if((u->flags & FNfixed) != 0){
 				if(maxx < p.xyz.x)
 					maxx = p.xyz.x;
 			}else{
 				nf++;
-				p.xyz.y = -128 + nrand(256);
+				p.xyz.x = 0;
+				p.xyz.y = -L + nrand(2*L);
 			}
 		}else{
-			p.xyz.x = g->nnodes / 2;
-			p.xyz.y = -32 + nrand(64);
+			p.xyz.x = 0;
+			p.xyz.y = -L + nrand(2*L);
 		}
 		*p.pos = p.xyz;
 		u->layid = dylen(ptab);
@@ -73,11 +73,13 @@ new(Graph *g)
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
 		if((u->flags & FNfixed) != 0){
-			pp->i = -1;
 			pp->xyz.x -= maxx / 2;
 			pp->pos->x = pp->xyz.x;
+			pp->i = -1;
 			continue;
 		}
+		pp->xyz.x = -maxx / 2 + nrand(maxx);
+		pp->pos->x = pp->xyz.x;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
 			v = getnode(g, g->edges[*e].v >> 1);
@@ -150,9 +152,11 @@ compute(void *arg, volatile int *stat, int i)
 			if(u->i < 0)
 				continue;
 
-			/* FIXME: removing this is not really a fix
+			// FIXME: removing this is not really a fix
+			/*
 			for(v=pp; v<pp+dylen(pp); v++){
-				if(u == v)
+				// movable nodes don't repulse each other
+				if(u == v || v->i >= 0)
 					continue;
 				δx = x - v->xyz.x;
 				δy = y - v->xyz.y;
@@ -196,7 +200,7 @@ compute(void *arg, volatile int *stat, int i)
 			u->xyz.x = x;
 			u->xyz.y = y;
 			*u->pos = u->xyz;
-			ROTATENODE(u->rot, u->dir, δx, δy);
+			SETDIR(*u->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}

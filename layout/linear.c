@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "layout.h"
 #include "graph.h"
+#include "drw.h"
 
 /* FIXME: NOTE: returning stuff by copy to feed graphs etc means pointers
  * will be invalidated as soon as those arrays are resized, so just malloc
@@ -136,7 +137,7 @@ compute(void *arg, volatile int *stat, int idx)
 			nu = g->nodes + u->i;
 			nu->pos.x = x;
 			nu->pos.y = y;
-			ROTATENODE(&nu->rot, &nu->dir, δx, δy);
+			SETDIR(nu->dir, δx, δy);
 			if(Δr < δ)
 				Δr = δ;
 		}
