@@ -6,11 +6,7 @@
 /* FIXME:
  * - add status messages => first cimgui stuff
  * - toggle node/edge labels on/off
- * - load metadata from csv/tsv
  * - move gfa specific shit to fs/gfa.c → loadmeta function pointer
- * - buffer commands until meta is loaded to launch meta commands
- *	awk: save to batch buffer, then send it back
- *	then strpg sends it back again?
  */
 
 static int
@@ -38,6 +34,7 @@ collectgfanodes(Graph *g, File *f)
 		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
 			pushcmd("LN[lnode[%d]] = %d", n->id, l);
+			n->length = l;
 			r = 1;
 		}
 		for(s=t; s!=nil; s=t){
@@ -48,10 +45,13 @@ collectgfanodes(Graph *g, File *f)
 			}
 			/* FIXME: don't assume two letter tags? */
 			/* ignore length if sequence was inlined */
-			if(strncmp(s, "LN", 2) == 0 && r){
-				DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", n->id);
-				continue;
 			/* FIXME: no error checking */
+			if(strncmp(s, "LN", 2) == 0){
+				if(r){
+					DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", n->id);
+					continue;
+				}
+				n->length = atoi(s+5);
 			}else if(strncmp(s, "fx", 2) == 0){
 				n->flags |= FNfixed;
 				n->pos0.x = atof(s+5);
