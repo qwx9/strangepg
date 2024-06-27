@@ -1,3 +1,5 @@
+extern int noreset;
+
 extern char *awkprog;
 extern Channel *cmdc;
 extern int epfd[2];

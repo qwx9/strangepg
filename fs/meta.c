@@ -13,10 +13,10 @@ static int
 collectgfanodes(Graph *g, File *f)
 {
 	char *s, *t;
-	int r, l, nerr;
+	int c, r, l, nerr;
 	Node *n;
 
-	for(n=g->nodes, nerr=0; n<g->nodes+dylen(g->nodes); n++){
+	for(n=g->nodes, nerr=c=0; n<g->nodes+dylen(g->nodes); n++){
 		r = 0;
 		seekfs(f, n->metaoff);
 		if((s = readline(f, &l)) == nil){
@@ -34,6 +34,7 @@ collectgfanodes(Graph *g, File *f)
 		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
 			pushcmd("LN[lnode[%d]] = %d", n->id, l);
+			c++;
 			n->length = l;
 			r = 1;
 		}
@@ -64,18 +65,19 @@ collectgfanodes(Graph *g, File *f)
 			}
 			s[2] = 0;
 			pushcmd("%s[lnode[%d]] = \"%s\"", s, n->id, s+5);
+			c++;
 		}
 		nerr = 0;
 	}
 	warn("collectgfanodes: done\n");
-	return 0;
+	return c;
 }
 
 static int
 collectgfaedges(Graph *g, File *f)
 {
-	char *s, *t;
 	int l, nerr;
+	char *s, *t;
 	Edge *e;
 
 	for(e=g->edges, nerr=0; e<g->edges+dylen(g->edges); e++){
@@ -113,16 +115,19 @@ collectgfaedges(Graph *g, File *f)
 void
 collectgfameta(Graph *g)
 {
+	int n, m;
 	File *f;
 
 	clearmeta(g);	/* delegated to awk */
 	f = g->f;
-	if(collectgfanodes(g, f) < 0)
+	if((n = collectgfanodes(g, f)) < 0)
 		warn("collectmeta: %s\n", error());
-	if(collectgfaedges(g, f) < 0)
+	if((m = collectgfaedges(g, f)) < 0)
 		warn("collectmeta: %s\n", error());
 	g->flags |= GFarmed;
-	pushcmd("cmd(\"FGD135\")");
+	/* if no actual useful metadata was loaded, don't do anything */
+	if(!noreset && n+m > 0)
+		pushcmd("cmd(\"FGD135\")");
 }
 
 void

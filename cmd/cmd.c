@@ -2,9 +2,11 @@
 #include "graph.h"
 #include "drw.h"
 #include "fs.h"
+#include "layout.h"
 #include "threads.h"
 #include "cmd.h"
 
+int noreset;
 int epfd[2] = {-1, -1};
 Channel *cmdc;
 
@@ -91,11 +93,16 @@ readcmd(char *s)
 	redraw = 0;
 	t = nextfield(nil, s, nil, '\n');
 	while(s != nil){
+		/* FIXME: mootigraph */
+		g = graphs;
 		switch(*s){
 		case 0:
 			return;
 		case 'E': 
 			warn("Error:%s\n", s+1);
+			goto next;
+		case 'R':
+			resetlayout(g);
 			goto next;
 		case 'c':
 		case 'f':
@@ -107,8 +114,6 @@ readcmd(char *s)
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
 			goto error;
-		/* FIXME: mootigraph */
-		g = graphs;
 		/* FIXME: stupid approach */
 		switch(s[0]){
 		error:

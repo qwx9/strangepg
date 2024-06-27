@@ -29,7 +29,7 @@ load(char **files)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-bi] [-l layout] [-m 16-63] [-t 1-128] FILE [FILE..]\n", argv0);
+	sysfatal("usage: %s [-Rbi] [-l layout] [-m 16-63] [-t 1-128] FILE [FILE..]\n", argv0);
 }
 
 static char **
@@ -70,6 +70,7 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
+	case 'R': noreset = 1; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
 	case 'i': intype = FFindex; break;
 	case 'l':

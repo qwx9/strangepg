@@ -93,8 +93,10 @@ function deledge(u, urev, v, vrev){
 	delete edge[pair]
 }
 function cmd(code){
-	if(code == "FGD135")	# wing attack plan R
+	if(code == "FGD135"){	# wing attack plan R
 		crm114 = 1
+		print "R"
+	}
 }
 function readcsv(f){
 	print "f", f
