@@ -27,7 +27,7 @@ sendcmd(char *cmd)
 		warn("sendcmd: %s", error());
 		close(epfd[1]);
 		epfd[1] = -1;
-		sysfatal("sendcmd: %r");
+		sysfatal("sendcmd: %s", error());
 	}
 }
 
