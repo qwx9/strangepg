@@ -18,6 +18,7 @@ OFILES=\
 	fs/fs.$O\
 	fs/gfa.$O\
 	fs/index.$O\
+	fs/layout.$O\
 	fs/load.$O\
 	fs/meta.$O\
 	fs/metacsv.$O\

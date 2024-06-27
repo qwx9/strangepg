@@ -73,56 +73,109 @@ readfs(File *f, void *buf, int n)
 	return m;
 }
 
-u8int
-get8(File *f)
+/* ugh */
+int
+get8(File *f, u8int *v)
 {
 	int m;
-	uchar v;
+	uchar u[sizeof *v];
+
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		return m;
+	*v = GBIT8(u);
+	return 0;
+}
+
+int
+get16(File *f, u16int *v)
+{
+	int m;
+	uchar u[sizeof *v];
+
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		return m;
+	*v = GBIT16(u);
+	return 0;
+}
+
+int
+get32(File *f, u32int *v)
+{
+	int m;
+	uchar u[sizeof *v];
+
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		return m;
+	*v = GBIT32(u);
+	return 0;
+}
+
+int
+get64(File *f, u64int *v)
+{
+	int m;
+	uchar u[sizeof *v];
+
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		return m;
+	*v = GBIT64(u);
+	return 0;
+}
+
+u8int
+eget8(File *f)
+{
+	int m;
+	uchar u[1];
 
 	assert(f->aux != nil);
-	if((m = sysread(f, &v, 1)) <= 0){
-		if(debug & Debugtheworld){
-			warn("get8: short read %d: %s\n", m, error());
-			abort();
-		}
+	if((m = sysread(f, u, sizeof u)) <= 0)
 		sysfatal("get8: short read %d: %s\n", m, error());
-	}
-	return v;
+	return GBIT8(u);
 }
 
 u16int
-get16(File *f)
+eget16(File *f)
 {
-	u8int v;
+	int m;
+	uchar u[2];
 
-	v = get8(f);
-	return (u16int)get8(f) << 8 | v;
+	assert(f->aux != nil);
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		sysfatal("get16: short read %d: %s", m, error());
+	return GBIT16(u);
 }
 
 u32int
-get32(File *f)
+eget32(File *f)
 {
-	u16int v;
+	int m;
+	uchar u[4];
 
-	v = get16(f);
-	return (u32int)get16(f) << 16 | v;
+	assert(f->aux != nil);
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		sysfatal("get32: short read %d: %s", m, error());
+	return GBIT32(u);
 }
 
 u64int
-get64(File *f)
+eget64(File *f)
 {
-	u32int v;
+	int m;
+	uchar u[8];
 
-	v = get32(f);
-	return (u64int)get32(f) << 32 | v;
+	assert(f->aux != nil);
+	if((m = sysread(f, u, sizeof u)) <= 0)
+		sysfatal("get64: short read %d: %s", m, error());
+	return GBIT64(u);
 }
 
 double
-getdbl(File *f)
+egetdbl(File *f)
 {
 	union{ u64int v; double d; } u;
 
-	u.v = get64(f);
+	u.v = eget64(f);
 	return u.d;
 }
 

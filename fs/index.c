@@ -27,10 +27,10 @@ expandnode(Graph *g, Node *pp)
 	warn("pp %#p %zx\n", pp, pp->id);
 	seekfs(f, l->noff);
 	for(i=0, p=nil; i<l->nnodes; i++){
-		u = get64(f);
-		idx = get64(f);
-		par = get64(f);
-		w = get64(f);
+		u = eget64(f);
+		idx = eget64(f);
+		par = eget64(f);
+		w = eget64(f);
 		warn("pp %#p %zx\n", pp, pp->id);
 		DPRINT(Debugcoarse, "check %zx %zx %zx against %zx", u, idx, par, pp->id);
 		// FIXME: better way?
@@ -44,9 +44,9 @@ expandnode(Graph *g, Node *pp)
 	seekfs(f, l->eoff);
 	warn("pp %#p %zx\n", pp, pp->id);
 	for(i=0; i<l->nedges; i++){
-		u = get64(f);
-		v = get64(f);
-		get64(f);	/* ei */
+		u = eget64(f);
+		v = eget64(f);
+		eget64(f);	/* ei */
 		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
@@ -99,20 +99,20 @@ readtree(Graph *g, char *path)
 	f = g->f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
 	if(openfs(f, path, OREAD) < 0)
 		return -1;
-	g->nnodes = get64(f);
-	g->nedges = get64(f);
-	g->nsuper = get64(f);
-	nl = g->nlevels = get64(f);
+	g->nnodes = eget64(f);
+	g->nedges = eget64(f);
+	g->nsuper = eget64(f);
+	nl = g->nlevels = eget64(f);
 	DPRINT(Debugcoarse, "ct: nv %zd nv+ns %zd ne %zd nl %d",
 		g->nnodes, g->nsuper, g->nedges, g->nlevels);
 	g->c = emalloc(sizeof *c);
 	c = g->c;
 	dyprealloc(c->levels, nl);
 	for(l=c->levels; l<c->levels+dylen(c->levels); l++){
-		l->nnodes = get64(f);
-		l->nedges = get64(f);
-		l->noff = get64(f);
-		l->eoff = get64(f);
+		l->nnodes = eget64(f);
+		l->nedges = eget64(f);
+		l->noff = eget64(f);
+		l->eoff = eget64(f);
 		DPRINT(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
 			l-c->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}

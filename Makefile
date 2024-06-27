@@ -16,17 +16,6 @@ BINDIR:= $(PREFIX)/bin
 OBJS:=\
 	sokol/draw.o\
 	sokol/ui.o\
-	glsl/node.vert.o\
-	glsl/node.frag.o\
-	glsl/edge.vert.o\
-	glsl/edge.frag.o\
-	glsl/scr.vert.o\
-	glsl/scr.frag.o\
-	glsl/bezier.vert.o\
-	glsl/bezier.tcs.o\
-	glsl/bezier.tes.o\
-	glsl/bezier.geom.o\
-	glsl/bezier.frag.o\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
 	lib/queue.o\
@@ -46,6 +35,7 @@ OBJS:=\
 	fs/fs.o\
 	fs/gfa.o\
 	fs/index.o\
+	fs/layout.o\
 	fs/load.o\
 	fs/meta.o\
 	fs/metacsv.o\
@@ -62,6 +52,17 @@ OBJS:=\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\
+	glsl/node.vert.o\
+	glsl/node.frag.o\
+	glsl/edge.vert.o\
+	glsl/edge.frag.o\
+	glsl/scr.vert.o\
+	glsl/scr.frag.o\
+	glsl/bezier.vert.o\
+	glsl/bezier.tcs.o\
+	glsl/bezier.tes.o\
+	glsl/bezier.geom.o\
+	glsl/bezier.frag.o\
 
 COARSENOBJS:=\
 	coarsen.o\

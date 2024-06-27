@@ -37,6 +37,9 @@ void	regfs(Filefmt*);
 void	collectgfameta(Graph*);
 void	clearmeta(Graph*);
 
+int	importlayout(Graph*, char*);
+int	exportlayout(Graph*, char*);
+
 int	sysopen(File*, int);
 int	sysfdopen(File*, int, int);
 int	syswrite(File*, void*, int);
@@ -63,11 +66,15 @@ void	sysclose(File*);
 #define	PBIT64(p,v)	do{(p)[0]=(v);(p)[1]=(v)>>8;(p)[2]=(v)>>16;(p)[3]=(v)>>24;\
 			   (p)[4]=(v)>>32;(p)[5]=(v)>>40;(p)[6]=(v)>>48;(p)[7]=(v)>>56;}while(0)
 
-u8int	get8(File*);
-u16int	get16(File*);
-u32int	get32(File*);
-u64int	get64(File*);
-double	getdbl(File*);
+int	get8(File*, u8int*);
+int	get16(File*, u16int*);
+int	get32(File*, u32int*);
+int	get64(File*, u64int*);
+u8int	eget8(File*);
+u16int	eget16(File*);
+u32int	eget32(File*);
+u64int	eget64(File*);
+double	egetdbl(File*);
 int	put8(File*, u8int);
 int	put16(File*, u16int);
 int	put32(File*, u32int);

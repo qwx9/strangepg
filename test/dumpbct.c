@@ -29,18 +29,18 @@ main(int argc, char **argv)
 		seekfs(f, l->noff);
 		print("\tnodes:");
 		for(i=0; i<l->nnodes; i++){
-			u = get64(f);
-			idx = get64(f);
-			par = get64(f);
-			w = get64(f);
+			u = eget64(f);
+			idx = eget64(f);
+			par = eget64(f);
+			w = eget64(f);
 			print(" %zx[%zx]←%zx:%zd", u, idx, par, w);
 		}
 		print("\n\tedges:");
 		seekfs(f, l->eoff);
 		for(i=0; i<l->nedges; i++){
-			u = get64(f);
-			v = get64(f);
-			ei = get64(f);
+			u = eget64(f);
+			v = eget64(f);
+			ei = eget64(f);
 			print(" [%zx]%zx,%zx", ei, u&1?-u/2:u/2, v&1?-v/2:v/2);
 		}
 		print("\n");
