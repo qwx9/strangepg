@@ -28,25 +28,18 @@ load(void)
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
 		case FFlayout:
-			if(access(in->path, AREAD) < 0)
-				goto err;
 			pushcmd("importlayout(\"%s\")", in->path);
 			break;
 		case FFcsv:
-			if(access(in->path, AREAD) < 0)
-				goto err;
 			pushcmd("readcsv(\"%s\")", in->path);
 			break;
 		default:
 			if(loadfs(in->path, in->type) < 0)
-				goto err;
+				sysfatal("could not load file %s: %s", in->path, error());
 			break;
 		}
 	}
 	dyfree(files);
-	return;
-err:
-	sysfatal("could not load file %s: %s", in->path, error());
 }
 
 static void
@@ -58,6 +51,8 @@ pushfile(char *file, int type)
 		warn("invalid input file\n");
 		return;
 	}
+	if(access(file, AREAD) < 0)
+		sysfatal("could not load file %s: %s", file, error());
 	in = (Input){type, file};
 	dypush(files, in);
 }
