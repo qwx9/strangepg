@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 #include "graph.h"
+#include "layout.h"
 #include "threads.h"
 #include "cmd.h"
 
@@ -9,12 +10,13 @@ importlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int r;
-	uchar buf[sizeof(ssize) + 2*3*sizeof(float)], *p;
+	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
 	u64int id;
 	Vertex v;
 	File *fs;
 	Node *n;
 
+	stoplayout(g);
 	r = -1;
 	fs = emalloc(sizeof *fs);
 	if(g == nil || path == nil){
@@ -35,20 +37,20 @@ importlayout(Graph *g, char *path)
 		}
 		u.u = GBIT32(p);
 		v.x = u.f;
-		p += sizeof u;
+		p += sizeof u.u;
 		u.u = GBIT32(p);
 		v.y = u.f;
-		p += sizeof u;
+		p += sizeof u.u;
 		u.u = GBIT32(p);
 		v.z = u.f;
-		p += sizeof u;
+		p += sizeof u.u;
 		n->pos = v;
 		u.u = GBIT32(p);
 		v.x = u.f;
-		p += sizeof u;
+		p += sizeof u.u;
 		u.u = GBIT32(p);
 		v.y = u.f;
-		p += sizeof u;
+		p += sizeof u.u;
 		u.u = GBIT32(p);
 		v.z = u.f;
 		n->dir = v;
@@ -69,7 +71,7 @@ exportlayout(Graph *g, char *path)
 	int r;
 	s64int i;
 	u64int id;
-	uchar buf[sizeof(ssize) + 2*3*sizeof(float)], *p;
+	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
 	File *fs;
 	Node *n;
 
@@ -89,22 +91,22 @@ exportlayout(Graph *g, char *path)
 		p += sizeof id;
 		u.f = n->pos.x;
 		PBIT32(p, u.u);
-		p += sizeof u;
+		p += sizeof u.u;
 		u.f = n->pos.y;
 		PBIT32(p, u.u);
-		p += sizeof u;
+		p += sizeof u.u;
 		u.f = n->pos.z;
 		PBIT32(p, u.u);
-		p += sizeof u;
+		p += sizeof u.u;
 		u.f = n->dir.x;
 		PBIT32(p, u.u);
-		p += sizeof u;
+		p += sizeof u.u;
 		u.f = n->dir.y;
 		PBIT32(p, u.u);
-		p += sizeof u;
+		p += sizeof u.u;
 		u.f = n->dir.z;
 		PBIT32(p, u.u);
-		if(writefs(fs, buf, sizeof buf) != sizeof buf){
+		if(writefs(fs, buf, sizeof buf) < 0){
 			r = -1;
 			break;
 		}

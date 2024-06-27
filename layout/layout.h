@@ -39,6 +39,7 @@ void	initlayout(void);
 int	runlayout(Graph*, int);
 int	resetlayout(Graph*);
 int	haltlayout(Graph*);
+int	stoplayout(Graph*);
 int	updatelayout(Graph*);
 int	togglelayout(Graph*);
 
