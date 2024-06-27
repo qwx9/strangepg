@@ -17,8 +17,13 @@ sysopen(File *f, int mode)
 {
 	int fd;
 
-	if((fd = open(f->path, mode)) < 0)
-		return -1;
+	if(mode != OWRITE && (mode & OTRUNC) == 0){
+		if((fd = open(f->path, mode)) < 0)
+			return -1;
+	}else{
+		if((fd = create(f->path, mode, 0644)) < 0)
+			return -1;
+	}
 	return sysfdopen(f, fd, mode);
 }
 

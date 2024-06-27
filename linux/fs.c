@@ -10,7 +10,7 @@ modestr(int omode)
 	mode = "nein";
 	switch(omode){
 	case OREAD: mode = "rb"; break;
-	case OWRITE: mode = "wb"; break;
+	case OWRITE: mode = "w+b"; break;
 	case ORDWR: mode = "w+b"; break;
 	default: sysfatal("sysopen: unknown file mode");
 	}
