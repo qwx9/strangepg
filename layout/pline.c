@@ -51,17 +51,21 @@ new(Graph *g)
 		p.dir = &u->dir;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			p.xyz.x = u->pos0.x * Nodesz * 2;
-			p.xyz.y = u->pos0.y + (-4 + (i % 8)) * Nodesz;
+			p.xyz.y = (u->pos0.y * Nodesz * 2) * (i % 2 == 0 ? -1 : 1);
+			/*
+			if(p.xyz.y == 0.0f)
+				p.xyz.y = -4 + (i % 8) * Nodesz;
+			*/
 			if((u->flags & FNfixed) != 0){
 				if(maxx < p.xyz.x)
 					maxx = p.xyz.x;
 			}else{
 				nf++;
-				p.xyz.x = 0;
-				p.xyz.y = -L + nrand(2*L);
+				p.xyz.x = 0.0f;
+				//p.xyz.y = -L + nrand(2*L);
 			}
 		}else{
-			p.xyz.x = 0;
+			p.xyz.x = 0.0f;
 			p.xyz.y = -L + nrand(2*L);
 		}
 		*p.pos = p.xyz;
