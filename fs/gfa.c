@@ -1,6 +1,8 @@
 #include "strpg.h"
 #include "graph.h"
 #include "fs.h"
+#include "threads.h"
+#include "cmd.h"
 
 /* assumptions:
  * - required field separator is \t
@@ -73,6 +75,7 @@ static void
 loadgfa1(void *arg)
 {
 	int (*parse)(Graph*, File*, char*);
+	int n;
 	char *s, *p, *path;
 	ssize nnodes, nedges;
 	Graph g;
@@ -109,7 +112,12 @@ loadgfa1(void *arg)
 	g.nnodes = dylen(g.nodes);
 	g.nedges = dylen(g.edges);
 	pushgraph(g);
-	collectgfameta(&g);
+	if((n = collectgfameta(&g)) < 0)
+		warn("loadgfa: loading metadata failed: %s\n", error());
+	/* if no actual useful metadata was loaded, don't do anything */
+	else if(n > 0 && !noreset)
+		pushcmd("cmd(\"OPL753\")");
+	pushcmd("cmd(\"FGD135\")");
 	closefs(f);
 }
 

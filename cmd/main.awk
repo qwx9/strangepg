@@ -94,12 +94,29 @@ function deledge(u, urev, v, vrev){
 }
 function cmd(code){
 	if(code == "FGD135"){	# wing attack plan R
+		if(deferred != ""){
+			print deferred
+			deferred = ""
+		}
 		crm114 = 1
-		print "R"
+	}else if(code == "KDH037")	# all planes to report position
+		standby++
+	else if(code == "OPL753")	# wing to contact base immediately
+		deferred = deferred "R\n"
+	else if(code == "FJJ142"){	# mission completed returning
+		if(--standby == 0)
+			print "R"
 	}
+	#else if(code == "FHJ142")	# wing to proceed to targets
+	#else if(code == "OPL753")	# wing to contact base immediately
 }
 function readcsv(f){
-	print "f", f
+	if(crm114 == 1)
+		print "f", f
+	else{
+		deferred = deferred "f " f "\n"
+		cmd("KDH037")
+	}
 }
 function selectnode(){
 }

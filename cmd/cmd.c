@@ -114,7 +114,6 @@ readcmd(char *s)
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
 			goto error;
-		/* FIXME: stupid approach */
 		switch(s[0]){
 		error:
 			warn("readcmd: %s\n", error());

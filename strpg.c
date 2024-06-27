@@ -7,7 +7,12 @@
 #include "fs.h"
 #include "ui.h"
 
-static int intype;
+typedef struct Input Input;
+struct Input{
+	int type;
+	char *path;
+};
+static Input *files;
 
 void
 quit(void)
@@ -16,32 +21,56 @@ quit(void)
 }
 
 static void
-load(char **files)
+load(void)
 {
-	char *s;
+	Input *in, *end;
 
-	while((s = *files++) != nil){
-		if(loadfs(s, intype) < 0)
-			sysfatal("loadfs: could not load %s: %r\n", s);
+	for(in=files, end=in+dylen(files); in!=end; in++){
+		switch(in->type){
+		case FFcsv:
+			if(access(in->path, AREAD) < 0)
+				sysfatal("could not load file %s: %s", in->path, error());
+			pushcmd("readcsv(\"%s\")", in->path);
+			break;
+		default:
+			if(loadfs(in->path, in->type) < 0)
+				sysfatal("could not load file %s: %s", in->path, error());
+			break;
+		}
 	}
+	dyfree(files);
+}
+
+static void
+pushfile(char *file, int type)
+{
+	Input in;
+
+	if(file == nil || type == FFdead || type >= FFnil){
+		warn("invalid input file\n");
+		return;
+	}
+	in = (Input){type, file};
+	dypush(files, in);
 }
 
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Rbi] [-l layout] [-m 16-63] [-t 1-128] FILE [FILE..]\n", argv0);
+	sysfatal("usage: %s [-Rb] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]", argv0);
 }
 
-static char **
+static void
 parseargs(int argc, char **argv)
 {
+	int type;
 	char *s;
 
 	/* FIXME: remove intype and -i, add an optional format specifier in filename:
 	 *	strpg ass.gfa; strpg i~ass.bct */
 	/* FIXME: we won't try to guess format, but we should validate it */
 	/* FIXME: lilu dallas mooltigraph */
-	intype = FFgfa;
+	type = FFgfa;
 	ARGBEGIN{
 	case 'D':
 		s = EARGF(usage());
@@ -72,7 +101,7 @@ parseargs(int argc, char **argv)
 		break;
 	case 'R': noreset = 1; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
-	case 'i': intype = FFindex; break;
+	case 'c': pushfile(EARGF(usage()), FFcsv); break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)
@@ -108,7 +137,8 @@ parseargs(int argc, char **argv)
 	}ARGEND
 	if(argv == nil)
 		usage();
-	return argv;
+	for(; *argv!=nil; argv++)
+		pushfile(*argv, type);
 }
 
 static void
@@ -128,9 +158,9 @@ main(int argc, char **argv)
 {
 	sysinit();
 	srand(time(nil));
-	argv = parseargs(argc, argv);
+	parseargs(argc, argv);
 	init();
-	load(argv);
+	load();
 	evloop();
 	quit();
 	return 0;

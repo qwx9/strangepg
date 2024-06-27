@@ -112,7 +112,7 @@ collectgfaedges(Graph *g, File *f)
 	return 0;
 }
 
-void
+int
 collectgfameta(Graph *g)
 {
 	int n, m;
@@ -121,13 +121,11 @@ collectgfameta(Graph *g)
 	clearmeta(g);	/* delegated to awk */
 	f = g->f;
 	if((n = collectgfanodes(g, f)) < 0)
-		warn("collectmeta: %s\n", error());
+		return -1;
 	if((m = collectgfaedges(g, f)) < 0)
-		warn("collectmeta: %s\n", error());
+		return -1;
 	g->flags |= GFarmed;
-	/* if no actual useful metadata was loaded, don't do anything */
-	if(!noreset && n+m > 0)
-		pushcmd("cmd(\"FGD135\")");
+	return n + m;
 }
 
 void

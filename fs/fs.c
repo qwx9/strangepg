@@ -68,7 +68,7 @@ readfs(File *f, void *buf, int n)
 			warn("readfs: short read %d not %d: %s\n", m, n, error());
 			abort();
 		}
-		sysfatal("readfs: short read %d not %d: %s\n", m, n, error());
+		sysfatal("readfs: short read %d not %d: %s", m, n, error());
 	}
 	return m;
 }
@@ -130,7 +130,7 @@ eget8(File *f)
 
 	assert(f->aux != nil);
 	if((m = sysread(f, u, sizeof u)) <= 0)
-		sysfatal("get8: short read %d: %s\n", m, error());
+		sysfatal("get8: short read %d: %s", m, error());
 	return GBIT8(u);
 }
 
