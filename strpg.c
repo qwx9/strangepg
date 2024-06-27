@@ -27,18 +27,26 @@ load(void)
 
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
+		case FFlayout:
+			if(access(in->path, AREAD) < 0)
+				goto err;
+			pushcmd("importlayout(\"%s\")", in->path);
+			break;
 		case FFcsv:
 			if(access(in->path, AREAD) < 0)
-				sysfatal("could not load file %s: %s", in->path, error());
+				goto err;
 			pushcmd("readcsv(\"%s\")", in->path);
 			break;
 		default:
 			if(loadfs(in->path, in->type) < 0)
-				sysfatal("could not load file %s: %s", in->path, error());
+				goto err;
 			break;
 		}
 	}
 	dyfree(files);
+	return;
+err:
+	sysfatal("could not load file %s: %s", in->path, error());
 }
 
 static void
@@ -57,7 +65,7 @@ pushfile(char *file, int type)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Rb] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]", argv0);
+	sysfatal("usage: %s [-Rb] [-f layfile] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]", argv0);
 }
 
 static void
@@ -102,6 +110,7 @@ parseargs(int argc, char **argv)
 	case 'R': noreset = 1; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
+	case 'f': pushfile(EARGF(usage()), FFlayout); break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "random") == 0)

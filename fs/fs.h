@@ -22,6 +22,7 @@ enum{
 	FFgfa,
 	FFindex,
 	FFcsv,
+	FFlayout,
 	FFnil,
 };
 

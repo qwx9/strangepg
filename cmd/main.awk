@@ -110,6 +110,17 @@ function cmd(code){
 	#else if(code == "FHJ142")	# wing to proceed to targets
 	#else if(code == "OPL753")	# wing to contact base immediately
 }
+function exportlayout(f){
+	print "o", f
+}
+function importlayout(f){
+	if(crm114 == 1)
+		print "i", f
+	else{
+		deferred = deferred "i " f "\n"
+		cmd("KDH037")
+	}
+}
 function readcsv(f){
 	if(crm114 == 1)
 		print "f", f

@@ -105,7 +105,9 @@ readcmd(char *s)
 			resetlayout(g);
 			goto next;
 		case 'c':
+		case 'i':
 		case 'f':
+		case 'o':
 		case 'x':
 			break;
 		default:
@@ -125,6 +127,22 @@ readcmd(char *s)
 			}
 			if(loadfs(fld[0], FFcsv) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
+			break;
+		case 'i':
+			if(m != 1){
+				werrstr("invalid o message length %d\n", m);
+				goto error;
+			}
+			if(importlayout(g, fld[0]) < 0)
+				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
+			break;
+		case 'o':
+			if(m != 1){
+				werrstr("invalid o message length %d\n", m);
+				goto error;
+			}
+			if(exportlayout(g, fld[0]) < 0)
+				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
 			break;
 		case 'X':
 			if(m != 3){
