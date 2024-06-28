@@ -81,13 +81,14 @@ u32int
 scrobj(int x, int y)
 {
 	Rectangle r;
-	union { uchar u[4]; u32int v; } u;
+	union { uchar u[8]; u64int v; } u;	/* libdraw bug */
 
 	if(selfb == nil)
 		return 0;
-	r = Rpt(Pt(x, y), Pt(x+1, y+1));
-	r = rectsubpt(r, screen->r.min);
-	unloadimage(selfb, r, u.u, 4);
+	r = Rect(x, y, x+1, y+1);
+	r = rectaddpt(r, ΔZP);
+	if(unloadimage(selfb, r, u.u, sizeof u.u) < 0)
+		warn("scrobj: %r\n");
 	return u.v;
 }
 
