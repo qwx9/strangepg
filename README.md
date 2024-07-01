@@ -19,7 +19,7 @@ extensible manner, designed to allow substituting different algorithms for most 
 general framework for experimentation with layouting and new visualization techniques.
 ```
 
-![](strangelove.png)
+<p align="center"><img src="strangelove.png/></p>
 
 _Note: this is a work in progress.
 Please consider this to be a public beta of sorts.
@@ -293,8 +293,6 @@ Tested with clang and gcc only.
   limitations of the bundled graphics library; this limitation reduces
   responsiveness and will be lifted once the renderer is rewritten
 
-![](plan.png)
-
 ## Used and bundled alien software
 
 Data structures:
@@ -312,6 +310,8 @@ Used but not bundled:
 
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
+
+![](plan.png)
 
 ## 9front
 
