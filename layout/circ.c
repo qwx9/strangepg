@@ -28,7 +28,7 @@ struct D{
 	float k;
 };
 
-#define Fa(x, k)	((x) * (x) / (k))
+#define Fa(x, k)	((x) * (x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
 #define	cool(t)	((t) - 0.0001f > 0 ? (t) - 0.0001f : 0.0f)
@@ -36,7 +36,8 @@ struct D{
 static void *
 new(Graph *g)
 {
-	int fx, min, max;
+	int fx;
+	uint min, max;
 	ssize nf, nm, i, *e, *ee, *etab;
 	float n, m, r, r1, r2, θ;
 	Node *u, *v;
@@ -46,10 +47,13 @@ new(Graph *g)
 	ptab = nil;
 	etab = nil;
 	max = 0;
-	min = -1UL;
+	min = ~0;
 	for(i=g->node0.next, nf=nm=0; i>=0; i=u->next){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
+		/* FIXME: bug in data prod? */
+		if(dylen(u->in) == 0 && dylen(u->out) == 0)
+			continue;
 		p.i = i;
 		p.nx = &u->pos.x;
 		p.ny = &u->pos.y;
@@ -67,34 +71,20 @@ new(Graph *g)
 		}
 		dypush(ptab, p);
 	}
-	r1 = Vdefw / 1.5f - Nodesz / 2;
-	//r2 = r1 - 4 * Nodesz;
-	// FIXME: problem here, getting stuck??
+	/* FIXME */
+	//r1 = Vdefw / 1.5f - Nodesz / 2;
+	r1 = (max - min) / 4;
+	n = 0;
 	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
 		u = g->nodes + pp->i;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			fx = (u->flags & FNfixed);
-			// FIXME: use minx - maxx as [0,1]
-			//n = pp->x / (max - min);
-			n = pp->x;
+			n++;
 			r = r1;
-			//r = max - min;
-			#ifdef fuck
-			for(;;){
-				// FIXME: not scalable, must depend on nnodes
-				m = r * 2 * PI / (Nodesz / 2);
-				if(n < m)
-					break;
-				//n -= m;
-				n--;
-				//r -= Nodesz;	// FIXME: ouch inefficient
-				r--;
-				warn("%.f < %.f?\n", n, m);
-			}
-			#endif
+			r -= (n / (max - min)) * Nodesz * 4;
 			θ = n * Nodesz / r;
 			if(!fx)
-				r = r1 - r;
+				r = 0.0f;
 			*pp->nx = pp->x = r * cos(θ);
 			*pp->ny = pp->y = r * -sin(θ);
 			if(fx){
@@ -123,58 +113,6 @@ new(Graph *g)
 	aux->etab = etab;
 	aux->k = 1 * sqrt((float)Area / dylen(ptab));
 	return aux;
-
-#ifdef fuck
-	ssize i, n, m;
-	float r, r1, r2, dθ, θ, d;
-	Node *u;
-	P *ptab, p = {0};
-
-	ptab = nil;
-	/* one ring for fixed, one ring for free, one arc increment to
-	 * find them */
-	r1 = Vdefw / 2 - Nodesz;
-	r2 = r1 - 2 * Nodesz;
-	dθ = 2 * PI / g->nnodes;	/* approx; start from -π */
-	//d = r1|r2 * θ;
-	for(i=g->node0.next; i>=0; i=u->next){
-		u = g->nodes + i;
-		p.nx = &u->pos.x;
-		p.ny = &u->pos.y;
-		if((u->flags & (FNfixed|FNinitpos)) == FNfixed){
-			n = u->pos0.x;
-			r = r1;
-			for(;;){
-				m = r * 2 * PI / Nodesz;
-				if(n < m)
-					break;
-				n -= m;
-				r -= Ptsz * 2;
-			}
-			θ = n * Nodesz / r;
-			/*
-			if((u->flags & FNfixed) != 0){
-				r = r1;
-				p.i = -1;
-			}else{
-				r = r2;
-				p.i = i;
-			}
-			*/
-			p.i = -1;
-			p.x = u->pos.x = r * cos(θ);
-			p.y = u->pos.y = r * -sin(θ);
-		}else{
-			p.x = 0.0f;
-			p.y = 0.0f;
-			p.i = i;
-		}
-		u->layid = dylen(ptab);
-		dypush(ptab, p);
-	}
-	ptab->g = g;
-	return ptab;
-#endif
 }
 
 static void
@@ -219,6 +157,7 @@ compute(void *arg, volatile int *stat, int i)
 			Δx = Δy = 0;
 			if(u->i < 0)
 				continue;
+			/* FIXME */
 			for(v=pp; v<pp+dylen(pp); v++){
 				if(u == v)
 					continue;
