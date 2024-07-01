@@ -3,9 +3,27 @@
 Huge graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
 Currently supports graphs in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format.
 
+Sales pitch:
+```
+Visualizing large graphs in the million node scale and beyond remains a challenge and is relevant to multiple fields of study. In
+pangenomics, as databases are continuously enriched by new and high quality assemblies, there is a growing need for tools and
+methods tailored to handle extremely large volumes of data. As pangenome sizes multiply, available techniques quickly hit
+operational limits in terms of processing time and memory. In particular, visualizing graphs in a general, intuitive and interactive
+manner is useful for analysis and interpretation, yet computationally prohibitive at such a scale. The main objective of this
+project is the development of strangepg, a new tool and visualization workflow aiming to address these limitations by employing
+the combination of offline indexing and graph coarsening with the extensive use of a generic external memory layer. By
+offloading the major computational effort to a preprocessing step, the interactive visualizer loads only a small fraction of the
+total data and fetches more from disk only on request. The use of external memory ensures that every step can be performed on
+commodity hardware for arbitrary sized graphs. strangepg is being implemented in C in a highly modular, portable and
+extensible manner, designed to allow substituting different algorithms for most steps with minimal effort, and aims to provide a
+general framework for experimentation with layouting and new visualization techniques.
+```
+
+![](strangelove.png)
+
 _Note: this is a work in progress.
 Please consider this to be a public beta of sorts.
-Feel free to send any bug reports, feature requests and comments email or as github issues.
+Feel free to send any bug reports, feature requests and comments by email or as github issues.
 Thanks!_
 
 ## Features
@@ -274,6 +292,8 @@ Tested with clang and gcc only.
 - Linux: keyboard/mouse handling are in the same thread as the renderer due to
   limitations of the bundled graphics library; this limitation reduces
   responsiveness and will be lifted once the renderer is rewritten
+
+![](plan.png)
 
 ## Used and bundled alien software
 
