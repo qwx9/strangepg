@@ -19,7 +19,7 @@ extensible manner, designed to allow substituting different algorithms for most 
 general framework for experimentation with layouting and new visualization techniques.
 ```
 
-<p align="center"><img src="strangelove.png/></p>
+<p align="center"><img src="strangelove.png"/></p>
 
 _Note: this is a work in progress.
 Please consider this to be a public beta of sorts.
