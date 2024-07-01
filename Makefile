@@ -3,9 +3,6 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 
-#	strindex\
-#	strcoarse\
-
 DIRS:=\
 	strawk\
 

@@ -2,7 +2,6 @@
 BIN=$home/bin/$objtype
 TARG=\
 	strpg\
-	coarsen\
 
 DIRS=\
 	strawk\
