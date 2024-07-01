@@ -56,10 +56,9 @@ collectgfanodes(Graph *g, File *f)
 			}else if(strncmp(s, "fx", 2) == 0){
 				n->flags |= FNfixed;
 				n->pos0.x = atof(s+5);
-			}else if(strncmp(s, "fy", 2) == 0){
-				n->flags |= FNfixed;
+			}else if(strncmp(s, "fy", 2) == 0)
 				n->pos0.y = atof(s+5);
-			}else if(strncmp(s, "mv", 2) == 0 || strncmp(s, "BO", 2) == 0){
+			else if(strncmp(s, "mv", 2) == 0 || strncmp(s, "BO", 2) == 0){
 				n->flags |= FNinitpos;
 				n->pos0.x = atof(s+5);
 			}
