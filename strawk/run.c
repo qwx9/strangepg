@@ -194,13 +194,15 @@ Cell *program(Node **a, int n)	/* execute an awk program */
 		tempfree(x);
 		fflush(stdout);
 	}
-	if (a[1] || a[2])
+	if (a[1] || a[2]){
+		freezenodes();
 		while (getrec(&record, &recsize, true) > 0) {
 			x = execute(a[1]);
 			if (isexit(x))
 				break;
 			tempfree(x);
 		}
+	}
   ex:
 	if (setjmp(env) != 0)	/* handles exit within END */
 		goto ex1;
@@ -2096,12 +2098,16 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 	case FEVAL:
 		lexprog = getsval(x);
 		yyparse();
-		DPRINTF("eval expr \"%s\", program %p root %p\n", lexprog, (void*)runnerup, (void*)winner);
-		if(setjmp(evalenv) >= 0)
-			execute(runnerup);
-		// FIXME: no cleanup!
+		DPRINTF("eval expr \"%s\", program %p root %p\n", lexprog,
+			(void*)runnerup, (void*)winner);
+		if(setjmp(evalenv) >= 0){
+			y = execute(runnerup);
+			//freesymtab(y);
+			tempfree(y);
+		}
 		runnerup = NULL;
 		errorflag = 0;
+		freenodes();
 		fflush(stdout);
 		break;
 	default:	/* can't happen */

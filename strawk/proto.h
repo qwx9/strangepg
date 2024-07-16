@@ -67,6 +67,9 @@ extern	void	freefa(fa *);
 extern	int	pgetc(void);
 extern	char	*cursource(void);
 
+extern	void	freenodes(void);
+extern	void	freezenodes(void);
+extern	void	initnodepool(void);
 extern	Node	*nodealloc(size_t);
 extern	Node	*exptostat(Node *);
 extern	Node	*node1(int, Node *);
