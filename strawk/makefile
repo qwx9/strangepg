@@ -22,14 +22,13 @@
 # THIS SOFTWARE.
 # ****************************************************************/
 
-CFLAGS = -O2 -pipe -march=native
+CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wcast-qual
+CC?= clang
 
 # compiler options
 #CC = cc -Wall -g -Wwrite-strings
 #CC = cc -O4 -Wall -pedantic -fno-strict-aliasing
 #CC = cc -fprofile-arcs -ftest-coverage # then gcov f1.c; cat f1.c.gcov
-HOSTCC = cc -Wall -pedantic -Wcast-qual
-CC = $(HOSTCC)  # change this is cross-compiling.
 
 # By fiat, to make our lives easier, yacc is now defined to be bison.
 # If you want something else, you're on your own.
@@ -65,7 +64,7 @@ proctab.c:	maketab
 	./maketab awkgram.tab.h >proctab.c
 
 maketab:	awkgram.tab.h maketab.c
-	$(HOSTCC) $(CFLAGS) maketab.c -o maketab
+	$(CC) $(CFLAGS) maketab.c -o maketab
 
 bundle:
 	@cp awkgram.tab.h awkgram.tab.h.bak
