@@ -152,8 +152,6 @@ init(void)
 	initem();
 	initfs();
 	initlayout();
-	initdrw();
-	initui();
 }
 
 /* note: npe already sets mainstacksize higher before renaming main */
@@ -165,6 +163,8 @@ main(int argc, char **argv)
 	parseargs(argc, argv);
 	init();
 	load();
+	initdrw();
+	initui();
 	evloop();
 	quit();
 	return 0;
