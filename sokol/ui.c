@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include <sys/select.h>
 #define	SOKOL_GLCORE
 //#define	NDEBUG
 #include "lib/sokol_app.h"
@@ -183,7 +184,6 @@ special(const sapp_event* ev)
 void
 event(const sapp_event* ev)
 {
-	pollcmd();
 	if(special(ev))
 		return;
 	snk_handle_event(ev);
@@ -214,8 +214,21 @@ setnktheme(void)
 	}
 }
 
+static void
+nkproc(void *)
+{
+	while(sapp_poll_event() >= 0)
+		pollcmd();
+}
+
+void
+initnk(void)
+{
+	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
+	newthread(nkproc, nil, nil, nil, "nkproc", mainstacksize);
+}
+
 void
 initsysui(void)
 {
-	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
 }

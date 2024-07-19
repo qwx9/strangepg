@@ -1,5 +1,6 @@
 #include "strpg.h"
 #include <signal.h>
+#include <sys/select.h>
 #include "lib/flextgl/flextGL.h"
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
@@ -37,6 +38,7 @@ extern char *bezier_vertsh, *bezier_tcssh, *bezier_tessh, *bezier_geomsh, *bezie
 void	event(const sapp_event*);
 void	_drawui(struct nk_context*);
 void	setnktheme(void);
+void	initnk(void);
 
 struct Color{
 	u32int col;
@@ -927,6 +929,7 @@ evloop(void)
 		.init_cb = init,
 		.frame_cb = frame,
 		.cleanup_cb = cleanup,
+		.init_event_cb = initnk,
 		.event_cb = event,
 		.width = Vdefw,
 		.height = Vdefh,
