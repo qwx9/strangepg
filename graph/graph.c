@@ -449,7 +449,6 @@ cleargraph(Graph *g)
 {
 	Node *n;
 
-	clearmeta(g);
 	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
 		dyfree(n->in);
 		dyfree(n->out);

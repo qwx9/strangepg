@@ -35,9 +35,6 @@ char*	readfrag(File*, int*);
 char*	readline(File*, int*);
 void	regfs(Filefmt*);
 
-int	collectgfameta(Graph*);
-void	clearmeta(Graph*);
-
 int	importlayout(Graph*, char*);
 int	exportlayout(Graph*, char*);
 

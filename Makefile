@@ -34,7 +34,6 @@ OBJS:=\
 	fs/index.o\
 	fs/layout.o\
 	fs/load.o\
-	fs/meta.o\
 	fs/metacsv.o\
 	graph/graph.o\
 	layout/bo.o\

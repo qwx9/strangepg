@@ -19,7 +19,6 @@ OFILES=\
 	fs/index.$O\
 	fs/layout.$O\
 	fs/load.$O\
-	fs/meta.$O\
 	fs/metacsv.$O\
 	graph/graph.$O\
 	layout/bo.$O\

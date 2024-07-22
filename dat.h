@@ -41,7 +41,6 @@ struct Node{
 	int lvl;
 	ssize *in;		/* dynamic array (edge indices) */
 	ssize *out;		/* dynamic array (edge indices) */
-	vlong metaoff;
 	int weight;
 	int length;
 	Vertex pos;
@@ -63,7 +62,6 @@ struct Edge{
 	u32int flags;
 	ssize next;
 	ssize prev;
-	vlong metaoff;
 	Color *col;
 };
 enum{
@@ -75,6 +73,8 @@ struct Graph{
 	int type;
 	u32int flags;
 	File *f;
+	vlong *nodeoff;
+	vlong *edgeoff;
 	Coarse *c;
 	usize nnodes;	/* gfa-wide totals */
 	usize nedges;
