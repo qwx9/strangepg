@@ -16,7 +16,7 @@ enum{
 struct Obj{
 	Graph *g;
 	int type;
-	ssize idx;
+	ioff idx;
 };
 extern Obj selected;	// FIXME: only one
 extern Obj aintnothingthere;

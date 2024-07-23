@@ -32,9 +32,9 @@ reverse(Graph *g, Lbuf *lvl)
 	if(fdopenfs(f, 1, OWRITE) < 0)
 		sysfatal("fdopenfs: %s", error());
 	DPRINT(Debugcoarse, "reverse: %zx %zx %zx %zx",
-		g->nnodes, g->nedges, nsuper, dylen(lvl));
-	put64(f, g->nnodes);
-	put64(f, g->nedges);
+		dylen(g->nodes), dylen(g->edges), nsuper, dylen(lvl));
+	put64(f, dylen(g->nodes));
+	put64(f, dylen(g->edges));
 	put64(f, nsuper);
 	put64(f, dylen(lvl));
 	noff = tellfs(f) + dylen(lvl) * Lrecsz;
@@ -157,16 +157,16 @@ coarsen(Graph *g, char *uindex, char *eindex)
 		sysfatal("coarsen: %s", error());
 	if((nodes = emopen(uindex)) == nil)
 		sysfatal("coarsen: %s", error());
-	g->nnodes = emr64(nodes, 0);
-	g->nedges = emr64(edges0, 0);
+	dylen(g->nodes) = emr64(nodes, 0);
+	dylen(g->edges) = emr64(edges0, 0);
 	M = emr64(edges0, 1);
-	S0 = g->nnodes;
+	S0 = dylen(g->nodes);
 	if(S0 <= Minnodes){
 		werrstr("number of nodes below set threshold, nothing to do");
 		return nil;
 	}
 	S = S0 - 1;
-	DPRINT(Debugcoarse, "graph %s:%s nnodes %lld nedges %lld tot edges %lld", uindex, eindex, g->nnodes, g->nedges, M);
+	DPRINT(Debugcoarse, "graph %s:%s nnodes %lld nedges %lld tot edges %lld", uindex, eindex, dylen(g->nodes), dylen(g->edges), M);
 	lp = lvl = nil;
 	nlvl = 0;
 	w = S;
@@ -191,14 +191,14 @@ coarsen(Graph *g, char *uindex, char *eindex)
 		for(e=0; e<m; e++){
 			if(nlvl > 0){
 				x = emr64(edges, 3*e);
-				U = x % (2*g->nnodes);
-				V = x / (2*g->nnodes);
+				U = x % (2*dylen(g->nodes));
+				V = x / (2*dylen(g->nodes));
 				o = U&1 | (V&1 << 1);
 				u = (U >> 1) + k;
 				v = (V >> 1) + k;
 				x = emr64(edges, 3*e+1);
-				u0 = x % g->nnodes;
-				v0 = x / g->nnodes;
+				u0 = x % dylen(g->nodes);
+				v0 = x / dylen(g->nodes);
 				ei = emr64(edges, 3*e+2);
 			}else{
 				if(di >= d){
@@ -234,21 +234,21 @@ coarsen(Graph *g, char *uindex, char *eindex)
 					outputedge(lp, u, v, o, ei, nlvl);
 				}else
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; skip [%zx]%zx", v0, v);
-			}else if(EXISTS(h, u, v, 2*g->nnodes)){
+			}else if(EXISTS(h, u, v, 2*dylen(g->nodes))){
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; redundant %zx:%d,%zx:%d", u, o&1, v, o>>1&1);
-				if(!EXISTS(h, U, V, 2*g->nnodes) && !EXISTSONE(h, U^1, V^1, 2*g->nnodes)){
+				if(!EXISTS(h, U, V, 2*dylen(g->nodes)) && !EXISTSONE(h, U^1, V^1, 2*dylen(g->nodes))){
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b but with unique orientation %d,%d", o&1, o>>1&1);
-					SPAWN(h, U, V, 2*g->nnodes);
+					SPAWN(h, U, V, 2*dylen(g->nodes));
 					outputedge(lp, u, v, o, ei, nlvl);
 				}
 			}else if(u == v){
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; self edge");
-				if(!EXISTS(h, U, V, 2*g->nnodes)){
+				if(!EXISTS(h, U, V, 2*dylen(g->nodes))){
 					outputedge(lp, u, v, o, ei, nlvl);
-					SPAWN(h, u, v, 2*g->nnodes);
+					SPAWN(h, u, v, 2*dylen(g->nodes));
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; added %zx:%zd,%zx:%zd", u, u&1, v, v&1);
 					if(nlvl == 0){
-						SPAWN(h, U, V, 2*g->nnodes);
+						SPAWN(h, U, V, 2*dylen(g->nodes));
 						DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; added %zx:%zd,%zx:%zd", U, U&1, V, V&1);
 					}
 				}
@@ -258,13 +258,13 @@ coarsen(Graph *g, char *uindex, char *eindex)
 				DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; external[%zx] %zx,%zx", M, s, t);
 				s = (s-w) << 1 | o & 1;
 				t = (t-w) << 1 | o >> 1 & 1;
-				SPAWN(h, u, v, 2*g->nnodes);
+				SPAWN(h, u, v, 2*dylen(g->nodes));
 				if(nlvl == 0){
 					DPRINT(Debugcoarse, "\b\b\b\b\b\b\b\b\b\b; spawn %zx:%zd,%zx:%zd", U, (U&1), V, (V)>>1&1);
-					SPAWN(h, U, V, 2*g->nnodes);
+					SPAWN(h, U, V, 2*dylen(g->nodes));
 				}
-				emw64(edges, 3*M, t * 2*g->nnodes + s);
-				emw64(edges, 3*M+1, v0 * g->nnodes + u0);
+				emw64(edges, 3*M, t * 2*dylen(g->nodes) + s);
+				emw64(edges, 3*M+1, v0 * dylen(g->nodes) + u0);
 				emw64(edges, 3*M+2, ei);
 				outputedge(lp, u, v, o, ei, nlvl);
 				M++;

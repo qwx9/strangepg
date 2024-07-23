@@ -34,7 +34,7 @@ sendcmd(char *cmd)
 void
 pushcmd(char *fmt, ...)
 {
-	ssize ai;
+	ioff ai;
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
@@ -57,11 +57,11 @@ pushcmd(char *fmt, ...)
 			sp = strecpy(sp, sb+sizeof sb-1, as);
 			break;
 		case 'd':
-			ai = va_arg(arg, ssize);
+			ai = va_arg(arg, ioff);
 			sp = seprint(sp, sb+sizeof sb-1, "%zd", ai);
 			break;
 		case 'x':
-			ai = va_arg(arg, ssize);
+			ai = va_arg(arg, ioff);
 			sp = seprint(sp, sb+sizeof sb-1, "%08zx", ai);
 			break;
 		default:
@@ -85,7 +85,7 @@ readcmd(char *s)
 {
 	int m, redraw;
 	float x, y;
-	ssize v;
+	ioff id, v;
 	char *fld[8], *p, *t;
 	Node *n;
 	Graph *g;
@@ -149,8 +149,9 @@ readcmd(char *s)
 				werrstr("invalid X message length %d\n", m);
 				goto error;
 			}
-			if((n = str2node(g, fld[0])) == nil)
+			if((id = str2idx(fld[0])) < 0)
 				goto error;
+			n = g->nodes + id;
 			x = strtod(fld[1], &p);
 			if(p == fld[1]){
 				werrstr("invalid coordinate %s", fld[1]);
@@ -170,8 +171,9 @@ readcmd(char *s)
 				werrstr("invalid x message length %d\n", m);
 				goto error;
 			}
-			if((n = str2node(g, fld[0])) == nil)
+			if((id = str2idx(fld[0])) < 0)
 				goto error;
+			n = g->nodes + id;
 			x = strtod(fld[1], &p);
 			if(p == fld[1]){
 				werrstr("invalid coordinate %s", fld[1]);
@@ -185,8 +187,9 @@ readcmd(char *s)
 				werrstr("invalid c message length %d\n", m);
 				goto error;
 			}
-			if((n = str2node(g, fld[0])) == nil)
+			if((id = str2idx(fld[0])) < 0)
 				goto error;
+			n = g->nodes + id;
 			v = strtoll(fld[1], &p, 0);
 			if(p == fld[1]){
 				werrstr("invalid color %s", fld[1]);

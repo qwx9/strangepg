@@ -17,14 +17,14 @@ struct P{
 	float y;
 	float *nx;
 	float *ny;
-	ssize i;
-	ssize e;
+	ioff i;
+	ioff e;
 	int nin;
 	int nout;
 };
 struct D{
 	P *ptab;
-	ssize *etab;
+	ioff *etab;
 	float k;
 };
 
@@ -38,8 +38,8 @@ new(Graph *g)
 {
 	int fx;
 	uint min, max;
-	ssize nf, nm, i, *e, *ee, *etab;
-	float n, m, r, r1, r2, θ;
+	ioff nf, nm, i, ie, *e, *ee, *etab;
+	float n, r, r1, θ;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
 	D *aux;
@@ -48,7 +48,7 @@ new(Graph *g)
 	etab = nil;
 	max = 0;
 	min = ~0;
-	for(i=g->node0.next, nf=nm=0; i>=0; i=u->next){
+	for(i=0, ie=dylen(g->nodes), nf=nm=0; i<ie; i++){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		/* FIXME: bug in data prod? */
@@ -94,14 +94,14 @@ new(Graph *g)
 		}
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = getnode(g, g->edges[*e].v >> 1);
+			v = g->nodes + (g->edges[*e].v >> 1);
 			assert(v != nil);
 			dypush(etab, v->layid);
 			assert(v->layid >= 0 && v->layid < dylen(ptab));
 		}
 		pp->nout = i;
 		for(e=u->in, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = getnode(g, g->edges[*e].u >> 1);
+			v = g->nodes + (g->edges[*e].u >> 1);
 			assert(v != nil);
 			dypush(etab, v->layid);
 			assert(v->layid >= 0 && v->layid < dylen(ptab));
@@ -133,7 +133,7 @@ compute(void *arg, volatile int *stat, int i)
 	int c;
 	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize *e, *ee;
+	ioff *e, *ee;
 	D *d;
 
 	d = arg;

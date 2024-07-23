@@ -55,7 +55,7 @@ void	pandraw(float, float);
 int	drawline(Vertex, Vertex, double, int, s32int, Color*);
 int	drawbezier(Vertex, Vertex, s32int, Color*);
 int	drawquad(Vertex, Vertex, s32int, Color*);
-int	drawlabel(Node*, Color*);
+int	drawlabel(Node*, ioff, Color*);
 void	drawui(void);
 void	cleardraw(void);
 int	redraw(int);

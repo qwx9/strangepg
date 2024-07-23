@@ -6,10 +6,11 @@ static void *
 new(Graph *g)
 {
 	int x;
-	ssize i;
+	ioff i, ie;
 	Node *u;
 
-	for(i=g->node0.next, x=-(Nodesz+Ptsz)*(g->nnodes-1)/2; i>=0; i=u->next, x+=Nodesz+Ptsz){
+	x = -(Nodesz + Ptsz) * (dylen(g->nodes) - 1) / 2;
+	for(i=0, ie=dylen(g->nodes); i<ie; i++, x+=Nodesz+Ptsz){
 		u = g->nodes + i;
 		u->pos.x = x;
 		u->pos.y = 0;

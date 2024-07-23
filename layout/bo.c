@@ -13,14 +13,14 @@ struct P{
 	Vertex xyz;
 	Vertex *pos;
 	Vertex *dir;
-	ssize i;
-	ssize e;
+	ioff i;
+	ioff e;
 	int nin;
 	int nout;
 };
 struct D{
 	P *ptab;
-	ssize *etab;
+	ioff *etab;
 	float k;
 	int nth;
 };
@@ -33,7 +33,7 @@ static void *
 new(Graph *g)
 {
 	uint min, max;
-	ssize i, n, *e, *ee, *etab;
+	ioff i, ie, n, *e, *ee, *etab;
 	Node *u, *v;
 	P p = {0}, *ptab, *pp;
 	D *aux;
@@ -42,7 +42,7 @@ new(Graph *g)
 	etab = nil;
 	min = -1U;
 	max = 0;
-	for(i=g->node0.next, n=0; i>=0; i=u->next, n++){
+	for(i=0, ie=dylen(g->nodes), n=0; i<ie; i++, n++){
 		u = g->nodes + i;
 		u->layid = dylen(ptab);
 		p.i = i;
@@ -63,14 +63,14 @@ new(Graph *g)
 		*pp->pos = pp->xyz;
 		pp->e = dylen(etab);
 		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = getnode(g, g->edges[*e].v >> 1);
+			v = g->nodes + (g->edges[*e].v >> 1);
 			assert(v != nil);
 			dypush(etab, v->layid);
 			assert(v->layid >= 0 && v->layid < dylen(ptab));
 		}
 		pp->nout = i;
 		for(e=u->in, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = getnode(g, g->edges[*e].u >> 1);
+			v = g->nodes + (g->edges[*e].u >> 1);
 			assert(v != nil);
 			dypush(etab, v->layid);
 			assert(v->layid >= 0 && v->layid < dylen(ptab));
@@ -103,7 +103,7 @@ compute(void *arg, volatile int *stat, int i)
 	P *pp, *p0, *p1, *u, *v;
 	double dt;
 	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ssize *e, *ee;
+	ioff *e, *ee;
 	D *d;
 
 	d = arg;

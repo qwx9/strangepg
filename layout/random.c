@@ -5,10 +5,10 @@
 static void *
 new(Graph *g)
 {
-	ssize i;
+	ioff i, ie;
 	Node *u;
 
-	for(i=g->node0.next; i>=0; i=u->next){
+	for(i=0, ie=dylen(g->nodes); i<ie; i++){
 		u = g->nodes + i;
 		u->pos.x = -Vdefw / 2 + nrand(Vdefw);
 		u->pos.y = -Vdefh / 2 + nrand(Vdefh);

@@ -8,7 +8,8 @@
 void
 expandnode(Graph *g, Node *pp)
 {
-	ssize i, idx, u, v, par, w;
+	/*
+	ioff i, idx, u, v, par, w;
 	Level *l;
 	Coarse *c;
 	File *f;
@@ -46,7 +47,7 @@ expandnode(Graph *g, Node *pp)
 	for(i=0; i<l->nedges; i++){
 		u = eget64(f);
 		v = eget64(f);
-		eget64(f);	/* ei */
+		eget64(f);	// ei
 		DPRINT(Debugcoarse, "expanding edge %c%zx,%c%zx", (u&1)?'-':'+',u>>1, (v&1)?'-':'+',v>>1);
 		n = getnode(g, u >> 1);
 		m = getnode(g, v >> 1);
@@ -58,14 +59,16 @@ expandnode(Graph *g, Node *pp)
 		}
 		n = getactivenode(g, n);
 		m = getactivenode(g, m);
-		pushedge(g, n, m, u&1, v&1);
+		pushiedge(g, n, m, u&1, v&1);
 	}
 	printgraph(g);
+	*/
 }
 
 void
 retractnode(Graph *g, Node *pp)
 {
+	/*
 	DPRINT(Debugcoarse, "merge %#p node %zx level %d", g, pp->id, pp->lvl);
 	if(g->c == nil){
 		warn("expandnode: nothing to retract");
@@ -73,6 +76,7 @@ retractnode(Graph *g, Node *pp)
 	}
 	poptree(g, pp);
 	printgraph(g);
+	*/
 }
 
 int
@@ -86,6 +90,7 @@ zoomgraph(Graph *g, int Δ)
 int
 readtree(Graph *g, char *path)
 {
+	/*
 	usize nl;
 	File *f;
 	Level *l;
@@ -99,12 +104,12 @@ readtree(Graph *g, char *path)
 	f = g->f = emalloc(sizeof *f);	// FIXME: this sucks, wrap the alloc
 	if(openfs(f, path, OREAD) < 0)
 		return -1;
-	g->nnodes = eget64(f);
-	g->nedges = eget64(f);
+	dylen(g->nodes) = eget64(f);
+	dylen(g->edges) = eget64(f);
 	g->nsuper = eget64(f);
 	nl = g->nlevels = eget64(f);
 	DPRINT(Debugcoarse, "ct: nv %zd nv+ns %zd ne %zd nl %d",
-		g->nnodes, g->nsuper, g->nedges, g->nlevels);
+		dylen(g->nodes), g->nsuper, dylen(g->edges), g->nlevels);
 	g->c = emalloc(sizeof *c);
 	c = g->c;
 	dyprealloc(c->levels, nl);
@@ -116,14 +121,17 @@ readtree(Graph *g, char *path)
 		DPRINT(Debugcoarse, "level %zd off %zd %zd len %zd %zd",
 			l-c->levels, l->noff, l->eoff, l->nnodes, l->nedges);
 	}
-	/* file remains open */
+	// file remains open
 	DPRINT(Debugcoarse, "readtree done");
 	return 0;
+	*/
+	return -1;
 }
 
 static void
 load(void *arg)
 {
+	/*
 	char *path;
 	Graph g;
 
@@ -134,9 +142,10 @@ load(void *arg)
 	free(path);
 	// FIXME: don't rely on this number, there isn't always just one anyway
 	// instead look at the top level and make parents
-	pushnode(&g, g.nsuper, -1, g.nsuper, 1);
+	pushinode(&g, g.nsuper, -1, g.nsuper, 1);
 	expandnode(&g, g.nodes);
 	pushgraph(g);
+	*/
 }
 
 static int

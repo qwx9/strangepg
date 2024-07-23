@@ -7,17 +7,6 @@
 #include "drw.h"
 #include "layout.h"
 
-/* FIXME: think about an alternate, easier, em-backed representation: just a tree
- *	expanded nodes are marked expanded, otherwise a traversal ends on that,
- *	shit like that; em makes our life considerably easier here, why not just
- *	do that? benchmark to see what the performance hit would be, if any
- *	same for layouting; use em there as well
- * still, reconsider if the below is fine or not, perhaps use it in coarsen
- * BEST: indices == bct indices, always, no renaming -> easier edge management, etc;
- *	avoid long traversals by keeping a current pointer/index to sibling/child/edge,
- *	etc; describe the ds, ask for opinions, measure performance; cache lines
- */
-
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
  *	directed: .in/.out are incoming/outgoing edges
@@ -52,78 +41,34 @@ RWLock graphlock;
 void
 printgraph(Graph *g)
 {
-	ssize i, *np, *nq;
+	ioff i, ie, *np, *ne;
 	Edge *e;
 	Node *n;
 
 	if((debug & Debugcoarse) == 0)
 		return;
-	warn("graph %#p nn %zd ne %zd ns %zd: actual nn %zd ne %zd\n", g, g->nnodes, g->nedges, g->nsuper, dylen(g->nodes), dylen(g->edges));
-	for(i=g->edge0.next; i>=0; i=e->next){
+	warn("graph %#p nn %zd ne %zd\n", g, dylen(g->nodes), dylen(g->edges));
+	for(i=0, ie=i+dylen(g->edges); i<ie; i++){
 		e = g->edges + i;
-		warn("e[%04zx] %#p %zx %zx,%zx\n", i, e, e->id, e->u >> 1, e->v >> 1);
+		warn("e[%04zx] %zx%c:%zx%c\n", i,
+			e->u >> 1, e->u & 1 ? '-' : '+',
+			e->v >> 1, e->v & 1 ? '-' : '+');
 	}
-	assert(dylen(g->nodes) > 0);
-	for(i=g->node0.next; i>=0; i=n->next){
+	for(i=0, ie=i+dylen(g->nodes); i<ie; i++){
 		n = g->nodes + i;
-		warn("n[%04zx] %#p %zx pid %zx idx %zx weight %d ch %zx → [ ",
-			i, n, n->id, n->pid, n->idx, n->weight, n->ch);
-		for(np=n->out, nq=np+dylen(np); np<nq; np++)
+		warn("n[%04zx] ch %zx → [ ", i, n->ch);
+		for(np=n->out, ne=np+dylen(np); np<ne; np++)
 			warn("%zx ", *np);
 		warn("] ← [ ");
-		for(np=n->in, nq=np+dylen(np); np<nq; np++)
+		for(np=n->in, ne=np+dylen(np); np<ne; np++)
 			warn("%zx ", *np);
-		warn("] >%zx <%zx\n", n->next, n->prev);
+		warn("]\n");
 	}
 }
 
-Edge *
-getedge(Graph *g, ssize id)
-{
-	ssize i;
-	khiter_t k;
 
-	k = kh_get(idmap, g->emap, id);
-	if(k == kh_end(g->emap))
-		return nil;
-	i = kh_val(g->emap, k);
-	if(i < 0)
-		return nil;
-	assert(i >= 0 && i < dylen(g->edges));
-	return g->edges + i;
-}
-
-Node *
-getnode(Graph *g, ssize id)
-{
-	ssize i;
-	khiter_t k;
-
-	k = kh_get(idmap, g->nmap, id);
-	if(k == kh_end(g->nmap)){
-		werrstr("getnode: no such node id=%zd\n", id);
-		return nil;
-	}
-	i = kh_val(g->nmap, k);
-	assert(i >= 0 && i < dylen(g->nodes));
-	return g->nodes + i;
-}
-
-Node *
-str2node(Graph *g, char *s)
-{
-	ssize id;
-	char *p;
-
-	id = strtoll(s, &p, 0);
-	if(p == s){
-		werrstr("unknown node id \'%s\'", s);
-		return nil;
-	}
-	return getnode(g, id);
-}
-
-/* an inactive node is a future child and points to itself */
+/*
+// an inactive node is a future child and points to itself
 Node *
 getactivenode(Graph *g, Node *n)
 {
@@ -135,22 +80,8 @@ getactivenode(Graph *g, Node *n)
 	return n;
 }
 
-static Node *
-getnamednode(Graph *g, char *s)
-{
-	ssize i;
-	khiter_t k;
-
-	k = kh_get(strmap, g->strnmap, s);
-	if(k == kh_end(g->strnmap))
-		return nil;
-	i = kh_val(g->strnmap, k);
-	assert(i >= 0 && i < dylen(g->nodes));
-	return g->nodes + i;
-}
-
 int
-ischild(Graph *g, ssize ch, ssize pid)
+ischild(Graph *g, ioff ch, ioff pid)
 {
 	Node *n;
 
@@ -159,7 +90,6 @@ ischild(Graph *g, ssize ch, ssize pid)
 	return n->pid == pid;
 }
 
-/* screw it */
 #define LINK(p, l0, l, r)	do{ \
 	if((r)->prev >= 0) \
 		p[(r)->prev].next = (l)->next; \
@@ -187,9 +117,9 @@ ischild(Graph *g, ssize ch, ssize pid)
 }while(0)
 
 static void
-cuttie(ssize *es, ssize id)
+cuttie(ioff *es, ioff id)
 {
-	ssize i, n;
+	ioff i, n;
 
 	for(i=0, n=dylen(es); i<n; i++)
 		if(es[i] == id){
@@ -199,7 +129,7 @@ cuttie(ssize *es, ssize id)
 		}
 }
 static void
-redactedge(Graph *g, ssize id)
+redactedge(Graph *g, ioff id)
 {
 	Edge *e;
 	Node *u, *v;
@@ -224,212 +154,6 @@ redactedge(Graph *g, ssize id)
 	printgraph(g);
 }
 
-void
-hidenode(Graph *g, Node *n)
-{
-	ssize *e, *ee;
-
-	DPRINT(Debugcoarse, "hidenode %#p %zx >%zd <%zd", g, n->id, dylen(n->out), dylen(n->in));
-	assert(n->ch < 0);	// FIXME: opposite unhandled, but should it be?
-	for(e=n->out, ee=e+dylen(n->out); e<ee; e++)
-		redactedge(g, *e);
-	for(e=n->in, ee=e+dylen(n->in); e<ee; e++)
-		redactedge(g, *e);
-	pushcmd("delnode(%d)", n->id);
-	UNLINK(g->nodes, &g->node0, n, n);
-	dyfree(n->out);
-	dyfree(n->in);
-}
-
-static Node *
-newnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
-{
-	int ret;
-	ssize i;
-	Node n = {0}, *np;
-	khiter_t k;
-	char bleh[32];
-
-	k = kh_put(idmap, g->nmap, id, &ret);
-	if(ret == 0){
-		warn("newnode: not overwriting existing node %zx\n", id);
-		i = kh_val(g->nmap, k);
-		return g->nodes + i;
-	}
-	n.id = id;
-	n.pid = pid;
-	n.dir = V(1.0f, 0.0f, 0.0f);
-	n.idx = idx;
-	n.length = 1;
-	n.weight = w;
-	n.ch = -1;
-	n.col = somecolor(g);
-	i = g->nsuper > 0 ? g->nsuper - id : dylen(g->nodes);	// FIXME: what the fuck is the point of the hashtab then
-	dyinsert(g->nodes, i, n);
-	kh_val(g->nmap, k) = i;
-	np = g->nodes + i;
-	np->prev = np->next = i;
-	snprint(bleh, sizeof bleh, "!@#$%%^&*()_+%zd", id);	// FIXME: gfa only?
-	pushcmd("addnode(%d,\"%s\",\"0x%x\")", id, bleh, col2int(n.col));
-	return np;
-}
-
-// FIXME: lvl not set, same as pushnode; defer setting or allow dynamic level? (why?)
-/* create node and references but don't actually use it */
-Node *
-touchnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
-{
-	Node *n;
-
-	n = newnode(g, id, pid, idx, w);
-	return n;
-}
-
-Node *
-pushnode(Graph *g, ssize id, ssize pid, ssize idx, int w)
-{
-	ssize i;
-	Node *n, *m;
-
-	n = touchnode(g, id, pid, idx, w);
-	for(i=g->node0.next, m=&g->node0; i>=0; i=m->next){
-		m = g->nodes + i;
-		if(m->id < n->id)	/* ids in reverse order */
-			break;
-	}
-	LINK(g->nodes, &g->node0, m, n);
-	return n;
-}
-
-Node *
-pushsibling(Graph *g, ssize id, Node *m, ssize idx, int w)
-{
-	Node *n;
-
-	n = touchnode(g, id, m->pid, idx, w);
-	n->lvl = m->lvl;
-	LINK(g->nodes, &g->node0, m, n);
-	return n;
-}
-
-Node *
-pushchild(Graph *g, ssize id, Node *pp, ssize idx, int w)
-{
-	ssize i;
-	Node *n, *m;
-
-	DPRINT(Debugcoarse, "pushchild [%zx]%zx←%zx", idx, id, pp!=nil?pp->id:-1);
-
-	n = newnode(g, id, pp != nil ? pp->id : -1, idx, w);
-	if(pp != nil){
-		hidenode(g, pp);
-		pp->ch = n - g->nodes;
-		n->lvl = pp->lvl + 1;
-	}else
-		n->lvl = 0;
-	for(i=g->node0.prev, m=&g->node0; i>=0; i=m->prev){
-		m = g->nodes + i;
-		if(m->id > n->id)	/* ids in reverse order */
-			break;
-	}
-	LINK(g->nodes, &g->node0, m, n);
-	return n;
-}
-
-Node *
-pushnamednode(Graph *g, char *s)
-{
-	int ret;
-	ssize i, id;
-	Node *n;
-	khiter_t k;
-
-	if((n = getnamednode(g, s)) != nil){
-		DPRINT(Debugfs, "duplicate node %s", s);
-		return n;
-	}
-	i = dylen(g->nodes);
-	id = i;
-	n = pushnode(g, id, -1, i, 1);
-	s = estrdup(s);
-	k = kh_put(strmap, g->strnmap, s, &ret);
-	assert(ret != 0);
-	kh_val(g->strnmap, k) = id;
-	DPRINT(Debugcoarse, "pushnamednode %zd", id);
-	pushcmd("addnode(%d,\"%s\")", id, s);
-	return n;
-}
-
-static Edge *
-newedge(Graph *g, Node *u, Node *v, int udir, int vdir)
-{
-	ssize i, id;
-	int ret;
-	Edge e = {0}, *ep;
-	khiter_t k;
-
-	/* FIXME: won't scale; could have another pass after input parsing to remap */
-	//id = v->id * g->nsuper + u->id << 2 | udir << 1 & 1 | vdir & 1;
-	//id = dylen(g->edges) << 2 | udir << 1 & 1 | vdir & 1;
-	id = dylen(g->edges);
-	DPRINT(Debugcoarse, "newedge %c%zd,%c%zd id=%zd", udir?'<':'>', u->id, vdir?'<':'>', v->id, id);
-	k = kh_put(idmap, g->emap, id, &ret);
-	if(ret == 0){
-		warn("newedge: not overwriting existing edge [%zx] %zx,%zx\n", id, u->id, v->id);
-		i = kh_val(g->emap, k);
-		return g->edges + i;
-	}
-	e.id = id;
-	e.u = u->id << 1 | udir & 1;
-	e.v = v->id << 1 | vdir & 1;
-	dypush(u->out, id);
-	dypush(v->in, id);
-	dypush(g->edges, e);
-	i = dylen(g->edges) - 1;
-	kh_val(g->emap, k) = i;
-	ep = g->edges + i;
-	ep->prev = ep->next = i;
-	DPRINT(Debugcoarse, "newedge %zx[%zd]: %zd,%zd", e.id, i, e.u>>1, e.v>>1);
-	pushcmd("addedge(%d,%d,%d,%d,%d)", id, e.u, udir, e.v, vdir);
-	return ep;
-}
-
-Edge *
-pushedge(Graph *g, Node *u, Node *v, int udir, int vdir)
-{
-	Edge *e, *pe;
-
-	if((e = newedge(g, u, v, udir, vdir)) == nil)
-		return nil;
-	if(e->prev == e->next){	/* new */
-		if((pe = g->edges + g->edge0.prev) < g->edges)
-			pe = &g->edge0;
-		LINK(g->edges, &g->edge0, pe, e);
-	}
-	return e;
-}
-
-/* id's in edges are always packed with direction bit */
-Edge *
-pushnamededge(Graph *g, char *eu, char *ev, int d1, int d2)
-{
-	Node *u, *v;
-
-	DPRINT(Debugcoarse, "pushnamededge %s,%s", eu, ev);
-	if((u = getnamednode(g, eu)) == nil
-	&& pushnamednode(g, eu) == nil)
-		warn("pushnamededge: %s\n", error());
-	if((v = getnamednode(g, ev)) == nil
-	&& pushnamednode(g, ev) == nil)
-		warn("pushnamededge: %s\n", error());
-	if(u == nil || v == nil){
-		u = getnamednode(g, eu);
-		v = getnamednode(g, ev);
-		assert(u != nil && v != nil);
-	}
-	return pushedge(g, u, v, d1, d2);
-}
-
 void 
 poptree(Graph *g, Node *p)
 {
@@ -444,7 +168,212 @@ poptree(Graph *g, Node *p)
 	hidenode(g, n);
 }
 
+Node *
+pushsibling(Graph *g, ioff id, Node *m, ioff idx, int w)
+{
+	Node *n;
+
+	n = touchnode(g, id, m->pid, idx, w);
+	n->lvl = m->lvl;
+	LINK(g->nodes, &g->node0, m, n);
+	return n;
+}
+
+Node *
+pushchild(Graph *g, ioff id, Node *pp, ioff idx, int w)
+{
+	ioff i;
+	Node *n, *m;
+
+	DPRINT(Debugcoarse, "pushchild [%zx]%zx←%zx", idx, id, pp!=nil?pp->id:-1);
+
+	n = newnode(g, id, pp != nil ? pp->id : -1, idx, w);
+	if(pp != nil){
+		hidenode(g, pp);
+		pp->ch = n - g->nodes;
+		n->lvl = pp->lvl + 1;
+	}else
+		n->lvl = 0;
+	for(i=g->node0.prev, m=&g->node0; i>=0; i=m->prev){
+		m = g->nodes + i;
+		if(m->id > n->id)	// ids in reverse order
+			break;
+	}
+	LINK(g->nodes, &g->node0, m, n);
+	return n;
+}
+
 void
+hidenode(Graph *g, Node *n)
+{
+	ioff *e, *ee;
+
+	DPRINT(Debugcoarse, "hidenode %#p %zx >%zd <%zd", g, n->id, dylen(n->out), dylen(n->in));
+	assert(n->ch < 0);	// FIXME: opposite unhandled, but should it be?
+	for(e=n->out, ee=e+dylen(n->out); e<ee; e++)
+		redactedge(g, *e);
+	for(e=n->in, ee=e+dylen(n->in); e<ee; e++)
+		redactedge(g, *e);
+	pushcmd("delnode(%d)", n->id);
+	UNLINK(g->nodes, &g->node0, n, n);
+	dyfree(n->out);
+	dyfree(n->in);
+}
+*/
+
+/* usable once loading completed */
+ioff
+str2idx(char *s)
+{
+	ioff id;
+	char *t;
+
+	if((id = strtoll(s, &t, 0)) == 0 && t == s)
+		return -1;
+	return id;
+}
+
+/* usable solely during loading */
+ioff
+getid(Graph *g, char *s)
+{
+	ioff id;
+	khiter_t k;
+
+	k = kh_get(strmap, g->strnmap, s);
+	if(k == kh_end(g->strnmap))
+		return -1;
+	id = kh_val(g->strnmap, k);
+	assert(id >= 0 && id < dylen(g->nodes));
+	return id;
+}
+
+static ioff
+pushid(Graph *g, char *s, ioff id)
+{
+	int ret;
+	khiter_t k;
+
+	k = kh_put(strmap, g->strnmap, s, &ret);
+	assert(ret != 0);
+	kh_val(g->strnmap, k) = id;
+	return 0;
+}
+
+static inline int
+newnode(Graph *g, Node *n)
+{
+	ioff id;
+
+	id = dylen(g->nodes);
+	n->ch = -1;
+	n->col = somecolor(g);	/* FIXME */
+	n->dir = V(1.0f, 0.0f, 0.0f);	/* FIXME */
+	n->length = 1;	/* FIXME */
+	n->weight = 1;	/* FIXME */
+	return id;
+}
+
+ioff
+pushinode(Graph *g)
+{
+	ioff id;
+	Node n = {0};
+
+	if((id = newnode(g, &n)) < 0)
+		return -1;
+	dypush(g->nodes, n);
+	return id;
+}
+
+ioff
+pushnode(Graph *g, char *s)
+{
+	ioff id;
+
+	if((id = getid(g, s)) >= 0){
+		DPRINT(Debugfs, "duplicate node[%zd] %s", id, s);
+		return id;
+	}
+	s = strdup(s);
+	if((id = pushinode(g)) < 0 || pushid(g, s, id) < 0){
+		free(s);
+		return -1;
+	}
+	pushcmd("addnode(%d,\"%s\")", id, s);
+	return id;
+}
+
+static inline ioff
+newedge(Graph *g, Edge *e, ioff u, ioff v)
+{
+	ioff id;
+
+	id = dylen(g->edges);
+	e->u = u;
+	e->v = v;
+	dypush(g->nodes[u>>1].out, id);
+	dypush(g->nodes[v>>1].in, id);
+	return id;
+}
+
+ioff
+pushiedge(Graph *g, ioff u, ioff v)
+{
+	ioff id;
+	Edge e = {0};
+
+	if((id = newedge(g, &e, u, v)) < 0)
+		return -1;
+	dypush(g->edges, e);
+	return id;
+}
+
+ioff
+pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
+{
+	char *s;
+	ioff id, n, u, v;
+
+	if((u = pushnode(g, eu)) < 0 || (v = pushnode(g, ev)) < 0)
+		return -1;
+	n = strlen(eu) + strlen(ev) + 8;
+	s = emalloc(n);
+	snprint(s, n, "%s%c\x1c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
+	if(getid(g, s) >= 0){
+		warn("duplicate edge %s%c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
+		free(s);
+		return -1;
+	}
+	u = u << 1 | d1 & 1;
+	v = v << 1 | d2 & 1;
+	if((id = pushiedge(g, u, v)) < 0 || pushid(g, s, id) < 0){
+		warn("pushedge: %s\n", error());
+		//deledge(g, s, id);
+		free(s);
+		id = -1;
+	}else
+		pushcmd("addedge(%d,\"%s\")", id, s);
+	return id;
+}
+
+void
+cleargraphtempshit(Graph *g)
+{
+	ioff id;
+	char *k;
+
+	if(g->strnmap == nil)
+		return;
+	kh_foreach(g->strnmap, k, id,
+		{free(k); USED(id);}
+	);
+	kh_destroy(strmap, g->strnmap);
+	g->strnmap = nil;
+
+}
+
+static void
 cleargraph(Graph *g)
 {
 	Node *n;
@@ -455,9 +384,6 @@ cleargraph(Graph *g)
 	}
 	dyfree(g->nodes);
 	dyfree(g->edges);
-	kh_destroy(idmap, g->nmap);
-	kh_destroy(idmap, g->emap);
-	g->nmap = g->emap = nil;
 }
 
 void
@@ -468,14 +394,11 @@ nukegraph(Graph *g)
 	if(haltlayout(g) < 0)
 		warn("nukegraph: %s\n", error());
 	cleargraph(g);
-	freefs(g->f);	// FIXME: probably not necessary to have in the first place
+	freefs(g->f);
 	memset(g, 0, sizeof *g);
 }
 
 /* FIXME: avoid pointless pass by value */
-/* FIXME: since graphs[] can change, for mooltigraph we need again to use indices,
- *	or an array of pointers; same for nodes and edges maybe? avoiding the node0
- *	and edge0 dance? */
 void
 pushgraph(Graph g)
 {
@@ -511,10 +434,6 @@ initgraph(int type)
 	Graph g = {0};
 
 	g.type = type;
-	g.node0.next = g.node0.prev = -1;
-	g.edge0.next = g.edge0.prev = -1;
-	g.nmap = kh_init(idmap);
-	g.emap = kh_init(idmap);
 	g.strnmap = kh_init(strmap);
 	return g;
 }

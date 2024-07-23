@@ -45,13 +45,13 @@ coarsen(Graph *g, char *index)
 
 	if((fedge = emopen(index)) == nil)
 		sysfatal("coarsen: %s", error());
-	g->nnodes = emr64(fedge, 0);
-	g->nedges = emr64(fedge, 1);
-	assert(g->nedges > 0);
+	dylen(g->nodes) = emr64(fedge, 0);
+	dylen(g->edges) = emr64(fedge, 1);
+	assert(dylen(g->edges) > 0);
 	fnode = emopen(nil);
 	fweight = emopen(nil);
-	M = g->nedges;
-	S = g->nnodes - 1;
+	M = dylen(g->edges);
+	S = dylen(g->nodes) - 1;
 	w = S;
 	k = 0;
 	uw = 0;	/* cannot happen */
@@ -95,7 +95,7 @@ coarsen(Graph *g, char *index)
 				warn("SELF %zx,%zx (%zx,%zx)\n", s, t, u, v);
 			}else if(t == s){
 				warn("MIRROR %zx,%zx (%zx,%zx)\n", s, t, u, v);
-			}else if(EXISTS(h, s, t, g->nnodes)){
+			}else if(EXISTS(h, s, t, dylen(g->nodes))){
 				warn("REDUNDANT %zx,%zx (%zx,%zx)\n", s, t, u, v);
 			}else{
 				warn("EXT %zx,%zx (%zx,%zx)\n", s, t, u, v);
@@ -103,7 +103,7 @@ coarsen(Graph *g, char *index)
 				emw64(fedge, 2+M*2+1, t);
 				emw64(fshit, M*2+0, u);
 				emw64(fshit, M*2+1, v);
-				SPAWN(h, s, t, g->nnodes);
+				SPAWN(h, s, t, dylen(g->nodes));
 				M++;
 			}
 		}

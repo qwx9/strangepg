@@ -110,7 +110,6 @@ void
 showobj(Obj *o)
 {
 	char s[128];
-	Node *n;
 	Edge *e;
 
 	if(selected.type == Onil)
@@ -121,8 +120,7 @@ showobj(Obj *o)
 		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
 		break;
 	case Onode:
-		n = o->g->nodes + o->idx;
-		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
+		snprint(s, sizeof s, "V[%zx]", o->idx);
 		break;
 	}
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
@@ -144,7 +142,7 @@ renderui(void)
 }
 
 int
-drawlabel(Node *n, Color *c)
+drawlabel(Node *n, ioff idx, Color *c)
 {
 	Vertex v;
 	Point p;
@@ -157,7 +155,7 @@ drawlabel(Node *n, Color *c)
 	v = centerscalev(n->pos);
 	/* FIXME: unstackenblochen placement */
 	p = Pt(v.x + Ptsz, v.y + Ptsz);
-	snprint(lab, sizeof lab, "%zx", n->id);
+	snprint(lab, sizeof lab, "%zx", idx);
 	string(viewfb, p, c->i, ZP, font, lab);
 	return 0;
 }

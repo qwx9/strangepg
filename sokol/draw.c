@@ -157,16 +157,16 @@ showobj(Obj *o)
 		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
 		ee = e;
 		nn = nil;
-		pushcmd("print %d, ledge[%d]", e->id, e->id);
+		pushcmd("print %d, ledge[%d]", o->idx, o->idx);
 		break;
 	case Onode:
 		n = o->g->nodes + o->idx;
 		if(n == nn)
 			return;
-		snprint(s, sizeof s, "V[%zx] %zx", o->idx, n->id);
+		snprint(s, sizeof s, "V[%zx]", o->idx);
 		nn = n;
 		ee = nil;
-		pushcmd("print %d, lnode[%d]", n->id, n->id);
+		pushcmd("print %d, lnode[%d]", o->idx, o->idx);
 		break;
 	}
 	//string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
@@ -174,7 +174,7 @@ showobj(Obj *o)
 }
 
 int
-drawlabel(Node *, Color *)
+drawlabel(Node *, ioff, Color *)
 {
 	return 0;
 }
@@ -303,7 +303,7 @@ pandraw(float Δx, float Δy)
 static inline void
 renderedges(Params p)
 {
-	ssize n;
+	ioff n;
 	sg_buffer_desc d;
 
 	n = dylen(edgev);
@@ -333,7 +333,7 @@ renderedges(Params p)
 static inline void
 rendernodes(Params p)
 {
-	ssize n;
+	ioff n;
 	sg_buffer_desc d;
 
 	n = dylen(nodev);

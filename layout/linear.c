@@ -23,7 +23,7 @@ struct P{
 	float y;
 	float Δx;
 	float Δy;
-	ssize i;
+	ioff i;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -34,12 +34,12 @@ struct P{
 static void *
 new(Graph *g)
 {
-	ssize i;
+	ioff i, ie;
 	Node *u;
 	P *ptab, p = {0};
 
 	ptab = nil;
-	for(i=g->node0.next; i>=0; i=u->next){
+	for(i=0, ie=dylen(g->nodes); i<ie; i++){
 		u = g->nodes + i;
 		p.i = i;
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
@@ -48,7 +48,7 @@ new(Graph *g)
 			if((u->flags & FNfixed) != 0)
 				p.i = -1;
 		}else{
-			p.x = g->nnodes / 2;
+			p.x = dylen(g->nodes) / 2;
 			p.y = -32 + nrand(64);
 		}
 		u->layid = dylen(ptab);
@@ -68,7 +68,7 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int idx)
 {
-	ssize i;
+	ioff i, ie;
 	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
@@ -102,10 +102,10 @@ compute(void *arg, volatile int *stat, int idx)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		for(i=g->edge0.next; i>=0; i=e->next){
+		for(i=0, ie=dylen(g->edges); i<ie; i++){
 			e = g->edges + i;
-			nu = getnode(g, e->u >> 1);
-			nv = getnode(g, e->v >> 1);
+			nu = g->nodes + (e->u >> 1);
+			nv = g->nodes + (e->v >> 1);
 			if(nu == nv)
 				continue;
 			assert(nu != nil && nv != nil);

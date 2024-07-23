@@ -10,8 +10,8 @@ importlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int r;
-	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
-	u64int id;
+	uchar buf[sizeof(ioff) + 2*3*sizeof(float)], *p;
+	ioff id;
 	Vertex v;
 	File *fs;
 	Node *n;
@@ -31,10 +31,12 @@ importlayout(Graph *g, char *path)
 		p = buf;
 		id = GBIT64(p);
 		p += sizeof id;
-		if((n = getnode(g, id)) == nil){
+		if(id < 0 || id >= dylen(g->nodes)){
+			werrstr("invalid id");
 			r = -1;
 			break;
 		}
+		n = g->nodes + id;
 		u.u = GBIT32(p);
 		v.x = u.f;
 		p += sizeof u.u;
@@ -69,8 +71,7 @@ exportlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int r;
-	s64int i;
-	u64int id;
+	ioff i, ie, id;
 	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
 	File *fs;
 	Node *n;
@@ -83,12 +84,11 @@ exportlayout(Graph *g, char *path)
 	}
 	if((r = openfs(fs, path, OWRITE)) < 0)
 		goto end;
-	for(i=g->node0.next; i>=0; i=n->next){
+	for(i=0, ie=dylen(g->nodes); i<ie; i++){
 		p = buf;
 		n = g->nodes + i;
-		id = i;
-		PBIT64(p, id);
-		p += sizeof id;
+		PBIT64(p, i);
+		p += sizeof i;
 		u.f = n->pos.x;
 		PBIT32(p, u.u);
 		p += sizeof u.u;

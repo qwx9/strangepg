@@ -70,10 +70,9 @@ function delnode(name){
 	delete lnode[node[name]]
 	delete node[name]
 }
-function addedge(id, u, urev, v, vrev, 	pair){
-	pair = u (urev ? "-" : "+") "\x1c" v (vrev ? "-" : "+")
-	edge[pair] = id
-	ledge[id] = pair
+function addedge(id, name){
+	edge[name] = id
+	ledge[id] = name
 }
 function deledgebyid(id){
 	if(!(name in edge)){

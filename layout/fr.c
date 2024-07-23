@@ -19,7 +19,7 @@ struct P{
 	float y;
 	float Δx;
 	float Δy;
-	ssize i;
+	ioff i;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -31,12 +31,12 @@ struct P{
 static void *
 new(Graph *g)
 {
-	ssize i;
+	ioff i, ie;
 	Node *u;
 	P *ptab, p = {0};
 
 	ptab = nil;
-	for(i=g->node0.next; i>=0; i=u->next){
+	for(i=0, ie=dylen(g->nodes); i<ie; i++){
 		u = g->nodes + i;
 		p.i = i;
 		p.x = -W/4 + nrand(W/2);
@@ -58,7 +58,7 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int idx)
 {
-	ssize i;
+	ioff i, ie;
 	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
@@ -90,11 +90,11 @@ compute(void *arg, volatile int *stat, int idx)
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		for(i=g->edge0.next; i>=0; i=e->next){
+		for(i=0, ie=dylen(g->edges); i<ie; i++){
 			e = g->edges + i;
 			/* FIXME: expensive? avoid this, just set at index? */
-			nu = getnode(g, e->u >> 1);
-			nv = getnode(g, e->v >> 1);
+			nu = g->nodes + (e->u >> 1);
+			nv = g->nodes + (e->v >> 1);
 			if(nu == nv)
 				continue;
 			assert(nu != nil && nv != nil);

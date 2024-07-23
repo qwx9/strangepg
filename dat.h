@@ -15,8 +15,10 @@ typedef struct Thread Thread;
 #pragma incomplete Color
 #pragma incomplete Thread
 
-KHASH_MAP_INIT_STR(strmap, ssize)
-KHASH_MAP_INIT_INT64(idmap, ssize)
+/* FIXME */
+typedef	ssize	ioff;
+
+KHASH_MAP_INIT_STR(strmap, ioff)
 
 enum{
 	Vforward = 0,
@@ -34,13 +36,10 @@ enum{
 	FNinitpos = 1<<1,
 };
 struct Node{
-	ssize id;		/* key */
-	ssize pid;		/* key (parent) */
-	ssize idx;		/* index: leaf */
-	ssize layid;	/* index: layout backref */
-	int lvl;
-	ssize *in;		/* dynamic array (edge indices) */
-	ssize *out;		/* dynamic array (edge indices) */
+	ioff pid;		/* key (parent) */
+	ioff layid;	/* index: layout backref */
+	ioff *in;		/* dynamic array (edge indices) */
+	ioff *out;		/* dynamic array (edge indices) */
 	int weight;
 	int length;
 	Vertex pos;
@@ -48,20 +47,14 @@ struct Node{
 	Vertex dir;
 	Color *col;
 	u32int flags;
-	ssize prev;		/* index */
-	ssize next;		/* index */
-	ssize ch;		/* index */
+	ioff ch;		/* index */
 };
 enum{
 	FEfixed = 1<<0,
 };
 struct Edge{
-	ssize id;
-	ssize u;
-	ssize v;
-	u32int flags;
-	ssize next;
-	ssize prev;
+	ioff u;	/* always packed with direction bit */
+	ioff v;
 	Color *col;
 };
 enum{
@@ -76,16 +69,9 @@ struct Graph{
 	vlong *nodeoff;
 	vlong *edgeoff;
 	Coarse *c;
-	usize nnodes;	/* gfa-wide totals */
-	usize nedges;
-	usize nsuper;
 	int nlevels;
 	Node *nodes;	/* dynamic array */
 	Edge *edges;	/* dynamic array */
-	Node node0;		/* list */
-	Edge edge0;		/* list */
-	khash_t(idmap) *nmap;
-	khash_t(idmap) *emap;
 	khash_t(strmap) *strnmap;
 	Layout *layout;
 };

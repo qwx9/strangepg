@@ -11,7 +11,7 @@ Obj aintnothingthere = {nil, Onil, -1};
 static Obj *visobj;
 
 static u32int
-mapvis(Graph *g, int type, ssize idx)
+mapvis(Graph *g, int type, ioff idx)
 {
 	Obj o;
 
@@ -40,7 +40,7 @@ drawguides(void)
 }
 
 static inline int
-drawedge(Graph *g, Node *u, Node *v, int urev, int vrev, ssize idx)
+drawedge(Graph *g, Node *u, Node *v, int urev, int vrev, ioff idx)
 {
 	u32int i;
 	float m;
@@ -65,7 +65,7 @@ drawedge(Graph *g, Node *u, Node *v, int urev, int vrev, ssize idx)
 }
 
 static inline int
-drawnode(Graph *g, Node *n, ssize idx)
+drawnode(Graph *g, Node *n, ioff idx)
 {
 	u32int i;
 	float m;
@@ -92,7 +92,7 @@ drawnode(Graph *g, Node *n, ssize idx)
 		if(drawline(n->pos, addv(n->pos, v), 1, 1, -1, color(theme[Cemph])) < 0)
 			return -1;
 	}
-	if((view.flags & VFdrawlabels) != 0 && drawlabel(n, color(theme[Ctext])) < 0)
+	if((view.flags & VFdrawlabels) != 0 && drawlabel(n, idx, color(theme[Ctext])) < 0)
 		return -1;
 	return 0;
 }
@@ -100,14 +100,14 @@ drawnode(Graph *g, Node *n, ssize idx)
 static int
 drawedges(Graph *g)
 {
-	ssize i;
+	ioff i, ie;
 	Edge *e;
 	Node *u, *v;
 
-	for(i=g->edge0.next; i>=0; i=e->next){
+	for(i=0, ie=dylen(g->edges); i<ie; i++){
 		e = g->edges + i;
-		u = getnode(g, e->u >> 1);
-		v = getnode(g, e->v >> 1);
+		u = g->nodes + (e->u >> 1);
+		v = g->nodes + (e->v >> 1);
 		assert(u != nil && v != nil);
 		drawedge(g, u, v, e->u & 1, e->v & 1, i);
 	}
@@ -117,10 +117,10 @@ drawedges(Graph *g)
 static int
 drawnodes(Graph *g)
 {
-	ssize i;
+	ioff i, ie;
 	Node *n;
 
-	for(i=g->node0.next; i>=0; i=n->next){
+	for(i=0, ie=dylen(g->nodes); i<ie; i++){
 		n = g->nodes + i;
 		drawnode(g, n, i);
 	}

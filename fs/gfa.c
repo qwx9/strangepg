@@ -13,11 +13,12 @@ collectgfanodes(Graph *g, File *f)
 {
 	char *s, *t;
 	int c, r, l, nerr;
+	ioff i, ie;
 	vlong *off;
 	Node *n;
 
 	off = g->nodeoff;
-	for(n=g->nodes, nerr=c=0; n<g->nodes+dylen(g->nodes); n++, off){
+	for(i=0,ie=dylen(g->nodes),nerr=c=0; i<ie; i++, off++){
 		r = 0;
 		seekfs(f, *off);
 		if((s = readline(f, &l)) == nil){
@@ -28,13 +29,14 @@ collectgfanodes(Graph *g, File *f)
 			}
 			continue;
 		}
-		DPRINT(Debugmeta, "collectgfanodes node[%zd]: %d %s", n-g->nodes, f->trunc, s);
+		n = g->nodes + i;
+		DPRINT(Debugmeta, "collectgfanodes node[%zd]: %d %s", i, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
 		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* id */
 			continue;
 		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
-			pushcmd("LN[lnode[%d]] = %d", n->id, l);
+			pushcmd("LN[lnode[%d]] = %d", i, l);
 			c++;
 			n->length = l;
 			r = 1;
@@ -50,7 +52,7 @@ collectgfanodes(Graph *g, File *f)
 			/* FIXME: no error checking */
 			if(strncmp(s, "LN", 2) == 0){
 				if(r){
-					DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", n->id);
+					DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", i);
 					continue;
 				}
 				n->length = atoi(s+5);
@@ -64,7 +66,7 @@ collectgfanodes(Graph *g, File *f)
 				n->pos0.x = atof(s+5);
 			}
 			s[2] = 0;
-			pushcmd("%s[lnode[%d]] = \"%s\"", s, n->id, s+5);
+			pushcmd("%s[lnode[%d]] = \"%s\"", s, i, s+5);
 			c++;
 		}
 		nerr = 0;
@@ -77,12 +79,12 @@ static int
 collectgfaedges(Graph *g, File *f)
 {
 	int l, nerr;
+	ioff i, ie;
 	vlong *off;
 	char *s, *t;
-	Edge *e;
 
 	off = g->edgeoff;
-	for(e=g->edges,nerr=0; e<g->edges+dylen(g->edges); e++, off++){
+	for(i=0,ie=dylen(g->edges),nerr=0; i<ie; i++, off++){
 		seekfs(f, *off);
 		if((s = readline(f, &l)) == nil){
 			warn("collectmeta: %s\n", error());
@@ -92,7 +94,7 @@ collectgfaedges(Graph *g, File *f)
 			}
 			continue;
 		}
-		DPRINT(Debugmeta, "collectgfaedges edges[%zd]: %d %s", e-g->edges, f->trunc, s);
+		DPRINT(Debugmeta, "collectgfaedges edges[%zd]: %d %s", i, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* L */
 		|| (s = nextfield(f, s, nil, '\t')) == nil	/* u */
 		|| (s = nextfield(f, s, nil, '\t')) == nil	/* du */
@@ -101,13 +103,13 @@ collectgfaedges(Graph *g, File *f)
 			continue;
 		t = nextfield(f, s, nil, '\t');
 		if(l > 0)
-			pushcmd("cigar[ledge[%d]] = \"%s\"", e->id, s);
+			pushcmd("cigar[ledge[%d]] = \"%s\"", i, s);
 		for(s=t; s!=nil; s=t){
 			t = nextfield(f, s, nil, '\t');
 			if(l < 6 || s[2] != ':' || s[4] != ':')
 				continue;
 			s[2] = 0;
-			pushcmd("%s[ledge[%d]] = \"%s\"", s, e->id, s+5);
+			pushcmd("%s[ledge[%d]] = \"%s\"", s, i, s+5);
 		}
 		nerr = 0;
 	}
@@ -115,18 +117,10 @@ collectgfaedges(Graph *g, File *f)
 }
 
 static void
-clearmeta(Graph *g)
+clearmetatempshit(Graph *g)
 {
-	ssize id;
-	char *k;
-
-	if(g->strnmap == nil)
-		return;
-	kh_foreach(g->strnmap, k, id,
-		{free(k); USED(id);}
-	);
-	kh_destroy(strmap, g->strnmap);
-	g->strnmap = nil;
+	dyfree(g->nodeoff);
+	dyfree(g->edgeoff);
 }
 
 static int
@@ -135,7 +129,6 @@ collectgfameta(Graph *g)
 	int n, m;
 	File *f;
 
-	clearmeta(g);	/* delegated to awk */
 	f = g->f;
 	if((n = collectgfanodes(g, f)) < 0)
 		return -1;
@@ -154,14 +147,11 @@ gfa1hdr(Graph *, File *, char *)
 static int
 gfa1seg(Graph *g, File *f, char *s)
 {
-	Node *u;
-
 	nextfield(f, s, nil, '\t');
-	DPRINT(Debugfs, "gfa pushnamednode %s", s);
-	if((u = pushnamednode(g, s)) == nil)
+	DPRINT(Debugfs, "gfa pushnode %s", s);
+	if(pushnode(g, s) < 0)
 		return -1;
 	dypush(g->nodeoff, f->foff);
-	DPRINT(Debugfs, "seg %zx %s off %lld\n", u->id, s, f->foff);
 	return 0;
 }
 
@@ -180,7 +170,6 @@ gfa1link(Graph *g, File *f, char *s)
 {
 	int d1, d2;
 	char *t, *fld[4], **fp;
-	Edge *e;
 
 	for(fp=fld; fp<fld+nelem(fld); fp++, s=t){
 		if(s == nil){
@@ -194,8 +183,8 @@ gfa1link(Graph *g, File *f, char *s)
 		werrstr("malformed link orientation");
 		return -1;
 	}
-	DPRINT(Debugfs, "gfa pushnamededge %c%s,%c%s", d1?'-':'+', fld[0], d2?'-':'+', fld[2]);
-	if((e = pushnamededge(g, fld[0], fld[2], d1, d2)) == nil)
+	DPRINT(Debugfs, "gfa pushedge %c%s,%c%s", d1?'-':'+', fld[0], d2?'-':'+', fld[2]);
+	if(pushedge(g, fld[0], fld[2], d1, d2) < 0)
 		return -1;
 	dypush(g->edgeoff, f->foff);
 	return 0;
@@ -214,7 +203,7 @@ loadgfa1(void *arg)
 	int (*parse)(Graph*, File*, char*);
 	int n;
 	char *s, *p, *path;
-	ssize nnodes, nedges;
+	ioff nnodes, nedges;
 	Graph g;
 	File *f;
 
@@ -245,9 +234,8 @@ loadgfa1(void *arg)
 		closefs(f);
 		sysfatal("%s", error());
 	}
+	cleargraphtempshit(&g);
 	DPRINT(Debugfs, "done loading gfa");
-	g.nnodes = dylen(g.nodes);
-	g.nedges = dylen(g.edges);
 	pushgraph(g);
 	if((n = collectgfameta(&g)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
@@ -255,8 +243,7 @@ loadgfa1(void *arg)
 	else if(n > 0 && !noreset)
 		pushcmd("cmd(\"OPL753\")");
 	pushcmd("cmd(\"FGD135\")");
-	dyfree(g.nodeoff);
-	dyfree(g.edgeoff);
+	clearmetatempshit(&g);
 	closefs(f);
 }
 
