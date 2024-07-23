@@ -8,7 +8,6 @@ char *edge_vertsh = \
 	"layout(location=1) in vec2 p1;\n"
 	"layout(location=2) in vec2 p2;\n"
 	"layout(location=3) in vec4 col0;\n"
-	"layout(location=4) in uint idx0;\n"
 	"out vec4 col;\n"
 	"flat out uint idx;\n"
 	"void main(){\n"
@@ -16,5 +15,5 @@ char *edge_vertsh = \
 	"	float z = gl_InstanceID * -0.000001;\n"
 	"	gl_Position = mvp * vec4(p / s, z, 1.0);\n"
 	"	col = col0;\n"
-	"	idx = idx0;\n"
+	"	idx = gl_InstanceID + 1 | 1<<31;\n"
 	"}\n";

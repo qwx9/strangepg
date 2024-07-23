@@ -1,5 +1,3 @@
-typedef struct Obj Obj;
-
 enum{
 	Klmb = Kmouse | 1<<0,
 	Kmmb = Kmouse | 1<<1,
@@ -8,24 +6,10 @@ enum{
 	Kscrldn = Kmouse | 1<<4,
 };
 
-enum{
-	Onil,
-	Onode,
-	Oedge,
-};
-struct Obj{
-	Graph *g;
-	int type;
-	ioff idx;
-};
-extern Obj selected;	// FIXME: only one
-extern Obj aintnothingthere;
+extern ioff selected;	/* FIXME: only one */
 
 void	resetprompt(void);
 void	prompt(Rune);
-u32int	scrobj(int, int);
-void	showobj(Obj*);
-Obj	mouseselect(int, int);
 int	mouseevent(Vertex, Vertex);
 int	keyevent(Rune, int);
 void	evloop(void);

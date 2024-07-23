@@ -8,7 +8,6 @@ layout(location=0) in vec2 geom;
 layout(location=1) in vec2 pos;
 layout(location=2) in vec2 dir;
 layout(location=3) in vec4 col0;
-layout(location=4) in uint idx0;
 out vec4 col;
 flat out uint idx;
 
@@ -24,5 +23,5 @@ void main(){
 	float theta = atan(-dir.y, dir.x);	/* ccw geometry, cw angle */
 	gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);
 	col = col0;
-	idx = idx0;
+	idx = gl_InstanceID + 1;
 }

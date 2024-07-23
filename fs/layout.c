@@ -71,7 +71,7 @@ exportlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int r;
-	ioff i, ie, id;
+	ioff i, ie;
 	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
 	File *fs;
 	Node *n;

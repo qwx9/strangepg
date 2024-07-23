@@ -116,8 +116,7 @@ prompt(Rune r)
 void
 drawui(void)
 {
-	if(selected.type != Onil)
-		showobj(&selected);
+	drawselected();
 }
 
 void

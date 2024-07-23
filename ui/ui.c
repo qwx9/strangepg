@@ -6,7 +6,7 @@
 #include "layout.h"
 #include "ui.h"
 
-Obj selected;
+ioff selected = -1;
 int prompting;
 
 enum{
@@ -102,30 +102,42 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
+static ioff
+mouseselect(int x, int y)
+{
+	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
+		return -1;
+	return mousepick(x, y);
+}
+
 /* the very first mouse event will have nonsense deltas */
 int
 mouseevent(Vertex v, Vertex Δ)
 {
 	int m;
-	Obj o;
+	ioff sel;
 	static int omod;
 
 	m = mod & Mmask;
 	if(m != 0 && omod == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(m == Mlmb && (omod & Mlmb) == 0){
-		o = selected;
-		selected = mouseselect(v.x, v.y);
-		if(selected.type == Onode && o.g != nil && o.g->c != nil){
-			if(memcmp(&selected, &o, sizeof o) == 0){
-				assert(o.idx < dylen(o.g->nodes));
+		if((sel = mouseselect(v.x, v.y)) != -1){
+			/*
+			if(sel == selected && ISNODE(sel)){
+				Graph *g = graphs[0];
 				if(haltlayout(o.g) < 0)
 					warn("mouseevent: %s\n", error());
-				expandnode(o.g, o.g->nodes + o.idx);
-				selected = aintnothingthere;
-				updatelayout(o.g);
-			}
-		}
+				expandnode(g->nodes + sel);
+				selected = -1;
+				updatelayout(g);
+			}else
+			*/
+				selected = sel;
+			/* FIXME: notify select */
+		}else
+			selected = -1;
+		warn("selected now %zd\n", selected);
 		reqdraw(Reqshallowdraw);
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)

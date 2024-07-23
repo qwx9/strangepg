@@ -79,13 +79,11 @@ struct hjdicks GLNode{
 	HMM_Vec2 pos;
 	HMM_Vec2 dir;
 	HMM_Vec4 col;
-	u32int idx;
 };
 struct hjdicks GLEdge{
 	HMM_Vec2 pos1;
 	HMM_Vec2 pos2;
 	HMM_Vec4 col;
-	u32int idx;
 };
 static GLNode *nodev;
 static GLEdge *edgev;
@@ -131,46 +129,29 @@ col2int(Color *c)
 	return c->col;
 }
 
-u32int
-scrobj(int x, int y)
+ioff
+mousepick(int x, int y)
 {
 	return sg_query_image_pixel(x, y, pickfb);
 }
 
-/* FIXME: parts in shared port code */
 void
-showobj(Obj *o)
+drawselected(void)
 {
-	char s[128];
-	Node *n;
-	Edge *e;
-	static Edge *ee;
-	static Node *nn;
+	ioff id;
+	static ioff osel = -1;
 
-	if(selected.type == Onil)
+	if(selected == -1 || selected == osel)
 		return;
-	switch(selected.type){
-	case Oedge:
-		e = o->g->edges + o->idx;
-		if(e == ee)
-			return;
-		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
-		ee = e;
-		nn = nil;
-		pushcmd("print %d, ledge[%d]", o->idx, o->idx);
-		break;
-	case Onode:
-		n = o->g->nodes + o->idx;
-		if(n == nn)
-			return;
-		snprint(s, sizeof s, "V[%zx]", o->idx);
-		nn = n;
-		ee = nil;
-		pushcmd("print %d, lnode[%d]", o->idx, o->idx);
-		break;
+	else if((selected & (1<<31)) == 0){
+		id = (uint)selected;
+		pushcmd("print \"selected node \" %d, lnode[%d]", id, id);
+	}else{
+		id = (uint)selected & ~(1<<31);
+		pushcmd("print \"selected edge \"  %d, ledge[%d]", id, id);
 	}
-	//string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
-	warn("selected: %s\n", s);
+	warn("sel %zd osel %zd\n", selected, osel);
+	osel = selected;
 }
 
 int
@@ -179,9 +160,12 @@ drawlabel(Node *, ioff, Color *)
 	return 0;
 }
 
+/* FIXME: this would mess up indexing */
 int
-drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
+drawline(Vertex a, Vertex b, double w, int emph, ioff idx, Color *c)
 {
+	return 0;
+
 	GLEdge e = {
 		.pos1 = {
 			.X = a.x,
@@ -197,7 +181,6 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 			.Z = c->b,
 			.W = 0.6f,
 		},
-		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(edgev, e);
@@ -205,7 +188,7 @@ drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
 }
 
 int
-drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, ioff idx, Color *c)
 {
 	GLEdge e = {
 		.pos1 = {
@@ -222,7 +205,6 @@ drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
 			.Z = c->b,
 			.W = 0.2f,
 		},
-		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(edgev, e);
@@ -230,7 +212,7 @@ drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
 }
 
 int
-drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex dir, ioff idx, Color *c)
 {
 	GLNode v = {
 		.pos = {
@@ -247,7 +229,6 @@ drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
 			.Z = c->b,
 			.W = 0.6f,
 		},
-		.idx = idx < 0 ? 0 : (u32int)idx + 1,
 	};
 
 	dypush(nodev, v);
@@ -723,11 +704,6 @@ initgl(void)
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
-				[4] {
-					.offset = offsetof(GLNode, idx),
-					.format = SG_VERTEXFORMAT_UINT,
-					.buffer_index = 1,
-				},
 			}
 		},
 		.shader = nodesh,
@@ -790,11 +766,6 @@ initgl(void)
 				[3] {
 					.offset = offsetof(GLEdge, col),
 					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-				[4] {
-					.offset = offsetof(GLEdge, idx),
-					.format = SG_VERTEXFORMAT_UINT,
 					.buffer_index = 1,
 				},
 			}

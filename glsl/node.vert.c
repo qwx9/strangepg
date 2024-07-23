@@ -8,7 +8,6 @@ char *node_vertsh = \
 	"layout(location=1) in vec2 pos;\n"
 	"layout(location=2) in vec2 dir;\n"
 	"layout(location=3) in vec4 col0;\n"
-	"layout(location=4) in uint idx0;\n"
 	"out vec4 col;\n"
 	"flat out uint idx;\n"
 	"vec2 rotatez(vec2 v, float angle){\n"
@@ -22,5 +21,5 @@ char *node_vertsh = \
 	"	float theta = atan(-dir.y, dir.x);	/* ccw geometry, cw angle */\n"
 	"	gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
 	"	col = col0;\n"
-	"	idx = idx0;\n"
+	"	idx = gl_InstanceID + 1;\n"
 	"}\n";

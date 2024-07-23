@@ -77,18 +77,18 @@ col2int(Color *c)
 	return c->col >> 8;
 }
 
-u32int
-scrobj(int x, int y)
+ioff
+mousepick(int x, int y)
 {
 	Rectangle r;
-	union { uchar u[8]; u64int v; } u;	/* libdraw bug */
+	union { uchar u[8]; ioff v; } u;	/* libdraw bug */
 
 	if(selfb == nil)
 		return 0;
 	r = Rect(x, y, x+1, y+1);
 	r = rectaddpt(r, ΔZP);
 	if(unloadimage(selfb, r, u.u, sizeof u.u) < 0)
-		warn("scrobj: %r\n");
+		warn("mousepick: %r\n");
 	return u.v;
 }
 
@@ -107,21 +107,26 @@ i2c(s32int idx)
 }
 
 void
-showobj(Obj *o)
+drawselected(void)
 {
+	ioff id;
 	char s[128];
 	Edge *e;
+	Node *n;
+	Graph *g;
 
-	if(selected.type == Onil)
+	g = graphs;
+	if(selected == -1)
 		return;
-	switch(selected.type){
-	case Oedge:
-		e = o->g->edges + o->idx;
-		snprint(s, sizeof s, "E[%zx] %zx,%zx", o->idx, e->u, e->v);
-		break;
-	case Onode:
-		snprint(s, sizeof s, "V[%zx]", o->idx);
-		break;
+	else if((selected & (1<<31)) == 0){
+		id = (uint)selected;
+		n = g->nodes + id;
+		snprint(s, sizeof s, "V[%zx]", id);
+		USED(n);
+	}else{
+		id = (uint)selected & ~(1<<31);
+		e = g->edges + id;
+		snprint(s, sizeof s, "E[%zx] %zx,%zx", id, e->u, e->v);
 	}
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
 }
@@ -148,12 +153,7 @@ drawlabel(Node *n, ioff idx, Color *c)
 	Point p;
 	char lab[128];
 
-	/* FIXME: note: maybe treat em allocations like strings like dy; have
-	 * an emstr allocator with its own bank, etc. or selectable banks like
-	 * doom */
-	/* FIXME: just keep label in em/memory, what's the point */
 	v = centerscalev(n->pos);
-	/* FIXME: unstackenblochen placement */
 	p = Pt(v.x + Ptsz, v.y + Ptsz);
 	snprint(lab, sizeof lab, "%zx", idx);
 	string(viewfb, p, c->i, ZP, font, lab);
@@ -163,7 +163,7 @@ drawlabel(Node *n, ioff idx, Color *c)
 /* FIXME: no prior screen intersection test */
 
 int
-drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
+drawquad(Vertex pos, Vertex dir, ioff idx, Color *c)
 {
 	float θ, cθ, sθ;
 	Point p[5];
@@ -186,7 +186,7 @@ drawquad(Vertex pos, Vertex dir, s32int idx, Color *c)
 }
 
 int
-drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
+drawbezier(Vertex a, Vertex b, ioff idx, Color *c)
 {
 	int w;
 	float Δx, Δy;
@@ -221,7 +221,7 @@ drawbezier(Vertex a, Vertex b, s32int idx, Color *c)
 }
 
 int
-drawline(Vertex a, Vertex b, double w, int emph, s32int idx, Color *c)
+drawline(Vertex a, Vertex b, double w, int emph, ioff idx, Color *c)
 {
 	Point p[2];
 

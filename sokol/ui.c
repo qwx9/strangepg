@@ -70,8 +70,7 @@ _drawui(nk_context *ctx)
 	float h;
 	nk_flags e;
 
-	if(selected.type != Onil)
-		showobj(&selected);
+	drawselected();
 	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w, 78), NKwopt)){
 		/* FIXME: no wrap */
 		nk_layout_row_dynamic(ctx, 0, 1);
