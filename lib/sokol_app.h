@@ -1682,7 +1682,6 @@ typedef struct sapp_desc {
     void (*init_cb)(void);                  // these are the user-provided callbacks without user data
     void (*frame_cb)(void);
     void (*cleanup_cb)(void);
-    void (*init_event_cb)(void);
     void (*event_cb)(const sapp_event*);
 
     void* user_data;                        // these are the user-provided callbacks with user data
@@ -1829,8 +1828,6 @@ SOKOL_APP_API_DECL void sapp_cancel_quit(void);
 SOKOL_APP_API_DECL void sapp_quit(void);
 /* call from inside event callback to consume the current event (don't forward to platform) */
 SOKOL_APP_API_DECL void sapp_consume_event(void);
-/* poll for events, outside of render loop */
-SOKOL_APP_API_DECL int sapp_poll_event(void);
 /* get the current frame counter (for comparison with sapp_event.frame_count) */
 SOKOL_APP_API_DECL uint64_t sapp_frame_count(void);
 /* get an averaged/smoothed frame duration in seconds */
@@ -2856,7 +2853,6 @@ typedef struct {
     bool fullscreen;
     bool first_frame;
     bool init_called;
-    bool init_event_called;
     bool cleanup_called;
     bool quit_requested;
     bool quit_ordered;
@@ -3011,13 +3007,6 @@ _SOKOL_PRIVATE void _sapp_call_init(void) {
     _sapp.init_called = true;
 }
 
-_SOKOL_PRIVATE void _sapp_call_init_event(void) {
-    if (_sapp.desc.init_event_cb) {
-        _sapp.desc.init_event_cb();
-    }
-    _sapp.init_event_called = true;
-}
-
 _SOKOL_PRIVATE void _sapp_call_frame(void) {
     if (_sapp.init_called && !_sapp.cleanup_called) {
         if (_sapp.desc.frame_cb) {
@@ -3042,7 +3031,7 @@ _SOKOL_PRIVATE void _sapp_call_cleanup(void) {
 }
 
 _SOKOL_PRIVATE bool _sapp_call_event(const sapp_event* e) {
-    if (!_sapp.cleanup_called && _sapp.init_event_called) {
+    if (!_sapp.cleanup_called) {
         if (_sapp.desc.event_cb) {
             _sapp.desc.event_cb(e);
         }
@@ -3198,7 +3187,7 @@ _SOKOL_PRIVATE void _sapp_init_event(sapp_event_type type) {
 
 _SOKOL_PRIVATE bool _sapp_events_enabled(void) {
     /* only send events when an event callback is set, and the init function was called */
-    return (_sapp.desc.event_cb || _sapp.desc.event_userdata_cb) && _sapp.init_called && _sapp.init_event_called;
+    return (_sapp.desc.event_cb || _sapp.desc.event_userdata_cb) && _sapp.init_called;
 }
 
 _SOKOL_PRIVATE sapp_keycode _sapp_translate_key(int scan_code) {
@@ -11162,10 +11151,16 @@ _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
     if (_sapp.fullscreen) {
         _sapp_x11_set_fullscreen(true);
     }
+
     XFlush(_sapp.x11.display);
-	_sapp_call_init_event();
     while (!_sapp.quit_ordered) {
         _sapp_timing_measure(&_sapp.timing);
+        int count = XPending(_sapp.x11.display);
+        while (count--) {
+            XEvent event;
+            XNextEvent(_sapp.x11.display, &event);
+            _sapp_x11_process_event(&event);
+        }
         _sapp_frame();
 #if defined(_SAPP_GLX)
         _sapp_glx_swap_buffers();
@@ -11432,31 +11427,6 @@ SOKOL_API_IMPL void sapp_cancel_quit(void) {
 
 SOKOL_API_IMPL void sapp_quit(void) {
     _sapp.quit_ordered = true;
-}
-
-/* this SUCKS */
-SOKOL_API_IMPL int sapp_poll_event(void) {
-    #if defined(_SAPP_LINUX)
-    static int xfd = -1;
-    static fd_set fds;
-    static struct timeval tm = {.tv_sec = 0, .tv_usec = 500};
-    if(xfd < 0){
-        xfd = XConnectionNumber(_sapp.x11.display);
-        FD_ZERO(&fds);
-        FD_SET(xfd, &fds);
-    }
-    if((select(1, &fds, NULL, NULL, &tm)) < 0)
-        return -1;
-    int count = XPending(_sapp.x11.display);
-    while(count--){
-        XEvent event;
-        XNextEvent(_sapp.x11.display, &event);
-        _sapp_x11_process_event(&event);
-        if(_sapp.quit_ordered || _sapp.quit_requested)
-            return -1;
-    }
-    #endif
-    return 0;
 }
 
 SOKOL_API_IMPL void sapp_consume_event(void) {
