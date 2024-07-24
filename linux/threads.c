@@ -120,7 +120,7 @@ recvp(Channel *c)
 ulong
 recvul(Channel *c)
 {
-	s32int v;
+	u32int v;
 
 	if(chan_recv_int32(c, &v) < 0)
 		return 0;
@@ -135,10 +135,17 @@ nbsendp(Channel *c, void *p)
 	return 1;
 }
 
+/* ONLY the _send_type functions alloc memory, so if one of the
+ * _recv_type functions gets something sent via this select shit,
+ * it will get an invalid pointer and will also try to free it */
 int
 nbsendul(Channel *c, ulong n)
 {
-	if(chan_select(nil, 0, nil, &c, 1, (void**)&n) < 0)
+	ulong *ass;
+
+	ass = emalloc(sizeof *ass);
+	*ass = n;
+	if(chan_select(nil, 0, nil, &c, 1, (void**)&ass) < 0)
 		return 0;
 	return 1;
 }
@@ -146,7 +153,7 @@ nbsendul(Channel *c, ulong n)
 ulong
 nbrecvul(Channel *c)
 {
-	ulong n;
+	u32int n;
 
 	if(chan_select(&c, 1, (void **)&n, nil, 0, nil) < 0)
 		return 0;
