@@ -287,10 +287,11 @@ static inline void
 renderedges(Params p)
 {
 	ioff n;
-	sg_buffer_desc d;
 
 	n = dylen(edgev);
 	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
+	/*
+	sg_buffer_desc d;
 	if(d.size / sizeof *edgev < n){
 		sg_destroy_buffer(edgebind.vertex_buffers[1]);
 		edgebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
@@ -298,6 +299,7 @@ renderedges(Params p)
 			.usage = SG_USAGE_STREAM,
 		});
 	}
+	*/
 	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
 		.ptr = edgev,
 		.size = n * sizeof *edgev,
@@ -317,17 +319,20 @@ static inline void
 rendernodes(Params p)
 {
 	ioff n;
-	sg_buffer_desc d;
 
 	n = dylen(nodev);
 	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
+	/*
+	sg_buffer_desc d;
 	if(d.size / sizeof *nodev < n){
+		warn("nodes: yep %x < %x\n", d.size, n);
 		sg_destroy_buffer(nodebind.vertex_buffers[1]);
 		nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
 			.size = n * sizeof *nodev,
 			.usage = SG_USAGE_STREAM,
 		});
 	}
+	*/
 	sg_update_buffer(nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = nodev,
 		.size = n * sizeof *nodev,
@@ -395,6 +400,7 @@ flush(void)
 void
 startdrawclock(void)
 {
+	reqdraw(Reqredraw);
 }
 
 void
@@ -572,7 +578,9 @@ static void
 initgl(void)
 {
 	Color *c;
+	Graph *g;
 
+	g = graphs;
 	/* geometry */
 	float nodevert[] = {
 		-FNodesz/2.0f, +Nodethiccc/2.0f,
@@ -595,7 +603,7 @@ initgl(void)
 				.data = SG_RANGE(nodevert),
 			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = 1024 * sizeof(GLNode),
+				.size = dylen(g->nodes) * sizeof(GLNode),
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
@@ -610,7 +618,7 @@ initgl(void)
 				.data = SG_RANGE(edgevert),
 			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = 1024 * sizeof(GLEdge),
+				.size = dylen(g->edges) * sizeof(GLEdge),
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
@@ -893,6 +901,9 @@ initsysdraw(void)
 void
 evloop(void)
 {
+	/* wait until at least one file asks for a redraw */
+	while(recvul(drawc) != Reqredraw)
+		;
 	sapp_run(&(sapp_desc){
 		.init_cb = init,
 		.frame_cb = frame,
