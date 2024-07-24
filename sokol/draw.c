@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include <signal.h>
-#include <sys/select.h>
 #include "lib/flextgl/flextGL.h"
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
@@ -37,7 +36,6 @@ extern char *bezier_vertsh, *bezier_tcssh, *bezier_tessh, *bezier_geomsh, *bezie
 
 void	event(const sapp_event*);
 void	_drawui(struct nk_context*);
-void	setnktheme(void);
 void	initnk(void);
 
 struct Color{
@@ -132,7 +130,11 @@ col2int(Color *c)
 ioff
 mousepick(int x, int y)
 {
-	return sg_query_image_pixel(x, y, pickfb);
+	ioff i;
+
+	if((i = sg_query_image_pixel(x, y, pickfb)) == 0)
+		return -1;
+	return i;
 }
 
 void
@@ -473,7 +475,6 @@ frame(void)
 		resetui();
 		updateview();
 	}
-	pollcmd();
 	// FIXME: actually implement shallow redraw, etc.
 	if(req != Reqshallowdraw){
 		if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
@@ -868,11 +869,7 @@ init(void)
 	assert(sg_isvalid());
 	initgl();
 	initbullshit();
-	snk_setup(&(snk_desc_t){
-		.dpi_scale = sapp_dpi_scale(),
-		.logger.func = slog_func,
-	});
-	setnktheme();
+	initnk();
 	resetui();
 	updateview();
 }
@@ -900,7 +897,6 @@ evloop(void)
 		.init_cb = init,
 		.frame_cb = frame,
 		.cleanup_cb = cleanup,
-		.init_event_cb = initnk,
 		.event_cb = event,
 		.width = Vdefw,
 		.height = Vdefh,

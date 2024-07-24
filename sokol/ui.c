@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include <sys/select.h>
 #define	SOKOL_GLCORE
 //#define	NDEBUG
 #include "lib/sokol_app.h"
@@ -189,12 +188,17 @@ event(const sapp_event* ev)
 }
 
 void
-setnktheme(void)
+initnk(void)
 {
 	nk_context *ctx;
 
+	snk_setup(&(snk_desc_t){
+		.dpi_scale = sapp_dpi_scale(),
+		.logger.func = slog_func,
+	});
 	ctx = snk_get_context();
 	memcpy(nktheme, nk_default_color_style, sizeof nk_default_color_style);
+	/* FIXME: inconsistent with draw/color.c */
 	if((view.flags & VFhaxx0rz) == 0){
 		nktheme[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
 		nktheme[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
@@ -211,20 +215,7 @@ setnktheme(void)
 		nktheme[NK_COLOR_TAB_HEADER] = nktheme[NK_COLOR_WINDOW];
 		nk_style_from_table(ctx, nktheme);
 	}
-}
-
-static void
-nkproc(void *)
-{
-	while(sapp_poll_event() >= 0)
-		pollcmd();
-}
-
-void
-initnk(void)
-{
 	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
-	newthread(nkproc, nil, nil, nil, "nkproc", mainstacksize);
 }
 
 void
