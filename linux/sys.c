@@ -100,7 +100,8 @@ lsleep(vlong ns)
 	struct timespec t = {0};
 
 	t.tv_nsec = ns;
-	nanosleep(&t, NULL);
+	if(nanosleep(&t, NULL) < 0)
+		sysfatal("lsleep: %s", error());
 }
 
 vlong

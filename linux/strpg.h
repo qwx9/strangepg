@@ -128,7 +128,7 @@ int	create(char*, int, int);
 int	dupfd(int, int);
 
 // FIXME
-#define sleep(x)	lsleep((x) * 1000000)
+#define sleep(x)	lsleep((x) * 1000000ULL)
 #define snprint	snprintf
 #define print	printf
 #define	dup	dupfd
