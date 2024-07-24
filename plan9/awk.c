@@ -14,41 +14,10 @@ cproc(void *)
 	sysfatal("procexecl: %r");
 }
 
-static void
-readcproc(void *)
-{
-	int n;
-	char buf[8192], *p, *s;
-
-	threadsetname("cproc");
-	for(;;){
-		/* FIXME: not handling longer input */
-		if((n = read(epfd[1], buf, sizeof buf-1)) <= 0)
-			break;
-		buf[n] = 0;
-		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, buf);
-		for(s=p=buf; p<buf+n; s=++p){
-			if((p = strchr(p, '\n')) == nil)
-				break;
-			/* reader must free */
-			*p = 0;
-			sendp(cmdc, estrdup(s));
-		}
-		if(s < buf + n)
-			sendp(cmdc, estrdup(s));
-	}
-	close(epfd[1]);
-	epfd[1] = -1;
-	if(n < 0)
-		warn("readcproc: %r");
-}
-
 int
 initrepl(void)
 {
 	if(pipe(epfd) < 0)
-		return -1;
-	if((cmdc = chancreate(sizeof(char*), 16)) == nil)
 		return -1;
 	if(procrfork(cproc, nil, mainstacksize, RFNAMEG|RFENVG|RFFDG|RFNOMNT) < 0)
 		return -1;

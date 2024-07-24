@@ -8,7 +8,6 @@
 
 int noreset;
 int epfd[2] = {-1, -1};
-Channel *cmdc;
 
 void
 sendcmd(char *cmd)
@@ -207,17 +206,6 @@ readcmd(char *s)
 		reqdraw(Reqredraw);
 }
 
-void
-pollcmd(void)
-{
-	char *s;
-
-	while((s = nbrecvp(cmdc)) != nil){
-		readcmd(s);
-		free(s);
-	}
-}
-
 static void
 readcproc(void *fd)
 {
@@ -234,8 +222,7 @@ readcproc(void *fd)
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
 		}
-		/* reader must free */
-		sendp(cmdc, estrdup(s));
+		readcmd(s);
 	}
 	freefs(f);
 }

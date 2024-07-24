@@ -6,8 +6,6 @@
 #include <draw.h>
 #include <mouse.h>
 
-extern Channel *cmdc;
-
 typedef struct Kev Kev;
 struct Kev{
 	Rune r;
@@ -132,14 +130,12 @@ evloop(void)
 		Aresize,
 		Amouse,
 		Akbd,
-		Acmd,
 		Aend,
 	};
 	Alt a[] = {
 		[Aresize] {mc->resizec, nil, CHANRCV},
 		[Amouse] {mc->c, &mc->Mouse, CHANRCV},
 		[Akbd] {kbc, &k, CHANRCV},
-		[Acmd] {cmdc, &s, CHANRCV},
 		[Aend] {nil, nil, CHANEND},
 	};
 	mold = mc->Mouse;	/* likely blank */
@@ -172,11 +168,6 @@ evloop(void)
 			case 'q': quit();
 			default: keyevent(k.r, k.down); break;
 			}
-			break;
-		case Acmd:
-			DPRINT(Debugcmd, "← ui:<%s>", s);
-			readcmd(s);
-			free(s);
 			break;
 		}
 	}

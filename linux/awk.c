@@ -21,8 +21,6 @@ initrepl(void)
 
 	if(pipe(epfd) < 0 || pipe(fucker) < 0)
 		return -1;
-	if((cmdc = chancreate(sizeof(char*), 16)) == nil)
-		return -1;
 	r = fork();
 	switch(r){
 	case -1: return -1;
