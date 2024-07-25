@@ -121,7 +121,6 @@ void
 evloop(void)
 {
 	int i;
-	char *s;
 	Kev k;
 	Point Δ;
 	Mouse mold;

@@ -289,9 +289,9 @@ renderedges(Params p)
 	ioff n;
 
 	n = dylen(edgev);
-	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
 	/*
 	sg_buffer_desc d;
+	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
 	if(d.size / sizeof *edgev < n){
 		sg_destroy_buffer(edgebind.vertex_buffers[1]);
 		edgebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
@@ -321,9 +321,9 @@ rendernodes(Params p)
 	ioff n;
 
 	n = dylen(nodev);
-	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
 	/*
 	sg_buffer_desc d;
+	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *nodev < n){
 		warn("nodes: yep %x < %x\n", d.size, n);
 		sg_destroy_buffer(nodebind.vertex_buffers[1]);
