@@ -118,8 +118,6 @@ parseargs(int argc, char **argv)
 			deflayout = LLfr;
 		else if(strcmp(s, "pfr") == 0)
 			deflayout = LLpfr;
-		else if(strcmp(s, "pline") == 0)
-			deflayout = LLpline;
 		else if(strcmp(s, "circ") == 0)
 			deflayout = LLcirc;
 		else if(strcmp(s, "bo") == 0)

@@ -28,7 +28,6 @@ OFILES=\
 	layout/layout.$O\
 	layout/linear.$O\
 	layout/pfr.$O\
-	layout/pline.$O\
 	layout/random.$O\
 	plan9/awk.$O\
 	plan9/draw.$O\

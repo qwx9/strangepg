@@ -43,7 +43,6 @@ OBJS:=\
 	layout/layout.o\
 	layout/linear.o\
 	layout/pfr.o\
-	layout/pline.o\
 	layout/random.o\
 	ui/ui.o\
 	util/print.o\

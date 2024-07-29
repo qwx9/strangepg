@@ -9,7 +9,6 @@ enum{
 	LLfr,
 	LLpfr,
 	LLlinear,
-	LLpline,
 	LLcirc,
 	LLbo,
 	LLnil,
@@ -31,7 +30,6 @@ Shitkicker*	regconga(void);
 Shitkicker*	regfr(void);
 Shitkicker*	regpfr(void);
 Shitkicker*	reglinear(void);
-Shitkicker*	regpline(void);
 Shitkicker*	regcirc(void);
 Shitkicker*	regbo(void);
 
