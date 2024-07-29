@@ -9,24 +9,19 @@
 int noreset;
 int epfd[2] = {-1, -1};
 
-void
+static void
 sendcmd(char *cmd)
 {
 	int n;
 
-	if(epfd[1] < 0){
-		warn("pushcmd: pipe closed\n");
-		return;
-	}
-	n = strlen(cmd);
-	DPRINT(Debugcmd, "→ sendcmd:[%d][%s]", n, cmd);
 	if(epfd[1] < 0)
-		warn("sendcmd: closed pipe\n");
-	else if(write(epfd[1], cmd, n) != n){
-		warn("sendcmd: %s", error());
+		return;
+	n = strlen(cmd);
+	DPRINT(Debugcmd, "sendcmd: [%d][%s]", n, cmd);
+	if(write(epfd[1], cmd, n) != n){
+		DPRINT(Debugcmd, "sendcmd: %s", error());
 		close(epfd[1]);
 		epfd[1] = -1;
-		sysfatal("sendcmd: %s", error());
 	}
 }
 
@@ -37,6 +32,8 @@ pushcmd(char *fmt, ...)
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
+	if(epfd[1] < 0)
+		return;
 	DPRINT(Debugcmd, "pushcmd %c", fmt[0]);
 	va_start(arg, fmt);
 	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
