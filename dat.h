@@ -5,14 +5,14 @@ typedef struct Edge Edge;
 typedef struct Layout Layout;
 typedef struct File File;
 typedef struct Coarse Coarse;
-typedef struct Color Color;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
+typedef struct RNode RNode;
+typedef struct REdge REdge;
 
 #pragma incomplete File
 #pragma incomplete Coarse
 #pragma incomplete Layout
-#pragma incomplete Color
 #pragma incomplete Thread
 
 /* FIXME */
@@ -31,31 +31,38 @@ struct Vertex{
 	float z;
 };
 
+/* FIXME: later, vertices or HMM vectors? */
+struct RNode{
+	float pos[2];
+	float dir[2];
+	float col[4];
+};
+struct REdge{
+	float pos1[2];
+	float pos2[2];
+	float col[4];
+};
+extern RNode *rnodes;
+extern REdge *redges;
+
 enum{
 	FNfixed = 1<<0,
 	FNinitpos = 1<<1,
 };
 struct Node{
-	ioff pid;		/* key (parent) */
-	ioff layid;	/* index: layout backref */
 	ioff *in;		/* dynamic array (edge indices) */
 	ioff *out;		/* dynamic array (edge indices) */
+	/* FIXME: attr ht */
 	int weight;
 	int length;
-	Vertex pos;
 	Vertex pos0;
-	Vertex dir;
-	Color *col;
 	u32int flags;
+	ioff pid;		/* key (parent) */
 	ioff ch;		/* index */
-};
-enum{
-	FEfixed = 1<<0,
 };
 struct Edge{
 	ioff u;	/* always packed with direction bit */
 	ioff v;
-	Color *col;
 };
 enum{
 	GFlayme = 1<<0,

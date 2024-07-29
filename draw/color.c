@@ -78,9 +78,10 @@ color(u32int v)
 }
 
 Color *
-somecolor(Graph *g)
+somecolor(ioff i)
 {
-	return color(colors[dylen(g->nodes) % nelem(colors)]);
+	assert(i >= 0);
+	return color(colors[i % nelem(colors)]);
 }
 
 void

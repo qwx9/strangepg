@@ -185,13 +185,12 @@ readcmd(char *s)
 			}
 			if((id = str2idx(fld[0])) < 0)
 				goto error;
-			n = g->nodes + id;
 			v = strtoll(fld[1], &p, 0);
 			if(p == fld[1]){
 				werrstr("invalid color %s", fld[1]);
 				goto error;
 			}
-			n->col = color(v);
+			setcolor(rnodes[id].col, color(v));
 			redraw = 1;
 			break;
 		}

@@ -267,8 +267,6 @@ newnode(Graph *g, Node *n)
 
 	id = dylen(g->nodes);
 	n->ch = -1;
-	n->col = somecolor(g);	/* FIXME */
-	n->dir = V(1.0f, 0.0f, 0.0f);	/* FIXME */
 	n->length = 1;	/* FIXME */
 	n->weight = 1;	/* FIXME */
 	return id;
@@ -279,10 +277,15 @@ pushinode(Graph *g)
 {
 	ioff id;
 	Node n = {0};
+	RNode r = {0};
 
 	if((id = newnode(g, &n)) < 0)
 		return -1;
 	dypush(g->nodes, n);
+	setcolor(r.col, somecolor(id));
+	r.col[3] = 0.6f;
+	r.dir[0] = 1.0f;	/* FIXME */
+	dypush(rnodes, r);
 	return id;
 }
 
@@ -291,6 +294,8 @@ pushnode(Graph *g, char *s)
 {
 	ioff id;
 
+	/* nodes may be defined after an edge references them, should
+	 * not be considered as an error */
 	if((id = getid(g, s)) >= 0){
 		DPRINT(Debugfs, "duplicate node[%zd] %s", id, s);
 		return id;
@@ -322,10 +327,14 @@ pushiedge(Graph *g, ioff u, ioff v)
 {
 	ioff id;
 	Edge e = {0};
+	REdge r = {0};
 
 	if((id = newedge(g, &e, u, v)) < 0)
 		return -1;
 	dypush(g->edges, e);
+	setcolor(r.col, color(theme[Cedge]));
+	r.col[3] = 0.6f;
+	dypush(redges, r);
 	return id;
 }
 
@@ -341,14 +350,13 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 	s = emalloc(n);
 	snprint(s, n, "%s%c\x1c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
 	if(getid(g, s) >= 0){
-		warn("duplicate edge %s%c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
 		free(s);
+		werrstr("duplicate edge %s%c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
 		return -1;
 	}
 	u = u << 1 | d1 & 1;
 	v = v << 1 | d2 & 1;
 	if((id = pushiedge(g, u, v)) < 0 || pushid(g, s, id) < 0){
-		warn("pushedge: %s\n", error());
 		//deledge(g, s, id);
 		free(s);
 		id = -1;

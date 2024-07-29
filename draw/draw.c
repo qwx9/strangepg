@@ -5,7 +5,12 @@
 #include "ui.h"
 #include "threads.h"
 
+/* FIXME: right now the renderer just redraws everything, which is fine
+ * up until some size of graph, at which point performance starts to drop
+ * even though many objects likely have not changed at all */
 View view;
+RNode *rnodes;
+REdge *redges;
 
 static void
 drawguides(void)
@@ -14,58 +19,63 @@ drawguides(void)
 	drawline(ZV, view.pan, 0, 2, -1, color(theme[Ctext]));
 }
 
-static inline int
-drawedge(Node *u, Node *v, ioff idx, int urev, int vrev)
+static inline void
+drawedge(Graph *g, ioff i, ioff u, ioff v, int urev, int vrev)
 {
 	float m;
-	Vertex du, dv;
+	Color *c;
+	Vertex p1, p2, du, dv;
+	REdge *r;
+	RNode *n1, *n2;
 
-	/* FIXME: just compute angle then length vector based on that */
-	/* FIXME: occasional fp errors, fixed with x≠0? */
-	du = u->dir;
+	/* FIXME */
+	assert(u >= 0 && u < dylen(rnodes) && v >= 0 && v < dylen(rnodes));
+	n1 = rnodes + u;
+	n2 = rnodes + v;
+	du.x = n1->dir[0];
+	du.y = n1->dir[1];
+	p1.x = n1->pos[0];
+	p1.y = n1->pos[1];
+	dv.x = n2->dir[0];
+	dv.y = n2->dir[1];
+	p2.x = n2->pos[0];
+	p2.y = n2->pos[1];
 	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
-	//du = mulv(du, Nodesz * u->length / 2);
+	//du = mulv(du, Nodesz * n1->length / 2);
 	du = mulv(du, Nodesz / 2);
-	du = urev ? subv(u->pos, du) : addv(u->pos, du);
-	dv = v->dir;
+	du = urev ? subv(p1, du) : addv(p1, du);
 	m = sqrt(dv.x * dv.x + dv.y * dv.y) + 0.000001;
 	dv = divv(dv, m);
-	//dv = mulv(dv, Nodesz * v->length / 2);
+	//dv = mulv(dv, Nodesz * n2->length / 2);
 	dv = mulv(dv, Nodesz / 2);
-	dv = vrev ? addv(v->pos, dv) : subv(v->pos, dv);
-	return drawbezier(du, dv, idx, color(theme[Cedge]));
+	dv = vrev ? addv(p2, dv) : subv(p2, dv);
+	r = redges + i;
+	r->pos1[0] = du.x;
+	r->pos1[1] = du.y;
+	r->pos2[0] = dv.x;
+	r->pos2[1] = dv.y;
 }
 
-static inline int
-drawnode(Node *n, ioff idx)
+static inline void
+drawnode(Graph *g, ioff i)
 {
 	float m;
 	Vertex v;
+	RNode *r;
+	Node *n;
 
-	v = n->dir;
-	if((view.flags & VFdrawarrows) == 0){
-		v = n->dir;
-		/*
-		m = sqrt(v.x * v.x + v.y * v.y);
-		v.x /= m;
-		v.y /= m;
-		m = Nodesz * n->length / 2.0f;
-		v = mulv(v, m);
-		*/
-		if(drawquad(n->pos, v, idx, n->col) < 0)
-			return -1;
+	assert(i >= 0 && i < dylen(rnodes));
+	r = rnodes + i;
 	/* FIXME */
-	}else{
-		m = atan2(n->dir.y, n->dir.x);
-		v.x = Nodesz * cos(m);
-		v.y = Nodesz * sin(m);
-		if(drawline(n->pos, addv(n->pos, v), 1, 1, idx, color(theme[Cemph])) < 0)
-			return -1;
-	}
-	if((view.flags & VFdrawlabels) != 0 && drawlabel(n, idx, color(theme[Ctext])) < 0)
-		return -1;
-	return 0;
+	n = g->nodes + i;
+	/* FIXME: done in layout */
+	/*
+	r->pos[0] = n->pos.x;
+	r->pos[1] = n->pos.y;
+	r->dir[0] = n->dir.x;
+	r->dir[1] = n->dir.y;
+	*/
 }
 
 static int
@@ -73,14 +83,10 @@ drawedges(Graph *g)
 {
 	ioff i, ie;
 	Edge *e;
-	Node *u, *v;
 
 	for(i=0, ie=dylen(g->edges); i<ie; i++){
 		e = g->edges + i;
-		u = g->nodes + (e->u >> 1);
-		v = g->nodes + (e->v >> 1);
-		assert(u != nil && v != nil);
-		drawedge(u, v, i, e->u & 1, e->v & 1);
+		drawedge(g, i, e->u >> 1, e->v >> 1, e->u & 1, e->v & 1);
 	}
 	return 0;
 }
@@ -91,7 +97,7 @@ drawnodes(Graph *g)
 	ioff i, ie;
 
 	for(i=0, ie=dylen(g->nodes); i<ie; i++)
-		drawnode(g->nodes + i, i);
+		drawnode(g, i);
 	return 0;
 }
 
@@ -106,7 +112,7 @@ drawworld(void)
 			continue;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
-		drawnodes(g);
+		//drawnodes(g);
 	}
 	unlockgraphs(0);
 	if(debug)

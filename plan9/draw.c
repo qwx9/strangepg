@@ -28,21 +28,6 @@ eallocimage(Rectangle r, uint chan, int repl, uint col)
 	return i;
 }
 
-void
-freecolor(Color *c)
-{
-	khiter_t k;
-
-	if(c == nil)
-		return;
-	k = kh_get(cmap, cmap, c->col);
-	assert(k != kh_end(cmap));
-	kh_del(cmap, cmap, k);
-	freeimage(c->i);
-	freeimage(c->shad);
-	free(c);
-}
-
 static Color *
 alloccolor(u32int col)
 {
@@ -61,6 +46,11 @@ alloccolor(u32int col)
 	return c;
 }
 
+void
+setcolor(float *, Color *)
+{
+}
+
 Color *
 newcolor(u32int v)
 {
@@ -69,12 +59,6 @@ newcolor(u32int v)
 	v = v << 8 | 0xff;
 	c = alloccolor(v);
 	return c;
-}
-
-u32int
-col2int(Color *c)
-{
-	return c->col >> 8;
 }
 
 ioff

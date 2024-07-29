@@ -6,14 +6,12 @@ static void *
 new(Graph *g)
 {
 	int x;
-	ioff i, ie;
-	Node *u;
+	RNode *r, *re;
 
 	x = -(Nodesz + Ptsz) * (dylen(g->nodes) - 1) / 2;
-	for(i=0, ie=dylen(g->nodes); i<ie; i++, x+=Nodesz+Ptsz){
-		u = g->nodes + i;
-		u->pos.x = x;
-		u->pos.y = 0;
+	for(r=rnodes, re=r+dylen(r); r<re; r++, x+=Nodesz+Ptsz){
+		r->pos[0] = x;
+		r->pos[1] = 0;
 	}
 	return nil;
 }

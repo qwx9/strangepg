@@ -10,10 +10,6 @@ enum{
 typedef struct P P;
 typedef struct D D;
 struct P{
-	Vertex xyz;
-	Vertex *pos;
-	Vertex *dir;
-	ioff i;
 	ioff e;
 	int nin;
 	int nout;
@@ -31,44 +27,33 @@ struct D{
 static void *
 new(Graph *g)
 {
-	float n;
-	ioff i, ie, *e, *ee, *etab;
-	Node *u, *v;
-	P p = {0}, *ptab, *pp;
+	int n;
+	ioff i, iv, ie, *e, *ee, *etab;
+	Node *u, *ue;
+	RNode *r, *re;
+	P p, *pp, *ptab;
 	D *aux;
 
 	ptab = nil;
 	etab = nil;
-	for(i=0, ie=dylen(g->nodes), n=0.0; i<ie; i++){
-		u = g->nodes + i;
-		u->layid = dylen(ptab);
-		p.i = i;
-		p.pos = &u->pos;
-		p.dir = &u->dir;
+	for(u=g->nodes, ue=u+dylen(u); u<ue; u++){
+		p.e = dylen(etab);
+		p.nout = dylen(u->out);
+		p.nin = dylen(u->in);
+		for(e=u->out, ee=e+p.nout; e<ee; e++){
+			iv = g->edges[*e].v >> 1;
+			dypush(etab, iv);
+		}
+		for(e=u->in, ee=e+p.nin; e<ee; e++){
+			iv = g->edges[*e].u >> 1;
+			dypush(etab, iv);
+		}
 		dypush(ptab, p);
-		n += 1.0;
 	}
-	n = Nodesz * log(n);
-	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
-		pp->xyz.x = -n + nrand(2*n);
-		pp->xyz.y = -n + nrand(2*n);
-		*pp->pos = pp->xyz;
-		u = g->nodes + pp->i;
-		pp->e = dylen(etab);
-		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = g->nodes + (g->edges[*e].v >> 1);
-			assert(v != nil);
-			dypush(etab, v->layid);
-			assert(v->layid >= 0 && v->layid < dylen(ptab));
-		}
-		pp->nout = i;
-		for(e=u->in, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = g->nodes + (g->edges[*e].u >> 1);
-			assert(v != nil);
-			dypush(etab, v->layid);
-			assert(v->layid >= 0 && v->layid < dylen(ptab));
-		}
-		pp->nin = i;
+	n = Nodesz * log(dylen(ptab));
+	for(r=rnodes, re=r+dylen(r); r<re; r++){
+		r->pos[0] = nrand(2 * n) - n;
+		r->pos[1] = nrand(2 * n) - n;
 	}
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
@@ -88,44 +73,46 @@ cleanup(void *p)
 	free(aux);
 }
 
-/* what takes the most time (O(n²)) is the all-to-all node repulsion loop,
- * the rest is fast, but to avoid waiting, just do all three steps in each
- * worker */
+/* skipping through nodes ensures that each thread works on a more
+ * "global" part of the graph, otherwise the quality of the layout
+ * is horrible; preparing the data in contiguous chunks in some
+ * manner would be better but more complicated, as it stands,
+ * performance doesn't really suffer because of this, possibly
+ * because other threads would be accessing what was prefetched
+ * anyway */
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	int c;
-	P *pp, *p0, *p1, *u, *v;
-	double dt;
-	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	int c, Δ;
 	ioff *e, *ee;
+	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	double dt;
+	RNode *r0, *r1, *r, *v;
+	P *pp, *p0;
 	D *d;
+	Clk clk = {.lab = "layiter"};
 
 	d = arg;
-	pp = d->ptab;
 	k = d->k;
 	t = 1.0f;
-	p0 = pp + i;
-	p1 = pp + dylen(pp);	/* FIXME: oob??? */
-	if(p1 > pp + dylen(pp))
-		p1 = pp + dylen(pp);
+	p0 = d->ptab + i;
+	r0 = rnodes + i;
+	r1 = rnodes + dylen(rnodes);
+	Δ = nlaythreads;
 	for(c=0;;c++){
+		CLK0(clk);
 		Δr = 0;
-		// FIXME: this such for the cache
-		/* not the best way to do this, but skipping through the array
-		 * approximately gives a view over the entire graph, not just
-		 * a slice, for eg. termination */
-		for(u=p0; u<p1; u+=nlaythreads){
+		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
 			if((*stat & LFstop) != 0)
 				return 0;
-			x = u->xyz.x;
-			y = u->xyz.y;
+			x = r->pos[0];
+			y = r->pos[1];
 			Δx = Δy = 0;
-			for(v=pp; v<pp+dylen(pp); v++){
-				if(u == v)
+			for(v=rnodes; v<r1; v++){
+				if(r == v)
 					continue;
-				δx = x - v->xyz.x;
-				δy = y - v->xyz.y;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
@@ -133,11 +120,10 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
-			e = d->etab + u->e;
-			for(ee=e+u->nout; e<ee; e++){
-				v = pp + *e;
-				δx = x - v->xyz.x;
-				δy = y - v->xyz.y;
+			for(e=d->etab+pp->e, ee=e+pp->nout; e<ee; e++){
+				v = rnodes + *e;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -145,10 +131,10 @@ compute(void *arg, volatile int *stat, int i)
 				Δx -= rx;
 				Δy -= ry;
 			}
-			for(ee+=u->nin; e<ee; e++){
-				v = pp + *e;
-				δx = v->xyz.x - x;
-				δy = v->xyz.y - y;
+			for(ee+=pp->nin; e<ee; e++){
+				v = rnodes + *e;
+				δx = v->pos[0] - x;
+				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -161,10 +147,12 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(δx, δy);
 			x += δx / δ;
 			y += δy / δ;
-			u->xyz.x = x;
-			u->xyz.y = y;
-			*u->pos = u->xyz;
-			SETDIR(*u->dir, δx, δy);
+			r->pos[0] = x;
+			r->pos[1] = y;
+			if(δx != 0.0f){	/* FIXME */
+				r->dir[0] = δx;
+				r->dir[1] = δy;
+			}
 			if(Δr < δ)
 				Δr = δ;
 		}
@@ -173,6 +161,7 @@ compute(void *arg, volatile int *stat, int i)
 		/* y = 1 - (x/Nrep)^4 */
 		dt = c * (1.0 / 4000.0);
 		t = 1.0 - dt * dt * dt * dt;
+		CLK1(clk);
 	}
 }
 

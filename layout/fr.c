@@ -34,6 +34,7 @@ new(Graph *g)
 	ioff i, ie;
 	Node *u;
 	P *ptab, p = {0};
+	RNode *r;
 
 	ptab = nil;
 	for(i=0, ie=dylen(g->nodes); i<ie; i++){
@@ -41,8 +42,10 @@ new(Graph *g)
 		p.i = i;
 		p.x = -W/4 + nrand(W/2);
 		p.y = -L/4 + nrand(L/2);
-		u->layid = dylen(ptab);
 		dypush(ptab, p);
+		r = rnodes + i;
+		r->pos[0] = p.x;
+		r->pos[1] = p.y;
 	}
 	ptab->g = g;
 	return ptab;
@@ -62,6 +65,7 @@ compute(void *arg, volatile int *stat, int idx)
 	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
 	Node *nu, *nv;
+	RNode *r, *r1, *r2, *re;
 	Edge *e;
 	Graph *g;
 
@@ -92,20 +96,18 @@ compute(void *arg, volatile int *stat, int idx)
 		}
 		for(i=0, ie=dylen(g->edges); i<ie; i++){
 			e = g->edges + i;
-			/* FIXME: expensive? avoid this, just set at index? */
-			nu = g->nodes + (e->u >> 1);
-			nv = g->nodes + (e->v >> 1);
-			if(nu == nv)
+			r1 = rnodes + (e->u >> 1);
+			r2 = rnodes + (e->v >> 1);
+			if(r1 == r2)
 				continue;
-			assert(nu != nil && nv != nil);
-			u = ptab + nu->layid;
-			v = ptab + nv->layid;
-			δx = u->x - v->x;
-			δy = u->y - v->y;
+			δx = r1->pos[0] - r2->pos[0];
+			δy = r1->pos[1] - r2->pos[1];
 			δ = Δ(δx, δy);
 			f = Fa(δ, k);
 			rx = f * δx / δ;
 			ry = f * δy / δ;
+			u = ptab + (e->u >> 1);
+			v = ptab + (e->v >> 1);
 			u->Δx -= rx;
 			u->Δy -= ry;
 			v->Δx += rx;
@@ -113,18 +115,18 @@ compute(void *arg, volatile int *stat, int idx)
 		}
 		if((*stat & LFstop) != 0)
 			break;
-		for(u=ptab; u<ptab+dylen(ptab); u++){
+		for(u=ptab, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 			δx = u->Δx;
 			δy = u->Δy;
 			δ = Δ(δx, δy);
 			x = u->x + δx / δ * t;
 			y = u->y + δy / δ * t;
-			u->x = x;
-			u->y = y;
-			nu = g->nodes + u->i;
-			nu->pos.x = x;
-			nu->pos.y = y;
-			SETDIR(nu->dir, δx, δy);
+			r->pos[0] = u->x = x;
+			r->pos[1] = u->y = y;
+			if(δx != 0.0f){	/* FIXME */
+				r->dir[0] = δx;
+				r->dir[1] = δy;
+			}
 			if(Δr < δ)
 				Δr = δ;
 		}

@@ -10,10 +10,6 @@ enum{
 typedef struct P P;
 typedef struct D D;
 struct P{
-	Vertex xyz;
-	Vertex *pos;
-	Vertex *dir;
-	ioff i;
 	ioff e;
 	int nin;
 	int nout;
@@ -33,49 +29,37 @@ static void *
 new(Graph *g)
 {
 	uint min, max;
-	ioff i, ie, n, *e, *ee, *etab;
-	Node *u, *v;
-	P p = {0}, *ptab, *pp;
+	ioff i, iv, ie, n, *e, *ee, *etab;
+	Node *u, *ue;
+	RNode *r, *re;
+	P p, *pp, *ptab;
 	D *aux;
 
 	ptab = nil;
 	etab = nil;
 	min = -1U;
 	max = 0;
-	for(i=0, ie=dylen(g->nodes), n=0; i<ie; i++, n++){
-		u = g->nodes + i;
-		u->layid = dylen(ptab);
-		p.i = i;
-		p.pos = &u->pos;
-		p.dir = &u->dir;
+	for(u=g->nodes, ue=u+dylen(u); u<ue; u++){
+		p.e = dylen(etab);
+		p.nout = dylen(u->out);
+		p.nin = dylen(u->in);
+		for(e=u->out, ee=e+p.nout; e<ee; e++){
+			iv = g->edges[*e].v >> 1;
+			dypush(etab, iv);
+		}
+		for(e=u->in, ee=e+p.nin; e<ee; e++){
+			iv = g->edges[*e].u >> 1;
+			dypush(etab, iv);
+		}
 		dypush(ptab, p);
 		if(u->pos0.x < min)
 			min = u->pos0.x;
 		else if(u->pos0.x > max)
 			max = u->pos0.x;
 	}
-	for(pp=ptab; pp<ptab+dylen(ptab); pp++){
-		u = g->nodes + pp->i;
-		pp->xyz = u->pos0;
-		pp->xyz.x -= min + (max - min) / 2;
-		pp->xyz.x *= Nodesz + 32;
-		pp->xyz.y = -32 + nrand(32);
-		*pp->pos = pp->xyz;
-		pp->e = dylen(etab);
-		for(e=u->out, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = g->nodes + (g->edges[*e].v >> 1);
-			assert(v != nil);
-			dypush(etab, v->layid);
-			assert(v->layid >= 0 && v->layid < dylen(ptab));
-		}
-		pp->nout = i;
-		for(e=u->in, ee=e+dylen(e), i=0; e<ee; e++, i++){
-			v = g->nodes + (g->edges[*e].u >> 1);
-			assert(v != nil);
-			dypush(etab, v->layid);
-			assert(v->layid >= 0 && v->layid < dylen(ptab));
-		}
-		pp->nin = i;
+	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
+		r->pos[0] = (Nodesz + 32) * (u->pos0.x - (min + (max - min) / 2));
+		r->pos[1] = u->pos0.y + nrand(32) - 32;
 	}
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
@@ -99,35 +83,36 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	int c, nth;
-	P *pp, *p0, *p1, *u, *v;
-	double dt;
-	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	int c, Δ;
 	ioff *e, *ee;
+	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	double dt;
+	RNode *r0, *r1, *r, *v;
+	P *pp, *p0;
 	D *d;
+	Clk clk = {.lab = "layiter"};
 
 	d = arg;
-	pp = d->ptab;
 	k = d->k;
-	nth = d->nth;
 	t = 1.0f;
-	p0 = pp + i;
-	p1 = pp + dylen(pp);
-	if(p1 > pp + dylen(pp))
-		p1 = pp + dylen(pp);
+	p0 = d->ptab + i;
+	r0 = rnodes + i;
+	r1 = rnodes + dylen(rnodes);
+	Δ = nlaythreads;
 	for(c=0;;c++){
+		CLK0(clk);
 		Δr = 0;
-		for(u=p0; u<p1; u+=nth){
+		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
 			if((*stat & LFstop) != 0)
 				return 0;
-			x = u->xyz.x;
-			y = u->xyz.y;
+			x = r->pos[0];
+			y = r->pos[1];
 			Δx = Δy = 0;
-			for(v=pp; v<pp+dylen(pp); v++){
-				if(u == v)
+			for(v=rnodes; v<r1; v++){
+				if(r == v)
 					continue;
-				δx = x - v->xyz.x;
-				δy = y - v->xyz.y;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
@@ -135,11 +120,10 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
-			e = d->etab + u->e;
-			for(ee=e+u->nout; e<ee; e++){
-				v = pp + *e;
-				δx = x - v->xyz.x;
-				δy = y - v->xyz.y;
+			for(e=d->etab+pp->e, ee=e+pp->nout; e<ee; e++){
+				v = rnodes + *e;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -147,10 +131,10 @@ compute(void *arg, volatile int *stat, int i)
 				Δx -= rx;
 				Δy -= ry;
 			}
-			for(ee+=u->nin; e<ee; e++){
-				v = pp + *e;
-				δx = v->xyz.x - x;
-				δy = v->xyz.y - y;
+			for(ee+=pp->nin; e<ee; e++){
+				v = rnodes + *e;
+				δx = v->pos[0] - x;
+				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
 				rx = f * δx / δ;
@@ -163,10 +147,12 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(δx, δy);
 			x += δx / δ;
 			y += δy / δ;
-			u->xyz.x = x;
-			u->xyz.y = y;
-			*u->pos = u->xyz;
-			SETDIR(*u->dir, δx, δy);
+			r->pos[0] = x;
+			r->pos[1] = y;
+			if(δx != 0.0f){	/* FIXME */
+				r->dir[0] = δx;
+				r->dir[1] = δy;
+			}
 			if(Δr < δ)
 				Δr = δ;
 		}
@@ -175,6 +161,7 @@ compute(void *arg, volatile int *stat, int i)
 		/* y = 1 - (x/Nrep)^4 */
 		dt = c * (1.0 / 4000.0);
 		t = 1.0 - dt * dt * dt * dt;
+		CLK1(clk);
 	}
 }
 

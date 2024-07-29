@@ -39,10 +39,7 @@ void	_drawui(struct nk_context*);
 void	initnk(void);
 
 struct Color{
-	u32int col;
-	float r;
-	float g;
-	float b;
+	float col[3];
 };
 
 /* FIXME:
@@ -73,6 +70,7 @@ struct hjdicks Params{
 	HMM_Mat4 mvp;
 	HMM_Vec2 scale;	/* FIXME */
 };
+/*
 struct hjdicks GLNode{
 	HMM_Vec2 pos;
 	HMM_Vec2 dir;
@@ -85,6 +83,7 @@ struct hjdicks GLEdge{
 };
 static GLNode *nodev;
 static GLEdge *edgev;
+*/
 static HMM_Mat4 mvp;
 
 struct Shader{
@@ -105,8 +104,15 @@ static sg_bindings fsq_bind;
 static sg_image fb, pickfb, zfb;
 
 static Channel *drawc;
+static int reqs;
 
 static GLuint stupid, stupidvao, stupidvbo;
+
+void
+setcolor(float *col, Color *c)
+{
+	memcpy(col, c->col, sizeof c->col);
+}
 
 Color *
 newcolor(u32int v)
@@ -114,17 +120,10 @@ newcolor(u32int v)
 	Color *c;
 
 	c = emalloc(sizeof *c);
-	c->col = v;
-	c->r = (v >> 16 & 0xff) / 255.f;
-	c->g = (v >> 8 & 0xff) / 255.f;
-	c->b = (v & 0xff) / 255.f;
+	c->col[0] = (v >> 16 & 0xff) / 255.f;
+	c->col[1] = (v >> 8 & 0xff) / 255.f;
+	c->col[2] = (v & 0xff) / 255.f;
 	return c;
-}
-
-u32int
-col2int(Color *c)
-{
-	return c->col;
 }
 
 ioff
@@ -162,12 +161,11 @@ drawlabel(Node *, ioff, Color *)
 	return 0;
 }
 
-/* FIXME: this would mess up indexing */
+/* FIXME: this would mess up indexing (another shader for straight lines?) */
 int
 drawline(Vertex a, Vertex b, double w, int emph, ioff idx, Color *c)
 {
-	return 0;
-
+/*
 	GLEdge e = {
 		.pos1 = {
 			.X = a.x,
@@ -186,12 +184,14 @@ drawline(Vertex a, Vertex b, double w, int emph, ioff idx, Color *c)
 	};
 
 	dypush(edgev, e);
+*/
 	return 0;
 }
 
 int
 drawbezier(Vertex a, Vertex b, ioff idx, Color *c)
 {
+/*
 	GLEdge e = {
 		.pos1 = {
 			.X = a.x,
@@ -210,12 +210,14 @@ drawbezier(Vertex a, Vertex b, ioff idx, Color *c)
 	};
 
 	dypush(edgev, e);
+*/
 	return 0;
 }
 
 int
 drawquad(Vertex pos, Vertex dir, ioff idx, Color *c)
 {
+/*
 	GLNode v = {
 		.pos = {
 			.X = pos.x,
@@ -234,14 +236,17 @@ drawquad(Vertex pos, Vertex dir, ioff idx, Color *c)
 	};
 
 	dypush(nodev, v);
+*/
 	return 0;
 }
 
 void
 cleardraw(void)
 {
+/*
 	dyreset(nodev);
 	dyreset(edgev);
+*/
 }
 
 // FIXME: merge with port
@@ -253,7 +258,7 @@ updateview(void)
 
 	view.Δeye = subv(view.eye, view.center);
 	view.ar = view.w / view.h;
-	proj = HMM_Perspective_RH_NO(60.0f, view.ar, 0.01f, 1000.0f);
+	proj = HMM_Perspective_RH_NO(60.0f, view.ar, 0.01f, 10000.0f);
 	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
 	center = HMM_V3(view.center.x, view.center.y, view.center.z);
 	up = HMM_V3(view.up.x, view.up.y, view.up.z);
@@ -288,7 +293,7 @@ renderedges(Params p)
 {
 	ioff n;
 
-	n = dylen(edgev);
+	n = dylen(redges);
 	/*
 	sg_buffer_desc d;
 	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
@@ -301,8 +306,8 @@ renderedges(Params p)
 	}
 	*/
 	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
-		.ptr = edgev,
-		.size = n * sizeof *edgev,
+		.ptr = redges,
+		.size = n * sizeof *redges,
 	});
 	sg_begin_pass(&(sg_pass){
 		.action = offscreen_pass_action,
@@ -320,7 +325,7 @@ rendernodes(Params p)
 {
 	ioff n;
 
-	n = dylen(nodev);
+	n = dylen(rnodes);
 	/*
 	sg_buffer_desc d;
 	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
@@ -334,8 +339,8 @@ rendernodes(Params p)
 	}
 	*/
 	sg_update_buffer(nodebind.vertex_buffers[1], &(sg_range){
-		.ptr = nodev,
-		.size = n * sizeof *nodev,
+		.ptr = rnodes,
+		.size = n * sizeof *rnodes,
 	});
 	sg_begin_pass(&(sg_pass){
 		.action = offscreen_pass_action2,
@@ -388,7 +393,7 @@ flush(void)
 		.mvp = mvp,
 		.scale = HMM_V2(FNodesz, FNodesz),
 	};
-	if(dylen(nodev) > 0){
+	if(dylen(rnodes) > 0){
 		renderedges(p);
 		rendernodes(p);
 	}
@@ -465,32 +470,43 @@ reqdraw(int r)
 		f = 0;
 }
 
+static void
+drawproc(void *)
+{
+	int req;
+
+	for(;;){
+		if((req = recvul(drawc)) == 0)
+			break;
+		reqs |= req;
+		if(req != Reqshallowdraw){
+			if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
+				stopdrawclock();
+		}
+	}
+}
+
 void
 frame(void)
 {
-	int req;
 	struct nk_context *ctx;
 	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
 
-	req = nbrecvul(drawc) | Reqrefresh;
 	CLK0(fclk);
 	ctx = snk_new_frame();
-	if((req & Reqresetdraw) != 0)
+	if((reqs & Reqresetdraw) != 0)
 		resize();
-	if((req & Reqresetui) != 0){
+	if((reqs & Reqresetui) != 0){
 		resetui();
 		updateview();
 	}
-	// FIXME: actually implement shallow redraw, etc.
-	if(req != Reqshallowdraw){
-		if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
-			stopdrawclock();
-		_drawui(ctx);
-	}
+	reqs &= ~(Reqresetui | Reqresetdraw);
+	_drawui(ctx);
 	CLK0(clk);
 	flush();
 	CLK1(clk);
 	CLK1(fclk);
+	reqdraw(Reqrefresh);
 }
 
 static int
@@ -578,9 +594,7 @@ static void
 initgl(void)
 {
 	Color *c;
-	Graph *g;
 
-	g = graphs;
 	/* geometry */
 	float nodevert[] = {
 		-FNodesz/2.0f, +Nodethiccc/2.0f,
@@ -603,7 +617,7 @@ initgl(void)
 				.data = SG_RANGE(nodevert),
 			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = dylen(g->nodes) * sizeof(GLNode),
+				.size = dylen(rnodes) * sizeof *rnodes,
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
@@ -618,7 +632,7 @@ initgl(void)
 				.data = SG_RANGE(edgevert),
 			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = dylen(g->edges) * sizeof(GLEdge),
+				.size = dylen(redges) * sizeof *redges,
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
@@ -658,7 +672,7 @@ initgl(void)
 			[0] {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
-				.clear_value = { c->r, c->g, c->b, 0.0f },
+				.clear_value = { c->col[0], c->col[1], c->col[2], 0.0f },
 			},
 			[1] {
 				.load_action = SG_LOADACTION_CLEAR,
@@ -688,7 +702,7 @@ initgl(void)
 					.stride = 2 * sizeof(float),
 				},
 				[1] {
-					.stride = sizeof(GLNode),
+					.stride = sizeof(RNode),
 					.step_func = SG_VERTEXSTEP_PER_INSTANCE
 				},
 			},
@@ -699,17 +713,17 @@ initgl(void)
 					.buffer_index = 0,
 				},
 				[1] {
-					.offset = offsetof(GLNode, pos),
+					.offset = offsetof(RNode, pos),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
 				[2] {
-					.offset = offsetof(GLNode, dir),
+					.offset = offsetof(RNode, dir),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
 				[3] {
-					.offset = offsetof(GLNode, col),
+					.offset = offsetof(RNode, col),
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
@@ -752,7 +766,7 @@ initgl(void)
 					.stride = sizeof(float),
 				},
 				[1] {
-					.stride = sizeof(GLEdge),
+					.stride = sizeof(REdge),
 					.step_func = SG_VERTEXSTEP_PER_INSTANCE
 				},
 			},
@@ -763,17 +777,17 @@ initgl(void)
 					.buffer_index = 0,
 				},
 				[1] {
-					.offset = offsetof(GLEdge, pos1),
+					.offset = offsetof(REdge, pos1),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
 				[2] {
-					.offset = offsetof(GLEdge, pos2),
+					.offset = offsetof(REdge, pos2),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
 				[3] {
-					.offset = offsetof(GLEdge, col),
+					.offset = offsetof(REdge, col),
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
@@ -904,6 +918,8 @@ evloop(void)
 	/* wait until at least one file asks for a redraw */
 	while(recvul(drawc) != Reqredraw)
 		;
+	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
+	reqdraw(Reqredraw);
 	sapp_run(&(sapp_desc){
 		.init_cb = init,
 		.frame_cb = frame,

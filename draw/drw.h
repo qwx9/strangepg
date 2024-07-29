@@ -1,5 +1,8 @@
 typedef struct Quad Quad;
 typedef struct View View;
+typedef struct Color Color;
+
+#pragma incomplete Color
 
 enum{
 	Nodesz = 8,
@@ -76,13 +79,11 @@ enum{
 };
 extern u32int *theme;
 
-int	setnodecolor(Graph*, Node*, u32int);
 Color*	newcolor(u32int);
-void	freecolor(Color*);
-u32int	col2int(Color*);
 Color*	color(u32int);
-Color*	somecolor(Graph*);
+Color*	somecolor(ioff);
 void	settheme(void);
+void	setcolor(float*, Color*);
 
 enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
