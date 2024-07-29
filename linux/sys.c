@@ -76,9 +76,12 @@ error(void)
 {
 	char *s;
 
-	s = strerror(errno);
-	errno = 0;
-	return s;
+	if(errno != 0){
+		s = strerror(errno);
+		errbuf[0] = 0;
+		return s;
+	}
+	return errbuf;
 }
 
 /* FIXME: check */
