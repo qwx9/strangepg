@@ -333,7 +333,7 @@ pushiedge(Graph *g, ioff u, ioff v)
 		return -1;
 	dypush(g->edges, e);
 	setcolor(r.col, color(theme[Cedge]));
-	r.col[3] = 0.6f;
+	r.col[3] = 0.2f;
 	dypush(redges, r);
 	return id;
 }

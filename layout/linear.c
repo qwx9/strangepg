@@ -15,7 +15,7 @@ struct P{
 	ioff e;
 	int nin;
 	int nout;
-	int fixed;
+	char fixed;
 };
 struct D{
 	P *ptab;
@@ -24,7 +24,7 @@ struct D{
 	float k;
 };
 
-#define Fa(x, k)	((x) * (x) / (k))
+#define Fa(x, k)	((x) * (x) * (x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
 
@@ -32,8 +32,7 @@ static void *
 new(Graph *g)
 {
 	ioff i, ie, iv, *e, *ee, *etab, *ftab;
-	uint min, max;
-	float x, y;
+	float x, y, min, max;
 	Node *u, *v, *ue;
 	RNode *r, *re;
 	P p, *ptab, *pp;
@@ -42,7 +41,7 @@ new(Graph *g)
 	ptab = nil;
 	etab = ftab = nil;
 	max = 0;
-	min = ~0;
+	min = 3.40282347e+38f;
 	for(i=0, r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++, i++){
 		p.e = dylen(etab);
 		p.nout = dylen(u->out);
@@ -58,41 +57,26 @@ new(Graph *g)
 		}
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
 			x = u->pos0.x * Nodesz;
-			y = u->pos0.y + (Nodesz * 2) * (i % 2 == 0 ? -1 : 1);
-			/*
-			if(y == 0.0f)
-				y = -4 + (i % 8) * Nodesz;
-			*/
-			if((u->flags & FNfixed) == 0){
-				x = 0.0f;
-				y = -L + nrand(2*L);
-			}
-		}else{
-			x = 0.0f;
-			y = -L + nrand(2*L);
-		}
+			y = u->pos0.y * Nodesz * Ptsz;
+			if((u->flags & FNfixed) != 0)
+				p.fixed = 1;
+			else
+				p.fixed = 2;
+		}else
+			x = y = 0.0f;
 		if(max < x)
 			max = x;
 		if(min > x)
 			min = x;
 		r->pos[0] = x;
 		r->pos[1] = y;
-		if((u->flags & (FNfixed|FNinitpos)) == FNfixed)
-			p.fixed = 1;
-		else
+		if(p.fixed != 1)
 			dypush(ftab, i);
 		dypush(ptab, p);
 	}
 	for(pp=ptab, r=rnodes, re=r+dylen(r); r<re; r++, pp++){
-		r->pos[0] -= (max - min) / 2;
-		if(!pp->fixed)
-			r->pos[0] = -min / 2 + nrand(max - min);
-		/*
 		if(pp->fixed)
-			r->pos[0] -= maxx / 2;
-		else
-			r->pos[0] = -maxx / 2 + nrand(maxx);
-		*/
+			r->pos[0] -= (max - min) / 2.0f;
 	}
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
@@ -120,9 +104,9 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int c, Δ;
-	double dt;
-	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ioff *e, *ee, *fp, *f0, *f1;
+	float f, x, y, Δx, Δy;
+	double dt, t, k, δx, δy, δ, rx, ry, Δr;
+	ioff n, *e, *ee, *fp, *f0, *f1;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *vp, *u;
 	D *d;
@@ -137,6 +121,7 @@ compute(void *arg, volatile int *stat, int i)
 	f1 = fp + dylen(fp);
 	if(f1 > fp + dylen(fp))
 		f1 = fp + dylen(fp);
+	r1 = rnodes + dylen(rnodes);
 	Δ = nlaythreads;
 	for(c=0;;c++){
 		CLK0(clk);
@@ -144,24 +129,25 @@ compute(void *arg, volatile int *stat, int i)
 		for(fp=f0; fp<f1; fp+=Δ){
 			if((*stat & LFstop) != 0)
 				return 0;
-			i = *fp;
-			u = pp + i;
-			r = rnodes + i;
+			n = *fp;
+			u = pp + n;
+			r = rnodes + n;
 			x = r->pos[0];
 			y = r->pos[1];
-			Δx = Δy = 0;
-			// FIXME: removing this is not really a fix
+			Δx = Δy = 0.0f;
 			/*
 			for(v=rnodes, vp=pp; v<r1; v++, vp++){
 				// movable nodes don't repulse each other
-				if(r == v || !vp->fixed)
+				if(r == v || vp->fixed == 1)
 					continue;
 				δx = x - v->pos[0];
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				Δx += f * δx / δ;
-				Δy += f * δy / δ;
+				rx = f * δx / δ;
+				ry = f * δy / δ;
+				Δx += rx;
+				Δy += ry;
 			}
 			*/
 			if((*stat & LFstop) != 0)
@@ -172,8 +158,10 @@ compute(void *arg, volatile int *stat, int i)
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
+				//rx = f * δx / δ;
+				//ry = f * δy / δ;
+				rx = f * δx;
+				ry = f * δy;
 				Δx -= rx;
 				Δy -= ry;
 			}
@@ -183,8 +171,10 @@ compute(void *arg, volatile int *stat, int i)
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
+				//rx = f * δx / δ;
+				//ry = f * δy / δ;
+				rx = f * δx;
+				ry = f * δy;
 				Δx += rx;
 				Δy += ry;
 			}
@@ -202,10 +192,10 @@ compute(void *arg, volatile int *stat, int i)
 			if(Δr < δ)
 				Δr = δ;
 		}
-		if(Δr < 1.0)
+		if(Δr <= 1.0)
 			break;
 		/* y = 1 - (x/Nrep)^4 */
-		dt = c * (1.0 / 100000.0);
+		dt = c * (1.0 / 1000000.0);
 		t = 1.0 - dt * dt * dt * dt;
 		CLK1(clk);
 	}

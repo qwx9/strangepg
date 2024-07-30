@@ -24,10 +24,9 @@ struct D{
 	float k;
 };
 
-#define Fa(x, k)	((x) * (x) * (x) / (k))
+#define Fa(x, k)	((x) * (x) * (x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
-#define	cool(t)	((t) - 0.0001f > 0 ? (t) - 0.0001f : 0.0f)
 
 static void *
 new(Graph *g)
@@ -79,16 +78,14 @@ new(Graph *g)
 skip:
 		dypush(ptab, p);
 	}
-	/* FIXME */
-	//ρ1 = Vdefw / 1.5f - Nodesz / 2;
-	ρ1 = (max - min) / 4;
+	ρ1 = (max - min) / (Nodesz * Ptsz);
 	n = 0;
 	for(pp=ptab, r=rnodes, re=r+dylen(r); r<re; r++, pp++){
 		if(!pp->fixed)
 			continue;
 		n++;
-		ρ = ρ1;
-		ρ -= (n / (max - min)) * Nodesz * 4;
+		/* FIXME */
+		ρ = ρ1 + (n / (max - min)) * Nodesz * 192;
 		θ = n * Nodesz / ρ;
 		if(pp->fixed == 2)
 			ρ = 0.0f;
@@ -117,65 +114,69 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int c, Δ;
-	double dt;
-	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	ioff *e, *ee, *fp, *f0, *f1;
-	RNode *r0, *r1, *r, *v;
-	P *pp, *vp, *u, *p0, *p1;
+	float f, x, y, Δx, Δy;
+	double dt, t, k, δx, δy, δ, rx, ry, Δr;
+	ioff *e, *ee;
+	RNode *u, *v;
+	P *p, *p0, *p1;
 	D *d;
 	Clk clk = {.lab = "layiter"};
 
 	d = arg;
-	pp = d->ptab;
 	k = d->k;
 	t = 1.0;
-	p0 = pp + i;
-	p1 = pp + dylen(pp);
-	if(p1 > pp + dylen(pp))
-		p1 = pp + dylen(pp);
-	for(c=0;; c++){
+	p0 = d->ptab + i;
+	p1 = d->ptab + dylen(d->ptab);
+	Δ = nlaythreads;
+	for(c=0;;c++){
+		CLK0(clk);
 		Δr = 0;
-		for(u=p0; u<p1; u+=nlaythreads){
+		for(u=rnodes, p=p0; p<p1; p+=Δ, u++){
 			if((*stat & LFstop) != 0)
 				return 0;
-			u = pp + i;
-			if(u->fixed)
-				continue;
-			r = rnodes + i;
-			x = r->pos[0];
-			y = r->pos[1];
-			Δx = Δy = 0;
+			x = u->pos[0];
+			y = u->pos[1];
+			Δx = Δy = 0.0f;
+			/*
 			for(v=rnodes, vp=pp; v<r1; v++, vp++){
-				if(r == v)
+				// movable nodes don't repulse each other
+				if(r == v || vp->fixed == 1)
 					continue;
 				δx = x - v->pos[0];
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				Δx += f * δx / δ;
-				Δy += f * δy / δ;
+				rx = f * δx / δ;
+				ry = f * δy / δ;
+				Δx += rx;
+				Δy += ry;
 			}
+			*/
 			if((*stat & LFstop) != 0)
 				return 0;
-			for(e=d->etab+u->e, ee=e+u->nout; e<ee; e++){
+			for(e=d->etab+p->e, ee=e+p->nout; e<ee; e++){
 				v = rnodes + *e;
 				δx = x - v->pos[0];
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
+				//rx = f * δx / δ;
+				//ry = f * δy / δ;
+				rx = f * δx;
+				ry = f * δy;
 				Δx -= rx;
 				Δy -= ry;
 			}
-			for(ee+=u->nin; e<ee; e++){
+			for(ee+=p->nin; e<ee; e++){
 				v = rnodes + *e;
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
+				//rx = f * δx / δ;
+				//ry = f * δy / δ;
+				rx = f * δx;
+				ry = f * δy;
 				Δx += rx;
 				Δy += ry;
 			}
@@ -184,19 +185,19 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(δx, δy);
 			x += δx / δ;
 			y += δy / δ;
-			r->pos[0] = x;
-			r->pos[1] = y;
+			u->pos[0] = x;
+			u->pos[1] = y;
 			if(δx != 0.0f){	/* FIXME */
-				r->dir[0] = δx;
-				r->dir[1] = δy;
+				u->dir[0] = δx;
+				u->dir[1] = δy;
 			}
 			if(Δr < δ)
 				Δr = δ;
 		}
-		if(Δr < 1.0)
+		if(Δr <= 1.0)
 			break;
 		/* y = 1 - (x/Nrep)^4 */
-		dt = c * (1.0 / 100000.0);
+		dt = c * (1.0 / 1000000.0);
 		t = 1.0 - dt * dt * dt * dt;
 		CLK1(clk);
 	}

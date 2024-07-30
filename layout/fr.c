@@ -32,13 +32,11 @@ static void *
 new(Graph *g)
 {
 	ioff i, ie;
-	Node *u;
 	P *ptab, p = {0};
 	RNode *r;
 
 	ptab = nil;
 	for(i=0, ie=dylen(g->nodes); i<ie; i++){
-		u = g->nodes + i;
 		p.i = i;
 		p.x = -W/4 + nrand(W/2);
 		p.y = -L/4 + nrand(L/2);

@@ -57,27 +57,6 @@ drawedge(Graph *g, ioff i, ioff u, ioff v, int urev, int vrev)
 	r->pos2[1] = dv.y;
 }
 
-static inline void
-drawnode(Graph *g, ioff i)
-{
-	float m;
-	Vertex v;
-	RNode *r;
-	Node *n;
-
-	assert(i >= 0 && i < dylen(rnodes));
-	r = rnodes + i;
-	/* FIXME */
-	n = g->nodes + i;
-	/* FIXME: done in layout */
-	/*
-	r->pos[0] = n->pos.x;
-	r->pos[1] = n->pos.y;
-	r->dir[0] = n->dir.x;
-	r->dir[1] = n->dir.y;
-	*/
-}
-
 static int
 drawedges(Graph *g)
 {
@@ -88,16 +67,6 @@ drawedges(Graph *g)
 		e = g->edges + i;
 		drawedge(g, i, e->u >> 1, e->v >> 1, e->u & 1, e->v & 1);
 	}
-	return 0;
-}
-
-static int
-drawnodes(Graph *g)
-{
-	ioff i, ie;
-
-	for(i=0, ie=dylen(g->nodes); i<ie; i++)
-		drawnode(g, i);
 	return 0;
 }
 
@@ -112,7 +81,6 @@ drawworld(void)
 			continue;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
-		//drawnodes(g);
 	}
 	unlockgraphs(0);
 	if(debug)

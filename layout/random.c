@@ -10,7 +10,7 @@ new(Graph *g)
 	Node *u;
 	RNode *r, *re;
 
-	for(r=rnodes, re=r+dylen(r); r<re; r++, x+=Nodesz+Ptsz){
+	for(x=0, r=rnodes, re=r+dylen(r); r<re; r++, x+=Nodesz+Ptsz){
 		r->pos[0] = -Vdefw / 2 + nrand(Vdefw);
 		r->pos[1] = -Vdefh / 2 + nrand(Vdefh);;
 	}
