@@ -5,22 +5,17 @@
 
 /* FIXME:
  * - always clean up on exit: sig/notehandler
- * - non-64 byte accesses
- * - macrofy PAGE again
+ * - test string and arbitrary read/write functions
  * - windowing, buffering, etc.
  * - prefetch, ie. readahead or other?
  * - testct13: test concurrent em with 10 procs (old: add qlock)
- */
-/* FIXME:
  * - tune Nwriters, channel size, age, etc.
- * - non-64bit read/writes
  * - buf[Pagesz]: should it rather be allocated contiguous than just
- *	pointing to a buffer? would be better for sequential access
- * - reuse freed etab slots
- * - concurrent access?
+ *	 pointing to a buffer? would be better for sequential access
+ * - emfree; reuse freed etab slots
+ * - read/write functions as inline or macros?
+ * - add test: read from file (new=1)
  */
-/* FIXME: split/macro/inline */
-/* FIXME: add test: read from file (new=1) */
 
 int multiplier = 30;
 
@@ -70,12 +65,13 @@ struct EM{
 static int swapfd = -1;
 static Bank **banks;
 static RWLock elock;
-static EM **etab;
+static EM **etab, *emstrbuf;
 static Page pused = {.lleft = &pused, .lright = &pused};
 static uvlong poolsz = Poolsz;
 static ssize mpages, memfree, memreallyfree = Poolsz / Pagesz;
 static Channel *wchan[Nwriters];
 static uvlong emtc;
+static vlong stroff;
 
 #define PLINK(u, v)	do{ \
 	Page *a = (u), *b = (v); \
@@ -130,7 +126,7 @@ cleanup(void *)
 */
 
 /* FIXME: UGHHHHHH */
-static Page *
+static inline Page *
 GETPAGE(EM *em, ssize off)
 {
 	int new, old;
@@ -240,6 +236,8 @@ feedpages(void)
 	Page *l, *r, *pl, *p, *pe;
 
 	n = memreallyfree;
+	if(n > 128)
+		n = 128;
 	pl = emalloc(n * sizeof *pl);
 	memreallyfree -= n;
 	for(p=pl, pe=p+n; p<pe; p++){
@@ -296,7 +294,7 @@ lruproc(void *)
 			p = l;
 		}
 		if(j < nelem(wchan))
-			sleep(10);
+			lsleep(100);
 	}
 }
 
@@ -327,6 +325,89 @@ emr64(EM *em, vlong off)
 	v = GBIT64(u);
 	DPRINT(Debugextmem, "r64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
 	return v;
+}
+
+void
+emwrite(EM *em, vlong off, uchar *buf, int sz)
+{
+	int n;
+	uchar *u;
+	vlong bound;
+	Page *p;
+
+	assert(buf != nil);
+	while(sz > 0){
+		p = GETPAGE(em, off);
+		u = PLEA(p, off);
+		bound = off + (1 << Pshift) & ~Pmask;
+		n = sz;
+		if(bound - off < sz)
+			n = bound - off;
+		memcpy(u, buf, n);
+		sz -= n;
+		off = bound;
+	}
+}
+
+/* assumption: fits in buffer, not going to bother further; instead
+ * "allocate" within page boundaries */
+uchar *
+emread(EM *em, vlong off, int sz, vlong *n)
+{
+	vlong bound;
+	uchar *u;
+	Page *p;
+
+	p = GETPAGE(em, off);
+	u = PLEA(p, off);
+	bound = off + (1 << Pshift) & ~Pmask;
+	if(bound - off < sz)
+		sz = bound - off;
+	*n = sz;
+	return u;
+}
+
+/* 64k max characters ought to be quite enough... */
+char *
+emgetstring(vlong off)
+{
+	char *s;
+	Page *p;
+
+	/* uninitialized or past the tail are both errors */
+	if(emstrbuf == nil){
+		emstrbuf = emopen(nil);
+		return nil;
+	}else if(off >= stroff)
+		return nil;
+	p = GETPAGE(emstrbuf, off);
+	s = (char *)PLEA(p, off);
+	return s;
+}
+
+int
+emputstring(char *s, int len)
+{
+	uchar *u;
+	vlong off, bound;
+	Page *p;
+
+	len++;
+	if(len > Pagesz){
+		werrstr("string too long");
+		return -1;
+	}
+	if(emstrbuf == nil)
+		emstrbuf = emopen(nil);
+	off = stroff;
+	bound = off + (1 << Pshift) & ~Pmask;
+	if(bound - off < len)
+		off = bound;
+	p = GETPAGE(emstrbuf, off);
+	u = PLEA(p, off);
+	memcpy(u, (uchar *)s, len);
+	stroff = off + len;
+	return 0;
 }
 
 /* FIXME: overwrites clean pages, wasting time */
