@@ -66,9 +66,6 @@ void	cleardraw(void);
 int	redraw(int);
 int	reshape(int);
 
-KHASH_MAP_INIT_INT(cmap, Color*)
-
-extern khash_t(cmap) *cmap;
 enum{
 	Cbg,
 	Ctext,
@@ -97,5 +94,6 @@ enum{
 void	reqdraw(int);
 void	stopdrawclock(void);
 void	startdrawclock(void);
+void	initcol();
 void	initsysdraw(void);
 void	initdrw(void);

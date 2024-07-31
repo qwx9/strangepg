@@ -107,7 +107,7 @@ compute(void *arg, volatile int *stat, int i)
 	float f, x, y, Δx, Δy;
 	double dt, t, k, δx, δy, δ, rx, ry, Δr;
 	ioff n, *e, *ee, *fp, *f0, *f1;
-	RNode *r0, *r1, *r, *v;
+	RNode *r0, *r, *v;
 	P *pp, *vp, *u;
 	D *d;
 	Clk clk = {.lab = "layiter"};
@@ -121,7 +121,6 @@ compute(void *arg, volatile int *stat, int i)
 	f1 = fp + dylen(fp);
 	if(f1 > fp + dylen(fp))
 		f1 = fp + dylen(fp);
-	r1 = rnodes + dylen(rnodes);
 	Δ = nlaythreads;
 	for(c=0;;c++){
 		CLK0(clk);
@@ -136,7 +135,7 @@ compute(void *arg, volatile int *stat, int i)
 			y = r->pos[1];
 			Δx = Δy = 0.0f;
 			/*
-			for(v=rnodes, vp=pp; v<r1; v++, vp++){
+			for(v=rnodes, vp=pp; v<rnodes+dylen(rnodes); v++, vp++){
 				// movable nodes don't repulse each other
 				if(r == v || vp->fixed == 1)
 					continue;

@@ -18,8 +18,6 @@ typedef struct REdge REdge;
 /* FIXME */
 typedef	ssize	ioff;
 
-KHASH_MAP_INIT_STR(strmap, ioff)
-
 enum{
 	Vforward = 0,
 	Vreverse = 1,
@@ -79,7 +77,6 @@ struct Graph{
 	int nlevels;
 	Node *nodes;	/* dynamic array */
 	Edge *edges;	/* dynamic array */
-	khash_t(strmap) *strnmap;
 	Layout *layout;
 };
 extern Graph *graphs;	/* dynamic array */

@@ -38,6 +38,9 @@
 Graph *graphs;
 RWLock graphlock;
 
+KHASHL_MAP_INIT(, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
+static namemap *names;
+
 void
 printgraph(Graph *g)
 {
@@ -133,7 +136,7 @@ redactedge(Graph *g, ioff id)
 {
 	Edge *e;
 	Node *u, *v;
-	khiter_t k;
+	khint_t k;
 
 	DPRINT(Debugcoarse, "redactedge %#p %zx", g, id);
 	if((e = getedge(g, id)) == nil){
@@ -238,12 +241,12 @@ ioff
 getid(Graph *g, char *s)
 {
 	ioff id;
-	khiter_t k;
+	khint_t k;
 
-	k = kh_get(strmap, g->strnmap, s);
-	if(k == kh_end(g->strnmap))
+	k = names_get(names, s);
+	if(k == kh_end(names))
 		return -1;
-	id = kh_val(g->strnmap, k);
+	id = kh_val(names, k);
 	assert(id >= 0 && id < dylen(g->nodes));
 	return id;
 }
@@ -251,12 +254,12 @@ getid(Graph *g, char *s)
 static ioff
 pushid(Graph *g, char *s, ioff id)
 {
-	int ret;
-	khiter_t k;
+	int abs;
+	khint_t k;
 
-	k = kh_put(strmap, g->strnmap, s, &ret);
-	assert(ret != 0);
-	kh_val(g->strnmap, k) = id;
+	k = names_put(names, s, &abs);
+	assert(abs);
+	kh_val(names, k) = id;
 	return 0;
 }
 
@@ -368,17 +371,15 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 void
 cleargraphtempshit(Graph *g)
 {
-	ioff id;
-	char *k;
+	char *s;
+	khint_t k;
 
-	if(g->strnmap == nil)
+	if(names == nil)
 		return;
-	kh_foreach(g->strnmap, k, id,
-		{free(k); USED(id);}
-	);
-	kh_destroy(strmap, g->strnmap);
-	g->strnmap = nil;
-
+	kh_foreach(names, k)
+		free(kh_key(names, k));
+	names_destroy(names);
+	names = nil;
 }
 
 static void
@@ -441,7 +442,9 @@ initgraph(int type)
 {
 	Graph g = {0};
 
+	/* no refcounting nor mooltigraph */
+	if(names == nil)
+		names = names_init();
 	g.type = type;
-	g.strnmap = kh_init(strmap);
 	return g;
 }

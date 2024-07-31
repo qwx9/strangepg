@@ -20,10 +20,9 @@ drawguides(void)
 }
 
 static inline void
-drawedge(Graph *g, ioff i, ioff u, ioff v, int urev, int vrev)
+drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 {
 	float m;
-	Color *c;
 	Vertex p1, p2, du, dv;
 	REdge *r;
 	RNode *n1, *n2;
@@ -60,13 +59,11 @@ drawedge(Graph *g, ioff i, ioff u, ioff v, int urev, int vrev)
 static int
 drawedges(Graph *g)
 {
-	ioff i, ie;
-	Edge *e;
+	ioff i;
+	Edge *e, *ee;
 
-	for(i=0, ie=dylen(g->edges); i<ie; i++){
-		e = g->edges + i;
-		drawedge(g, i, e->u >> 1, e->v >> 1, e->u & 1, e->v & 1);
-	}
+	for(i=0, e=g->edges, ee=e+dylen(e); e<ee; e++, i++)
+		drawedge(i, e->u >> 1, e->v >> 1, e->u & 1, e->v & 1);
 	return 0;
 }
 
@@ -109,6 +106,6 @@ void
 initdrw(void)
 {
 	settheme();
-	cmap = kh_init(cmap);
+	initcol();
 	initsysdraw();
 }

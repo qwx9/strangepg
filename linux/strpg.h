@@ -114,7 +114,7 @@ enum{
 	Kmouse = Spec|0x100,
 };
 
-#include "lib/khash.h"
+#include "lib/khashl.h"
 #include "dat.h"
 #include "fns.h"
 #include "dynar.h"
@@ -122,7 +122,6 @@ enum{
 void	werrstr(char*, ...);
 void	sysfatal(char*, ...);
 
-void	lsleep(vlong);
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);
 int	dupfd(int, int);

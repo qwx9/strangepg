@@ -69,7 +69,7 @@ HFILES=\
 	fs/fs.h\
 	graph/graph.h\
 	layout/layout.h\
-	lib/khash.h\
+	lib/khashl.h\
 	plan9/strpg.h\
 	plan9/threads.h\
 	ui/ui.h\

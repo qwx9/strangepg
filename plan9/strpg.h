@@ -5,7 +5,7 @@
 typedef intptr	ssize;
 
 #define	const
-#include "lib/khash.h"
+#include "lib/khashl.h"
 #include "dat.h"
 #include "fns.h"
 #include "dynar.h"

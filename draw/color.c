@@ -1,6 +1,9 @@
 #include "strpg.h"
 #include "drw.h"
 
+KHASHL_MAP_INIT(KH_LOCAL, colormap, cmap, u32int, Color*, kh_hash_uint32, kh_eq_generic)
+static colormap *cmap;
+
 u32int *theme;
 
 static u32int theme1[Cend] = {
@@ -58,19 +61,17 @@ static u32int colors[] = {
 	0xffff99,	/* pale yellow */
 };
 
-khash_t(cmap) *cmap;
-
 Color *
 color(u32int v)
 {
-	int ret;
-	khiter_t k;
+	int abs;
+	khint_t k;
 	Color *c;
 
-	k = kh_get(cmap, cmap, v);
+	k = cmap_get(cmap, v);
 	if(k == kh_end(cmap)){
 		c = newcolor(v);
-		k = kh_put(cmap, cmap, v, &ret);
+		k = cmap_put(cmap, v, &abs);
 		kh_val(cmap, k) = c;
 	}else
 		c = kh_val(cmap, k);
@@ -91,4 +92,10 @@ settheme(void)
 		theme = theme1;
 	else
 		theme = theme2;
+}
+
+void
+initcol(void)
+{
+	cmap = cmap_init();
 }
