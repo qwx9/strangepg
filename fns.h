@@ -10,6 +10,7 @@ void*	emalloc(usize);
 void	errmsg(char*, ...);
 int	errstr(char*, uint);
 vlong	μsec(void);
+void	lsleep(vlong);
 void	sysquit(void);
 void	quit(void);
 void	sysinit(void);

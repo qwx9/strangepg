@@ -42,6 +42,14 @@ vlong
 	return nanosec() / 1000;
 }
 
+/* FIXME: better would be not to need it at all */
+void
+lsleep(vlong ns)
+{
+	sleep(ns / 1000000);
+	return 0;
+}
+
 char *
 estrdup(char *s)
 {
