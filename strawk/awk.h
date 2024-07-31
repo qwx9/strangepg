@@ -169,7 +169,6 @@ typedef struct Node {
 #define	NIL	((Node *) 0)
 
 extern Node	*winner;
-extern Node	*nullstat;
 extern Node	*nullnode;
 extern Node *runnerup;
 
