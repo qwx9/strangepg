@@ -50,7 +50,7 @@ new(Graph *g)
 		}
 		dypush(ptab, p);
 	}
-	n = Nodesz * Ptsz * dylen(ptab);
+	n = Nodesz * log(dylen(ptab));
 	for(r=rnodes, re=r+dylen(r); r<re; r++){
 		r->pos[0] = nrand(2 * n) - n;
 		r->pos[1] = nrand(2 * n) - n;
