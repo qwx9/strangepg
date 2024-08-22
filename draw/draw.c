@@ -69,34 +69,40 @@ drawedges(Graph *g)
 	return 0;
 }
 
-static void
+static int
 drawworld(void)
 {
+	int r;
 	Graph *g;
 
+	r = 1;
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type <= FFdead || g->layout == nil)
 			continue;
+		if((g->flags & GFdrawme) == 0)
+			r = 0;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
 	}
 	unlockgraphs(0);
 	if(debug)
 		drawguides();
+	return r;
 }
 
 int
-redraw(int force)
+redraw(void)
 {
 	int go;
 	static Clk clk = {.lab = "redraw"};
 
 	go = 1;
-	if(!reshape(force))
+	if(!reshape())
 		go = 0;
 	CLK0(clk);
-	drawworld();
+	if(!drawworld())
+		go = 0;
 	CLK1(clk);
 	return go;
 }

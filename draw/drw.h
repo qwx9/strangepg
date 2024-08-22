@@ -58,8 +58,8 @@ ioff	mousepick(int, int);
 void	drawselected(void);
 void	drawui(void);
 void	cleardraw(void);
-int	redraw(int);
-int	reshape(int);
+int	redraw(void);
+int	reshape(void);
 
 enum{
 	Cbg,
@@ -84,6 +84,7 @@ enum{
 	Reqshape = 1<<3,		/* force refresh: layout end */
 	Reqredraw = 1<<4,		/* paint and flush canvas */
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
+	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
 void	reqdraw(int);

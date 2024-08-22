@@ -6,19 +6,19 @@
 
 /* FIXME: get rid of this */
 int
-reshape(int force)
+reshape(void)
 {
-	int r;
+	int go;
 	Graph *g;
 	static Clk clk = {.lab = "shape"};
 
-	r = 0;
+	go = 0;
 	CLK0(clk);
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type == FFdead || (g->flags & GFlayme) == 0)
 			continue;
-		if((g->flags & GFdrawme) != 0 || force){
+		if((g->flags & GFdrawme) != 0){
 			if(g->layout == nil){
 				DPRINT(Debugrender, "reshape: no layout");
 				continue;
@@ -27,10 +27,10 @@ reshape(int force)
 				DPRINT(Debugrender, "reshape: empty graph");
 				continue;
 			}
-			r = 1;
+			go = 1;
 		}
 	}
 	unlockgraphs(0);
 	CLK1(clk);
-	return r;
+	return go;
 }

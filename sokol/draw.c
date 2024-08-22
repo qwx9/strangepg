@@ -410,6 +410,7 @@ startdrawclock(void)
 void
 stopdrawclock(void)
 {
+	reqdraw(Reqstop);
 }
 
 static void
@@ -472,16 +473,21 @@ reqdraw(int r)
 static void
 drawproc(void *)
 {
-	int req;
+	int req, stop;
 
+	stop = 0;
 	for(;;){
 		if((req = recvul(drawc)) == 0)
 			break;
 		reqs |= req;
-		if(req != Reqshallowdraw){
-			if(!redraw((req & Reqrefresh) != 0 || (req & Reqshape) != 0))
+		if((req & (Reqrefresh | Reqshape)) != 0){
+			if(!redraw())
 				stopdrawclock();
 		}
+		if((req & Reqstop) != 0)
+			stop = 1;
+		else if((req & Reqredraw) != 0)
+			stop = 0;
 	}
 }
 
@@ -505,8 +511,6 @@ frame(void)
 	flush();
 	CLK1(clk);
 	CLK1(fclk);
-	// FIXME: continuously re-render everything? we don't want to waste
-		// a thread on doing nothing
 	reqdraw(Reqrefresh);
 }
 
