@@ -114,10 +114,10 @@ enum{
 	Kmouse = Spec|0x100,
 };
 
-#include "lib/khashl.h"
 #include "dat.h"
 #include "fns.h"
 #include "dynar.h"
+#include "lib/khashl.h"
 
 void	werrstr(char*, ...);
 void	sysfatal(char*, ...);

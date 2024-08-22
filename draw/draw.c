@@ -15,8 +15,10 @@ REdge *redges;
 static void
 drawguides(void)
 {
+	/*
 	drawline(ZV, view.center, 0, 1, -1, color(theme[Cemph]));
 	drawline(ZV, view.pan, 0, 2, -1, color(theme[Ctext]));
+	*/
 }
 
 static inline void
@@ -94,7 +96,6 @@ redraw(int force)
 	if(!reshape(force))
 		go = 0;
 	CLK0(clk);
-	cleardraw();
 	drawworld();
 	CLK1(clk);
 	return go;

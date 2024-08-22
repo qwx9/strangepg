@@ -151,7 +151,6 @@ drawselected(void)
 		id = (uint)selected & ~(1<<31);
 		pushcmd("print \"selected edge \"  %d, ledge[%d]", id, id);
 	}
-	warn("sel %zd osel %zd\n", selected, osel);
 	osel = selected;
 }
 
@@ -506,6 +505,8 @@ frame(void)
 	flush();
 	CLK1(clk);
 	CLK1(fclk);
+	// FIXME: continuously re-render everything? we don't want to waste
+		// a thread on doing nothing
 	reqdraw(Reqrefresh);
 }
 

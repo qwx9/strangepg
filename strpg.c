@@ -148,9 +148,9 @@ init(void)
 {
 	initcmd();	/* fork repl before starting other threads */
 	initem();
+	initdrw();
 	initfs();
 	initlayout();
-	initdrw();
 }
 
 /* note: npe already sets mainstacksize higher before renaming main */

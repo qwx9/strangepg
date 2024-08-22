@@ -3,6 +3,8 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 
+	#strcoarse\
+
 DIRS:=\
 	strawk\
 
@@ -64,7 +66,6 @@ COARSENOBJS:=\
 	fs/em.o\
 	fs/fs.o\
 	lib/chan.o\
-	lib/plan9/getfields.o\
 	lib/queue.o\
 	linux/fs.o\
 	linux/sys.o\
@@ -109,7 +110,11 @@ IFLAGS?=\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
-LDLIBS?= -lGL -lX11 -lXcursor -lXi -lm
+ifdef STATIC
+	LDFLAGS+= -static
+	LDLIBS+= -ldl -lpthread
+endif
+LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
@@ -132,10 +137,6 @@ else
 			-Wno-incompatible-pointer-types-discards-qualifiers \
 			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast \
 			-Wno-implicit-fallthrough
-endif
-ifdef STATIC
-	LDFLAGS+= -static
-	LDLIBS+= -ldl -lpthread
 endif
 
 ifeq ($(wildcard .git),.git)

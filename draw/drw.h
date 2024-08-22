@@ -55,11 +55,6 @@ extern View view;
 void	zoomdraw(float);
 void	pandraw(float, float);
 ioff	mousepick(int, int);
-
-int	drawline(Vertex, Vertex, double, int, ioff, Color*);
-int	drawbezier(Vertex, Vertex, ioff, Color*);
-int	drawquad(Vertex, Vertex, ioff, Color*);
-int	drawlabel(Node*, ioff, Color*);
 void	drawselected(void);
 void	drawui(void);
 void	cleardraw(void);
@@ -94,6 +89,6 @@ enum{
 void	reqdraw(int);
 void	stopdrawclock(void);
 void	startdrawclock(void);
-void	initcol();
+void	initcol(void);
 void	initsysdraw(void);
 void	initdrw(void);

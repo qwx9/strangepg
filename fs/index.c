@@ -6,7 +6,7 @@
 #include "index.h"
 
 void
-expandnode(Graph *g, Node *pp)
+expandnode(Graph *, Node *)
 {
 	/*
 	ioff i, idx, u, v, par, w;

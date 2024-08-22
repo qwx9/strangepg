@@ -3,11 +3,9 @@
 #include "drw.h"
 
 static void *
-new(Graph *g)
+new(Graph *)
 {
 	int x;
-	ioff i, ie;
-	Node *u;
 	RNode *r, *re;
 
 	for(x=0, r=rnodes, re=r+dylen(r); r<re; r++, x+=Nodesz+Ptsz){

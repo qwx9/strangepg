@@ -29,10 +29,10 @@ static void *
 new(Graph *g)
 {
 	uint min, max;
-	ioff i, iv, ie, n, *e, *ee, *etab;
+	ioff iv, *e, *ee, *etab;
 	Node *u, *ue;
 	RNode *r, *re;
-	P p, *pp, *ptab;
+	P p, *ptab;
 	D *aux;
 
 	ptab = nil;

@@ -62,7 +62,6 @@ compute(void *arg, volatile int *stat, int idx)
 	ioff i, ie;
 	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
-	Node *nu, *nv;
 	RNode *r, *r1, *r2, *re;
 	Edge *e;
 	Graph *g;

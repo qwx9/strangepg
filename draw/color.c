@@ -1,5 +1,8 @@
 #include "strpg.h"
 #include "drw.h"
+#include "fs.h"
+#include "em.h"
+#include "lib/khashl.h"
 
 KHASHL_MAP_INIT(KH_LOCAL, colormap, cmap, u32int, Color*, kh_hash_uint32, kh_eq_generic)
 static colormap *cmap;

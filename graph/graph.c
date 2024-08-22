@@ -6,6 +6,7 @@
 #include "cmd.h"
 #include "drw.h"
 #include "layout.h"
+#include "lib/khashl.h"
 
 /* nodes: .in and .out:
  *	undirected: .in is ignored;
@@ -252,7 +253,7 @@ getid(Graph *g, char *s)
 }
 
 static ioff
-pushid(Graph *g, char *s, ioff id)
+pushid(Graph *, char *s, ioff id)
 {
 	int abs;
 	khint_t k;
@@ -303,7 +304,7 @@ pushnode(Graph *g, char *s)
 		DPRINT(Debugfs, "duplicate node[%zd] %s", id, s);
 		return id;
 	}
-	s = strdup(s);
+	s = estrdup(s);
 	if((id = pushinode(g)) < 0 || pushid(g, s, id) < 0){
 		free(s);
 		return -1;
@@ -369,9 +370,8 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 }
 
 void
-cleargraphtempshit(Graph *g)
+cleargraphtempshit(Graph *)
 {
-	char *s;
 	khint_t k;
 
 	if(names == nil)

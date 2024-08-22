@@ -369,7 +369,7 @@ emread(EM *em, vlong off, int sz, vlong *n)
 
 /* 64k max characters ought to be quite enough... */
 char *
-emgetstring(vlong off)
+emgetstring(EMstring off)
 {
 	char *s;
 	Page *p;
@@ -385,7 +385,7 @@ emgetstring(vlong off)
 	return s;
 }
 
-int
+EMstring
 emputstring(char *s, int len)
 {
 	uchar *u;
@@ -407,7 +407,7 @@ emputstring(char *s, int len)
 	u = PLEA(p, off);
 	memcpy(u, (uchar *)s, len);
 	stroff = off + len;
-	return 0;
+	return off;
 }
 
 /* FIXME: overwrites clean pages, wasting time */

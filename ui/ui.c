@@ -137,7 +137,6 @@ mouseevent(Vertex v, Vertex Δ)
 			/* FIXME: notify select */
 		}else
 			selected = -1;
-		warn("selected now %zd\n", selected);
 		reqdraw(Reqshallowdraw);
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)

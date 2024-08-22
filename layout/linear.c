@@ -31,9 +31,9 @@ struct D{
 static void *
 new(Graph *g)
 {
-	ioff i, ie, iv, *e, *ee, *etab, *ftab;
+	ioff i, iv, *e, *ee, *etab, *ftab;
 	float x, y, min, max;
-	Node *u, *v, *ue;
+	Node *u, *ue;
 	RNode *r, *re;
 	P p, *ptab, *pp;
 	D *aux;
@@ -107,8 +107,8 @@ compute(void *arg, volatile int *stat, int i)
 	float f, x, y, Δx, Δy;
 	double dt, t, k, δx, δy, δ, rx, ry, Δr;
 	ioff n, *e, *ee, *fp, *f0, *f1;
-	RNode *r0, *r, *v;
-	P *pp, *vp, *u;
+	RNode *r, *v;
+	P *pp, *u;
 	D *d;
 	Clk clk = {.lab = "layiter"};
 

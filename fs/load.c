@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "threads.h"
 #include "fs.h"
+#include "layout.h"
 
 static Filefmt *fftab[FFnil];
 

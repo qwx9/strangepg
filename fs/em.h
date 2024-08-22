@@ -1,4 +1,5 @@
 typedef struct EM EM;
+typedef vlong EMstring;
 
 #pragma incomplete EM
 
@@ -10,8 +11,8 @@ u64int	emr64(EM*, vlong);
 void	emw64(EM*, vlong, u64int);
 void	emwrite(EM*, vlong, uchar*, int);
 uchar*	emread(EM*, vlong, int, vlong*);
-char*	emgetstring(vlong);
-int	emputstring(char*, int);
+char*	emgetstring(EMstring);
+EMstring	emputstring(char*, int);
 void	emclose(EM*);
 EM*	emopen(char*);
 void	initem(void);

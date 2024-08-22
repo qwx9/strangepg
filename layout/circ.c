@@ -32,9 +32,9 @@ static void *
 new(Graph *g)
 {
 	uint min, max;
-	ioff i, iv, ie, *e, *ee, *etab;
+	ioff i, iv, *e, *ee, *etab;
 	float n, ρ, ρ1, θ, x, y;
-	Node *u, *v, *ue;
+	Node *u, *ue;
 	RNode *r, *re;
 	P p = {0}, *ptab, *pp;
 	D *aux;
@@ -56,6 +56,8 @@ new(Graph *g)
 			iv = g->edges[*e].u >> 1;
 			dypush(etab, iv);
 		}
+		x = 0;
+		y = 0;
 		/* FIXME: bug in data prod? */
 		if(p.e == dylen(etab)){
 			p.dafuq = 1;

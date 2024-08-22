@@ -11,8 +11,6 @@ importlayout(Graph *g, char *path)
 	union { u32int u; float f; } u;
 	int x;
 	uchar buf[sizeof(ioff) + 2*3*sizeof(float)], *p;
-	ioff id;
-	Vertex v;
 	File *fs;
 	RNode *r;
 
