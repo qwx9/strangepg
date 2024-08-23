@@ -38,6 +38,8 @@ THIS SOFTWARE.
 #include "awk.h"
 
 extern int u8_nextlen(const char *s);
+extern int bracecnt, brackcnt, parencnt;
+extern bool infunc;
 
 char	EMPTY[] = { '\0' };
 FILE	*infile	= NULL;
@@ -676,11 +678,8 @@ void yyerror(const char *s)
 void SYNTAX(const char *fmt, ...)
 {
 	extern char *cmdname, *curfname;
-	static int been_here = 0;
 	va_list varg;
 
-	if (been_here++ > 2)
-		return;
 	fprintf(stderr, "%s: ", cmdname);
 	va_start(varg, fmt);
 	vfprintf(stderr, fmt, varg);
@@ -693,9 +692,9 @@ void SYNTAX(const char *fmt, ...)
 	fprintf(stderr, "\n");
 	errorflag = 2;
 	eprint();
+	bracecnt = brackcnt = parencnt = 0;
+	infunc = false;
 }
-
-extern int bracecnt, brackcnt, parencnt;
 
 void bracecheck(void)
 {
@@ -783,10 +782,9 @@ void eprint(void)	/* try to print context around error */
 {
 	char *p, *q;
 	int c;
-	static int been_here = 0;
 	extern char ebuf[], *ep;
 
-	if (compile_time != COMPILING || been_here++ > 0 || ebuf == ep)
+	if (compile_time != COMPILING || ebuf == ep)
 		return;
 	if (ebuf == ep)
 		return;
