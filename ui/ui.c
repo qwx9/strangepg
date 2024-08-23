@@ -119,7 +119,7 @@ mouseevent(Vertex v, Vertex Δ)
 	static int omod;
 
 	m = mod & Mmask;
-	if(m != 0 && omod == 0)
+	if(m != 0 && (omod & ~Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(m == Mlmb && (omod & Mlmb) == 0){
 		if((sel = mouseselect(v.x, v.y)) != -1){
