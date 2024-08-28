@@ -6,59 +6,61 @@
 enum{
 	Length = 256,
 };
+#define C	0.1
 
 typedef struct P P;
 typedef struct D D;
 struct P{
 	ioff e;
-	int nin;
-	int nout;
+	int ne;
 };
 struct D{
 	P *ptab;
 	ioff *etab;
-	float k;
+	double k;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
+#define	cool(t)	(0.995 * (t))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
 
 static void *
 new(Graph *g)
 {
 	int n;
-	ioff i, iv, ie, *e, *ee, *etab;
+	ioff iv, *e, *ee, *etab;
+	double k;
 	Node *u, *ue;
 	RNode *r, *re;
-	P p, *pp, *ptab;
+	P p, *ptab;
 	D *aux;
 
 	ptab = nil;
 	etab = nil;
-	for(u=g->nodes, ue=u+dylen(u); u<ue; u++){
+	n = C * Length;
+	k = C * sqrt((double)(Length * Length) / dylen(rnodes));
+	for(r=rnodes, re=r+dylen(r); r<re; r++){
+		r->pos[0] = nrand(2 * n) - n;
+		r->pos[1] = nrand(2 * n) - n;
+	}
+	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
-		p.nout = dylen(u->out);
-		p.nin = dylen(u->in);
-		for(e=u->out, ee=e+p.nout; e<ee; e++){
+		p.ne = 0;
+		for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
 			iv = g->edges[*e].v >> 1;
 			dypush(etab, iv);
 		}
-		for(e=u->in, ee=e+p.nin; e<ee; e++){
+		for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++){
 			iv = g->edges[*e].u >> 1;
 			dypush(etab, iv);
 		}
 		dypush(ptab, p);
 	}
-	n = Nodesz * log(dylen(ptab));
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
-		r->pos[0] = nrand(2 * n) - n;
-		r->pos[1] = nrand(2 * n) - n;
-	}
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->etab = etab;
-	aux->k = 1 * sqrt((float)(Length * Length) / dylen(ptab));
+	aux->k = k;
 	return aux;
 }
 
@@ -83,10 +85,9 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	int c, Δ;
+	int Δ;
 	ioff *e, *ee;
-	float t, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
-	double dt;
+	double t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -94,12 +95,13 @@ compute(void *arg, volatile int *stat, int i)
 
 	d = arg;
 	k = d->k;
-	t = 1.0f;
+	t = k;
+	tol = 0.01 * k;
 	p0 = d->ptab + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	Δ = nlaythreads;
-	for(c=0;;c++){
+	for(;;){
 		CLK0(clk);
 		Δr = 0;
 		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
@@ -120,18 +122,7 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
-			for(e=d->etab+pp->e, ee=e+pp->nout; e<ee; e++){
-				v = rnodes + *e;
-				δx = x - v->pos[0];
-				δy = y - v->pos[1];
-				δ = Δ(δx, δy);
-				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
-				Δx -= rx;
-				Δy -= ry;
-			}
-			for(ee+=pp->nin; e<ee; e++){
+			for(e=d->etab+pp->e, ee=e+pp->ne; e<ee; e++){
 				v = rnodes + *e;
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
@@ -149,18 +140,16 @@ compute(void *arg, volatile int *stat, int i)
 			y += δy / δ;
 			r->pos[0] = x;
 			r->pos[1] = y;
-			if(δx != 0.0f){	/* FIXME */
+			if(δx != 0.0){	/* FIXME */
 				r->dir[0] = δx;
 				r->dir[1] = δy;
 			}
 			if(Δr < δ)
 				Δr = δ;
 		}
-		if(Δr < 1.0f)
+		if(Δr < tol)
 			return 0;
-		/* y = 1 - (x/Nrep)^4 */
-		dt = c * (1.0 / 4000.0);
-		t = 1.0 - dt * dt * dt * dt;
+		t = cool(t);
 		CLK1(clk);
 	}
 }

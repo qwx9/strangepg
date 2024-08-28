@@ -4,7 +4,7 @@
 #include "threads.h"
 
 int nlaythreads = 4;
-int deflayout = LLfr;
+int deflayout = LLpfr;
 
 static Shitkicker *sktab[LLnil];
 
