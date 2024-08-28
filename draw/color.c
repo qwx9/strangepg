@@ -10,58 +10,58 @@ static colormap *cmap;
 u32int *theme;
 
 static u32int theme1[Cend] = {
-	[Cbg]	0x000000,
-	[Ctext]	0xbb1100,
-	[Cnode]	0x2222ff,
-	[Cedge]	0xbbbbbb,
-	[Cemph]	0xff0000,
+	[Cbg]	0x000000ff,
+	[Ctext]	0xbb1100ff,
+	[Cnode]	0x2222ff90,
+	[Cedge]	0xbbbbbb30,
+	[Cemph]	0xff0000ff,
 };
 static u32int theme2[Cend] = {
-	[Cbg]	0xffffff,
-	[Ctext]	0xeeee00,
-	[Cnode]	0xdddd00,
-	[Cedge]	0x777777,
-	[Cemph]	0xff0000,
+	[Cbg]	0xffffffff,
+	[Ctext]	0xeeee00ff,
+	[Cnode]	0xdddd009f,
+	[Cedge]	0x77777730,
+	[Cemph]	0xff0000ff,
 };
 
 static u32int colors[] = {
 	/* 12 class paired */
-	0x1f78b4,	/* light blue */
-	0xff7f00,	/* light orange */
-	0x33a02c,	/* light green */
-	0xe31a1c,	/* light red */
-	0x6a3d9a,	/* violet */
-	0xb15928,	/* light brown */
+	0x1f78b490,	/* light blue */
+	0xff7f0090,	/* light orange */
+	0x33a02c90,	/* light green */
+	0xe31a1c90,	/* light red */
+	0x6a3d9a90,	/* violet */
+	0xb1592890,	/* light brown */
 	/* some bandage */
-	0x8080ff,	/* pale blue */
-	0x8ec65e,	/* pale green */
-	0xc76758,	/* pale red */
-	0xca9560,	/* pale orange */
-	0xc893f0,	/* pale violet */
-	0x7f5f67,	/* grey brown */
-	0xb160c9,	/* light violet */
-	0x5fc69f,	/* pale blueish green */
-	0xc96088,	/* pink violet */
+	0x8080ff90,	/* pale blue */
+	0x8ec65e90,	/* pale green */
+	0xc7675890,	/* pale red */
+	0xca956090,	/* pale orange */
+	0xc893f090,	/* pale violet */
+	0x7f5f6790,	/* grey brown */
+	0xb160c990,	/* light violet */
+	0x5fc69f90,	/* pale blueish green */
+	0xc9608890,	/* pink violet */
 	/* 12 class set3 */
-	0x8dd3c7,	/* cyan */
-	0xffffb3,	/* pale yellow */
-	0xbebada,	/* grey blue */
-	0xfb8072,	/* light orange (2) */
-	0x80b1d3,	/* light blue (2) */
-	0xfdb462,	/* light orange (2) */
-	0xb3de69,	/* light green (2) */
-	0xfccde5,	/* grey pink */
-	0xd9d9d9,	/* light grey */
-	0xbc80bd,	/* light violet */
-	0xccebc5,	/* grey green */
-	0xffed6f,	/* light yellow */
+	0x8dd3c790,	/* cyan */
+	0xffffb390,	/* pale yellow */
+	0xbebada90,	/* grey blue */
+	0xfb807290,	/* light orange (2) */
+	0x80b1d390,	/* light blue (2) */
+	0xfdb46290,	/* light orange (2) */
+	0xb3de6990,	/* light green (2) */
+	0xfccde590,	/* grey pink */
+	0xd9d9d990,	/* light grey */
+	0xbc80bd90,	/* light violet */
+	0xccebc590,	/* grey green */
+	0xffed6f90,	/* light yellow */
 	/* 12 class paired, pale counterparts */
-	0xa6cee3,	/* light blue (2) */
-	0xb2df8a,	/* light green (3) */
-	0xfb9a99,	/* light pink */
-	0xfdbf6f,	/* light orange (3) */
-	0xcab2d6,	/* grey violet */
-	0xffff99,	/* pale yellow */
+	0xa6cee390,	/* light blue (2) */
+	0xb2df8a90,	/* light green (3) */
+	0xfb9a9990,	/* light pink */
+	0xfdbf6f90,	/* light orange (3) */
+	0xcab2d690,	/* grey violet */
+	0xffff9990,	/* pale yellow */
 };
 
 Color *
@@ -81,11 +81,10 @@ color(u32int v)
 	return c;
 }
 
-Color *
+u32int
 somecolor(ioff i)
 {
-	assert(i >= 0);
-	return color(colors[i % nelem(colors)]);
+	return colors[i % nelem(colors)];
 }
 
 void

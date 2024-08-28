@@ -35,24 +35,17 @@ extern char *scr_vertsh, *scr_fragsh;
 extern char *bezier_vertsh, *bezier_tcssh, *bezier_tessh, *bezier_geomsh, *bezier_fragsh;
 
 void	event(const sapp_event*);
-void	_drawui(struct nk_context*);
+void	drawui(struct nk_context*);
 void	initnk(void);
 
 struct Color{
-	float col[3];
+	float col[4];
 };
 
 /* FIXME:
  * - resize: compensate for different viewsize == different gl coordinate system
  *	by moving eye (zoom + pan)
  * - debug node angle and scale, offset edge control points
- */
-/* FIXME: blackjack and hookers:
- * - start/stopdrawclock (larger draw buffer than screen + redraw when necessary?)
- *	redraw only, not re-render etc; or rather toggle continuous redraw?
- *	does performance/load suffer?
- * - draw labels, arrows
- * - extend for 3d vis and navigation, later port to plan9
  */
 
 #define	FNodesz	((float)Nodesz)
@@ -70,20 +63,6 @@ struct hjdicks Params{
 	HMM_Mat4 mvp;
 	HMM_Vec2 scale;	/* FIXME */
 };
-/*
-struct hjdicks GLNode{
-	HMM_Vec2 pos;
-	HMM_Vec2 dir;
-	HMM_Vec4 col;
-};
-struct hjdicks GLEdge{
-	HMM_Vec2 pos1;
-	HMM_Vec2 pos2;
-	HMM_Vec4 col;
-};
-static GLNode *nodev;
-static GLEdge *edgev;
-*/
 static HMM_Mat4 mvp;
 
 struct Shader{
@@ -109,8 +88,11 @@ static int reqs;
 static GLuint stupid, stupidvao, stupidvbo;
 
 void
-setcolor(float *col, Color *c)
+setcolor(float *col, u32int v)
 {
+	Color *c;
+
+	c = color(v);
 	memcpy(col, c->col, sizeof c->col);
 }
 
@@ -120,9 +102,10 @@ newcolor(u32int v)
 	Color *c;
 
 	c = emalloc(sizeof *c);
-	c->col[0] = (v >> 16 & 0xff) / 255.f;
-	c->col[1] = (v >> 8 & 0xff) / 255.f;
-	c->col[2] = (v & 0xff) / 255.f;
+	c->col[0] = (v >> 24 & 0xff) / 255.f;
+	c->col[1] = (v >> 16 & 0xff) / 255.f;
+	c->col[2] = (v >> 8 & 0xff) / 255.f;
+	c->col[3] = (v & 0xff) / 255.f;
 	return c;
 }
 
@@ -152,100 +135,6 @@ drawselected(void)
 		pushcmd("print \"selected edge \"  %d, ledge[%d]", id, id);
 	}
 	osel = selected;
-}
-
-int
-drawlabel(Node *, ioff, Color *)
-{
-	return 0;
-}
-
-/* FIXME: this would mess up indexing (another shader for straight lines?) */
-int
-drawline(Vertex a, Vertex b, double w, int emph, ioff idx, Color *c)
-{
-/*
-	GLEdge e = {
-		.pos1 = {
-			.X = a.x,
-			.Y = a.y,
-		},
-		.pos2 = {
-			.X = b.x,
-			.Y = b.y,
-		},
-		.col = {
-			.X = c->r,
-			.Y = c->g,
-			.Z = c->b,
-			.W = 0.6f,
-		},
-	};
-
-	dypush(edgev, e);
-*/
-	return 0;
-}
-
-int
-drawbezier(Vertex a, Vertex b, ioff idx, Color *c)
-{
-/*
-	GLEdge e = {
-		.pos1 = {
-			.X = a.x,
-			.Y = a.y,
-		},
-		.pos2 = {
-			.X = b.x,
-			.Y = b.y,
-		},
-		.col = {
-			.X = c->r,
-			.Y = c->g,
-			.Z = c->b,
-			.W = 0.2f,
-		},
-	};
-
-	dypush(edgev, e);
-*/
-	return 0;
-}
-
-int
-drawquad(Vertex pos, Vertex dir, ioff idx, Color *c)
-{
-/*
-	GLNode v = {
-		.pos = {
-			.X = pos.x,
-			.Y = pos.y,
-		},
-		.dir = {
-			.X = dir.x,
-			.Y = dir.y,
-		},
-		.col = {
-			.X = c->r,
-			.Y = c->g,
-			.Z = c->b,
-			.W = 0.6f,
-		},
-	};
-
-	dypush(nodev, v);
-*/
-	return 0;
-}
-
-void
-cleardraw(void)
-{
-/*
-	dyreset(nodev);
-	dyreset(edgev);
-*/
 }
 
 // FIXME: merge with port
@@ -401,18 +290,6 @@ flush(void)
 	sg_commit();
 }
 
-void
-startdrawclock(void)
-{
-	reqdraw(Reqredraw);
-}
-
-void
-stopdrawclock(void)
-{
-	reqdraw(Reqstop);
-}
-
 static void
 initfb(int w, int h)
 {
@@ -480,14 +357,12 @@ drawproc(void *)
 		if((req = recvul(drawc)) == 0)
 			break;
 		reqs |= req;
-		if((req & (Reqrefresh | Reqshape)) != 0){
-			if(!redraw())
-				stopdrawclock();
-		}
-		if((req & Reqstop) != 0)
-			stop = 1;
-		else if((req & Reqredraw) != 0)
+		if((req & Reqredraw) != 0)
 			stop = 0;
+		if(!stop && (req & (Reqrefresh | Reqshape)) != 0){
+			if(!redraw())
+				stop = 1;
+		}
 	}
 }
 
@@ -506,7 +381,7 @@ frame(void)
 		updateview();
 	}
 	reqs &= ~(Reqresetui | Reqresetdraw);
-	_drawui(ctx);
+	drawui(ctx);
 	CLK0(clk);
 	flush();
 	CLK1(clk);

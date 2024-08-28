@@ -56,10 +56,7 @@ void	zoomdraw(float);
 void	pandraw(float, float);
 ioff	mousepick(int, int);
 void	drawselected(void);
-void	drawui(void);
-void	cleardraw(void);
 int	redraw(void);
-int	reshape(void);
 
 enum{
 	Cbg,
@@ -73,9 +70,9 @@ extern u32int *theme;
 
 Color*	newcolor(u32int);
 Color*	color(u32int);
-Color*	somecolor(ioff);
+u32int	somecolor(ioff);
 void	settheme(void);
-void	setcolor(float*, Color*);
+void	setcolor(float*, u32int);
 
 enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
@@ -88,8 +85,6 @@ enum{
 };
 
 void	reqdraw(int);
-void	stopdrawclock(void);
-void	startdrawclock(void);
 void	initcol(void);
 void	initsysdraw(void);
 void	initdrw(void);

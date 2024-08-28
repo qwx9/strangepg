@@ -79,12 +79,15 @@ layproc(void *arg)
 			l->flags |= LFstop;
 			sk = nil;
 			reqdraw(Reqshape);
+			g->flags &= ~GFdrawme;
 			break;
 		case Layagain:
 			sk = l->sk != nil ? l->sk : sktab[deflayout];
 			goto start;
 		case Layidle:
 			l->nidle++;
+			if(l->nidle == nlaythreads)
+				g->flags &= ~GFdrawme;
 			if(!new)
 				break;
 			goto start;
@@ -98,28 +101,25 @@ layproc(void *arg)
 			if(l->nidle < nlaythreads)	/* start once all workers are up */
 				break;
 			if(sk == nil){
-				g->flags &= ~GFdrawme;
 				reqdraw(Reqshape);
 				break;
 			}
 			l->flags = 0;
 			oldsk = l->sk;
 			if((new || sk != oldsk) && oldsk != nil){
-				g->flags &= ~GFlayme;
 				if(oldsk->cleanup != nil && l->scratch != nil){
 					oldsk->cleanup(l->scratch);
 					l->scratch = nil;
 				}
 			}
 			l->sk = sk;
-			if((new || sk != oldsk) && sk->new != nil){
+			if((new || sk != oldsk) && sk->new != nil)
 				l->scratch = sk->new(g);
-				g->flags |= GFlayme;
-			}else if(sk->update != nil)
+			else if(sk->update != nil)
 				sk->update(g, l->scratch);
 			g->flags |= GFdrawme;
 			l->nidle = 0;
-			startdrawclock();
+			reqdraw(Reqredraw);
 			for(i=0; i<nlaythreads; i++)
 				if(sendul(l->wc, i+1) < 0)
 					return;

@@ -287,7 +287,6 @@ pushinode(Graph *g)
 		return -1;
 	dypush(g->nodes, n);
 	setcolor(r.col, somecolor(id));
-	r.col[3] = 0.6f;
 	r.dir[0] = 1.0f;	/* FIXME */
 	dypush(rnodes, r);
 	return id;
@@ -336,8 +335,7 @@ pushiedge(Graph *g, ioff u, ioff v)
 	if((id = newedge(g, &e, u, v)) < 0)
 		return -1;
 	dypush(g->edges, e);
-	setcolor(r.col, color(theme[Cedge]));
-	r.col[3] = 0.2f;
+	setcolor(r.col, theme[Cedge]);
 	dypush(redges, r);
 	return id;
 }

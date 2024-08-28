@@ -3,8 +3,6 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 
-	#strcoarse\
-
 DIRS:=\
 	strawk\
 
@@ -29,7 +27,6 @@ OBJS:=\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
-	draw/shape.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\
@@ -110,10 +107,6 @@ IFLAGS?=\
 
 CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
-ifdef STATIC
-	LDFLAGS+= -static
-	LDLIBS+= -ldl -lpthread
-endif
 LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 
 ifdef DEBUG

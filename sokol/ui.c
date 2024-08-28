@@ -64,7 +64,7 @@ prompt(Rune)
 
 /* must be called after a new frame was started and before flushing */
 void
-_drawui(nk_context *ctx)
+drawui(nk_context *ctx)
 {
 	float h;
 	nk_flags e;
@@ -82,11 +82,6 @@ _drawui(nk_context *ctx)
 		}
 	}
 	nk_end(ctx);
-}
-
-void
-drawui(void)
-{
 }
 
 static void

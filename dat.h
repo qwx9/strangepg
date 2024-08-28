@@ -63,7 +63,6 @@ struct Edge{
 	ioff v;
 };
 enum{
-	GFlayme = 1<<0,
 	GFdrawme = 1<<1,
 	GFarmed = 1<<2,
 };

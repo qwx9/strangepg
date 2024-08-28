@@ -190,7 +190,7 @@ readcmd(char *s)
 				werrstr("invalid color %s", fld[1]);
 				goto error;
 			}
-			setcolor(rnodes[id].col, color(v));
+			setcolor(rnodes[id].col, v);
 			redraw = 1;
 			break;
 		}
@@ -199,7 +199,7 @@ readcmd(char *s)
 		t = nextfield(nil, s, nil, '\n');
 	}
 	if(redraw)
-		reqdraw(Reqredraw);
+		reqdraw(Reqshallowdraw);
 }
 
 static void

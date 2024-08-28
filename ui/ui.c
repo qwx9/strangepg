@@ -33,7 +33,7 @@ pan(float Δx, float Δy)
 	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
 	view.pan = v;
 	pandraw(Δx, Δy);
-	reqdraw(Reqredraw);
+	reqdraw(Reqshallowdraw);
 }
 
 static void
@@ -95,8 +95,8 @@ keyevent(Rune r, int down)
 	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
 	case 'r': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
 	case 'p': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) togglelayout(g); unlockgraphs(0); break;
-	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqredraw); break;
-	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqredraw); break;
+	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqshallowdraw); break;
+	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;
 	}
 	return 0;

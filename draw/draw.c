@@ -12,15 +12,6 @@ View view;
 RNode *rnodes;
 REdge *redges;
 
-static void
-drawguides(void)
-{
-	/*
-	drawline(ZV, view.center, 0, 1, -1, color(theme[Cemph]));
-	drawline(ZV, view.pan, 0, 2, -1, color(theme[Ctext]));
-	*/
-}
-
 static inline void
 drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 {
@@ -75,19 +66,17 @@ drawworld(void)
 	int r;
 	Graph *g;
 
-	r = 1;
+	r = 0;
 	lockgraphs(0);
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type <= FFdead || g->layout == nil)
 			continue;
-		if((g->flags & GFdrawme) == 0)
-			r = 0;
+		if((g->flags & GFdrawme) != 0)
+			r++;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		drawedges(g);
 	}
 	unlockgraphs(0);
-	if(debug)
-		drawguides();
 	return r;
 }
 
@@ -98,8 +87,6 @@ redraw(void)
 	static Clk clk = {.lab = "redraw"};
 
 	go = 1;
-	if(!reshape())
-		go = 0;
 	CLK0(clk);
 	if(!drawworld())
 		go = 0;
