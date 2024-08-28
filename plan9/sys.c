@@ -47,7 +47,6 @@ void
 lsleep(vlong ns)
 {
 	sleep(ns / 1000000);
-	return 0;
 }
 
 char *

@@ -112,12 +112,6 @@ prompt(Rune r)
 }
 
 void
-drawui(void)
-{
-	drawselected();
-}
-
-void
 evloop(void)
 {
 	int i;

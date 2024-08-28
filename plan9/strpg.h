@@ -1,11 +1,11 @@
 #include <u.h>
 #include <libc.h>
 #include <keyboard.h>
+#include <ctype.h>
 
 typedef intptr	ssize;
 
 #define	const
-#include "lib/khashl.h"
 #include "dat.h"
 #include "fns.h"
 #include "dynar.h"
