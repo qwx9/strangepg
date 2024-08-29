@@ -241,7 +241,6 @@ fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 		overflo(__func__);
 	f->accept = poscnt-1;	/* penter has computed number of positions in re */
 	cfoll(f, p1);	/* set up follow sets */
-	freetr(p1);
 	resize_state(f, 1);
 	f->posns[0] = intalloc(*(f->re[0].lfollow), __func__);
 	f->posns[1] = intalloc(1, __func__);
