@@ -230,7 +230,7 @@ int readrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag)	/* read one rec
 	char *rs = getsval(rsloc);
 
 	if (CSV) {
-		c = readcsvrec(pbuf, pbufsize, inf, newflag);
+		c = readcsvrec(&buf, &bufsize, inf, newflag);
 		isrec = (c == EOF && rr == buf) ? false : true;
 	} else if (*rs && rs[1]) {
 		bool found;
@@ -755,7 +755,7 @@ void WARNING(const char *fmt, ...)
 	error();
 }
 
-void error(void)
+void error(void)
 {
 	extern Node *curnode;
 
