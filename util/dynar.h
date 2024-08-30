@@ -25,7 +25,7 @@ struct Dyhdr{
 	}}while(0)
 #define dylen(a)	((a) == nil ? 0 : dyhdr(a)->len)
 #define dyavail(a)	((a) == nil ? 0 : dyhdr(a)->sz - dyhdr(a)->len)
-#define dypush(a,v)	do{Dyhdr*__h = dyhdr(a); (a) = dychecksz((a),__h,__h->len); (a)[dyhdr(a)->len++] = v;}while(0)
+#define dypush(a,v)	do{Dyhdr*__h = dyhdr(a); (a) = dychecksz((a),__h,__h->len); (a)[dyhdr(a)->len++] = (v);}while(0)
 #define dypop(a)	do{assert((a) != nil && dyhdr(a)->len > 0); --dyhdr(a)->len;}while(0)
 #define dyclear(a)	do{if((a) != nil){ memset((a), 0, dyhdr(a)->len * sizeof(*(a))); dyhdr(a)->len = 0;}}while(0)
 #define dyreset(a)	do{if((a) != nil){ dyhdr(a)->len = 0;}}while(0)
@@ -33,18 +33,28 @@ struct Dyhdr{
 
 /* FIXME: starting to suck big time */
 #define dygrow(a,i)	do{ \
+	if((a) == nil){ \
+		dyprealloc(a, (i)); \
+		break; \
+	} \
 	Dyhdr*__h = dyhdr(a); \
-	(a) = dychecksz((a),__h,(i)); \
-	while(__h->sz <= (i))	\
-		(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
+	if(__h->sz <= (i)){ \
+		(a) = dychecksz((a),__h,(i)); \
+		while(__h->sz <= (i))	\
+			(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
+	}}while(0)
+#define dyresize(a,i) do{ \
+	Dyhdr*__h = dyhdr(a); \
+	if((a) == nil || __h->sz < (i)){ \
+		dygrow(a, i); \
+		__h = dyhdr(a); \
+		__h->len = (i); \
+	}else if(__h->len < (i)) \
+		__h->len = (i); \
 	}while(0)
-/* one may not simply use dygrow here with the do..while */
 #define dyinsert(a,i,v)	do{ \
-	dygrow(a, (i)+1); \
-	Dyhdr*__h = dyhdr(a); \
+	dyresize(a, (i)+1); \
 	(a)[(i)] = (v); \
-	if((i)+1 > __h->len) \
-		__h->len = (i)+1; \
 	}while(0)
 #define dydelete(a,i)	do{ \
 	ssize __Δ = dyhdr(a)->len - (i) - 1; \
