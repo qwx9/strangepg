@@ -189,10 +189,6 @@ compute(void *arg, volatile int *stat, int i)
 			y += δy / δ;
 			u->pos[0] = x;
 			u->pos[1] = y;
-			if(δx != 0.0f){	/* FIXME */
-				u->dir[0] = δx;
-				u->dir[1] = δy;
-			}
 			if(Δr < δ)
 				Δr = δ;
 		}

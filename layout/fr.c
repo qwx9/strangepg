@@ -6,11 +6,12 @@
 /* fruchterman and reingold 91, with small modifications */
 
 enum{
-	Nrep = 5000,
+	Nrep = 1000,
 	W = 256,
 	L = 256,
 	Area = W * L,
 };
+#define	C	0.25
 
 typedef struct P P;
 struct P{
@@ -26,7 +27,6 @@ struct P{
 #define Fr(x, k)	((k) * (k) / (x))
 #define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
 #define	cool(t)	((t) * ((Nrep - 1.0) / Nrep))
-//#define	cool(t)	((t) - 0.001f > 0.0f ? (t) - 0.001f : 0.0f)
 
 static void *
 new(Graph *g)
@@ -70,7 +70,7 @@ compute(void *arg, volatile int *stat, int idx)
 		return 0;
 	ptab = arg;
 	g = ptab->g;
-	k = 1 * sqrt((float)Area / dylen(ptab));
+	k = C * sqrt((double)Area / dylen(ptab));
 	t = 1.0;
 	for(;;){
 		Δr = 0;
@@ -120,10 +120,6 @@ compute(void *arg, volatile int *stat, int idx)
 			y = u->y + δy / δ * t;
 			r->pos[0] = u->x = x;
 			r->pos[1] = u->y = y;
-			if(δx != 0.0f){	/* FIXME */
-				r->dir[0] = δx;
-				r->dir[1] = δy;
-			}
 			if(Δr < δ)
 				Δr = δ;
 		}

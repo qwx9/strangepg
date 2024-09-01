@@ -32,6 +32,8 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	dv.y = n2->dir[1];
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
+
+	/* FIXME: fp exceptions on plan9 */
 	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
 	//du = mulv(du, Nodesz * n1->length / 2);
@@ -42,6 +44,7 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	//dv = mulv(dv, Nodesz * n2->length / 2);
 	dv = mulv(dv, Nodesz / 2);
 	dv = vrev ? addv(p2, dv) : subv(p2, dv);
+
 	r = redges + i;
 	r->pos1[0] = du.x;
 	r->pos1[1] = du.y;
@@ -60,6 +63,57 @@ drawedges(Graph *g)
 	return 0;
 }
 
+static inline void
+faceyourfears(Graph *g, Node *u, RNode *ru)
+{
+	int n;
+	float x, y, Δx, Δy;
+	double θ, c, s;
+	ioff *i, *ie;
+	Edge *e;
+	RNode *rv;
+
+	x = ru->pos[0];
+	y = ru->pos[1];
+	c = s = 0.0;
+	n = 0;
+	for(i=u->in, ie=i+dylen(i); i<ie; i++, n++){
+		e = g->edges + *i;
+		rv = rnodes + (e->u >> 1);
+		Δx = rv->pos[0] - x;
+		Δy = rv->pos[1] - y;
+		θ = atan2(Δy, Δx);
+		c += cos(θ);
+		s += sin(θ);
+	}
+	for(i=u->out, ie=i+dylen(i); i<ie; i++, n++){
+		e = g->edges + *i;
+		rv = rnodes + (e->v >> 1);
+		Δx = x - rv->pos[0];
+		Δy = y - rv->pos[1];
+		θ = atan2(Δy, Δx);
+		c += cos(θ);
+		s += sin(θ);
+	}
+	if(n > 0){
+		c /= n;
+		s /= n;
+	}
+	θ = atan2(s, c);
+	ru->dir[0] = cos(θ);
+	ru->dir[1] = sin(θ);
+}
+
+static void
+drawnodes(Graph *g)
+{
+	Node *n, *e;
+	RNode *r;
+
+	for(r=rnodes, n=g->nodes, e=n+dylen(n); n<e; n++, r++)
+		faceyourfears(g, n, r);
+}
+
 static int
 drawworld(void)
 {
@@ -74,6 +128,7 @@ drawworld(void)
 		if((g->flags & GFdrawme) != 0)
 			r++;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
+		drawnodes(g);
 		drawedges(g);
 	}
 	unlockgraphs(0);
