@@ -239,7 +239,7 @@ str2idx(char *s)
 
 /* usable solely during loading */
 ioff
-getid(Graph *g, char *s)
+getid(Graph *, char *s)
 {
 	ioff id;
 	khint_t k;
@@ -248,7 +248,6 @@ getid(Graph *g, char *s)
 	if(k == kh_end(names))
 		return -1;
 	id = kh_val(names, k);
-	assert(id >= 0 && id < dylen(g->nodes));
 	return id;
 }
 
