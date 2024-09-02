@@ -193,6 +193,7 @@ readcmd(char *s)
 				werrstr("invalid color %s", fld[1]);
 				goto error;
 			}
+			v = v << 8 | 0x90;	/* FIXME: need a better way to handle this */
 			setcolor(rnodes[id].col, v);
 			redraw = 1;
 			break;

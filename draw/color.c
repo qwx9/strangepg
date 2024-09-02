@@ -25,43 +25,43 @@ static u32int theme2[Cend] = {
 };
 
 static u32int colors[] = {
-	/* 12 class paired */
-	0x1f78b490,	/* light blue */
-	0xff7f0090,	/* light orange */
-	0x33a02c90,	/* light green */
-	0xe31a1c90,	/* light red */
-	0x6a3d9a90,	/* violet */
-	0xb1592890,	/* light brown */
 	/* some bandage */
-	0x8080ff90,	/* pale blue */
-	0x8ec65e90,	/* pale green */
-	0xc7675890,	/* pale red */
-	0xca956090,	/* pale orange */
-	0xc893f090,	/* pale violet */
-	0x7f5f6790,	/* grey brown */
-	0xb160c990,	/* light violet */
-	0x5fc69f90,	/* pale blueish green */
-	0xc9608890,	/* pink violet */
+	0x8080ff,	/* purpleblue */
+	0x8ec65e,	/* green */
+	0xc76758,	/* grey red */
+	0xca9560,	/* light brown */
+	0xc893f0,	/* pale purple */
+	0x7f5f67,	/* grey brown */
+	0xb160c9,	/* purple */
+	0x5fc69f,	/* blue green */
+	0xc96088,	/* dark pink */
+	/* 12 class paired */
+	0x1f78b4,	/* blue */
+	0xff7f00,	/* orange */
+	0x33a02c,	/* dark green */
+	0xe31a1c,	/* red */
+	0x6a3d9a,	/* dark purple */
+	0xb15928,	/* brown */
 	/* 12 class set3 */
-	0x8dd3c790,	/* cyan */
-	0xffffb390,	/* pale yellow */
-	0xbebada90,	/* grey blue */
-	0xfb807290,	/* light orange (2) */
-	0x80b1d390,	/* light blue (2) */
-	0xfdb46290,	/* light orange (2) */
-	0xb3de6990,	/* light green (2) */
-	0xfccde590,	/* grey pink */
-	0xd9d9d990,	/* light grey */
-	0xbc80bd90,	/* light violet */
-	0xccebc590,	/* grey green */
-	0xffed6f90,	/* light yellow */
+	0x8dd3c7,	/* light teal */
+	0xeaf47f,	/* pale yellow */
+	0xbebada,	/* grey blue */
+	0xfb8072,	/* light red */
+	0x80b1d3,	/* light blue */
+	0xfdb462,	/* light orange */
+	0xd5f65f,	/* light green */
+	0xfccde5,	/* light pink */
+	0xd9d9d9,	/* light grey */
+	0xbc80bd,	/* light purple */
+	0xccebc5,	/* grey green */
+	0xffed6f,	/* yellow */
 	/* 12 class paired, pale counterparts */
-	0xa6cee390,	/* light blue (2) */
-	0xb2df8a90,	/* light green (3) */
-	0xfb9a9990,	/* light pink */
-	0xfdbf6f90,	/* light orange (3) */
-	0xcab2d690,	/* grey violet */
-	0xffff9990,	/* pale yellow */
+	0xa6cee3,	/* pale blue */
+	0xb2df8a,	/* pale green */
+	0xfb9a99,	/* pale red */
+	0xfdbf6f,	/* pale orange */
+	0xcab2d6,	/* pale violet */
+	0x7acdcd,	/* cyan */
 };
 
 Color *
@@ -84,7 +84,7 @@ color(u32int v)
 u32int
 somecolor(ioff i)
 {
-	return colors[i % nelem(colors)];
+	return colors[i % nelem(colors)] << 8 | 0x90;
 }
 
 void
