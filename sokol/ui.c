@@ -70,7 +70,7 @@ drawui(nk_context *ctx)
 	nk_flags e;
 
 	drawselected();
-	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w, 78), NKwopt)){
+	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w - 8, 78+16), NKwopt)){
 		/* FIXME: no wrap */
 		nk_layout_row_dynamic(ctx, 0, 1);
 		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
@@ -80,6 +80,8 @@ drawui(nk_context *ctx)
 			ptext[plen] = 0;
 			pushcmd("%s", ptext);
 		}
+		if(selstring != nil)
+			nk_label(ctx, selstring, NK_LEFT);
 	}
 	nk_end(ctx);
 }

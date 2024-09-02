@@ -128,9 +128,20 @@ function readcsv(f){
 		cmd("KDH037")
 	}
 }
-function selectnode(){
+function nodeinfo(id){
+	name = lnode[id]
+	s = name
+	if(name in LN)
+		s = s ", length=" LN[name]
+	print "I", "Node:", s
 }
-function selectedge(){
+function edgeinfo(id){
+	name = ledge[id]
+	s = name
+	sub("\x1c", " ", s)
+	if(name in cigar)
+		s = s ", CIGAR=\"" cigar[name] "\""
+	print "I", "Edge:", s
 }
 # FIXME: stupid
 function fixnode(name, x, y){

@@ -3,6 +3,7 @@
 #include "drw.h"
 #include "fs.h"
 #include "layout.h"
+#include "ui.h"
 #include "threads.h"
 #include "cmd.h"
 
@@ -89,7 +90,6 @@ readcmd(char *s)
 	redraw = 0;
 	t = nextfield(nil, s, nil, '\n');
 	while(s != nil){
-		/* FIXME: mootigraph */
 		g = graphs;
 		switch(*s){
 		case 0:
@@ -99,6 +99,9 @@ readcmd(char *s)
 			goto next;
 		case 'R':
 			resetlayout(g);
+			goto next;
+		case 'I':
+			showobject(estrdup(s+2));
 			goto next;
 		case 'c':
 		case 'i':

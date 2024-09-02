@@ -7,7 +7,10 @@
 #include "ui.h"
 
 ioff selected = -1;
+char *selstring;
 int prompting;
+
+static ioff shown = -1;
 
 enum{
 	Mctrl = 1<<0,
@@ -102,42 +105,59 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
-static ioff
-mouseselect(int x, int y)
+void
+showobject(char *s)
 {
-	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
-		return -1;
-	return mousepick(x, y);
+	free(selstring);
+	selstring = s;
 }
 
-/* the very first mouse event will have nonsense deltas */
+static ioff
+hover(int x, int y)
+{
+	uint v, id;
+	static char *last;
+
+	if(x < 0 || y < 0 || x >= view.w || y >= view.h
+	|| (v = mousepick(x, y)) == -1){
+		if(last != nil)
+			free(last);
+		last = selstring;
+		selstring = nil;
+		return -1;
+	}
+	if(v == shown)
+		return v;
+	if((v & (1<<31)) == 0){
+		id = (uint)v - 1;
+		pushcmd("nodeinfo(%d)", id);
+	}else{
+		id = (uint)(v & ~(1<<31)) - 1;
+		pushcmd("edgeinfo(%d)", id);
+	}
+	return v;
+}
+
+static int
+mouseselect(ioff)
+{
+	return 0;
+}
+
 int
 mouseevent(Vertex v, Vertex Δ)
 {
 	int m;
-	ioff sel;
 	static int omod;
 
 	m = mod & Mmask;
 	if(m != 0 && (omod & ~Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
+	if(Δ.x != 0.0 && Δ.y != 0.0)
+		shown = hover(v.x, v.y);
 	if(m == Mlmb && (omod & Mlmb) == 0){
-		if((sel = mouseselect(v.x, v.y)) != -1){
-			/*
-			if(sel == selected && ISNODE(sel)){
-				Graph *g = graphs[0];
-				if(haltlayout(o.g) < 0)
-					warn("mouseevent: %s\n", error());
-				expandnode(g->nodes + sel);
-				selected = -1;
-				updatelayout(g);
-			}else
-			*/
-				selected = sel;
-			/* FIXME: notify select */
-		}else
-			selected = -1;
-		reqdraw(Reqshallowdraw);
+		if(mouseselect(shown))
+			reqdraw(Reqshallowdraw);
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)
 			zoom(-Δ.x, -Δ.y);
