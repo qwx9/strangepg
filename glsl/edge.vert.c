@@ -3,7 +3,6 @@ char *edge_vertsh = \
 	"//precision mediump float;\n"
 	"precision lowp float;\n"
 	"uniform mat4 mvp;\n"
-	"uniform vec2 s;\n"
 	"layout(location=0) in float v;\n"
 	"layout(location=1) in vec2 p1;\n"
 	"layout(location=2) in vec2 p2;\n"
@@ -13,7 +12,7 @@ char *edge_vertsh = \
 	"void main(){\n"
 	"	vec2 p = gl_VertexID == 0 ? p1 : p2;\n"
 	"	float z = gl_InstanceID * -0.000001;\n"
-	"	gl_Position = mvp * vec4(p / s, z, 1.0);\n"
+	"	gl_Position = mvp * vec4(p, z, 1.0);\n"
 	"	col = col0;\n"
 	"	idx = gl_InstanceID + 1 | 1<<31;\n"
 	"}\n";

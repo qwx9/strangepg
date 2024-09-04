@@ -43,6 +43,8 @@ struct View{
 	int h;
 	int flags;
 	float ar;
+	float fov;
+	float tfov;
 	Vertex eye;
 	Vertex center;
 	Vertex up;

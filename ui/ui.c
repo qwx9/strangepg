@@ -7,8 +7,8 @@
 #include "ui.h"
 
 ioff selected = -1;
-char *selstring;
 int prompting;
+char hoverstr[256], selstr[512];
 
 static ioff shown = -1;
 
@@ -108,22 +108,36 @@ keyevent(Rune r, int down)
 void
 showobject(char *s)
 {
-	free(selstring);
-	selstring = s;
+	strecpy(hoverstr, hoverstr+sizeof hoverstr, s);
 }
 
+static int
+mousedrag(float Δx, float Δy)
+{
+	RNode *r;
+
+	if(selected == -1 || (selected & 1<<31) != 0)
+		return 0;
+	Δx /= view.w;
+	Δy /= view.h;
+	Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
+	Δy = 2 * Δy * view.Δeye.z * view.tfov;
+	r = rnodes + selected - 1;
+	r->pos[0] += Δx;
+	r->pos[1] -= Δy;
+	return 1;
+}
+
+/* FIXME: selected vs. hovered over -> draw both */
+
 static ioff
-hover(int x, int y)
+mousehover(int x, int y)
 {
 	uint v, id;
-	static char *last;
 
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h
 	|| (v = mousepick(x, y)) == -1){
-		if(last != nil)
-			free(last);
-		last = selstring;
-		selstring = nil;
+		hoverstr[0] = 0;
 		return -1;
 	}
 	if(v == shown)
@@ -138,9 +152,12 @@ hover(int x, int y)
 	return v;
 }
 
+/* FIXME: push select, set string from response? */
 static int
-mouseselect(ioff)
+mouseselect(void)
 {
+	if((selected = shown) != -1)
+		return 1;
 	return 0;
 }
 
@@ -153,11 +170,16 @@ mouseevent(Vertex v, Vertex Δ)
 	m = mod & Mmask;
 	if(m != 0 && (omod & ~Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
-	if(Δ.x != 0.0 && Δ.y != 0.0)
-		shown = hover(v.x, v.y);
-	if(m == Mlmb && (omod & Mlmb) == 0){
-		if(mouseselect(shown))
-			reqdraw(Reqshallowdraw);
+	if(Δ.x != 0.0 || Δ.y != 0.0)
+		shown = mousehover(v.x, v.y);
+	if(m == Mlmb){
+		if((omod & Mlmb) == 0){
+			if(mouseselect())
+				reqdraw(Reqshallowdraw);
+		}else if(Δ.x != 0.0 || Δ.y != 0.0){
+			if(mousedrag(Δ.x, Δ.y))
+				reqdraw(Reqredraw);
+		}
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)
 			zoom(-Δ.x, -Δ.y);
@@ -173,7 +195,7 @@ void
 resetui(void)
 {
 	view.center = ZV;
-	view.eye = V(0.0f, 0.0f, 10.0f);
+	view.eye = V(0.0f, 0.0f, 25.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
 	view.Δeye = subv(view.eye, view.center);
 	view.pan = ZV;
@@ -184,5 +206,7 @@ void
 initui(void)
 {
 	initsysui();
+	view.fov = 60;
+	view.tfov = tan(view.fov / 2);
 	resetui();
 }

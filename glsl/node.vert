@@ -3,7 +3,6 @@
 precision lowp float;
 
 uniform mat4 mvp;
-uniform vec2 s;
 layout(location=0) in vec2 geom;
 layout(location=1) in vec2 pos;
 layout(location=2) in vec2 dir;
@@ -26,7 +25,7 @@ void main(){
 	float z = gl_InstanceID * 0.000001;
 	//float theta = atan(-dir.y, dir.x);	/* ccw geometry, cw angle */
 	//gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);
-	gl_Position = mvp * vec4((rotatez2(geom, dir.x, dir.y) + pos) / s, z, 1.0);
+	gl_Position = mvp * vec4(rotatez2(geom, dir.x, dir.y) + pos, z, 1.0);
 	col = col0;
 	idx = gl_InstanceID + 1;
 }

@@ -101,7 +101,7 @@ readcmd(char *s)
 			resetlayout(g);
 			goto next;
 		case 'I':
-			showobject(estrdup(s+2));
+			showobject(s + 2);
 			goto next;
 		case 'c':
 		case 'i':

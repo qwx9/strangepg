@@ -7,7 +7,7 @@ enum{
 };
 
 extern ioff selected;	/* FIXME: only one */
-extern char *selstring;
+extern char selstr[], hoverstr[];
 
 void	resetprompt(void);
 void	prompt(Rune);

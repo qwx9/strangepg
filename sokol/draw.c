@@ -42,15 +42,8 @@ struct Color{
 	float col[4];
 };
 
-/* FIXME:
- * - resize: compensate for different viewsize == different gl coordinate system
- *	by moving eye (zoom + pan)
- * - debug node angle and scale, offset edge control points
- */
-
 #define	FNodesz	((float)Nodesz)
 #define	Nodethiccc	(FNodesz/Ptsz)
-#define	FOV	60.0f
 
 typedef struct Params Params;
 typedef struct GLNode GLNode;
@@ -61,7 +54,6 @@ typedef struct Shader Shader;
 #define	hjdicks __attribute((packed))
 struct hjdicks Params{
 	HMM_Mat4 mvp;
-	HMM_Vec2 scale;	/* FIXME */
 };
 static HMM_Mat4 mvp;
 
@@ -119,24 +111,6 @@ mousepick(int x, int y)
 	return i;
 }
 
-void
-drawselected(void)
-{
-	ioff id;
-	static ioff osel = -1;
-
-	if(selected == -1 || selected == osel)
-		return;
-	else if((selected & (1<<31)) == 0){
-		id = (uint)selected;
-		pushcmd("print \"selected node \" %d, lnode[%d]", id, id);
-	}else{
-		id = (uint)selected & ~(1<<31);
-		pushcmd("print \"selected edge \"  %d, ledge[%d]", id, id);
-	}
-	osel = selected;
-}
-
 // FIXME: merge with port
 static void
 updateview(void)
@@ -145,8 +119,8 @@ updateview(void)
 	HMM_Mat4 vw, proj;
 
 	view.Δeye = subv(view.eye, view.center);
-	view.ar = view.w / view.h;
-	proj = HMM_Perspective_RH_NO(60.0f, view.ar, 0.01f, 10000.0f);
+	view.ar = (float)view.w / view.h;
+	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 10000.0f);
 	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
 	center = HMM_V3(view.center.x, view.center.y, view.center.z);
 	up = HMM_V3(view.up.x, view.up.y, view.up.z);
@@ -169,8 +143,8 @@ pandraw(float Δx, float Δy)
 
 	Δx /= view.w;
 	Δy /= view.h;
-	view.center.x += Δx * 2.0f * view.Δeye.z * view.ar * tan(FOV / 2.0f);
-	view.center.y -= Δy * 2.0f * view.Δeye.z * tan(FOV / 2.0f);
+	view.center.x += Δx * 2 * view.Δeye.z * view.ar * view.tfov;
+	view.center.y -= Δy * 2 * view.Δeye.z * view.tfov;
 	view.eye.x = view.center.x;
 	view.eye.y = view.center.y;
 	updateview();
@@ -279,7 +253,6 @@ flush(void)
 
 	p = (Params){
 		.mvp = mvp,
-		.scale = HMM_V2(FNodesz, FNodesz),
 	};
 	if(dylen(rnodes) > 0){
 		renderedges(p);
@@ -334,6 +307,7 @@ resize(void)
 	sg_destroy_image(zfb);
 	sg_destroy_attachments(offscreen_attachments);
 	initfb(sapp_width(), sapp_height());
+	resetui();
 	updateview();
 }
 
@@ -526,10 +500,8 @@ initgl(void)
 			.size = sizeof(Params),
 			.uniforms = {
 				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
 			},
 		},
-		/* FIXME: mvp and s: redundancy, s should be part of mvp or w/e */
 		.vs.source = node_vertsh,
 		.fs.source = node_fragsh,
 	});
@@ -538,7 +510,6 @@ initgl(void)
 			.size = sizeof(Params),
 			.uniforms = {
 				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-				[1] = { .name="s", .type=SG_UNIFORMTYPE_FLOAT2 },
 			},
 		},
 		.vs.source = edge_vertsh,
@@ -788,7 +759,7 @@ initsysdraw(void)
 {
 	/* FIXME: the reason why this can't be 0 is because of the fucking
 	 * input handling being synchronous */
-	if((drawc = chancreate(sizeof(ulong), 64)) == nil)
+	if((drawc = chancreate(sizeof(ulong), 32)) == nil)
 		sysfatal("initsysdraw: chancreate");
 }
 

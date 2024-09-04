@@ -3,7 +3,6 @@ char *node_vertsh = \
 	"//precision mediump float;\n"
 	"precision lowp float;\n"
 	"uniform mat4 mvp;\n"
-	"uniform vec2 s;\n"
 	"layout(location=0) in vec2 geom;\n"
 	"layout(location=1) in vec2 pos;\n"
 	"layout(location=2) in vec2 dir;\n"
@@ -23,7 +22,7 @@ char *node_vertsh = \
 	"	float z = gl_InstanceID * 0.000001;\n"
 	"	//float theta = atan(-dir.y, dir.x);	/* ccw geometry, cw angle */\n"
 	"	//gl_Position = mvp * vec4((rotatez(geom, theta) + pos) / s, z, 1.0);\n"
-	"	gl_Position = mvp * vec4((rotatez2(geom, dir.x, dir.y) + pos) / s, z, 1.0);\n"
+	"	gl_Position = mvp * vec4(rotatez2(geom, dir.x, dir.y) + pos, z, 1.0);\n"
 	"	col = col0;\n"
 	"	idx = gl_InstanceID + 1;\n"
 	"}\n";
