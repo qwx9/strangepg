@@ -8,6 +8,7 @@
 #include <math.h>
 #include <time.h>
 #include <ctype.h>
+#include <strings.h>
 
 /* u.h */
 //#define nil		((void*)0)
@@ -129,5 +130,6 @@ int	dupfd(int, int);
 // FIXME
 #define sleep(x)	lsleep((x) * 1000000ULL)
 #define snprint	snprintf
+#define	cistrcmp	strcasecmp
 #define print	printf
 #define	dup	dupfd

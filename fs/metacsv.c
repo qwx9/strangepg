@@ -80,7 +80,7 @@ loadcsv(void *arg)
 		for(nf=0; s!=nil; s=t, nf++){
 			t = nextfield(f, s, nil, ',');
 			if(nf == 0){
-				strncpy(name, s, sizeof name - 1);
+				strecpy(name, name+sizeof name, s);
 				continue;
 			}else if(nf-1 >= dylen(tags)){
 				warn("readcsv: line %d: ignoring extra columns\n", nr);
@@ -88,8 +88,7 @@ loadcsv(void *arg)
 			}
 			tag = tags[nf-1];
 			// FIXME: stupid
-			/* FIXME: also allow Color (case-insensitive)? */
-			if(strcmp(tag, "CL") == 0)
+			if(strcmp(tag, "CL") == 0 || cistrcmp(tag, "color") == 0)
 				pushcmd("nodecolor(\"%s\", %s)", name, s);
 			else if(strcmp(tag, "BO") == 0)
 				pushcmd("fixnodex(\"%s\", %s)", name, s);
