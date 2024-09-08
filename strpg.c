@@ -60,22 +60,22 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-Rb] [-f layfile] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]", argv0);
+	warn("usage: %s [-Rb] [-f layfile] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]\n", argv0);
 	warn(
-		"-b				White-on-black theme\n"
-		"-c FILE		Load tags from csv FILE\n"
-		"-f FILE		Load layout from FILE\n"
-		"-t N			Set number of layouting threads (default: 4)\n"
-		"-l ALGO		Set layouting algorithm (default: pfr)\n"
-		"-R				Do not reset layout once metadata is done loading\n"
+		"-b             White-on-black theme\n"
+		"-c FILE        Load tags from csv FILE\n"
+		"-f FILE        Load layout from FILE\n"
+		"-t N           Set number of layouting threads (default: 4)\n"
+		"-l ALGO        Set layouting algorithm (default: pfr)\n"
+		"-R             Do not reset layout once metadata is done loading\n"
 		"ALGO may be one of:\n"
-		"    fr			Fruchterman-Reingold variant\n"
-		"    pfr		Parallel Fruchterman-Reingold variant (default)\n"
-		"    conga		Fixed linear layout based on segment order in input file\n"
-		"    random		Random fixed positions\n"
-		"    linear		Linear layout with fixed-position nodes (wip)\n"
-		"    circ		Circular layout with fixed-position nodes (wip)\n"
-		"    bo			Linear layout with initial positions\n"
+		" fr            Fruchterman-Reingold variant\n"
+		" pfr           Parallel Fruchterman-Reingold variant (default)\n"
+		" conga         Fixed linear layout based on segment order in input file\n"
+		" random        Random fixed positions\n"
+		" linear        Linear layout with fixed-position nodes (wip)\n"
+		" circ          Circular layout with fixed-position nodes (wip)\n"
+		" bo            Linear layout with initial positions\n"
 	);
 	quit();
 }
