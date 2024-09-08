@@ -26,10 +26,12 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	n2 = rnodes + v;
 	du.x = n1->dir[0];
 	du.y = n1->dir[1];
+	du.z = 0.0f;
 	p1.x = n1->pos[0];
 	p1.y = n1->pos[1];
 	dv.x = n2->dir[0];
 	dv.y = n2->dir[1];
+	dv.z = 0.0f;
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
 
