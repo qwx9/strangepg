@@ -1,6 +1,6 @@
-# strange pangenome scale visualization
+# Strange pangenome scale visualization
 
-Huge graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
+Large graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
 Currently supports graphs in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format.
 
 Sales pitch:
@@ -22,53 +22,81 @@ general framework for experimentation with layouting and new visualization techn
 <p align="center"><img src="strangelove.png"/></p>
 
 _Note: this is a work in progress.
-Please consider this to be a public beta of sorts.
-Feel free to send any bug reports, feature requests and comments by email or as github issues.
+Please consider this to be a public beta of sorts
+and feel free to send bug reports, feature requests or comments.
 Thanks!_
 
-## Features
+## Table of contents
+
+[Features](#features)
+[Installation](#installation)
+[Usage](#usage)
+[Layouting](#layouting)
+[Navigation](#navigation)
+[Interaction](#interaction)
+[Loading tags from CSV files](#csv)
+[Additional compilation settings](#compilationsettings)
+[Known bugs](#bugs)
+[Used and bundled alien software](#bundled)
+[9front](#9front)
+
+
+## <a name="features"></a>Features
 
 - Scaling to arbitrarily large graphs via coarsening (work in progress)
 - GFA information loaded in two passes in parallel to start layouting as soon as possible
-- Highly responsive UI with immediate feedback whenever possible, no loading bars
 - High performance graphics with modern and efficient renderer
 - Highly modular, extensible and cross-platform by design
 - Embedded graph manipulation language based on GFA tags
-- Relatively easy to modify or add layout algorithms
+- Amenable to experimentation with custom layouts
 - Highly responsive: no loading bars, immediate feedback whenever possible
+- GFA files: no assumptions on order or label types (strings or integers)
 - Written from scratch in C with almost no dependencies
 
 Near finished:
 - Offline coarsening scheme, a few bugs remain
-- Displaying selection information graphically
 - Node and edge shaping according to length and other data
 - Further graphics performance improvements on Linux
 - 3D layouting and navigation
-- Layout algorithm adjustments and optimizations
-- More UI improvements
 - Additional capabilities in the graph language
-- Hooking up external memory to visualizer
 - Better documentation, manpages
 - Multiple graph handling
 
+Near future:
+- Better UI!
+- Path handling
+- macOS support
+- GBZ support
+
 Future:
-- Path information and additional overlays
+- Additional annotation overlays
 - Online graph coarsening, with no preprocessing step
 - Better graph manipulation language: vector language
-- More user-friendly layout algorithm design
+- IGV-like subviews
+- More user-friendly layout specification/implementation
 
 Released under the terms of the MIT license.
 
-## Installation
+## <a name="installation"></a>Installation
 
-Currently only Linux (and 9front) are supported. For now, it has to be
-installed from source by cloning the repository then building the software.
+Currently only Linux (and 9front) are supported.
+A macOS port will arrive as soon as someone kindly sacrifices their laptop
+for a while.
 
-Coming soon: macos, binary and conda packages.
+Installation can be done from source or via [bioconda](https://bioconda.github.io/).
 
-Planned: BSDs, switch (nx) and aarch64 ports.
+The binary's name is _strpg_.
 
-### Compilation
+
+#### Bioconda
+
+Install conda, then:
+
+```bash
+conda install strangepg
+```
+
+#### Compilation
 
 ```bash
 git clone https://github.com/qwx9/strangepg
@@ -82,35 +110,20 @@ by default in *$HOME/.local/bin*.
 If this directory is not in your $PATH or a different installation directory is desired,
 see the `Additional compilation settings` section below.
 
-### Dependencies
+#### Dependencies
 
-Full list (ubuntu package names):
+strangepg requires an OpenGL implementation and X11 libraries.
+Those are usually already present on typical Linux systems.
 
-- libbsd0
-- libgl-dev
-- libglvnd-dev
-- libglx-dev
-- libmd0
-- libx11-dev
-- libxau-dev
-- libxcb1-dev
-- libxcursor-dev
-- libxdmcp-dev
-- libxext-dev
-- libxfixes-dev
-- libxi-dev
-- libxrandr-dev
-
-Most of these would be installed already on a typical Linux system.
-Command line (adapt to your system):
+Command line for ubuntu (adapt to your system):
 ```bash
 apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev 
 ```
 
 Tested with gcc 11.4.0 and 13.2.0, and clang 14.0.0 and 17.0.6
-on Voidlinux and lubuntu.
+on Void Linux and Ubuntu 22.04/24.04.
 
-## Usage
+## <a name="usage"></a>Usage
 
 _strangepg_ requires at least one input file as argument.
 It currently supports graphs in GFA format.
@@ -126,16 +139,16 @@ For example:
 strpg test/03.232.gfa
 ```
 
-### Command-line options
+#### Command-line options
 
 - -b:	white-on-black theme
-- -c file.csv:	load metadata tags from csv file (see format below)
+- -c file:	load metadata tags from CSV file (see format below; can be repeated)
 - -f file:	load exported layout from file
 - -t nth:	number of layouting workers (default: 4)
 - -l alg:	select layouting algorithm (see Layouts below) (default: fr)
 - -R:	do not reset layout once metadata is done loading
 
-## Layouts
+## <a name="layouting"></a>Layouting
 
 _strangepg_ ships with a few selectable layouting algorithms currently all based
 on a spring model force-directed approach.
@@ -144,22 +157,33 @@ Layouting preallocates a pool of worker threads, but depending on the algorithm,
 only one worker may be active. The default is 4, changed via the *-t* option:
 
 ```bash
-# example: parallel FR layout with 8 workers: 
+# example: parallel FR layout with 8 workers:
 strpg -l pfr -t 8 file.gfa
 ```
 
-Available layouts:
+Single-threaded layouts will only use one thread regardless.
 
-- _fr_: Fruchterman-Reingold-based layout (default)
-- _pfr_: parallel version of the above
+Layouting may be paused/unpaused with the 'p' key,
+and can be restarted with the 'r' key at will.
+Restarting it is cheap; try it if the layout doesn't look good.
+
+Termination conditions for the algorithms are not yet well tuned wrt. the size of
+the graphs, and layouting may continue with little noticeable changes.
+Use the 'p' key to freeze/unfreeze layouting.
+
+#### Available layouts
+
+- _pfr_: parallelized variant of the Fruchterman-Reingold algorithm (default)
+- _fr_: single threaded version of the above
 - _conga_: fixed node placement on a line by GFA file order
 - _random_: random fixed node placement
 
 Experimental, problem-specific layouts:
 - _linear_: _fr_ layout with the addition of optionally fixed position nodes (_fx_ and _fy_ GFA segment tags) and initial position (via _mv_ segment tag)
-- _pline_: parallel version of the above
 - _circ_: attempt at a circular version of the above
 - _bo_: similar to _pline_ but using BO tags for initial placement along a horizontal line
+
+#### Loading from and saving to file
 
 A pre-existing layout may be loaded with the `-f` flag irrespective of the selected layout algorithm.
 Layouts can't yet be selected at runtime or ran partially but they may be interrupted and resumed with the 'p' key.
@@ -168,11 +192,7 @@ The current layout may be exported or imported at runtime with the `exportlayout
 (see the Interaction section below).
 The output file format is binary.
 
-Termination conditions for the algorithms are not yet well tuned wrt. the size of
-the graphs, and layouting may continue with little noticeable changes.
-Use the 'p' key to freeze/unfreeze layouting.
-
-## Navigation
+## <a name="navigation"></a>Navigation
 
 Mouse buttons:
 
@@ -189,19 +209,18 @@ Keyboard shortcuts:
 - Re-layout: 'r' key
 - Quit: 'q' key or close window
 - Reset initial position: 'escape' key
-- Arrow keys: move view by screenful in cardinal direction
+- Arrow keys: move view by screenful up/down/left/right
 
-Selecting an object currently only shows the selection on stdandard out,
-but will be shown in the prompt window soon.
+Hovering over an edge or node shows some information on the prompt window.
 
-## Interaction
+## <a name="interaction"></a>Interaction
 
 _strangepg_ provides a text prompt for interaction with the graph by issuing commands.
 They are effectively [_awk_](https://awk.dev) one-liners.
 GFA tags and labels are transformed into tables which can then be used to change the state of the graph in arbitrary ways.
 For more in-depth information, check out [the help document](strawk.md).
 
-### Examples
+#### Examples
 
 Color every other node in red:
 ```awk
@@ -227,9 +246,10 @@ Currently most of the functionality is limited to coloring, but editing the grap
 Note that the language is admittedly cumbersome for this purpose and is not final.
 
 
-## Loading tags from CSV files
+## <a name="csv"></a>Loading tags from CSV files
 
-CSV files can be loaded at start up or at runtime to feed or modify tags for existing nodes.
+CSV files can be loaded at start up with the '-c' flag or at runtime to feed or modify tags for existing nodes.
+The '-c' flag may be used multiple times to load more than one CSV file at startup.
 The first column is always reserved for node labels, and all subsequent columns are tags values.
 The first line must be a header specifying a tag name for each column.
 
@@ -243,12 +263,17 @@ utig4-143,0,53,red
 
 The name of the first column does not matter.
 The `CL` tag is used as a node's color and can thus also be set in this way.
+`Color` can also be used.
 Nodes labels must refer to existing nodes in the input GFA file.
 
-A csv file may be loaded at runtime with the `readcsv("file.csv")` command
+A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
 (see the Interaction section).
 
-### Format notes
+*Loading multiple CSV files one after the other is allowed.*
+In other words, variables such as color are not reset between files.
+CSV files thus needn't be merged together.
+
+#### Format notes
 
 The accepted format here is more stringent than usual.
 The implementation is not localized, ie. commas are always field separators.
@@ -258,9 +283,9 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 
 Each line must have the same number of fields as the header, but fields can be empty.
 
-## Additional compilation settings
+## <a name="compilationsettings"></a>Additional compilation settings
 
-### Installation prefix
+#### Installation prefix
 
 By default, the installation path is *$HOME/.local/bin*.
 To install to a different directory, use the _PREFIX_ make variable:
@@ -271,7 +296,7 @@ make -j
 sudo make PREFIX=/usr/local install
 ```
 
-### Compiler
+#### Compiler
 
 To build using a different compiler, eg. clang, use the _CC_ make variable:
 
@@ -282,21 +307,16 @@ sudo make PREFIX=/usr/local install
 
 Tested with clang and gcc only.
 
-## Known bugs
+## <a name="bugs"></a>Known bugs
 
-- node orientation is based on layout displacement direction as opposed to
-  edges, a recent regression
-- strawk leaks memory on each query because of the hack `eval` implementation;
-  the parse tree is not supposed to be modified once generated and this needs
-  to be done more intelligently
-- Linux: keyboard/mouse handling are in the same thread as the renderer due to
-  limitations of the bundled graphics library; this limitation reduces
-  responsiveness and will be lifted once the renderer is rewritten
+- strawk leaks some memory; awk wasn't meant to be used this way and plugging
+  the leaks is not trivial
+- currently broken on WSL because of GL initialization errors; not sure why
 
-## Used and bundled alien software
+## <a name="bundled"></a>Used and bundled alien software
 
 Data structures:
-- khash from [klib](https://github.com/attractivechaos/klib)
+- [khashl](https://github.com/attractivechaos/khashl)
 - [chan](https://github.com/tylertreat/chan)
 
 Linux graphics:
@@ -306,15 +326,15 @@ Linux graphics:
 
 Used but not bundled:
 - GL extension loading via [flextGL](https://github.com/mosra/flextGL)
-- GNU Bison or Plan9 yacc(1)
+- GNU Bison or Plan9 yacc(1) for awk
 
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 
 ![](plan.png)
 
-## 9front
+## <a name="9front"></a>9front
 
 Build with _mk_ instead of _make_ in the usual manner.
 Additionally requires [npe](https://git.sr.ht/~ft/npe); it's really only required to build khash.
-A better solution might exist since neither SDL2 isn't used at all.
+A better solution might exist since SDL2 isn't used at all.
