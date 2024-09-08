@@ -28,16 +28,16 @@ Thanks!_
 
 ## Table of contents
 
-[Features](#features)
-[Installation](#installation)
-[Usage](#usage)
-[Layouting](#layouting)
-[Navigation](#navigation)
-[Interaction](#interaction)
-[Loading tags from CSV files](#csv)
-[Additional compilation settings](#compilationsettings)
-[Known bugs](#bugs)
-[Used and bundled alien software](#bundled)
+[Features](#features)  
+[Installation](#installation)  
+[Usage](#usage)  
+[Layouting](#layouting)  
+[Navigation](#navigation)  
+[Interaction](#interaction)  
+[Loading tags from CSV files](#csv)  
+[Additional compilation settings](#compilationsettings)  
+[Known bugs](#bugs)  
+[Used and bundled alien software](#bundled)  
 [9front](#9front)
 
 
@@ -108,7 +108,7 @@ _-j_ is an optional flag to enable parallel building using all available cores.
 This installs the binaries ```strpg``` and ```strawk```,
 by default in *$HOME/.local/bin*.
 If this directory is not in your $PATH or a different installation directory is desired,
-see the `Additional compilation settings` section below.
+see [Additional compilation settings](#compilationsettings) below.
 
 #### Dependencies
 
@@ -142,10 +142,10 @@ strpg test/03.232.gfa
 #### Command-line options
 
 - -b:	white-on-black theme
-- -c file:	load metadata tags from CSV file (see format below; can be repeated)
+- -c file:	load metadata tags from CSV file (see [Loading tags from CSV files](#csv); can be repeated)
 - -f file:	load exported layout from file
 - -t nth:	number of layouting workers (default: 4)
-- -l alg:	select layouting algorithm (see Layouts below) (default: fr)
+- -l alg:	select layouting algorithm (see [Layouting](#layouting), default: fr)
 - -R:	do not reset layout once metadata is done loading
 
 ## <a name="layouting"></a>Layouting
@@ -189,7 +189,7 @@ A pre-existing layout may be loaded with the `-f` flag irrespective of the selec
 Layouts can't yet be selected at runtime or ran partially but they may be interrupted and resumed with the 'p' key.
 
 The current layout may be exported or imported at runtime with the `exportlayout("file")` and `importlayout("file")` functions
-(see the Interaction section below).
+(see [Interaction](#interaction)).
 The output file format is binary.
 
 ## <a name="navigation"></a>Navigation
@@ -267,7 +267,7 @@ The `CL` tag is used as a node's color and can thus also be set in this way.
 Nodes labels must refer to existing nodes in the input GFA file.
 
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
-(see the Interaction section).
+(see [Interaction](#interaction)).
 
 *Loading multiple CSV files one after the other is allowed.*
 In other words, variables such as color are not reset between files.
