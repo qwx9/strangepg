@@ -60,14 +60,16 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-Rb] [-f layfile] [-l layout] [-m 16-63] [-t 1-128] [-c csv] FILE [FILE..]\n", argv0);
+	warn("usage: %s [-Rbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]\n", argv0);
 	warn(
+		"-R             Do not reset layout once metadata is done loading\n"
 		"-b             White-on-black theme\n"
 		"-c FILE        Load tags from csv FILE\n"
 		"-f FILE        Load layout from FILE\n"
-		"-t N           Set number of layouting threads (default: 4)\n"
+		"-h             Print usage information and exit\n"
 		"-l ALGO        Set layouting algorithm (default: pfr)\n"
-		"-R             Do not reset layout once metadata is done loading\n"
+		"-t N           Set number of layouting threads (1-128, default: 4)\n"
+		"-v             Print version and exit\n"
 		"ALGO may be one of:\n"
 		" fr            Fruchterman-Reingold variant\n"
 		" pfr           Parallel Fruchterman-Reingold variant (default)\n"
@@ -83,7 +85,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Rbh] [-f layfile] [-l layout] [-t 1-128] [-c csv] FILE [FILE..]", argv0);
+	sysfatal("usage: %s [-Rbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]", argv0);
 }
 
 static void
@@ -159,6 +161,9 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
+	case 'v':
+		print(VERSION "\n");
+		quit();
 	default: usage();
 	}ARGEND
 	if(*argv == nil)

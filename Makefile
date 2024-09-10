@@ -1,4 +1,5 @@
 PROGRAM:= strpg
+VERSION:= 0.8.3
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
@@ -91,7 +92,8 @@ CFLAGS+= -D_XOPEN_SOURCE=500
 CFLAGS+= -pthread
 # generate dependency files for headers
 CFLAGS+= -MMD -MP
-WFLAGS?= -Wall -Wextra -Wformat=2 -Wno-parentheses
+CFLAGS+= -DVERSION="\"$(VERSION)\""
+WFLAGS?= -Wall -Wformat=2 -Wunused -Wno-parentheses
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
@@ -116,7 +118,7 @@ ifdef DEBUG
 			 -Winvalid-pch -Wunsafe-loop-optimizations \
 			 -Wmissing-format-attribute -Wmissing-include-dirs -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
-			 -Wsuggest-attribute=const -Wswitch-default -Wunused \
+			 -Wsuggest-attribute=const -Wswitch-default \
 			 -Wvariadic-macros
 	CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
 else
@@ -139,7 +141,7 @@ ifeq ($(wildcard .git),.git)
 	endif
 	GIT_HEAD:= $(shell $(GITCMD))
 	ifneq ($(GIT_HEAD),)
-		VERSION:= git_$(GIT_HEAD)
+		VERSION+= git_$(GIT_HEAD)
 	endif
 endif
 

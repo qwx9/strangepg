@@ -1,5 +1,6 @@
 </$objtype/mkfile
 BIN=$home/bin/$objtype
+VERSION=0.8.3
 TARG=\
 	strpg\
 
@@ -79,6 +80,7 @@ HFILES=\
 CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 	-I/sys/include/npe -Iplan9 \
 	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui -Iutil \
+	-DVERSION="$VERSION" \
 
 #LDFLAGS=$LDFLAGS -p
 
