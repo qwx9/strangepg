@@ -85,12 +85,10 @@ for a while.
 
 Installation can be done from source or via [bioconda](https://bioconda.github.io/).
 
-The binary's name is _strpg_.
-
 
 #### Bioconda
 
-Install conda, then:
+Install conda, add the bioconda channel, then:
 
 ```bash
 conda install strangepg
@@ -105,7 +103,7 @@ make -j install
 ```
 
 _-j_ is an optional flag to enable parallel building using all available cores.
-This installs the binaries ```strpg``` and ```strawk```,
+This installs the binaries ```strangepg``` and ```strawk```,
 by default in *$HOME/.local/bin*.
 If this directory is not in your $PATH or a different installation directory is desired,
 see [Additional compilation settings](#compilationsettings) below.
@@ -129,14 +127,14 @@ _strangepg_ requires at least one input file as argument.
 It currently supports graphs in GFA format.
 
 ```bash
-strpg file.gfa
+strangepg file.gfa
 ```
 
 Some test examples exist in the `test/` directory.
 For example:
 
 ```bash
-strpg test/03.232.gfa
+strangepg test/03.232.gfa
 ```
 
 #### Command-line options
@@ -144,8 +142,8 @@ strpg test/03.232.gfa
 - -b:	white-on-black theme
 - -c file:	load metadata tags from CSV file (see [Loading tags from CSV files](#csv); can be repeated)
 - -f file:	load exported layout from file
-- -t nth:	number of layouting workers (default: 4)
-- -l alg:	select layouting algorithm (see [Layouting](#layouting), default: fr)
+- -t nth:	number of layouting workers (default: 3)
+- -l alg:	select layouting algorithm (see [Layouting](#layouting), default: pfr)
 - -R:	do not reset layout once metadata is done loading
 
 ## <a name="layouting"></a>Layouting
@@ -154,11 +152,11 @@ _strangepg_ ships with a few selectable layouting algorithms currently all based
 on a spring model force-directed approach.
 Select one with the *-l* option.
 Layouting preallocates a pool of worker threads, but depending on the algorithm,
-only one worker may be active. The default is 4, changed via the *-t* option:
+only one worker may be active. The default is 3, changed via the *-t* option:
 
 ```bash
 # example: parallel FR layout with 8 workers:
-strpg -l pfr -t 8 file.gfa
+strangepg -l pfr -t 8 file.gfa
 ```
 
 Single-threaded layouts will only use one thread regardless.
@@ -222,28 +220,25 @@ For more in-depth information, check out [the help document](strawk.md).
 
 #### Examples
 
+Color nodes with labels matching a regexp:
+```awk
+CL[i ~ /chr13/] = red
+```
+
 Color every other node in red:
 ```awk
-for(i in node) if(i % 2 == 1) nodecolor(i, red)
+CL[node[i] % 2 == 1] = red
 ```
 
 Color nodes with sequence length > 50:
 ```awk
-for(i in node) if(LN[i] > 50) nodecolor(i, red)
+CL[LN[i] > 50] = red
 ```
 
-Color based on if-elseif-else pattern:
-```awk
-for(i in LN) nodecolor(i, LN[i] > 200 ? red : LN[i] > 50 ? green : blue)
-```
-
-Color nodes with labels matching a regexp:
-```awk
-for(i in node) if(i ~ /chr13/) nodecolor(i, red)
-```
+See [strawk.md](strawk.md) for a more detailed overview.
 
 Currently most of the functionality is limited to coloring, but editing the graph is next.
-Note that the language is admittedly cumbersome for this purpose and is not final.
+Note that the language is not yet satisfactory, thus not final.
 
 
 ## <a name="csv"></a>Loading tags from CSV files
