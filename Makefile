@@ -1,4 +1,4 @@
-PROGRAM:= strpg
+PROGRAM:= strangepg
 VERSION:= 0.8.3
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\

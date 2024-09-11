@@ -2,7 +2,7 @@
 BIN=$home/bin/$objtype
 VERSION=0.8.3
 TARG=\
-	strpg\
+	strangepg\
 
 DIRS=\
 	strawk\
