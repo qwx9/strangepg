@@ -166,6 +166,27 @@ function fixnodex(name, x){
 	BO[name] = x
 	print "x", node[name], x
 }
+# too complicated if nested, and temporary anyway; would ideally expand
+# other tags into tag[i]
+#/^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
+crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
+	i = index($0, "[")
+	v = substr($0, 1, i - 1)
+	s = substr($0, i + 1)
+	# FIXME: use a function; use for other vars?
+	if(v == "CL" || v ~ /[Cc][Oo][Ll][Oo][Rr]/){
+		i = 0
+		t = s
+		while((j = index(t, "]")) != 0){
+			i += j
+			t = substr(t, j + 1)
+		}
+		pred = substr(s, 1, i - 1)
+		i = match(s, "[^=]=[^=]")
+		s = substr(s, i + 2)
+		$0 = "for(i in node) if("pred"){ nodecolor(i, " s ")}"
+	}
+}
 {
 	eval("{" $0 "}")
 }
