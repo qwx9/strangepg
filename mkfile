@@ -87,6 +87,9 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
 
+$O.strangepg:	$OFILES
+	$LD $LDFLAGS -o $target $prereq
+
 $O.coarsen: $OCOARSEN
 	$LD $LDFLAGS -o $target $prereq
 
