@@ -3,7 +3,7 @@
 #include "drw.h"
 #include "threads.h"
 
-int nlaythreads = 4;
+int nlaythreads = 3;
 int deflayout = LLpfr;
 
 static Shitkicker *sktab[LLnil];

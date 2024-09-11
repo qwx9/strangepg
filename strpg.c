@@ -68,7 +68,7 @@ help(void)
 		"-f FILE        Load layout from FILE\n"
 		"-h             Print usage information and exit\n"
 		"-l ALGO        Set layouting algorithm (default: pfr)\n"
-		"-t N           Set number of layouting threads (1-128, default: 4)\n"
+		"-t N           Set number of layouting threads (1-128, default: 3)\n"
 		"-v             Print version and exit\n"
 		"ALGO may be one of:\n"
 		" fr            Fruchterman-Reingold variant\n"
