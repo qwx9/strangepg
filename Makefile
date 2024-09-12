@@ -1,5 +1,5 @@
 PROGRAM:= strangepg
-VERSION:= 0.8.3
+VERSION:= 0.8.4
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
@@ -81,6 +81,18 @@ CLEANFILES:=\
 	$(COARSENOBJS)\
 	$(DEPS)\
 
+ifeq ($(wildcard .git),.git)
+	VERSION:= $(shell git describe --tags)
+	GITCMD:= git describe --abbrev=8 --always
+	ifneq ($(shell git diff-index --name-only HEAD --),"")
+		GITCMD+= --dirty
+	endif
+	GIT_HEAD:= $(shell $(GITCMD))
+	ifneq ($(GIT_HEAD),)
+		VERSION+= git_$(GIT_HEAD)
+	endif
+endif
+
 CC?= clang
 OFLAGS?= -O3 -pipe -march=native
 CFLAGS?= $(OFLAGS)
@@ -132,17 +144,6 @@ else
 			-Wno-incompatible-pointer-types-discards-qualifiers \
 			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast \
 			-Wno-implicit-fallthrough
-endif
-
-ifeq ($(wildcard .git),.git)
-	GITCMD:= git describe --abbrev=8 --always
-	ifneq ($(shell git diff-index --name-only HEAD --),"")
-		GITCMD+= --dirty
-	endif
-	GIT_HEAD:= $(shell $(GITCMD))
-	ifneq ($(GIT_HEAD),)
-		VERSION+= git_$(GIT_HEAD)
-	endif
 endif
 
 all:	$(ALLTARGETS) dirall
