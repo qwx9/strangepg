@@ -78,7 +78,7 @@ drawui(nk_context *ctx)
 {
 	nk_flags e;
 
-	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w - 8, 78+20), NKwopt)){
+	if(nk_begin(ctx, "Prompt", nk_rect(8, 8, view.w - 16, 78+28*2), NKwopt)){
 		/* FIXME: no wrap */
 		nk_layout_row_dynamic(ctx, 0, 1);
 		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
@@ -88,6 +88,7 @@ drawui(nk_context *ctx)
 			ptext[plen] = 0;
 			pushcmd("%s", ptext);
 		}
+		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_LEFT);
 		if(hoverstr[0] != 0)
 			nk_label(ctx, hoverstr, NK_LEFT);
 	}

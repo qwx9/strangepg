@@ -128,8 +128,6 @@ mousedrag(float Δx, float Δy)
 	return 1;
 }
 
-/* FIXME: selected vs. hovered over -> draw both */
-
 static ioff
 mousehover(int x, int y)
 {
@@ -152,12 +150,17 @@ mousehover(int x, int y)
 	return v;
 }
 
-/* FIXME: push select, set string from response? */
 static int
 mouseselect(void)
 {
-	if((selected = shown) != -1)
+	char *p;
+
+	if((selected = shown) != -1){
+		p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
+		strecpy(p, selstr+sizeof selstr, hoverstr);
 		return 1;
+	}
+	selstr[0] = 0;
 	return 0;
 }
 
