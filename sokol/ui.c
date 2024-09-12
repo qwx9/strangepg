@@ -76,7 +76,6 @@ pasteprompt(char *s)
 void
 drawui(nk_context *ctx)
 {
-	float h;
 	nk_flags e;
 
 	if(nk_begin(ctx, "Prompt", nk_rect(0, 0, view.w - 8, 78+20), NKwopt)){

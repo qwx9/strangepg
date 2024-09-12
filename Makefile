@@ -105,7 +105,7 @@ CFLAGS+= -pthread
 # generate dependency files for headers
 CFLAGS+= -MMD -MP
 CFLAGS+= -DVERSION="\"$(VERSION)\""
-WFLAGS?= -Wall -Wformat=2 -Wunused -Wno-parentheses
+WFLAGS?= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
 SFLAGS?= -std=c99
 IFLAGS?=\
 	-I.\
@@ -125,25 +125,27 @@ LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
-	WFLAGS+= -Waggregate-return -Wcast-align -Wcast-qual \
-			 -Wdisabled-optimization -Wfloat-equal -Winit-self -Winline \
+	ifeq ($(CC), clang)
+		CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
+	else
+		CFLAGS+= -g -ggdb -O0
+		WFLAGS+= -Wno-suggest-attribute=format
+	endif
+	WFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
 			 -Winvalid-pch -Wunsafe-loop-optimizations \
-			 -Wmissing-format-attribute -Wmissing-include-dirs -Wpacked \
+			 -Wmissing-format-attribute -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
-			 -Wsuggest-attribute=const -Wswitch-default \
+			 -Wswitch-default \
 			 -Wvariadic-macros
-	CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
 else
 	# c2x for omitting parameter names in a function definition
 	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
-	WFLAGS+= -Wno-unknown-pragmas -Wno-unused-value \
-			-Wno-unused-function -Wno-unused-parameter \
-			-Wno-unused-variable -Wno-sign-compare \
-			-Wno-ignored-qualifiers \
-			-Wno-c2x-extensions -Wno-gnu-designator \
-			-Wno-incompatible-pointer-types-discards-qualifiers \
-			-Wno-format-nonliteral -Wno-int-to-void-pointer-cast \
-			-Wno-implicit-fallthrough
+	ifneq ($(CC), clang)
+		WFLAGS+= -Wno-discarded-qualifiers
+	endif
+	WFLAGS+= -Wno-incompatible-pointer-types -Wno-ignored-qualifiers \
+			 -Wno-unused-result -Wno-unused-function -Wno-unused-value \
+			 -Wno-c2x-extensions -Wno-format-nonliteral
 endif
 
 all:	$(ALLTARGETS) dirall

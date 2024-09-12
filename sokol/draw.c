@@ -50,9 +50,8 @@ typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
 typedef struct Shader Shader;
 
-/* FIXME: provide aligned data as per std140 instead of this shit */
-#define	hjdicks __attribute((packed))
-struct hjdicks Params{
+/* FIXME: provide aligned data as per std140? */
+struct Params{
 	HMM_Mat4 mvp;
 };
 static HMM_Mat4 mvp;
@@ -138,9 +137,6 @@ zoomdraw(float Δ)
 void
 pandraw(float Δx, float Δy)
 {
-	float len;
-	HMM_Vec3 dy, dx, c;
-
 	Δx /= view.w;
 	Δy /= view.h;
 	view.center.x += Δx * 2 * view.Δeye.z * view.ar * view.tfov;
@@ -520,12 +516,12 @@ initgl(void)
 	/* clear colors on the first pass, don't do anything on the second */
 	offscreen_pass_action = (sg_pass_action){
 		.colors = {
-			[0] {
+			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
 				.clear_value = { c->col[0], c->col[1], c->col[2], 0.0f },
 			},
-			[1] {
+			[1] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
 				.clear_value = { 0 },
@@ -534,11 +530,11 @@ initgl(void)
 	};
 	offscreen_pass_action2 = (sg_pass_action){
 		.colors = {
-			[0] {
+			[0] = {
 				.load_action = SG_LOADACTION_DONTCARE,
 				.store_action = SG_STOREACTION_DONTCARE,
 			},
-			[1] {
+			[1] = {
 				.load_action = SG_LOADACTION_DONTCARE,
 				.store_action = SG_STOREACTION_DONTCARE,
 			},
@@ -549,31 +545,31 @@ initgl(void)
 	nodepip = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
-				[0] {
+				[0] = {
 					.stride = 2 * sizeof(float),
 				},
-				[1] {
+				[1] = {
 					.stride = sizeof(RNode),
 					.step_func = SG_VERTEXSTEP_PER_INSTANCE
 				},
 			},
 			.attrs = {
-				[0] {
+				[0] = {
 					.offset = 0,
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 0,
 				},
-				[1] {
+				[1] = {
 					.offset = offsetof(RNode, pos),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
-				[2] {
+				[2] = {
 					.offset = offsetof(RNode, dir),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
-				[3] {
+				[3] = {
 					.offset = offsetof(RNode, col),
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
@@ -593,7 +589,7 @@ initgl(void)
 		.color_count = 2,
 		/* NOTE: per-attachment blend state may not be supported */
 		.colors = {
-			[0] {
+			[0] = {
 				.blend = {
 					.enabled = true,
 					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
@@ -604,7 +600,7 @@ initgl(void)
 					.op_alpha = SG_BLENDOP_ADD,
 				},
 			},
-			[1] {
+			[1] = {
 				.pixel_format = SG_PIXELFORMAT_R32UI,
 			},
 		},
@@ -613,31 +609,31 @@ initgl(void)
 	edgepip = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
-				[0] {
+				[0] = {
 					.stride = sizeof(float),
 				},
-				[1] {
+				[1] = {
 					.stride = sizeof(REdge),
 					.step_func = SG_VERTEXSTEP_PER_INSTANCE
 				},
 			},
 			.attrs = {
-				[0] {
+				[0] = {
 					.offset = 0,
 					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 0,
 				},
-				[1] {
+				[1] = {
 					.offset = offsetof(REdge, pos1),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
-				[2] {
+				[2] = {
 					.offset = offsetof(REdge, pos2),
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 1,
 				},
-				[3] {
+				[3] = {
 					.offset = offsetof(REdge, col),
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
@@ -656,7 +652,7 @@ initgl(void)
 		},
 		.color_count = 2,
 		.colors = {
-			[0] {
+			[0] = {
 				.blend = {
 					.enabled = true,
 					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
@@ -667,7 +663,7 @@ initgl(void)
 					.op_alpha = SG_BLENDOP_ADD,
 				},
 			},
-			[1] {
+			[1] = {
 				.pixel_format = SG_PIXELFORMAT_R32UI,
 			},
 		},
@@ -704,7 +700,7 @@ initgl(void)
 			},
 			.samplers[0].used = true,
 			.image_sampler_pairs = {
-				[0] {
+				[0] = {
 					.used = true,
 					.glsl_name = "tex0",
 					.image_slot = 0,

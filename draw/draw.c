@@ -29,13 +29,14 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	du.z = 0.0f;
 	p1.x = n1->pos[0];
 	p1.y = n1->pos[1];
+	p1.z = 0.0f;
 	dv.x = n2->dir[0];
 	dv.y = n2->dir[1];
 	dv.z = 0.0f;
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
+	p2.z = 0.0f;
 
-	/* FIXME: fp exceptions on plan9 */
 	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
 	//du = mulv(du, Nodesz * n1->length / 2);

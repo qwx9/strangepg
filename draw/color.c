@@ -10,18 +10,18 @@ static colormap *cmap;
 u32int *theme;
 
 static u32int theme1[Cend] = {
-	[Cbg]	0x000000ff,
-	[Ctext]	0xbb1100ff,
-	[Cnode]	0x2222ff90,
-	[Cedge]	0xbbbbbb30,
-	[Cemph]	0xff0000ff,
+	[Cbg]	= 0x000000ff,
+	[Ctext]	= 0xbb1100ff,
+	[Cnode]	= 0x2222ff90,
+	[Cedge]	= 0xbbbbbb30,
+	[Cemph]	= 0xff0000ff,
 };
 static u32int theme2[Cend] = {
-	[Cbg]	0xffffffff,
-	[Ctext]	0xeeee00ff,
-	[Cnode]	0xdddd009f,
-	[Cedge]	0x77777730,
-	[Cemph]	0xff0000ff,
+	[Cbg]	= 0xffffffff,
+	[Ctext]	= 0xeeee00ff,
+	[Cnode]	= 0xdddd009f,
+	[Cedge]	= 0x77777730,
+	[Cemph]	= 0xff0000ff,
 };
 
 static u32int colors[] = {

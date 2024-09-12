@@ -1962,7 +1962,7 @@ static char *nawk_convert(const char *s, int (*fun_c)(int),
 		/*
 		 * Reset internal state here too.
 		 */
-		(wctomb(NULL, L'\0'));
+		(n = wctomb(NULL, L'\0'));
 
 		ps   = s;
 		pbuf = buf;

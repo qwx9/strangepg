@@ -30,7 +30,6 @@ wipe(void *tp)
 static void *
 _thread(void *tp)
 {
-	void *p;
 	Thread *th;
 
 	th = tp;
@@ -120,7 +119,7 @@ recvp(Channel *c)
 ulong
 recvul(Channel *c)
 {
-	u32int v;
+	s32int v;
 
 	if(chan_recv_int32(c, &v) < 0)
 		return 0;
