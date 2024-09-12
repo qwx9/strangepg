@@ -30,7 +30,7 @@ typedef struct nk_text_edit nk_text_edit;
 static nk_text_edit nkprompt;
 static nk_color nktheme[NK_COLOR_COUNT];
 static int prompting;
-static char ptext[1024];
+static char ptext[8192];
 static int plen;
 
 enum{
@@ -60,6 +60,16 @@ resetprompt(void)
 void
 prompt(Rune)
 {
+}
+
+static void
+pasteprompt(char *s)
+{
+	if(s == nil)
+		return;
+	plen = nk_str_len_char(&nkprompt.string);
+	s = strecpy(ptext+plen, ptext+sizeof ptext, s);
+	plen = s - ptext;
 }
 
 /* must be called after a new frame was started and before flushing */
@@ -168,6 +178,7 @@ special(const sapp_event* ev)
 		ev->scroll_x, ev->scroll_y, -1, 1); break;
 	case SAPP_EVENTTYPE_KEY_DOWN: return keyev(ev->key_code, ev->modifiers, 1);
 	case SAPP_EVENTTYPE_KEY_UP: return keyev(ev->key_code, ev->modifiers, 0);
+	case SAPP_EVENTTYPE_CLIPBOARD_PASTED: pasteprompt(sapp_get_clipboard_string()); break;
 	case SAPP_EVENTTYPE_RESIZED: reqdraw(Reqresetdraw); break;
 	case SAPP_EVENTTYPE_QUIT_REQUESTED: sapp_quit(); break;
 	default:;

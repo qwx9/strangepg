@@ -1748,7 +1748,7 @@ static void _snk_clipboard_copy(nk_handle usr, const char *text, int len) {
     if (len == 0) {
         return;
     }
-    sapp_set_clipboard_string(text);
+    sapp_set_clipboard_string(text, len);
 }
 
 static void _snk_clipboard_paste(nk_handle usr, struct nk_text_edit *edit) {

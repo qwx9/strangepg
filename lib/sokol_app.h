@@ -1603,6 +1603,7 @@ typedef struct sapp_allocator {
     _SAPP_LOGITEM_XMACRO(LINUX_X11_OPEN_DISPLAY_FAILED, "XOpenDisplay() failed") \
     _SAPP_LOGITEM_XMACRO(LINUX_X11_QUERY_SYSTEM_DPI_FAILED, "failed to query system dpi value, assuming default 96.0") \
     _SAPP_LOGITEM_XMACRO(LINUX_X11_DROPPED_FILE_URI_WRONG_SCHEME, "dropped file URL doesn't start with 'file://'") \
+    _SAPP_LOGITEM_XMACRO(LINUX_X11_FAILED_TO_BECOME_OWNER_OF_CLIPBOARD, "X11: Failed to become owner of clipboard selection") \
     _SAPP_LOGITEM_XMACRO(ANDROID_UNSUPPORTED_INPUT_EVENT_INPUT_CB, "unsupported input event encountered in _sapp_android_input_cb()") \
     _SAPP_LOGITEM_XMACRO(ANDROID_UNSUPPORTED_INPUT_EVENT_MAIN_CB, "unsupported input event encountered in _sapp_android_main_cb()") \
     _SAPP_LOGITEM_XMACRO(ANDROID_READ_MSG_FAILED, "failed to read message in _sapp_android_main_cb()") \
@@ -1833,7 +1834,7 @@ SOKOL_APP_API_DECL uint64_t sapp_frame_count(void);
 /* get an averaged/smoothed frame duration in seconds */
 SOKOL_APP_API_DECL double sapp_frame_duration(void);
 /* write string into clipboard */
-SOKOL_APP_API_DECL void sapp_set_clipboard_string(const char* str);
+SOKOL_APP_API_DECL void sapp_set_clipboard_string(const char* str, int len3);
 /* read string from clipboard (usually during SAPP_EVENTTYPE_CLIPBOARD_PASTED) */
 SOKOL_APP_API_DECL const char* sapp_get_clipboard_string(void);
 /* set the window title (only on desktop platforms) */
@@ -2162,6 +2163,7 @@ inline void sapp_run(const sapp_desc& desc) { return sapp_run(&desc); }
     #include <limits.h> /* LONG_MAX */
     #include <pthread.h>    /* only used a linker-guard, search for _sapp_linux_run() and see first comment */
     #include <time.h>
+    #include <poll.h>
 #endif
 
 #if defined(_SAPP_APPLE)
@@ -2751,6 +2753,8 @@ typedef struct {
     float dpi;
     unsigned char error_code;
     Atom UTF8_STRING;
+    Atom CLIPBOARD;
+    Atom TARGETS;
     Atom WM_PROTOCOLS;
     Atom WM_DELETE_WINDOW;
     Atom WM_STATE;
@@ -9604,7 +9608,11 @@ _SOKOL_PRIVATE void _sapp_x11_release_error_handler(void) {
 }
 
 _SOKOL_PRIVATE void _sapp_x11_init_extensions(void) {
-    _sapp.x11.UTF8_STRING             = XInternAtom(_sapp.x11.display, "UTF8_STRING", False);
+    if (_sapp.clipboard.enabled) {
+        _sapp.x11.UTF8_STRING         = XInternAtom(_sapp.x11.display, "UTF8_STRING", False);
+        _sapp.x11.CLIPBOARD           = XInternAtom(_sapp.x11.display, "CLIPBOARD", False);
+        _sapp.x11.TARGETS                = XInternAtom(_sapp.x11.display, "TARGETS", False);
+    }
     _sapp.x11.WM_PROTOCOLS            = XInternAtom(_sapp.x11.display, "WM_PROTOCOLS", False);
     _sapp.x11.WM_DELETE_WINDOW        = XInternAtom(_sapp.x11.display, "WM_DELETE_WINDOW", False);
     _sapp.x11.WM_STATE                = XInternAtom(_sapp.x11.display, "WM_STATE", False);
@@ -10108,6 +10116,78 @@ _SOKOL_PRIVATE void _sapp_x11_lock_mouse(bool lock) {
         XUngrabPointer(_sapp.x11.display, CurrentTime);
     }
     XFlush(_sapp.x11.display);
+}
+
+_SOKOL_PRIVATE void _sapp_x11_set_clipboard_string(const char* str) {
+    SOKOL_ASSERT(_sapp.clipboard.enabled && _sapp.clipboard.buffer);
+    if (strlen(str) >= (size_t)_sapp.clipboard.buf_size) {
+        _SAPP_ERROR(CLIPBOARD_STRING_TOO_BIG);
+    }
+    XSetSelectionOwner(_sapp.x11.display, _sapp.x11.CLIPBOARD, _sapp.x11.window, CurrentTime);
+    if (XGetSelectionOwner(_sapp.x11.display, _sapp.x11.CLIPBOARD) != _sapp.x11.window) {
+        _SAPP_ERROR(LINUX_X11_FAILED_TO_BECOME_OWNER_OF_CLIPBOARD);
+    }
+}
+
+_SOKOL_PRIVATE const char* _sapp_x11_get_clipboard_string(void) {
+    SOKOL_ASSERT(_sapp.clipboard.enabled && _sapp.clipboard.buffer);
+    Atom none = XInternAtom(_sapp.x11.display, "SAPP_SELECTION", False);
+    Atom incremental = XInternAtom(_sapp.x11.display, "INCR", False);
+    if (XGetSelectionOwner(_sapp.x11.display, _sapp.x11.CLIPBOARD) == _sapp.x11.window) {
+        // Instead of doing a large number of X round-trips just to put this
+        // string into a window property and then read it back, just return it
+        return _sapp.clipboard.buffer;
+    }
+    XConvertSelection(_sapp.x11.display,
+                      _sapp.x11.CLIPBOARD,
+                      _sapp.x11.UTF8_STRING,
+                      none,
+                      _sapp.x11.window,
+                      CurrentTime);
+    XEvent event;
+    while (!XCheckTypedWindowEvent(_sapp.x11.display,
+                                   _sapp.x11.window,
+                                   SelectionNotify,
+                                   &event)) {
+        // Wait for event data to arrive on the X11 display socket
+        struct pollfd fd = { ConnectionNumber(_sapp.x11.display), POLLIN };
+        while (!XPending(_sapp.x11.display)) {
+            poll(&fd, 1, -1);
+        }
+    }
+    if (event.xselection.property == None) {
+        return NULL;
+    }
+    char* data = NULL;
+    Atom actualType;
+    int actualFormat;
+    unsigned long itemCount, bytesAfter;
+    const bool ret = XGetWindowProperty(_sapp.x11.display,
+                        event.xselection.requestor,
+                        event.xselection.property,
+                        0,
+                        LONG_MAX,
+                        True,
+                        _sapp.x11.UTF8_STRING,
+                        &actualType,
+                        &actualFormat,
+                        &itemCount,
+                        &bytesAfter,
+                        (unsigned char**) &data);
+    if (ret != Success || data == NULL) {
+        if (data != NULL) {
+            XFree(data);
+        }
+        return NULL;
+    }
+    if (actualType == incremental || itemCount >= (size_t)_sapp.clipboard.buf_size) {
+        _SAPP_ERROR(CLIPBOARD_STRING_TOO_BIG);
+        XFree(data);
+        return NULL;
+    }
+    _sapp_strcpy(data, _sapp.clipboard.buffer, _sapp.clipboard.buf_size);
+    XFree(data);
+    return _sapp.clipboard.buffer;
 }
 
 _SOKOL_PRIVATE void _sapp_x11_update_window_title(void) {
@@ -10970,6 +11050,44 @@ _SOKOL_PRIVATE void _sapp_x11_process_event(XEvent* event) {
                 }
             }
             break;
+        case SelectionRequest: {
+            XSelectionRequestEvent* req = &event->xselectionrequest;
+            if (req->selection != _sapp.x11.CLIPBOARD) {
+                break;
+            }
+            XSelectionEvent reply = {
+                .type = SelectionNotify,
+                .display = req->display,
+                .requestor = req->requestor,
+                .selection = req->selection,
+                .target = req->target,
+                .property = req->property,
+                .time = req->time
+            };
+            if (req->target == _sapp.x11.UTF8_STRING) {
+                XChangeProperty(_sapp.x11.display,
+                                req->requestor,
+                                req->property,
+                                _sapp.x11.UTF8_STRING,
+                                8,
+                                PropModeReplace,
+                                (unsigned char*) _sapp.clipboard.buffer,
+                                strlen(_sapp.clipboard.buffer));
+            } else if (req->target == _sapp.x11.TARGETS) {
+                XChangeProperty(_sapp.x11.display,
+                                req->requestor,
+                                req->property,
+                                XA_ATOM,
+                                32,
+                                PropModeReplace,
+                                (unsigned char*) &_sapp.x11.UTF8_STRING,
+                                1);
+            } else {
+                reply.property = None;
+            }
+            XSendEvent(_sapp.x11.display, req->requestor, False, 0, (XEvent*) &reply);
+            break;
+        }
         case DestroyNotify:
             break;
     }
@@ -11434,21 +11552,23 @@ SOKOL_API_IMPL void sapp_consume_event(void) {
 }
 
 /* NOTE: on HTML5, sapp_set_clipboard_string() must be called from within event handler! */
-SOKOL_API_IMPL void sapp_set_clipboard_string(const char* str) {
-    if (!_sapp.clipboard.enabled) {
+SOKOL_API_IMPL void sapp_set_clipboard_string(const char* str, int len) {
+    if (!_sapp.clipboard.enabled || len >= (size_t)_sapp.clipboard.buf_size - 1) {
         return;
     }
     SOKOL_ASSERT(str);
+    _sapp_strcpy(str, _sapp.clipboard.buffer, len + 1);
     #if defined(_SAPP_MACOS)
         _sapp_macos_set_clipboard_string(str);
     #elif defined(_SAPP_EMSCRIPTEN)
         _sapp_emsc_set_clipboard_string(str);
     #elif defined(_SAPP_WIN32)
         _sapp_win32_set_clipboard_string(str);
+    #elif defined(_SAPP_LINUX)
+        _sapp_x11_set_clipboard_string(str);
     #else
         /* not implemented */
     #endif
-    _sapp_strcpy(str, _sapp.clipboard.buffer, _sapp.clipboard.buf_size);
 }
 
 SOKOL_API_IMPL const char* sapp_get_clipboard_string(void) {
@@ -11461,6 +11581,8 @@ SOKOL_API_IMPL const char* sapp_get_clipboard_string(void) {
         return _sapp.clipboard.buffer;
     #elif defined(_SAPP_WIN32)
         return _sapp_win32_get_clipboard_string();
+    #elif defined(_SAPP_LINUX)
+        return _sapp_x11_get_clipboard_string();
     #else
         /* not implemented */
         return _sapp.clipboard.buffer;
