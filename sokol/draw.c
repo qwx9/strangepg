@@ -327,11 +327,16 @@ drawproc(void *)
 		if((req = recvul(drawc)) == 0)
 			break;
 		reqs |= req;
-		if((req & Reqredraw) != 0)
+		if((req & Reqredraw) != 0){
 			stop = 0;
+			sapp_input_wait(false);
+		}
 		if(!stop && (req & (Reqrefresh | Reqshape)) != 0){
-			if(!redraw())
+			if(!redraw()){
 				stop = 1;
+				sapp_input_wait(true);
+			}else
+				sapp_wakethefup();
 		}
 	}
 }
@@ -344,13 +349,16 @@ frame(void)
 
 	CLK0(fclk);
 	ctx = snk_new_frame();
-	if((reqs & Reqresetdraw) != 0)
+	if((reqs & Reqresetdraw) != 0){
+		reqs &= ~Reqresetdraw;
 		resize();
+	}
 	if((reqs & Reqresetui) != 0){
+		reqs &= ~Reqresetui;
 		resetui();
 		updateview();
 	}
-	reqs &= ~(Reqresetui | Reqresetdraw);
+	reqs &= ~(Reqrefresh | Reqshape | Reqshallowdraw | Reqredraw);
 	drawui(ctx);
 	CLK0(clk);
 	flush();

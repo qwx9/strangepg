@@ -1825,6 +1825,10 @@ SOKOL_APP_API_DECL sapp_desc sapp_query_desc(void);
 SOKOL_APP_API_DECL void sapp_request_quit(void);
 /* cancel a pending quit (when SAPP_EVENTTYPE_QUIT_REQUESTED has been received) */
 SOKOL_APP_API_DECL void sapp_cancel_quit(void);
+/* interrupt waiting for event */
+SOKOL_APP_API_DECL void sapp_wakethefup(void);
+/* this causes the app to block until input is received. the flag will be cleared after that, so you will have to call it again if necessary. */
+SOKOL_APP_API_DECL void sapp_input_wait(bool set);
 /* initiate a "hard quit" (quit application without sending SAPP_EVENTTYPE_QUIT_REQUESTED) */
 SOKOL_APP_API_DECL void sapp_quit(void);
 /* call from inside event callback to consume the current event (don't forward to platform) */
@@ -2164,6 +2168,7 @@ inline void sapp_run(const sapp_desc& desc) { return sapp_run(&desc); }
     #include <pthread.h>    /* only used a linker-guard, search for _sapp_linux_run() and see first comment */
     #include <time.h>
     #include <poll.h>
+    #include <sys/select.h>
 #endif
 
 #if defined(_SAPP_APPLE)
@@ -2675,7 +2680,7 @@ typedef struct {
 #define GLX_RGBA_BIT 0x00000001
 #define GLX_WINDOW_BIT 0x00000001
 #define GLX_DRAWABLE_TYPE 0x8010
-#define GLX_RENDER_TYPE	0x8011
+#define GLX_RENDER_TYPE    0x8011
 #define GLX_DOUBLEBUFFER 5
 #define GLX_RED_SIZE 8
 #define GLX_GREEN_SIZE 9
@@ -2863,6 +2868,7 @@ typedef struct {
     bool event_consumed;
     bool html5_ask_leave_site;
     bool onscreen_keyboard_shown;
+    bool input_wait;
     int window_width;
     int window_height;
     int framebuffer_width;
@@ -11227,6 +11233,34 @@ _SOKOL_PRIVATE void _sapp_egl_destroy(void) {
 
 #endif /* _SAPP_GLX */
 
+/* disgusting; x11 is not thread-safe so we can't send dummy events,
+ * forcing us to do this kind of shit with poll or select if we want
+ * to wait for next event but react to custom events to stop */
+_SOKOL_PRIVATE void _sapp_x11_wait_event(void) {
+    if (!_sapp.input_wait) {
+        return;
+    }
+    int cfd = ConnectionNumber(_sapp.x11.display);
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(cfd, &fds);
+    /* in the magical world of linux, select may return ready even
+     * though a read would block */
+    do{
+        if (select(cfd+1, &fds, NULL, NULL, NULL) < 0) {
+            break;
+        }
+    }while(!XPending(_sapp.x11.display));
+}
+
+_SOKOL_PRIVATE void _sapp_x11_wakethefup(void) {
+    if (!_sapp.x11.display || !_sapp.input_wait) {
+        return;
+    }
+    int cfd = ConnectionNumber(_sapp.x11.display);
+    write(cfd, &cfd, 0);
+}
+
 _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
     /* The following lines are here to trigger a linker error instead of an
         obscure runtime error if the user has forgotten to add -pthread to
@@ -11273,6 +11307,7 @@ _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
     XFlush(_sapp.x11.display);
     while (!_sapp.quit_ordered) {
         _sapp_timing_measure(&_sapp.timing);
+        _sapp_x11_wait_event();
         int count = XPending(_sapp.x11.display);
         while (count--) {
             XEvent event;
@@ -11545,6 +11580,16 @@ SOKOL_API_IMPL void sapp_cancel_quit(void) {
 
 SOKOL_API_IMPL void sapp_quit(void) {
     _sapp.quit_ordered = true;
+}
+
+SOKOL_API_IMPL void sapp_wakethefup(void) {
+    #if defined(_SAPP_LINUX)
+        _sapp_x11_wakethefup();
+    #endif
+}
+
+SOKOL_API_IMPL void sapp_input_wait(bool set) {
+    _sapp.input_wait = set;
 }
 
 SOKOL_API_IMPL void sapp_consume_event(void) {
