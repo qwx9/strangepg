@@ -41,12 +41,12 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	du = divv(du, m);
 	//du = mulv(du, Nodesz * n1->length / 2);
 	du = mulv(du, Nodesz / 2);
-	du = urev ? subv(p1, du) : addv(p1, du);
+	du = urev ? addv(p1, du) : subv(p1, du);
 	m = sqrt(dv.x * dv.x + dv.y * dv.y) + 0.000001;
 	dv = divv(dv, m);
 	//dv = mulv(dv, Nodesz * n2->length / 2);
 	dv = mulv(dv, Nodesz / 2);
-	dv = vrev ? addv(p2, dv) : subv(p2, dv);
+	dv = vrev ? subv(p2, dv) : addv(p2, dv);
 
 	r = redges + i;
 	r->pos1[0] = du.x;
