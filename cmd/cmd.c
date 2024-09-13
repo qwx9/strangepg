@@ -80,14 +80,14 @@ pushcmd(char *fmt, ...)
 void
 readcmd(char *s)
 {
-	int m, redraw;
+	int m, req;
 	float x, y;
 	ioff id, v;
 	char *fld[8], *p, *t;
 	Node *n;
 	Graph *g;
 
-	redraw = 0;
+	req = 0;
 	t = nextfield(nil, s, nil, '\n');
 	while(s != nil){
 		g = graphs;
@@ -134,6 +134,7 @@ readcmd(char *s)
 			}
 			if(importlayout(g, fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
+			req |= Reqredraw;
 			break;
 		case 'o':
 			if(m != 1){
@@ -195,15 +196,15 @@ readcmd(char *s)
 			}
 			v = v << 8 | 0x90;	/* FIXME: need a better way to handle this */
 			setcolor(rnodes[id].col, v);
-			redraw = 1;
+			req |= Reqshallowdraw;
 			break;
 		}
 	next:
 		s = t;
 		t = nextfield(nil, s, nil, '\n');
 	}
-	if(redraw)
-		reqdraw(Reqshallowdraw);
+	if(req != 0)
+		reqdraw(req);
 }
 
 static void

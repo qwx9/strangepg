@@ -37,12 +37,6 @@ importlayout(Graph *g, char *path)
 		p += sizeof u.u;
 		u.u = GBIT32(p);
 		r->pos[1] = u.f;
-		p += sizeof u.u;
-		u.u = GBIT32(p);
-		r->dir[0] = u.f;
-		p += sizeof u.u;
-		u.u = GBIT32(p);
-		r->dir[1] = u.f;
 	}
 end:
 	if(x > 0 && x < sizeof buf){
@@ -76,12 +70,6 @@ exportlayout(Graph *g, char *path)
 		PBIT32(p, u.u);
 		p += sizeof u.u;
 		u.f = r->pos[1];
-		PBIT32(p, u.u);
-		p += sizeof u.u;
-		u.f = r->dir[0];
-		PBIT32(p, u.u);
-		p += sizeof u.u;
-		u.f = r->dir[1];
 		PBIT32(p, u.u);
 		if(writefs(fs, buf, sizeof buf) < 0)
 			goto end;
