@@ -15,8 +15,7 @@ typedef struct REdge REdge;
 #pragma incomplete Layout
 #pragma incomplete Thread
 
-/* FIXME */
-typedef	ssize	ioff;
+typedef	s32int	ioff;
 
 enum{
 	Vforward = 0,

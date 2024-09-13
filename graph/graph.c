@@ -54,18 +54,18 @@ printgraph(Graph *g)
 	warn("graph %#p nn %zd ne %zd\n", g, dylen(g->nodes), dylen(g->edges));
 	for(i=0, ie=i+dylen(g->edges); i<ie; i++){
 		e = g->edges + i;
-		warn("e[%04zx] %zx%c:%zx%c\n", i,
+		warn("e[%04x] %x%c:%x%c\n", i,
 			e->u >> 1, e->u & 1 ? '-' : '+',
 			e->v >> 1, e->v & 1 ? '-' : '+');
 	}
 	for(i=0, ie=i+dylen(g->nodes); i<ie; i++){
 		n = g->nodes + i;
-		warn("n[%04zx] ch %zx → [ ", i, n->ch);
+		warn("n[%04x] ch %x → [ ", i, n->ch);
 		for(np=n->out, ne=np+dylen(np); np<ne; np++)
-			warn("%zx ", *np);
+			warn("%x ", *np);
 		warn("] ← [ ");
 		for(np=n->in, ne=np+dylen(np); np<ne; np++)
-			warn("%zx ", *np);
+			warn("%x ", *np);
 		warn("]\n");
 	}
 }
@@ -299,7 +299,7 @@ pushnode(Graph *g, char *s)
 	/* nodes may be defined after an edge references them, should
 	 * not be considered as an error */
 	if((id = getid(g, s)) >= 0){
-		DPRINT(Debugfs, "duplicate node[%zd] %s", id, s);
+		DPRINT(Debugfs, "duplicate node[%d] %s", id, s);
 		return id;
 	}
 	s = estrdup(s);

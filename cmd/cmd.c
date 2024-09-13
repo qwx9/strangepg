@@ -55,11 +55,11 @@ pushcmd(char *fmt, ...)
 			break;
 		case 'd':
 			ai = va_arg(arg, ioff);
-			sp = seprint(sp, sb+sizeof sb-1, "%zd", ai);
+			sp = seprint(sp, sb+sizeof sb-1, "%d", ai);
 			break;
 		case 'x':
 			ai = va_arg(arg, ioff);
-			sp = seprint(sp, sb+sizeof sb-1, "%08zx", ai);
+			sp = seprint(sp, sb+sizeof sb-1, "%08x", ai);
 			break;
 		default:
 			warn("pushcmd: unknown format %c in <%s>\n", c, f);

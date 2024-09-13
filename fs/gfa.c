@@ -30,7 +30,7 @@ collectgfanodes(Graph *g, File *f)
 			continue;
 		}
 		n = g->nodes + i;
-		DPRINT(Debugmeta, "collectgfanodes node[%zd]: %d %s", i, f->trunc, s);
+		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", i, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
 		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* id */
 			continue;
@@ -52,7 +52,7 @@ collectgfanodes(Graph *g, File *f)
 			/* FIXME: no error checking */
 			if(strncmp(s, "LN", 2) == 0){
 				if(r){
-					DPRINT(Debugmeta, "node[%zx]: ignoring redundant length field", i);
+					DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", i);
 					continue;
 				}
 				n->length = atoi(s+5);
@@ -94,7 +94,7 @@ collectgfaedges(Graph *g, File *f)
 			}
 			continue;
 		}
-		DPRINT(Debugmeta, "collectgfaedges edges[%zd]: %d %s", i, f->trunc, s);
+		DPRINT(Debugmeta, "collectgfaedges edges[%d]: %d %s", i, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* L */
 		|| (s = nextfield(f, s, nil, '\t')) == nil	/* u */
 		|| (s = nextfield(f, s, nil, '\t')) == nil	/* du */
@@ -218,8 +218,8 @@ loadgfa1(void *arg)
 		p = nextfield(f, s, nil, '\t');
 		switch(s[0]){
 		case 'H': parse = gfa1hdr; break;
-		case 'S': parse = gfa1seg; if(++nnodes % 100000 == 0) warn("loadgfa: %zde5 nodes...\n", nnodes/100000); break;
-		case 'L': parse = gfa1link; if(++nedges % 100000 == 0) warn("loadgfa: %zde5 edges...\n", nedges/100000); break;
+		case 'S': parse = gfa1seg; if(++nnodes % 100000 == 0) warn("loadgfa: %de5 nodes...\n", nnodes/100000); break;
+		case 'L': parse = gfa1link; if(++nedges % 100000 == 0) warn("loadgfa: %de5 edges...\n", nedges/100000); break;
 		case 'P': parse = gfa1path; break;
 		default: DPRINT(Debugfs, "line %d: unknown record type %c", f->nr, s[0]); continue;
 		}
