@@ -5,12 +5,16 @@
 #include "threads.h"
 #include "cmd.h"
 
+enum{
+	Recsz = 2 * sizeof(float),
+};
+
 int
 importlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int x;
-	uchar buf[sizeof(ioff) + 2*3*sizeof(float)], *p;
+	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r;
 
@@ -52,7 +56,7 @@ exportlayout(Graph *g, char *path)
 {
 	union { u32int u; float f; } u;
 	int x;
-	uchar buf[sizeof(u64int) + 2*3*sizeof(float)], *p;
+	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r, *re;
 
