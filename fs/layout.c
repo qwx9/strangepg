@@ -28,13 +28,13 @@ importlayout(Graph *g, char *path)
 	if((x = openfs(fs, path, OREAD)) < 0)
 		goto end;
 	for(r=rnodes;; r++){
+		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
+			break;
 		if(r >= rnodes + dylen(rnodes)){
 			werrstr("more records than there are rnodes");
 			x = -1;
 			break;
 		}
-		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
-			break;
 		p = buf;
 		u.u = GBIT32(p);
 		r->pos[0] = u.f;
