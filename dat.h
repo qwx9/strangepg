@@ -43,8 +43,12 @@ extern RNode *rnodes;
 extern REdge *redges;
 
 enum{
-	FNfixed = 1<<0,
-	FNinitpos = 1<<1,
+	FNfixedx = 1<<0,
+	FNfixedy = 1<<1,
+	FNfixed = FNfixedx | FNfixedy,
+	FNinitx = 1<<2,
+	FNinity = 1<<3,
+	FNinitpos = FNinitx | FNinity,
 };
 struct Node{
 	ioff *in;		/* dynamic array (edge indices) */

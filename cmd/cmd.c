@@ -74,6 +74,51 @@ pushcmd(char *fmt, ...)
 	sendcmd(sb);
 }
 
+static inline int
+fnsetpos(Graph *g, char *sid, char *pos, int fix, int axis)
+{
+	ioff id;
+	float c;
+	char *p;
+	Node *n;
+
+	if((id = str2idx(sid)) < 0)
+		return -1;
+	n = g->nodes + id;
+	c = strtod(pos, &p);
+	if(p == pos){
+		werrstr("invalid coordinate %s", pos);
+		return -1;
+	}
+	if(axis == 0){
+		n->flags |= fix ? FNfixedx | FNinitx : FNinitx;
+		n->pos0.x = c;
+	}else{
+		n->flags |= fix ? FNfixedy | FNinity : FNinity;
+		n->pos0.y = c;
+	}
+	return 0;
+}
+
+static inline int
+fnsetcolor(char *sid, char *col)
+{
+	ioff id;
+	char *p;
+	u32int v;
+
+	if((id = str2idx(sid)) < 0)
+		return -1;
+	v = strtol(col, &p, 0);
+	if(p == col){
+		werrstr("invalid color %s", col);
+		return -1;
+	}
+	v = v << 8 | 0x90;	/* FIXME: need a better way to handle this */
+	setcolor(rnodes[id].col, v);
+	return 0;
+}
+
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
  * how do we dispatch user queries? would be useful to do queries
  * on multiple ones! */
@@ -81,10 +126,7 @@ void
 readcmd(char *s)
 {
 	int m, req;
-	float x, y;
-	ioff id, v;
-	char *fld[8], *p, *t;
-	Node *n;
+	char *fld[8], *t;
 	Graph *g;
 
 	req = 0;
@@ -103,11 +145,14 @@ readcmd(char *s)
 		case 'I':
 			showobject(s + 2);
 			goto next;
+		case 'X':
+		case 'Y':
 		case 'c':
-		case 'i':
 		case 'f':
+		case 'i':
 		case 'o':
 		case 'x':
+		case 'y':
 			break;
 		default:
 			warn("reply: <%s>\n", s);
@@ -116,87 +161,61 @@ readcmd(char *s)
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
 			goto error;
 		switch(s[0]){
+		invalid:
+			werrstr("invalid %c message length %d\n", s[0], m);
+			/* wet floor */
 		error:
 			warn("readcmd: %s\n", error());
 			break;
-		case 'f':
-			if(m != 1){
-				werrstr("invalid f message length %d\n", m);
+		case 'X':
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(g, fld[0], fld[1], 1, 0) < 0)
 				goto error;
-			}
+			break;
+		case 'Y':
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(g, fld[0], fld[1], 1, 1) < 0)
+				goto error;
+			break;
+		case 'c':
+			if(m != 2)
+				goto invalid;
+			if(fnsetcolor(fld[0], fld[1]) < 0)
+				goto error;
+			req |= Reqshallowdraw;
+			break;
+		case 'f':
+			if(m != 1)
+				goto invalid;
 			if(loadfs(fld[0], FFcsv) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
 			break;
 		case 'i':
-			if(m != 1){
-				werrstr("invalid o message length %d\n", m);
-				goto error;
-			}
+			if(m != 1)
+				goto invalid;
 			if(importlayout(g, fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
 			req |= Reqredraw;
 			break;
 		case 'o':
-			if(m != 1){
-				werrstr("invalid o message length %d\n", m);
-				goto error;
-			}
+			if(m != 1)
+				goto invalid;
 			if(exportlayout(g, fld[0]) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
 			break;
-		case 'X':
-			if(m != 3){
-				werrstr("invalid X message length %d\n", m);
-				goto error;
-			}
-			if((id = str2idx(fld[0])) < 0)
-				goto error;
-			n = g->nodes + id;
-			x = strtod(fld[1], &p);
-			if(p == fld[1]){
-				werrstr("invalid coordinate %s", fld[1]);
-				goto error;
-			}
-			y = strtod(fld[2], &p);
-			if(p == fld[2]){
-				werrstr("invalid coordinate %s", fld[2]);
-				goto error;
-			}
-			n->flags |= FNfixed;
-			n->pos0.x = x;
-			n->pos0.y = y;
-			break;
 		case 'x':
-			if(m != 2){
-				werrstr("invalid x message length %d\n", m);
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(g, fld[0], fld[1], 0, 0) < 0)
 				goto error;
-			}
-			if((id = str2idx(fld[0])) < 0)
-				goto error;
-			n = g->nodes + id;
-			x = strtod(fld[1], &p);
-			if(p == fld[1]){
-				werrstr("invalid coordinate %s", fld[1]);
-				goto error;
-			}
-			n->flags |= FNinitpos;
-			n->pos0.x = x;
 			break;
-		case 'c':
-			if(m != 2){
-				werrstr("invalid c message length %d\n", m);
+		case 'y':
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(g, fld[0], fld[1], 0, 1) < 0)
 				goto error;
-			}
-			if((id = str2idx(fld[0])) < 0)
-				goto error;
-			v = strtoll(fld[1], &p, 0);
-			if(p == fld[1]){
-				werrstr("invalid color %s", fld[1]);
-				goto error;
-			}
-			v = v << 8 | 0x90;	/* FIXME: need a better way to handle this */
-			setcolor(rnodes[id].col, v);
-			req |= Reqshallowdraw;
 			break;
 		}
 	next:

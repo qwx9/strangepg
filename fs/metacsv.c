@@ -87,13 +87,7 @@ loadcsv(void *arg)
 				break;
 			}
 			tag = tags[nf-1];
-			// FIXME: stupid
-			if(strcmp(tag, "CL") == 0 || cistrcmp(tag, "color") == 0)
-				pushcmd("nodecolor(\"%s\", %s)", name, s);
-			else if(strcmp(tag, "BO") == 0)
-				pushcmd("fixnodex(\"%s\", %s)", name, s);
-			else
-				pushcmd("%s[\"%s\"] = \"%s\"", tags[nf-1], name, s);
+			setnamedtag(name, tag, s);
 		}
 		nr++;
 	}

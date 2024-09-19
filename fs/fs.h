@@ -37,6 +37,8 @@ void	regfs(Filefmt*);
 
 int	importlayout(Graph*, char*);
 int	exportlayout(Graph*, char*);
+void	setnamedtag(char*, char*, char*);
+void	settag(Node*, ioff, char*, char*);
 
 int	sysopen(File*, int);
 int	sysfdopen(File*, int, int);

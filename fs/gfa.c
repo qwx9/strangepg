@@ -6,7 +6,47 @@
 
 /* assumptions:
  * - required field separator is \t
+ * - tags are two characters long as per the spec
+ * - length of inlined sequence trumps LN tag
  */
+
+/* FIXME: no error checking */
+void
+setnamedtag(char *label, char *tag, char *val)
+{
+	if(strcmp(tag, "CL") == 0 || cistrcmp(tag, "color") == 0)
+		pushcmd("nodecolor(\"%s\", %s)", label, val);
+	else if(strcmp(tag, "fx") == 0)
+		pushcmd("fixx(\"%s\", %s)", label, val);
+	else if(strcmp(tag, "fy") == 0)
+		pushcmd("fixy(\"%s\", %s)", label, val);
+	else if(strcmp(tag, "x0") == 0)
+		pushcmd("initx(\"%s\", %s)", label, val);
+	else if(strcmp(tag, "y0") == 0)
+		pushcmd("inity(\"%s\", %s)", label, val);
+	else
+		pushcmd("%s[\"%s\"] = \"%s\"", tag, label, val);
+}
+void
+settag(Node *n, ioff id, char *tag, char *val)
+{
+	if(strcmp(tag, "LN") == 0){
+		n->length = atoi(val);
+	}else if(strcmp(tag, "fx") == 0){
+		n->pos0.x = atof(val);
+		n->flags |= FNfixedx | FNinitx;
+	}else if(strcmp(tag, "fy") == 0){
+		n->pos0.y = atof(val);
+		n->flags |= FNfixedy | FNinity;
+	}else if(strcmp(tag, "x0") == 0){
+		n->pos0.x = atof(val);
+		n->flags |= FNinitx;
+	}else if(strcmp(tag, "y0") == 0){
+		n->pos0.y = atof(val);
+		n->flags |= FNinity;
+	}
+	pushcmd("%s[label[%d]] = \"%s\"", tag, id, val);
+}
 
 static int
 collectgfanodes(Graph *g, File *f)
@@ -36,7 +76,7 @@ collectgfanodes(Graph *g, File *f)
 			continue;
 		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
-			pushcmd("LN[lnode[%d]] = %d", i, l);
+			pushcmd("LN[label[%d]] = %d", i, l);
 			c++;
 			n->length = l;
 			r = 1;
@@ -47,26 +87,13 @@ collectgfanodes(Graph *g, File *f)
 				warn("node[%zd]: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
 				continue;
 			}
-			/* FIXME: don't assume two letter tags? */
-			/* ignore length if sequence was inlined */
-			/* FIXME: no error checking */
-			if(strncmp(s, "LN", 2) == 0){
-				if(r){
-					DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", i);
-					continue;
-				}
-				n->length = atoi(s+5);
-			}else if(strncmp(s, "fx", 2) == 0){
-				n->flags |= FNfixed;
-				n->pos0.x = atof(s+5);
-			}else if(strncmp(s, "fy", 2) == 0)
-				n->pos0.y = atof(s+5);
-			else if(strncmp(s, "mv", 2) == 0 || strncmp(s, "BO", 2) == 0){
-				n->flags |= FNinitpos;
-				n->pos0.x = atof(s+5);
-			}
 			s[2] = 0;
-			pushcmd("%s[lnode[%d]] = \"%s\"", s, i, s+5);
+			/* ignore length if sequence was inlined */
+			if(strcmp(s, "LN") == 0 && r){
+				DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", i);
+				continue;
+			}
+			settag(n, i, s, s+5);
 			c++;
 		}
 		nerr = 0;

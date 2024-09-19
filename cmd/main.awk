@@ -48,12 +48,12 @@ BEGIN{
 }
 function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
-	if(id in lnode){
-		delete node[lnode[id]]
-		delete lnode[id]
+	if(id in label){
+		delete node[label[id]]
+		delete label[id]
 	}
 	node[name] = id
-	lnode[id] = name
+	label[id] = name
 	if(color != "")
 		CL[name] = color
 }
@@ -70,7 +70,7 @@ function delnode(name){
 		print "E no such node", name
 		return
 	}
-	delete lnode[node[name]]
+	delete label[node[name]]
 	delete node[name]
 }
 function addedge(id, name){
@@ -132,7 +132,7 @@ function readcsv(f){
 	}
 }
 function nodeinfo(id){
-	name = lnode[id]
+	name = label[id]
 	s = name
 	if(name in LN)
 		s = s ", length=" LN[name]
@@ -146,46 +146,66 @@ function edgeinfo(id){
 		s = s ", CIGAR=\"" cigar[name] "\""
 	print "I", "Edge:", s
 }
-# FIXME: stupid
-function fixnode(name, x, y){
+function initx(name, x){
 	if(!(name in node)){
 		print "E no such node", name
 		return
 	}
-	if(y == "")
-		y = 0
-	fx[name] = x
-	fy[name] = y
-	print "X", node[name], x, y
-}
-function fixnodex(name, x){
-	if(!(name in node)){
-		print "E no such node", name
-		return
-	}
-	BO[name] = x
+	x0[name] = x
 	print "x", node[name], x
+}
+function inity(name, y){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
+	y0[name] = y
+	print "y", node[name], y
+}
+function fixx(name, x){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
+	fx[name] = x
+	print "X", node[name], x
+}
+function fixy(name, y){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
+	fy[name] = y
+	print "Y", node[name], y
 }
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]
-#/^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
+function subexpr(s, fn,	i, j, t, pred){
+	i = 0
+	t = s
+	while((j = index(t, "]")) != 0){
+		i += j
+		t = substr(t, j + 1)
+	}
+	pred = substr(s, 1, i - 1)
+	i = match(s, "[^=]=[^=]")
+	s = substr(s, i + 2)
+	$0 = "for(i in node) if(" pred "){ " fn "(i, " s ")}"
+}
 crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)
 	s = substr($0, i + 1)
-	# FIXME: use a function; use for other vars?
-	if(v == "CL" || v ~ /[Cc][Oo][Ll][Oo][Rr]/){
-		i = 0
-		t = s
-		while((j = index(t, "]")) != 0){
-			i += j
-			t = substr(t, j + 1)
-		}
-		pred = substr(s, 1, i - 1)
-		i = match(s, "[^=]=[^=]")
-		s = substr(s, i + 2)
-		$0 = "for(i in node) if("pred"){ nodecolor(i, " s ")}"
-	}
+	if(v == "CL" || v ~ /[Cc][Oo][Ll][Oo][Rr]/)
+		subexpr(s, "nodecolor")
+	else if(v == "x0")
+		subexpr(s, "initx")
+	else if(v == "y0")
+		subexpr(s, "inity")
+	else if(v == "fx")
+		subexpr(s, "fixx")
+	else if(v == "fy")
+		subexpr(s, "fixy")
 }
 {
 	eval("{" $0 "}")

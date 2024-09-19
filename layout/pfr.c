@@ -12,7 +12,8 @@ typedef struct P P;
 typedef struct D D;
 struct P{
 	ioff e;
-	int ne;
+	short ne;
+	short flags;
 };
 struct D{
 	P *ptab;
@@ -40,20 +41,29 @@ new(Graph *g)
 	etab = nil;
 	n = C * Length;
 	k = C * sqrt((double)(Length * Length) / dylen(rnodes));
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
-		r->pos[0] = nrand(2 * n) - n;
-		r->pos[1] = nrand(2 * n) - n;
+	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
+		if((u->flags & FNinitx) != 0)
+			r->pos[0] = u->pos0.x;
+		else
+			r->pos[0] = nrand(2 * n) - n;
+		if((u->flags & FNinity) != 0)
+			r->pos[1] = u->pos0.y;
+		else
+			r->pos[1] = nrand(2 * n) - n;
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
 		p.ne = 0;
-		for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
-			iv = g->edges[*e].v >> 1;
-			dypush(etab, iv);
-		}
-		for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++){
-			iv = g->edges[*e].u >> 1;
-			dypush(etab, iv);
+		p.flags = u->flags & FNfixed;
+		if((u->flags & FNfixed) != FNfixed){
+			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
+				iv = g->edges[*e].v >> 1;
+				dypush(etab, iv);
+			}
+			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++){
+				iv = g->edges[*e].u >> 1;
+				dypush(etab, iv);
+			}
 		}
 		dypush(ptab, p);
 	}
@@ -107,6 +117,8 @@ compute(void *arg, volatile int *stat, int i)
 		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
 			if((*stat & LFstop) != 0)
 				return 0;
+			if((pp->flags & FNfixed) == FNfixed)
+				continue;
 			x = r->pos[0];
 			y = r->pos[1];
 			Δx = Δy = 0;
@@ -136,10 +148,14 @@ compute(void *arg, volatile int *stat, int i)
 			δx = t * Δx;
 			δy = t * Δy;
 			δ = Δ(δx, δy);
-			x += δx / δ;
-			y += δy / δ;
-			r->pos[0] = x;
-			r->pos[1] = y;
+			if((pp->flags & FNfixedx) == 0){
+				x += δx / δ;
+				r->pos[0] = x;
+			}
+			if((pp->flags & FNfixedy) == 0){
+				y += δy / δ;
+				r->pos[1] = y;
+			}
 			if(Δr < δ)
 				Δr = δ;
 		}
