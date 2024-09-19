@@ -5,8 +5,8 @@ typedef struct Color Color;
 #pragma incomplete Color
 
 enum{
-	Nodesz = 8,
-	Ptsz = 2,	// FIXME: mostly unused
+	Nodesz = 5,
+	Ptsz = 2,
 };
 
 struct Quad{

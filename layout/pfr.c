@@ -6,7 +6,7 @@
 enum{
 	Length = 256,
 };
-#define C	0.15
+#define C	0.1
 
 typedef struct P P;
 typedef struct D D;
@@ -39,7 +39,7 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
-	n = C * Length;
+	n = 2;
 	k = C * sqrt((double)(Length * Length) / dylen(rnodes));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
