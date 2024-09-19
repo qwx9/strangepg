@@ -216,23 +216,41 @@ Hovering over an edge or node shows some information on the prompt window.
 _strangepg_ provides a text prompt for interaction with the graph by issuing commands.
 They are effectively [_awk_](https://awk.dev) one-liners.
 GFA tags and labels are transformed into tables which can then be used to change the state of the graph in arbitrary ways.
-For more in-depth information, check out [the help document](strawk.md).
 
 #### Examples
 
 Color nodes with labels matching a regexp:
 ```awk
-CL[i ~ /chr13/] = red
-```
-
-Color every other node in red:
-```awk
-CL[node[i] % 2 == 1] = red
+CL[i ~ /chr13/] = green
 ```
 
 Color nodes with sequence length > 50:
 ```awk
-CL[LN[i] > 50] = red
+CL[LN[i] > 50] = darkgreen
+```
+
+Color nodes which have a certain tag defined:
+```awk
+CL[i in CN] = purple
+```
+
+Color a specific node:
+```awk
+nodecolor("s1", red)
+# also works but will loop through all nodes:
+CL[i == "s1"] = red
+```
+
+Color 42th node in order of appearance in GFA (in S or L records):
+```awk
+nodecolor(label[42], blue)
+# also works but will loop through all nodes:
+CL[node[i] == 42] = blue
+```
+
+Color every other node:
+```awk
+CL[node[i] % 2 == 1] = orange
 ```
 
 See [strawk.md](strawk.md) for a more detailed overview.
