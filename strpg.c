@@ -72,12 +72,11 @@ help(void)
 		"-v             Print version and exit\n"
 		"ALGO may be one of:\n"
 		" fr            Fruchterman-Reingold variant\n"
-		" pfr           Parallel Fruchterman-Reingold variant (default)\n"
+		" pfr           Parallelized Fruchterman-Reingold variant (default)\n"
 		" conga         Fixed linear layout based on segment order in input file\n"
 		" random        Random fixed positions\n"
 		" linear        Linear layout with fixed-position nodes (wip)\n"
 		" circ          Circular layout with fixed-position nodes (wip)\n"
-		" bo            Linear layout with initial positions\n"
 	);
 	quit();
 }
@@ -146,8 +145,6 @@ parseargs(int argc, char **argv)
 			deflayout = LLpfr;
 		else if(strcmp(s, "circ") == 0)
 			deflayout = LLcirc;
-		else if(strcmp(s, "bo") == 0)
-			deflayout = LLbo;
 		else
 			sysfatal("unknown layout type");
 		break;

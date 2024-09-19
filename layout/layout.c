@@ -250,5 +250,4 @@ initlayout(void)
 	sktab[LLlinear] = reglinear();
 	sktab[LLpfr] = regpfr();
 	sktab[LLcirc] = regcirc();
-	sktab[LLbo] = regbo();
 }
