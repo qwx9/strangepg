@@ -342,27 +342,37 @@ pushiedge(Graph *g, ioff u, ioff v)
 ioff
 pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 {
-	char *s;
-	ioff id, n, u, v;
+	char *s, *sf;
+	ioff id, f, n, u, v;
 
 	if((u = pushnode(g, eu)) < 0 || (v = pushnode(g, ev)) < 0)
 		return -1;
 	n = strlen(eu) + strlen(ev) + 8;
 	s = emalloc(n);
+	sf = nil;
 	snprint(s, n, "%s%c\x1c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
-	if(getid(g, s) >= 0){
-		free(s);
-		werrstr("duplicate edge %s%c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
-		return -1;
+	/* detect redundancies by always flipping edges such that u<v, or
+	 * for self-edges if u is reversed */
+	if(f = v > u || v == u && d1 == 1){
+		sf = estrdup(s);
+		snprint(s, n, "%s%c\x1c%s%c", ev, d2 ? '+' : '-', eu, d1 ? '+' : '-');
 	}
-	u = u << 1 | d1 & 1;
-	v = v << 1 | d2 & 1;
+	if((id = getid(g, s)) >= 0){
+		DPRINT(Debugfs, "duplicate edge[%d] %s%s", id, s, f ? " (flipped)" : "");
+		free(s);
+		free(sf);
+		return id;
+	}
+	u = u << 1 | d1;
+	v = v << 1 | d2;
 	if((id = pushiedge(g, u, v)) < 0 || pushid(g, s, id) < 0){
-		//deledge(g, s, id);
 		free(s);
 		id = -1;
-	}else
-		pushcmd("addedge(%d,\"%s\")", id, s);
+	}else{
+		/* always push only what was actually in the input */
+		pushcmd("addedge(%d,\"%s\")", id, sf != nil ? sf : s);
+	}
+	free(sf);
 	return id;
 }
 

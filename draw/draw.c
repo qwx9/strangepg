@@ -36,18 +36,14 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
 	p2.z = 0.0f;
-
 	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
-	//du = mulv(du, Nodesz * n1->length / 2);
-	du = mulv(du, Nodesz / 2);
+	du = mulv(du, Nodesz / 2.0f);
 	du = urev ? addv(p1, du) : subv(p1, du);
 	m = sqrt(dv.x * dv.x + dv.y * dv.y) + 0.000001;
 	dv = divv(dv, m);
-	//dv = mulv(dv, Nodesz * n2->length / 2);
-	dv = mulv(dv, Nodesz / 2);
+	dv = mulv(dv, Nodesz / 2.0f);
 	dv = vrev ? subv(p2, dv) : addv(p2, dv);
-
 	r = redges + i;
 	r->pos1[0] = du.x;
 	r->pos1[1] = du.y;
@@ -69,9 +65,8 @@ drawedges(Graph *g)
 static inline void
 faceyourfears(Graph *g, Node *u, RNode *ru)
 {
-	int n;
 	float x, y, Δx, Δy;
-	double θ, c, s;
+	double θ, c, s, Δ;
 	ioff *i, *ie;
 	Edge *e;
 	RNode *rv;
@@ -79,30 +74,37 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 	x = ru->pos[0];
 	y = ru->pos[1];
 	c = s = 0.0;
-	n = 0;
-	for(i=u->in, ie=i+dylen(i); i<ie; i++, n++){
+	for(i=u->in, ie=i+dylen(i); i<ie; i++){
 		e = g->edges + *i;
 		rv = rnodes + (e->u >> 1);
+		if(rv == ru)
+			continue;
 		Δx = rv->pos[0] - x;
 		Δy = rv->pos[1] - y;
-		θ = atan2(Δy, Δx);
-		c += cos(θ);
-		s += sin(θ);
+		if((e->v & 1) != 0){
+			Δx = -Δx;
+			Δy = -Δy;
+		}
+		Δ = sqrt(Δx * Δx + Δy * Δy);
+		c += Δx / Δ;
+		s += Δy / Δ;
 	}
-	for(i=u->out, ie=i+dylen(i); i<ie; i++, n++){
+	for(i=u->out, ie=i+dylen(i); i<ie; i++){
 		e = g->edges + *i;
 		rv = rnodes + (e->v >> 1);
+		if(rv == ru)
+			continue;
 		Δx = x - rv->pos[0];
 		Δy = y - rv->pos[1];
-		θ = atan2(Δy, Δx);
-		c += cos(θ);
-		s += sin(θ);
+		if((e->u & 1) != 0){
+			Δx = -Δx;
+			Δy = -Δy;
+		}
+		Δ = sqrt(Δx * Δx + Δy * Δy);
+		c += Δx / Δ;
+		s += Δy / Δ;
 	}
-	if(n > 0){
-		c /= n;
-		s /= n;
-	}
-	θ = atan2(s, c);
+	θ = fmod(atan2(s, c), 2*PI);
 	ru->dir[0] = cos(θ);
 	ru->dir[1] = sin(θ);
 }
