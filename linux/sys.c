@@ -68,6 +68,7 @@ sysfatal(char *fmt, ...)
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
 	fprintf(stderr, "\n");
+	close(epfd[1]);	/* for interrupting cproc */
 	exit(EXIT_FAILURE);
 }
 
