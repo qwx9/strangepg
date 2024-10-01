@@ -255,12 +255,10 @@ loadgfa1(void *arg)
 			f->err++;
 		}
 	}
-	if(f->err >= 10){
-		warn("loadgfa1: too many errors\n");
-		nukegraph(&g);
-		closefs(f);
-		sysfatal("%s", error());
-	}
+	if(f->err >= 10)
+		sysfatal("loadgfa1: too many errors, last error: %s\n", error());
+	if(dylen(g.nodeoff) < dylen(g.nodes))
+		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
 	cleargraphtempshit(&g);
 	DPRINT(Debugfs, "done loading gfa");
 	pushgraph(g);
