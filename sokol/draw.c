@@ -303,7 +303,6 @@ resize(void)
 	sg_destroy_image(zfb);
 	sg_destroy_attachments(offscreen_attachments);
 	initfb(sapp_width(), sapp_height());
-	resetui();
 	updateview();
 }
 
@@ -313,6 +312,7 @@ reqdraw(int r)
 	static ulong f;
 
 	f |= r;
+	reqs |= r;
 	if(nbsendul(drawc, f) != 0)
 		f = 0;
 }
@@ -326,7 +326,6 @@ drawproc(void *)
 	for(;;){
 		if((req = recvul(drawc)) == 0)
 			break;
-		reqs |= req;
 		if((req & Reqredraw) != 0){
 			stop = 0;
 			sapp_input_wait(false);
@@ -352,6 +351,7 @@ frame(void)
 	if((reqs & Reqresetdraw) != 0){
 		reqs &= ~Reqresetdraw;
 		resize();
+		reqdraw(Reqredraw);
 	}
 	if((reqs & Reqresetui) != 0){
 		reqs &= ~Reqresetui;
