@@ -36,11 +36,11 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
 	p2.z = 0.0f;
-	m = sqrt(du.x * du.x + du.y * du.y) + 0.000001;
+	m = sqrtf(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
 	du = mulv(du, Nodesz / 2.0f);
 	du = urev ? addv(p1, du) : subv(p1, du);
-	m = sqrt(dv.x * dv.x + dv.y * dv.y) + 0.000001;
+	m = sqrtf(dv.x * dv.x + dv.y * dv.y) + 0.000001;
 	dv = divv(dv, m);
 	dv = mulv(dv, Nodesz / 2.0f);
 	dv = vrev ? subv(p2, dv) : addv(p2, dv);
@@ -65,8 +65,8 @@ drawedges(Graph *g)
 static inline void
 faceyourfears(Graph *g, Node *u, RNode *ru)
 {
-	float x, y, Δx, Δy;
-	double θ, c, s, Δ;
+	float x, y, Δ, Δx, Δy;
+	float θ, c, s;
 	ioff *i, *ie;
 	Edge *e;
 	RNode *rv;
@@ -85,7 +85,7 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 			Δx = -Δx;
 			Δy = -Δy;
 		}
-		Δ = sqrt(Δx * Δx + Δy * Δy);
+		Δ = sqrtf(Δx * Δx + Δy * Δy);
 		c += Δx / Δ;
 		s += Δy / Δ;
 	}
@@ -100,13 +100,13 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 			Δx = -Δx;
 			Δy = -Δy;
 		}
-		Δ = sqrt(Δx * Δx + Δy * Δy);
+		Δ = sqrtf(Δx * Δx + Δy * Δy);
 		c += Δx / Δ;
 		s += Δy / Δ;
 	}
-	θ = fmod(atan2(s, c), 2*PI);
-	ru->dir[0] = cos(θ);
-	ru->dir[1] = sin(θ);
+	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
+	ru->dir[0] = cosf(θ);
+	ru->dir[1] = sinf(θ);
 }
 
 static void

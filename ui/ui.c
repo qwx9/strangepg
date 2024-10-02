@@ -209,7 +209,7 @@ void
 initui(void)
 {
 	initsysui();
-	view.fov = 60;
-	view.tfov = tan(view.fov / 2);
+	view.fov = 60.0f;
+	view.tfov = tanf(view.fov / 2);
 	resetui();
 }

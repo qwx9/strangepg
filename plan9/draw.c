@@ -117,12 +117,12 @@ drawselected(void)
 	else if((selected & (1<<31)) == 0){
 		id = (uint)selected;
 		n = g->nodes + id;
-		snprint(s, sizeof s, "V[%zx]", id);
+		snprint(s, sizeof s, "V[%x]", id);
 		USED(n);
 	}else{
 		id = (uint)selected & ~(1<<31);
 		e = g->edges + id;
-		snprint(s, sizeof s, "E[%zx] %zx,%zx", id, e->u, e->v);
+		snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);
 	}
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
 }
@@ -161,7 +161,7 @@ drawlabels(void)
 int
 drawquad(ioff i)
 {
-	float θ, cθ, sθ;
+	float cθ, sθ;
 	Point p[5];
 	Color *c;
 	Vertex pos, dir;
@@ -173,9 +173,8 @@ drawquad(ioff i)
 	dir.x = v->dir[0];
 	dir.y = v->dir[1];
 	c = v2col(v->col);
-	θ = atan2(dir.y, dir.x);
-	cθ = cos(θ);
-	sθ = sin(θ);
+	cθ = dir.x;
+	sθ = dir.y;
 	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
@@ -191,6 +190,7 @@ drawquad(ioff i)
 	return 0;
 }
 
+/* FIXME: angling */
 int
 drawbezier(ioff i)
 {

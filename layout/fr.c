@@ -11,7 +11,7 @@ enum{
 	L = 256,
 	Area = W * L,
 };
-#define	C	0.25
+#define	C	0.25f
 
 typedef struct P P;
 struct P{
@@ -25,8 +25,8 @@ struct P{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.00001)
-#define	cool(t)	((t) * ((Nrep - 1.0) / Nrep))
+#define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.00001f)
+#define	cool(t)	((t) * ((Nrep - 1.0f) / Nrep))
 
 static void *
 new(Graph *g)
@@ -70,14 +70,14 @@ compute(void *arg, volatile int *stat, int idx)
 		return 0;
 	ptab = arg;
 	g = ptab->g;
-	k = C * sqrt((double)Area / dylen(ptab));
-	t = 1.0;
+	k = C * sqrtf((float)Area / dylen(ptab));
+	t = 1.0f;
 	for(;;){
 		Δr = 0;
 		for(u=ptab; u<ptab+dylen(ptab); u++){
 			if((*stat & LFstop) != 0)
 				return 0;
-			Δx = Δy = 0;
+			Δx = Δy = 0.0f;
 			for(v=ptab; v<ptab+dylen(ptab); v++){
 				if(u == v)
 					continue;

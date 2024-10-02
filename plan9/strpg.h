@@ -2,6 +2,7 @@
 #include <libc.h>
 #include <keyboard.h>
 #include <ctype.h>
+#include <math.h>	/* npe: float math functions */
 
 typedef intptr	ssize;
 

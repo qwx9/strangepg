@@ -3,10 +3,9 @@
 #include "drw.h"
 #include "layout.h"
 
-enum{
-	Length = 256,
-};
-#define C	0.1
+#define C	0.11f
+#define Length	256.0f
+#define Tolerance	0.5f
 
 typedef struct P P;
 typedef struct D D;
@@ -18,20 +17,20 @@ struct P{
 struct D{
 	P *ptab;
 	ioff *etab;
-	double k;
+	float k;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.995 * (t))
-#define	Δ(x, y)	(sqrt((x) * (x) + (y) * (y)) + 0.0001)
+#define	cool(t)	(0.999f * (t))
+#define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
 
 static void *
 new(Graph *g)
 {
 	int n;
 	ioff iv, *e, *ee, *etab;
-	double k;
+	float k;
 	Node *u, *ue;
 	RNode *r, *re;
 	P p, *ptab;
@@ -40,7 +39,7 @@ new(Graph *g)
 	ptab = nil;
 	etab = nil;
 	n = 2;
-	k = C * sqrt((double)(Length * Length) / dylen(rnodes));
+	k = C * sqrtf(Length * Length / dylen(rnodes));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
@@ -97,7 +96,7 @@ compute(void *arg, volatile int *stat, int i)
 {
 	int Δ;
 	ioff *e, *ee;
-	double t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -106,7 +105,7 @@ compute(void *arg, volatile int *stat, int i)
 	d = arg;
 	k = d->k;
 	t = k;
-	tol = 0.01 * k;
+	tol = Tolerance * k;
 	p0 = d->ptab + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
@@ -121,7 +120,7 @@ compute(void *arg, volatile int *stat, int i)
 				continue;
 			x = r->pos[0];
 			y = r->pos[1];
-			Δx = Δy = 0;
+			Δx = Δy = 0.0f;
 			for(v=rnodes; v<r1; v++){
 				if(r == v)
 					continue;
