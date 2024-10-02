@@ -198,7 +198,7 @@ void
 resetui(void)
 {
 	view.center = ZV;
-	view.eye = V(0.0f, 0.0f, 25.0f);
+	view.eye = V(0.0f, 0.0f, 50.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
 	view.Δeye = subv(view.eye, view.center);
 	view.pan = ZV;
