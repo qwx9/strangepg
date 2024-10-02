@@ -12,15 +12,13 @@ u32int *theme;
 static u32int theme1[Cend] = {
 	[Cbg]	= 0x000000ff,
 	[Ctext]	= 0xbb1100ff,
-	[Cnode]	= 0x2222ff90,
-	[Cedge]	= 0xbbbbbb30,
+	[Cedge]	= 0xbbbbbb90,
 	[Cemph]	= 0xff0000ff,
 };
 static u32int theme2[Cend] = {
 	[Cbg]	= 0xffffffff,
 	[Ctext]	= 0xeeee00ff,
-	[Cnode]	= 0xdddd009f,
-	[Cedge]	= 0x77777730,
+	[Cedge]	= 0x77777790,
 	[Cemph]	= 0xff0000ff,
 };
 
@@ -84,7 +82,7 @@ color(u32int v)
 u32int
 somecolor(ioff i)
 {
-	return colors[i % nelem(colors)] << 8 | 0x90;
+	return colors[i % nelem(colors)] << 8 | 0xb0;
 }
 
 void
