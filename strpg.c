@@ -74,6 +74,7 @@ help(void)
 		"ALGO may be one of:\n"
 		" fr            Fruchterman-Reingold variant\n"
 		" pfr           Parallelized Fruchterman-Reingold variant (default)\n"
+		" pfr3d         Experimental 3d version of the above\n"
 		" conga         Fixed linear layout based on segment order in input file\n"
 		" random        Random fixed positions\n"
 		" linear        Linear layout with fixed-position nodes (wip)\n"
@@ -145,6 +146,8 @@ parseargs(int argc, char **argv)
 			deflayout = LLfr;
 		else if(strcmp(s, "pfr") == 0)
 			deflayout = LLpfr;
+		else if(strcmp(s, "pfr3d") == 0)
+			deflayout = LLpfr3d;
 		else if(strcmp(s, "circ") == 0)
 			deflayout = LLcirc;
 		else

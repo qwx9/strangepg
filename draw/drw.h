@@ -37,6 +37,7 @@ enum{
 	VFhaxx0rz = 1<<0,
 	VFdrawarrows = 1<<1,
 	VFdrawlabels = 1<<2,
+	VFnodepth = 1<<3,
 };
 struct View{
 	int w;
@@ -63,7 +64,6 @@ int	redraw(void);
 enum{
 	Cbg,
 	Ctext,
-	Cnode,
 	Cedge,
 	Cemph,
 	Cend,
