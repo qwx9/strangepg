@@ -30,13 +30,13 @@ struct Vertex{
 
 /* FIXME: later, vertices or HMM vectors? */
 struct RNode{
-	float pos[2];
-	float dir[2];
+	float pos[3];
+	float dir[3];
 	float col[4];
 };
 struct REdge{
-	float pos1[2];
-	float pos2[2];
+	float pos1[3];
+	float pos2[3];
 	float col[4];
 };
 extern RNode *rnodes;

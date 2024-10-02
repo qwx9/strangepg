@@ -26,16 +26,16 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	n2 = rnodes + v;
 	du.x = n1->dir[0];
 	du.y = n1->dir[1];
-	du.z = 0.0f;
+	du.z = n1->dir[2];
 	p1.x = n1->pos[0];
 	p1.y = n1->pos[1];
-	p1.z = 0.0f;
+	p1.z = n1->pos[2];
 	dv.x = n2->dir[0];
 	dv.y = n2->dir[1];
-	dv.z = 0.0f;
+	dv.z = n2->dir[2];
 	p2.x = n2->pos[0];
 	p2.y = n2->pos[1];
-	p2.z = 0.0f;
+	p2.z = n2->pos[2];
 	m = sqrtf(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
 	du = mulv(du, Nodesz / 2.0f);
@@ -47,8 +47,10 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	r = redges + i;
 	r->pos1[0] = du.x;
 	r->pos1[1] = du.y;
+	r->pos1[2] = du.z;
 	r->pos2[0] = dv.x;
 	r->pos2[1] = dv.y;
+	r->pos2[2] = dv.z;
 }
 
 static int
@@ -107,6 +109,7 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
+	ru->dir[2] = 0.0f;
 }
 
 static void

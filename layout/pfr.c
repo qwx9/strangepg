@@ -30,6 +30,7 @@ new(Graph *g)
 {
 	int n;
 	ioff iv, *e, *ee, *etab;
+	double z;
 	float k;
 	Node *u, *ue;
 	RNode *r, *re;
@@ -49,6 +50,10 @@ new(Graph *g)
 			r->pos[1] = u->pos0.y;
 		else
 			r->pos[1] = nrand(2 * n) - n;
+		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
+		r->pos[2] = (view.flags & VFnodepth) == 0
+			? 0.8 * (0.5 - z)
+			: 0.00001 * z;
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);

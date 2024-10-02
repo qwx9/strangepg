@@ -569,12 +569,12 @@ initgl(void)
 				},
 				[1] = {
 					.offset = offsetof(RNode, pos),
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
 				[2] = {
 					.offset = offsetof(RNode, dir),
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
 				[3] = {
@@ -633,12 +633,12 @@ initgl(void)
 				},
 				[1] = {
 					.offset = offsetof(REdge, pos1),
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
 				[2] = {
 					.offset = offsetof(REdge, pos2),
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
 				[3] = {

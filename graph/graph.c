@@ -286,7 +286,6 @@ pushinode(Graph *g)
 		return -1;
 	dypush(g->nodes, n);
 	setcolor(r.col, somecolor(id));
-	r.dir[0] = 1.0f;	/* FIXME */
 	dypush(rnodes, r);
 	return id;
 }

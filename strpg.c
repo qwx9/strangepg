@@ -63,6 +63,7 @@ help(void)
 	warn("usage: %s [-Rbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]\n", argv0);
 	warn(
 		"-R             Do not reset layout once metadata is done loading\n"
+		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"-b             White-on-black theme\n"
 		"-c FILE        Load tags from csv FILE\n"
 		"-f FILE        Load layout from FILE\n"
@@ -84,7 +85,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Rbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]", argv0);
+	sysfatal("usage: %s [-RZbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]", argv0);
 }
 
 static void
@@ -101,32 +102,33 @@ parseargs(int argc, char **argv)
 	ARGBEGIN{
 	case 'D':
 		s = EARGF(usage());
-		if(strcmp(s, "cmd") == 0)
+		if(strcmp(s, "all") == 0)
+			debug |= Debugtheworld;
+		else if(strcmp(s, "cmd") == 0)
 			debug |= Debugcmd;
-		else if(strcmp(s, "draw") == 0)
-			debug |= Debugdraw;
-		else if(strcmp(s, "render") == 0)
-			debug |= Debugrender;
-		else if(strcmp(s, "layout") == 0)
-			debug |= Debuglayout;
-		else if(strcmp(s, "fs") == 0)
-			debug |= Debugfs;
 		else if(strcmp(s, "coarse") == 0)
 			debug |= Debugcoarse;
+		else if(strcmp(s, "draw") == 0)
+			debug |= Debugdraw;
 		else if(strcmp(s, "extmem") == 0)
 			debug |= Debugextmem;
-		else if(strcmp(s, "perf") == 0)
-			debug |= Debugperf;
+		else if(strcmp(s, "fs") == 0)
+			debug |= Debugfs;
+		else if(strcmp(s, "layout") == 0)
+			debug |= Debuglayout;
 		else if(strcmp(s, "meta") == 0)
 			debug |= Debugmeta;
-		else if(strcmp(s, "all") == 0)
-			debug |= Debugtheworld;
+		else if(strcmp(s, "perf") == 0)
+			debug |= Debugperf;
+		else if(strcmp(s, "render") == 0)
+			debug |= Debugrender;
 		else{
 			warn("unknown debug component %s\n", s);
 			usage();
 		}
 		break;
 	case 'R': noreset = 1; break;
+	case 'Z': view.flags |= VFnodepth; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
 	case 'f': pushfile(EARGF(usage()), FFlayout); break;

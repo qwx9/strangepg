@@ -198,6 +198,8 @@ void
 resetui(void)
 {
 	view.center = ZV;
+	/* FIXME: eye should be much closer, but our pan and zoom decrease the closer
+	 * we go */
 	view.eye = V(0.0f, 0.0f, 50.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
 	view.Δeye = subv(view.eye, view.center);
