@@ -33,6 +33,7 @@ struct RNode{
 	float pos[3];
 	float dir[3];
 	float col[4];
+	float len;
 };
 struct REdge{
 	float pos1[3];
@@ -109,6 +110,6 @@ struct Clk{
 extern int debug;
 
 enum{
-	Vdefw = 768,
+	Vdefw = 1366,
 	Vdefh = 768,
 };

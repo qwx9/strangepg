@@ -32,6 +32,7 @@ settag(Node *n, ioff id, char *tag, char *val)
 {
 	if(strcmp(tag, "LN") == 0){
 		n->length = atoi(val);
+		rnodes[id].len = n->length;
 	}else if(strcmp(tag, "fx") == 0){
 		n->pos0.x = atof(val);
 		n->flags |= FNfixedx | FNinitx;
@@ -48,15 +49,32 @@ settag(Node *n, ioff id, char *tag, char *val)
 	pushcmd("%s[label[%d]] = \"%s\"", tag, id, val);
 }
 
+static inline void
+fixlengths(int minl, int maxl)
+{
+	int Δ;
+	double max;
+	RNode *r, *re;
+
+	Δ = maxl - minl;
+	if(Δ < 1)	/* all size 1 */
+		return;
+	max = 1.0 + log10(1.0 + Δ);	/* len - minl ∈ [0,Δ] */
+	for(r=rnodes, re=r+dylen(r); r<re; r++)
+		r->len = max * (1.0 + log10(1.0 + r->len - minl)) / max;
+}
+
 static int
 collectgfanodes(Graph *g, File *f)
 {
 	char *s, *t;
-	int c, r, l, nerr;
+	int c, r, l, nerr, minl, maxl;
 	ioff i, ie;
 	vlong *off;
 	Node *n;
 
+	minl = 0x7fffffff;
+	maxl = 1;
 	off = g->nodeoff;
 	for(i=0,ie=dylen(g->nodes),nerr=c=0; i<ie; i++, off++){
 		r = 0;
@@ -79,6 +97,7 @@ collectgfanodes(Graph *g, File *f)
 			pushcmd("LN[label[%d]] = %d", i, l);
 			c++;
 			n->length = l;
+			rnodes[i].len = l;
 			r = 1;
 		}
 		for(s=t; s!=nil; s=t){
@@ -97,7 +116,13 @@ collectgfanodes(Graph *g, File *f)
 			c++;
 		}
 		nerr = 0;
+		if(maxl < n->length)
+			maxl = n->length;
+		if(minl > n->length)
+			minl = n->length;
 	}
+	if(maxl > 1)
+		fixlengths(minl, maxl);
 	warn("collectgfanodes: done\n");
 	return c;
 }

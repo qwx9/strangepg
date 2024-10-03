@@ -582,6 +582,11 @@ initgl(void)
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
+				[4] = {
+					.offset = offsetof(RNode, len),
+					.format = SG_VERTEXFORMAT_FLOAT,
+					.buffer_index = 1,
+				},
 			}
 		},
 		.shader = nodesh,

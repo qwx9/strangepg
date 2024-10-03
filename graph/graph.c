@@ -286,6 +286,7 @@ pushinode(Graph *g)
 		return -1;
 	dypush(g->nodes, n);
 	setcolor(r.col, somecolor(id));
+	r.len = 1.0f;
 	dypush(rnodes, r);
 	return id;
 }

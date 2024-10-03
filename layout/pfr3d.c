@@ -17,6 +17,7 @@ typedef struct D D;
 struct P{
 	ioff e;
 	short ne;
+	float w;
 	short flags;
 };
 struct D{
@@ -33,7 +34,6 @@ struct D{
 static void *
 new(Graph *g)
 {
-	int n;
 	ioff iv, *e, *ee, *etab;
 	double z;
 	float k;
@@ -62,6 +62,7 @@ new(Graph *g)
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
 		p.ne = 0;
+		p.w = r->len;
 		p.flags = u->flags & FNfixed;
 		if((u->flags & FNfixed) != FNfixed){
 			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
@@ -103,9 +104,9 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	int Δ;
+	int skip, fixed;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, Δr;
+	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, w, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -118,15 +119,17 @@ compute(void *arg, volatile int *stat, int i)
 	p0 = d->ptab + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
-	Δ = nlaythreads;
+	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
-		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
+		for(pp=p0, r=r0; r<r1; r+=skip, pp+=skip){
 			if((*stat & LFstop) != 0)
 				return 0;
-			if((pp->flags & FNfixed) == FNfixed)
+			fixed = pp->flags & FNfixed;
+			if(fixed == FNfixed)
 				continue;
+			w = pp->w;
 			x = r->pos[0];
 			y = r->pos[1];
 			z = r->pos[2];
@@ -139,9 +142,9 @@ compute(void *arg, volatile int *stat, int i)
 				δz = z - v->pos[2];
 				δ = Δ(δx, δy, δz);
 				f = Fr(δ, k);
-				Δx += f * δx / δ;
-				Δy += f * δy / δ;
-				Δz += f * δz / δ;
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
+				Δz += w * f * δz / δ;
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
@@ -157,12 +160,12 @@ compute(void *arg, volatile int *stat, int i)
 				Δz += f * δz / δ;
 			}
 			δ = Δ(Δx, Δy, Δz);
-			if((pp->flags & FNfixedx) == 0){
+			if((fixed & FNfixedx) == 0){
 				f = MIN(t, fabs(Δx));
 				x += f * Δx / δ;
 				r->pos[0] = x;
 			}
-			if((pp->flags & FNfixedy) == 0){
+			if((fixed & FNfixedy) == 0){
 				f = MIN(t, fabs(Δy));
 				y += f * Δy / δ;
 				r->pos[1] = y;
