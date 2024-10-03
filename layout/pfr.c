@@ -3,8 +3,13 @@
 #include "drw.h"
 #include "layout.h"
 
-#define C	0.11f
-#define Length	256.0f
+enum{
+	W = 2048,
+	H = 2048,
+	Area = W * H,
+};
+
+#define C	1.75f
 #define Tolerance	0.5f
 
 typedef struct P P;
@@ -22,7 +27,7 @@ struct D{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.999f * (t))
+#define	cool(t)	(0.9995f * (t))
 #define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
 
 static void *
@@ -40,16 +45,20 @@ new(Graph *g)
 	ptab = nil;
 	etab = nil;
 	n = 2;
-	k = C * sqrtf(Length * Length / dylen(rnodes));
+	/* do not shrink edges past a certain size */
+	//k = C * sqrtf((float)Area / dylen(rnodes));
+	k = C;
+	if(dylen(rnodes) < 1000)
+		k *= log10(5000.0 / dylen(rnodes));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
 		else
-			r->pos[0] = nrand(2 * n) - n;
+			r->pos[0] = 30.0 * (W / 2 - nrand(W)) / (W / 2);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = u->pos0.y;
 		else
-			r->pos[1] = nrand(2 * n) - n;
+			r->pos[1] = 30.0 * (H / 2 - nrand(H)) / (H / 2);
 		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 		r->pos[2] = (view.flags & VFnodepth) == 0
 			? 0.8 * (0.5 - z)
@@ -99,9 +108,9 @@ cleanup(void *p)
 static int
 compute(void *arg, volatile int *stat, int i)
 {
-	int Δ;
+	int fixed, Δ;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, rx, ry, Δr;
+	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -121,7 +130,8 @@ compute(void *arg, volatile int *stat, int i)
 		for(pp=p0, r=r0; r<r1; r+=Δ, pp+=Δ){
 			if((*stat & LFstop) != 0)
 				return 0;
-			if((pp->flags & FNfixed) == FNfixed)
+			fixed = pp->flags & FNfixed;
+			if(fixed == FNfixed)
 				continue;
 			x = r->pos[0];
 			y = r->pos[1];
@@ -144,20 +154,19 @@ compute(void *arg, volatile int *stat, int i)
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
-				Δx += rx;
-				Δy += ry;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
 			}
-			δx = t * Δx;
-			δy = t * Δy;
-			δ = Δ(δx, δy);
-			if((pp->flags & FNfixedx) == 0){
-				x += δx / δ;
+			δ = Δ(Δx, Δy);
+			/* limiting layouting area doesn't work well for long linear graphs */
+			if((fixed & FNfixedx) == 0){
+				f = MIN(t, fabs(Δx));
+				x += f * Δx / δ;
 				r->pos[0] = x;
 			}
-			if((pp->flags & FNfixedy) == 0){
-				y += δy / δ;
+			if((fixed & FNfixedy) == 0){
+				f = MIN(t, fabs(Δy));
+				y += f * Δy / δ;
 				r->pos[1] = y;
 			}
 			if(Δr < δ)

@@ -43,7 +43,6 @@ new(Graph *g)
 	etab = nil;
 	max = 0;
 	min = ~0;
-
 	for(i=0, r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++, i++){
 		p.e = dylen(etab);
 		p.nout = dylen(u->out);
@@ -80,7 +79,7 @@ new(Graph *g)
 skip:
 		dypush(ptab, p);
 	}
-	ρ1 = (max - min) / (Nodesz * Ptsz);
+	ρ1 = (float)(max - min) / (Nodesz * Ptsz);
 	n = 0;
 	for(pp=ptab, r=rnodes, re=r+dylen(r); r<re; r++, pp++){
 		if(!pp->fixed)

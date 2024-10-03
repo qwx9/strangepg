@@ -110,7 +110,7 @@ mousepick(int x, int y)
 	return i;
 }
 
-// FIXME: merge with port
+/* FIXME: promote following functions to portable code; alias HMM types? */
 static void
 updateview(void)
 {
@@ -139,10 +139,10 @@ pandraw(float Δx, float Δy)
 {
 	Δx /= view.w;
 	Δy /= view.h;
-	view.center.x += Δx * 2 * view.Δeye.z * view.ar * view.tfov;
-	view.center.y -= Δy * 2 * view.Δeye.z * view.tfov;
-	view.eye.x = view.center.x;
-	view.eye.y = view.center.y;
+	view.eye.x += Δx * 2 * view.Δeye.z * view.ar * view.tfov;
+	view.eye.y -= Δy * 2 * view.Δeye.z * view.tfov;
+	view.center.x = view.eye.x;
+	view.center.y = view.eye.y;
 	updateview();
 }
 

@@ -3,8 +3,13 @@
 #include "drw.h"
 #include "layout.h"
 
-#define C	0.04f
-#define Length	256.0f
+enum{
+	W = 2048,
+	H = 2048,
+	Area = W * H,
+};
+
+#define C	1.0f
 #define Tolerance	0.5f
 
 typedef struct P P;
@@ -22,7 +27,7 @@ struct D{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.999f * (t))
+#define	cool(t)	(0.9995f * (t))
 #define	Δ(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.0001f)
 
 static void *
@@ -30,6 +35,7 @@ new(Graph *g)
 {
 	int n;
 	ioff iv, *e, *ee, *etab;
+	double z;
 	float k;
 	Node *u, *ue;
 	RNode *r, *re;
@@ -38,18 +44,20 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
-	n = 2;
-	k = C * sqrtf(Length * Length / dylen(rnodes));
+	k = C;
+	if(dylen(rnodes) < 1000)
+		k *= log10(5000.0 / dylen(rnodes));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
 		else
-			r->pos[0] = nrand(2 * n) - n;
+			r->pos[0] = 30.0 * (W / 2 - nrand(W)) / (W / 2);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = u->pos0.y;
 		else
-			r->pos[1] = nrand(2 * n) - n;
-		r->pos[2] = 0.5 - (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
+			r->pos[1] = 30.0 * (H / 2 - nrand(H)) / (H / 2);
+		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
+		r->pos[2] = 0.8 * (0.5 - z);
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
@@ -97,7 +105,7 @@ compute(void *arg, volatile int *stat, int i)
 {
 	int Δ;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, rx, ry, rz, Δr;
+	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -144,26 +152,23 @@ compute(void *arg, volatile int *stat, int i)
 				δz = v->pos[2] - z;
 				δ = Δ(δx, δy, δz);
 				f = Fa(δ, k);
-				rx = f * δx / δ;
-				ry = f * δy / δ;
-				rz = f * δz / δ;
-				Δx += rx;
-				Δy += ry;
-				Δz += rz;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
+				Δz += f * δz / δ;
 			}
-			δx = t * Δx;
-			δy = t * Δy;
-			δz = t * Δz;
-			δ = Δ(δx, δy, δz);
+			δ = Δ(Δx, Δy, Δz);
 			if((pp->flags & FNfixedx) == 0){
-				x += δx / δ;
+				f = MIN(t, fabs(Δx));
+				x += f * Δx / δ;
 				r->pos[0] = x;
 			}
 			if((pp->flags & FNfixedy) == 0){
-				y += δy / δ;
+				f = MIN(t, fabs(Δy));
+				y += f * Δy / δ;
 				r->pos[1] = y;
 			}
-			z += δz / δ;
+			f = MIN(t, fabs(Δz));
+			z += f * Δz / δ;
 			r->pos[2] = z;
 			if(Δr < δ)
 				Δr = δ;
