@@ -45,6 +45,7 @@ BEGIN{
 	violet = purple
 	white = "0xffffff"
 	yellow = "0xffed6f"
+	srand()
 }
 function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
@@ -181,15 +182,10 @@ function fixy(name, y){
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]
 function subexpr(s, fn,	i, j, t, pred){
-	i = 0
-	t = s
-	while((j = index(t, "]")) != 0){
-		i += j
-		t = substr(t, j + 1)
-	}
-	pred = substr(s, 1, i - 1)
-	i = match(s, "[^=]=[^=]")
-	s = substr(s, i + 2)
+	i = match(s, "\][ 	]*=[^=]")
+	# error check: i not 0; only sub expression up to } or ; etc
+	pred = substr(s, 1, i-1)
+	s = substr(s, RSTART+RLENGTH-1)
 	$0 = "for(i in node) if(" pred "){ " fn "(i, " s ")}"
 }
 crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
