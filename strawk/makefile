@@ -22,70 +22,42 @@
 # THIS SOFTWARE.
 # ****************************************************************/
 
-CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wcast-qual
-CC?= clang
-
-# compiler options
-#CC = cc -Wall -g -Wwrite-strings
-#CC = cc -O4 -Wall -pedantic -fno-strict-aliasing
-#CC = cc -fprofile-arcs -ftest-coverage # then gcov f1.c; cat f1.c.gcov
-
-# By fiat, to make our lives easier, yacc is now defined to be bison.
-# If you want something else, you're on your own.
-# YACC = yacc -d -b awkgram
-
+PREFIX?= $(HOME)/.local
+BINDIR:= $(PREFIX)/bin
 PROGRAM:= strawk
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:= $(BINTARGET)
-YACC = bison -d
+YACC:= bison
+YFLAGS:= -d
+CC?= clang
+CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wcast-qual
+LDFLAGS:= -lm
 
-OFILES = b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o
+OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o
 
-SOURCE = awk.h awkgram.tab.c awkgram.tab.h proto.h awkgram.y lex.c b.c main.c \
-	maketab.c mt19937-64.c mt19937-64.h parse.c lib.c run.c tran.c proctab.c
-
-LISTING = awk.h proto.h awkgram.y lex.c b.c main.c maketab.c parse.c \
-	lib.c run.c tran.c mt19937-64.c
-
-k = README LICENSE FIXES $(SOURCE) awkgram.tab.[ch].bak makefile  \
-	 awk.1
+CLEANFILES:=\
+	$(BINTARGET)\
+	$(OFILES)\
+	$(DEPS)\
+	maketab\
 
 all: $(BINTARGET)
 
-$(BINTARGET):	awkgram.tab.o $(OFILES)
-	$(CC) -o $(BINTARGET) $(CFLAGS) awkgram.tab.o $(OFILES) $(ALLOC)  -lm
+$(OFILES): awk.h proto.h awkgram.y
 
-$(OFILES):	awk.h awkgram.tab.h proto.h
+$(BINTARGET): $(OFILES)
+	$(CC) -o $(BINTARGET) $(CFLAGS) $(OFILES) $(LDFLAGS)
 
-awkgram.tab.c awkgram.tab.h:	awk.h proto.h awkgram.y
-	$(YACC) $(YFLAGS) awkgram.y
+awkgram.tab.c awkgram.tab.h: awk.h proto.h awkgram.y
+	if command -v $(YACC) >/dev/null; then \
+		$(YACC) $(YFLAGS) awkgram.y; \
+	fi
 
-proctab.c:	maketab
+proctab.c: maketab awkgram.tab.h
 	./maketab awkgram.tab.h >proctab.c
 
-maketab:	awkgram.tab.h maketab.c
+maketab: maketab.c
 	$(CC) $(CFLAGS) maketab.c -o maketab
-
-bundle:
-	@cp awkgram.tab.h awkgram.tab.h.bak
-	@cp awkgram.tab.c awkgram.tab.c.bak
-	@bundle $(SHIP)
-
-tar:
-	@cp awkgram.tab.h awkgram.tab.h.bak
-	@cp awkgram.tab.c awkgram.tab.c.bak
-	@bundle $(SHIP) >awk.shar
-	@tar cf awk.tar $(SHIP)
-	gzip awk.tar
-	ls -l awk.tar.gz
-	@zip awk.zip $(SHIP)
-	ls -l awk.zip
-
-names:
-	@echo $(LISTING)
-
-PREFIX?= $(HOME)/.local
-BINDIR:= $(PREFIX)/bin
 
 install: $(ALLTARGETS)
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)
@@ -95,11 +67,11 @@ install: $(ALLTARGETS)
 
 uninstall:
 	for i in $(ALLTARGETS); do \
-		rm -f $(BINDIR)/$$i; \
+		$(RM) $(BINDIR)/$$i; \
 	done
 
 clean:
-	rm -f $(BINTARGET) a.out *.o *.obj maketab maketab.exe *.bb *.bbg *.da *.gcov *.gcno *.gcda
+	$(RM) $(CLEANFILES)
 
 nuke:
-	rm -f $(BINTARGET) a.out *.o *.obj maketab maketab.exe *.bb *.bbg *.da *.gcov *.gcno *.gcda proctab.c awkgram.tab.*
+	$(RM) $(CLEANFILES) maketab proctab.c awkgram.tab.*
