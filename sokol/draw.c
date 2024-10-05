@@ -134,6 +134,22 @@ zoomdraw(float Δ)
 	updateview();
 }
 
+/* FIXME: pan/zoom in world coordinates; standardize this, make mvp global */
+void
+worldview(Vertex v)
+{
+	view.center.x = view.eye.x = v.x;
+	view.center.y = view.eye.y = v.y;
+	view.eye.z = v.z;
+	updateview();
+}
+
+void
+worldpandraw(float x, float y)
+{
+	updateview();
+}
+
 void
 pandraw(float Δx, float Δy)
 {
@@ -357,6 +373,9 @@ frame(void)
 		reqs &= ~Reqresetui;
 		resetui();
 		updateview();
+	}else if((reqs & Reqfocus) != 0){
+		reqs &= ~Reqfocus;
+		focusobj();
 	}
 	reqs &= ~(Reqrefresh | Reqshape | Reqshallowdraw | Reqredraw);
 	drawui(ctx);

@@ -57,6 +57,7 @@ extern View view;
 
 void	zoomdraw(float);
 void	pandraw(float, float);
+void	worldview(Vertex);
 ioff	mousepick(int, int);
 void	drawselected(void);
 int	redraw(void);
@@ -83,6 +84,7 @@ enum{
 	Reqshape = 1<<3,		/* force refresh: layout end */
 	Reqredraw = 1<<4,		/* paint and flush canvas */
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
+	Reqfocus = 1<<6,		/* focus node event */
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 

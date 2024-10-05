@@ -119,6 +119,16 @@ fnsetcolor(char *sid, char *col)
 	return 0;
 }
 
+static inline int
+fnfindnode(char *sid){
+	ioff id;
+
+	if((id = str2idx(sid)) < 0)
+		return -1;
+	focusnode(id);
+	return 0;
+}
+
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
  * how do we dispatch user queries? would be useful to do queries
  * on multiple ones! */
@@ -139,12 +149,15 @@ readcmd(char *s)
 		case 'E': 
 			warn("Error:%s\n", s+1);
 			goto next;
+		case 'I':
+			/* FIXME: error check */
+			showobject(s + 2);
+			req |= Reqredraw;
+			goto next;
 		case 'R':
 			resetlayout(g);
 			goto next;
-		case 'I':
-			showobject(s + 2);
-			goto next;
+		case 'N':
 		case 'X':
 		case 'Y':
 		case 'c':
@@ -166,6 +179,13 @@ readcmd(char *s)
 			/* wet floor */
 		error:
 			warn("readcmd: %s\n", error());
+			break;
+		case 'N':
+			if(m != 1)
+				goto invalid;
+			if(fnfindnode(fld[0]) < 0)
+				goto error;
+			req |= Reqredraw | Reqfocus;
 			break;
 		case 'X':
 			if(m != 2)

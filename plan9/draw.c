@@ -137,6 +137,11 @@ pandraw(float, float)
 {
 }
 
+void
+worldview(Vertex)
+{
+}
+
 static void
 drawlabels(void)
 {

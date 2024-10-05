@@ -10,7 +10,7 @@ ioff selected = -1;
 int prompting;
 char hoverstr[256], selstr[512];
 
-static ioff shown = -1;
+static ioff shown = -1, focused = -1;
 
 enum{
 	Mctrl = 1<<0,
@@ -111,6 +111,8 @@ showobject(char *s)
 	strecpy(hoverstr, hoverstr+sizeof hoverstr, s);
 }
 
+/* FIXME: make clear that this is called from a different thread: req...
+ *	or maybe even its own file */
 static int
 mousedrag(float Δx, float Δy)
 {
@@ -151,17 +153,42 @@ mousehover(int x, int y)
 }
 
 static int
-mouseselect(void)
+mouseselect(ioff id)
 {
 	char *p;
 
-	if((selected = shown) != -1){
+	if((selected = id) != -1){
 		p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
 		strecpy(p, selstr+sizeof selstr, hoverstr);
+		reqdraw(Reqshallowdraw);
 		return 1;
 	}
 	selstr[0] = 0;
 	return 0;
+}
+
+void
+focusnode(ioff i)
+{
+	focused = i;
+}
+
+/* FIXME: naming and shit is stupid; view.pan/zoom are only for plan9
+ *	should instead convert to world coordinates *here* and request an
+ *	update, which *also* can be here, it just all updates view, and
+ *	the mvp, so either in draw/world.c, or ui/view.c or something */
+/* won't touch selection */
+void
+focusobj(void)
+{
+	RNode *r;
+	Vertex v;
+
+	if(focused == -1 || (focused & (1<<31)) != 0)	/* unimplemented */
+		return;
+	r = rnodes + focused;
+	v = V(view.center.x - r->pos[0], r->pos[1] - view.center.y, 0.0f);
+	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
 }
 
 int
@@ -177,8 +204,7 @@ mouseevent(Vertex v, Vertex Δ)
 		shown = mousehover(v.x, v.y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			if(mouseselect())
-				reqdraw(Reqshallowdraw);
+			mouseselect(shown);
 		}else if(Δ.x != 0.0 || Δ.y != 0.0){
 			if(mousedrag(Δ.x, Δ.y))
 				reqdraw(Reqredraw);

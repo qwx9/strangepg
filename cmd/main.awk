@@ -132,6 +132,13 @@ function readcsv(f){
 		cmd("KDH037")
 	}
 }
+function findnode(name){
+	if(!(name in node)){
+		print "E no such node", name
+		return
+	}
+	print "N", node[name]
+}
 function nodeinfo(id){
 	name = label[id]
 	s = name
