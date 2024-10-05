@@ -161,7 +161,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 
 #define __KHASHL_IMPL_RESIZE(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE int prefix##_resize(HType *h, khint_t new_n_buckets) { \
-		khint32_t *new_used = 0; \
+		khint32_t *new_used; \
 		khint_t j = 0, x = new_n_buckets, n_buckets, new_bits, new_mask; \
 		while ((x >>= 1) != 0) ++j; \
 		if (new_n_buckets & (new_n_buckets - 1)) ++j; \

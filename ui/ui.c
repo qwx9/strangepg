@@ -182,12 +182,10 @@ void
 focusobj(void)
 {
 	RNode *r;
-	Vertex v;
 
 	if(focused == -1 || (focused & (1<<31)) != 0)	/* unimplemented */
 		return;
 	r = rnodes + focused;
-	v = V(view.center.x - r->pos[0], r->pos[1] - view.center.y, 0.0f);
 	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
 }
 
