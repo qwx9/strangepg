@@ -407,8 +407,7 @@ nukegraph(Graph *g)
 {
 	if(g->type <= FFdead)
 		return;
-	if(haltlayout(g) < 0)
-		warn("nukegraph: %s\n", error());
+	reqlayout(g, Lstop);
 	cleargraph(g);
 	freefs(g->f);
 	memset(g, 0, sizeof *g);
@@ -416,13 +415,16 @@ nukegraph(Graph *g)
 
 /* FIXME: avoid pointless pass by value */
 void
-pushgraph(Graph g)
+pushgraph(Graph gp)
 {
+	Graph *g;
+
 	lockgraphs(1);
-	dypush(graphs, g);
+	dypush(graphs, gp);
 	unlockgraphs(1);
-	/* FIXME: selectable type */
-	if(runlayout(graphs + dylen(graphs) - 1, -1) < 0)
+	g = graphs + dylen(graphs) - 1;
+	newlayout(g, -1);
+	if(!waitforit && reqlayout(g, Lstart) < 0)
 		warn("pushgraph: %s\n", error());
 }
 

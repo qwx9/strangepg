@@ -183,14 +183,14 @@ compute(void *arg, volatile int *stat, int i)
 	}
 }
 
-static Shitkicker ll = {
+static Target ll = {
 	.name = "pfr3d",
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,
 };
 
-Shitkicker *
+Target *
 regpfr3d(void)
 {
 	return &ll;

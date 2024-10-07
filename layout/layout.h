@@ -1,8 +1,9 @@
 enum{
 	LFstop = 1<<0,
+	LFnuke = 1<<1,
 };
 
-typedef struct Shitkicker Shitkicker;
+typedef struct Target Target;
 enum{
 	LLrandom,
 	LLconga,
@@ -13,7 +14,7 @@ enum{
 	LLcirc,
 	LLnil,
 };
-struct Shitkicker{
+struct Target{
 	char *name;
 	void* (*new)(Graph*);
 	void (*update)(Graph*, void*);
@@ -25,21 +26,23 @@ struct Shitkicker{
 extern int deflayout;
 extern int nlaythreads;
 
-Shitkicker*	regrandom(void);
-Shitkicker*	regconga(void);
-Shitkicker*	regfr(void);
-Shitkicker*	regpfr(void);
-Shitkicker*	regpfr3d(void);
-Shitkicker*	reglinear(void);
-Shitkicker*	regcirc(void);
+Target*	regrandom(void);
+Target*	regconga(void);
+Target*	regfr(void);
+Target*	regpfr(void);
+Target*	regpfr3d(void);
+Target*	reglinear(void);
+Target*	regcirc(void);
 
+enum{
+	Lidle,
+	Lstop,
+	Lstart,
+	Lreset,
+};
 void	initlayout(void);
-int	runlayout(Graph*, int);
-int	resetlayout(Graph*);
-int	haltlayout(Graph*);
-int	stoplayout(Graph*);
-int	updatelayout(Graph*);
-int	togglelayout(Graph*);
+int	newlayout(Graph*, int);
+int reqlayout(Graph*, int);
 
 #define SETDIR(dir, dx, dy)	do{\
 	if((dx) != 0.0f) \

@@ -93,7 +93,7 @@ loadcsv(void *arg)
 	}
 	r = 0;
 end:
-	pushcmd("cmd(\"FJJ142\")");
+	pushcmd("cmd(\"FHJ142\")");
 	for(nf=0; nf<dylen(tags); nf++)
 		free(tags[nf]);
 	dyfree(tags);

@@ -7,6 +7,8 @@
 #include "fs.h"
 #include "ui.h"
 
+int waitforit;	/* deferred after aux files loaded */
+
 typedef struct Input Input;
 struct Input{
 	int type;
@@ -27,6 +29,7 @@ load(void)
 
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
+		/* defer anything that must be loaded after the graph(s) */
 		case FFlayout:
 			pushcmd("importlayout(\"%s\")", in->path);
 			break;
@@ -53,6 +56,8 @@ pushfile(char *file, int type)
 	}
 	if(access(file, AREAD) < 0)
 		sysfatal("could not load file %s: %s", file, error());
+	if(type == FFcsv || type == FFlayout)
+		waitforit = 1;
 	in = (Input){type, file};
 	dypush(files, in);
 }
@@ -60,9 +65,9 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-Rbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]\n", argv0);
+	warn("usage: %s [-FRZbhv] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
-		"-R             Do not reset layout once metadata is done loading\n"
+		"-F             Force start layouting ignoring files still loading\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"-b             White-on-black theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -71,7 +76,7 @@ help(void)
 		"-l ALGO        Set layouting algorithm (default: pfr)\n"
 		"-t N           Set number of layouting threads (1-128, default: 3)\n"
 		"-v             Print version and exit\n"
-		"ALGO may be one of:\n"
+		"ALG may be one of:\n"
 		" fr            Fruchterman-Reingold variant\n"
 		" pfr           Parallelized Fruchterman-Reingold variant (default)\n"
 		" pfr3d         Experimental 3d version of the above\n"
@@ -86,13 +91,13 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-RZbhv] [-f FILE] [-l ALGO] [-t N] [-c FILE] FILE [FILE..]", argv0);
+	sysfatal("usage: %s [-FRZbhv] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
 parseargs(int argc, char **argv)
 {
-	int type;
+	int type, gottagofast;
 	char *s;
 
 	/* FIXME: remove intype and -i, add an optional format specifier in filename:
@@ -100,6 +105,7 @@ parseargs(int argc, char **argv)
 	/* FIXME: we won't try to guess format, but we should validate it */
 	/* FIXME: lilu dallas mooltigraph */
 	type = FFgfa;
+	gottagofast = 0;
 	ARGBEGIN{
 	case 'D':
 		s = EARGF(usage());
@@ -128,7 +134,7 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
-	case 'R': noreset = 1; break;
+	case 'F': gottagofast = 1; break;
 	case 'Z': view.flags |= VFnodepth; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
@@ -172,6 +178,8 @@ parseargs(int argc, char **argv)
 		help();
 	for(; *argv!=nil; argv++)
 		pushfile(*argv, type);
+	if(gottagofast)
+		waitforit = 0;
 }
 
 static void
@@ -181,7 +189,6 @@ init(void)
 	initem();
 	initdrw();
 	initfs();
-	initlayout();
 }
 
 /* note: npe already sets mainstacksize higher before renaming main */
@@ -192,6 +199,7 @@ main(int argc, char **argv)
 	srand(time(nil));
 	parseargs(argc, argv);
 	init();
+	initlayout();
 	load();
 	initui();
 	evloop();

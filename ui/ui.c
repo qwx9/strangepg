@@ -93,11 +93,18 @@ keyevent(Rune r, int down)
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
-	/* FIXME: doesn't quite make sense */
-	case '+': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, 1); unlockgraphs(0); break;
-	case '-': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) zoomgraph(g, -1); unlockgraphs(0); break;
-	case 'r': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) resetlayout(g); unlockgraphs(0); break;
-	case 'p': lockgraphs(0); for(g=graphs; g<graphs+dylen(graphs); g++) togglelayout(g); unlockgraphs(0); break;
+	case 'r':
+		for(g=graphs; g<graphs+dylen(graphs); g++)
+			reqlayout(g, Lreset);
+		break;
+	case 'p':
+		for(g=graphs; g<graphs+dylen(graphs); g++){
+			if((g->flags & GFdrawme) != 0)
+				reqlayout(g, Lstop);
+			else
+				reqlayout(g, Lstart);
+		}
+		break;
 	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqshallowdraw); break;
 	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;

@@ -290,9 +290,9 @@ loadgfa1(void *arg)
 	if((n = collectgfameta(&g)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
 	/* if no actual useful metadata was loaded, don't do anything */
-	else if(n > 0 && !noreset)
-		pushcmd("cmd(\"OPL753\")");
-	pushcmd("cmd(\"FGD135\")");
+	else if(n > 0)
+		pushcmd("cmd(\"FHJ142\")");
+	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
 	clearmetatempshit(&g);
 	closefs(f);
 }

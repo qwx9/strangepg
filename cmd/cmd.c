@@ -7,7 +7,6 @@
 #include "threads.h"
 #include "cmd.h"
 
-int noreset;
 int epfd[2] = {-1, -1};
 
 static void
@@ -155,7 +154,7 @@ readcmd(char *s)
 			req |= Reqredraw;
 			goto next;
 		case 'R':
-			resetlayout(g);
+			reqlayout(g, Lreset);
 			goto next;
 		case 'N':
 		case 'X':

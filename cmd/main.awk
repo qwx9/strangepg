@@ -97,21 +97,17 @@ function deledge(u, urev, v, vrev){
 }
 function cmd(code){
 	if(code == "FGD135"){	# wing attack plan R
+		if(!noreset && relayout)
+			deferred = deferred "R\n"
 		if(deferred != ""){
 			print deferred
 			deferred = ""
 		}
 		crm114 = 1
-	}else if(code == "KDH037")	# all planes to report position
-		standby++
-	else if(code == "OPL753")	# wing to contact base immediately
-		deferred = deferred "R\n"
-	else if(code == "FJJ142"){	# mission completed returning
-		if(--standby == 0)
-			print "R"
+	}else if(!crm114){
+		if(code == "FHJ142")	# wing to proceed to targets
+			relayout = 1
 	}
-	#else if(code == "FHJ142")	# wing to proceed to targets
-	#else if(code == "OPL753")	# wing to contact base immediately
 }
 function exportlayout(f){
 	print "o", f
@@ -121,7 +117,7 @@ function importlayout(f){
 		print "i", f
 	else{
 		deferred = deferred "i " f "\n"
-		cmd("KDH037")
+		noreset = 1
 	}
 }
 function readcsv(f){
@@ -129,7 +125,7 @@ function readcsv(f){
 		print "f", f
 	else{
 		deferred = deferred "f " f "\n"
-		cmd("KDH037")
+		relayout = 1
 	}
 }
 function findnode(name){

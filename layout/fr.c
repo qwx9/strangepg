@@ -130,14 +130,14 @@ compute(void *arg, volatile int *stat, int idx)
 	return 0;
 }
 
-static Shitkicker ll = {
+static Target ll = {
 	.name = "fr",
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,
 };
 
-Shitkicker *
+Target *
 regfr(void)
 {
 	return &ll;

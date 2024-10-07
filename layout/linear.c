@@ -197,14 +197,14 @@ compute(void *arg, volatile int *stat, int i)
 	return 0;
 }
 
-static Shitkicker ll = {
+static Target ll = {
 	.name = "linear",
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,
 };
 
-Shitkicker *
+Target *
 reglinear(void)
 {
 	return &ll;

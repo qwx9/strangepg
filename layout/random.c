@@ -15,12 +15,12 @@ new(Graph *)
 	return nil;
 }
 
-static Shitkicker ll = {
+static Target ll = {
 	.name = "random",
 	.new = new,
 };
 
-Shitkicker *
+Target *
 regrandom(void)
 {
 	return &ll;

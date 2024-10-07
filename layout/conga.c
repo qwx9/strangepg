@@ -16,12 +16,12 @@ new(Graph *g)
 	return nil;
 }
 
-static Shitkicker ll = {
+static Target ll = {
 	.name = "congaline",
 	.new = new,
 };
 
-Shitkicker *
+Target *
 regconga(void)
 {
 	return &ll;

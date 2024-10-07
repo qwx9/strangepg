@@ -67,6 +67,7 @@ struct Edge{
 	ioff v;
 };
 enum{
+	GFlayme = 1<<0,
 	GFdrawme = 1<<1,
 	GFarmed = 1<<2,
 };
@@ -108,6 +109,7 @@ struct Clk{
 };
 
 extern int debug;
+extern int waitforit;
 
 enum{
 	Vdefw = 1366,

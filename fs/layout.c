@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 #include "graph.h"
+#include "drw.h"
 #include "layout.h"
 #include "threads.h"
 #include "cmd.h"
@@ -18,7 +19,8 @@ importlayout(Graph *g, char *path)
 	File *fs;
 	RNode *r;
 
-	stoplayout(g);
+	if((g->flags & GFdrawme) != 0)
+		reqlayout(g, Lstop);
 	x = -1;
 	fs = emalloc(sizeof *fs);
 	if(g == nil || path == nil){
@@ -48,6 +50,8 @@ end:
 		x = -1;
 	}
 	freefs(fs);
+	reqdraw(Reqshape);
+	warn("done reading layout\n");
 	return x;
 }
 
@@ -81,5 +85,6 @@ exportlayout(Graph *g, char *path)
 	x = 0;
 end:
 	freefs(fs);
+	warn("done writing layout\n");
 	return x;
 }
