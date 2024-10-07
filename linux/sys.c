@@ -37,6 +37,7 @@ errstr(char *err, uint nerr)
 void
 werrstr(char *fmt, ...)
 {
+	errno = 0;
 	va_list arg;
 	memset(errbuf, 0, sizeof errbuf);
 	va_start(arg, fmt);
