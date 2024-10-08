@@ -61,7 +61,6 @@ sac(void *)
 		x--;
 		//g = graphs + (x >> 2);
 		l = g->layout;
-		warn("req %s, %d/%d idle\n", x == Lidle ? "idle" : x == Lstop ? "stop" : x == Lstart ? "start" : x == Lreset ? "reset" : "what", nidle, nlaythreads);
 		switch(x & 3){
 		case Lreset:
 			g->flags |= GFlayme;

@@ -4,20 +4,19 @@
 #include "layout.h"
 
 enum{
-	W = 2048,
-	H = 2048,
+	W = 1024,
+	H = 1024,
 	Area = W * H,
 };
 
-#define C	1.0f
-#define Tolerance	0.5f
+#define C	0.065f
+#define Tolerance	3.0f
 
 typedef struct P P;
 typedef struct D D;
 struct P{
 	ioff e;
 	short ne;
-	float w;
 	short flags;
 };
 struct D{
@@ -44,25 +43,25 @@ new(Graph *g)
 
 	ptab = nil;
 	etab = nil;
-	k = C;
+	k = C * sqrtf((float)Area / dylen(rnodes));
+	/* force shrink edges for smaller graphs */
 	if(dylen(rnodes) < 1000)
-		k *= log10(5000.0 / dylen(rnodes));
+		k /= log10(dylen(redges));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
 		else
-			r->pos[0] = 30.0 * (W / 2 - nrand(W)) / (W / 2);
+			r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = u->pos0.y;
 		else
-			r->pos[1] = 30.0 * (H / 2 - nrand(H)) / (H / 2);
+			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
 		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 		r->pos[2] = 0.8 * (0.5 - z);
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
 		p.ne = 0;
-		p.w = r->len;
 		p.flags = u->flags & FNfixed;
 		if((u->flags & FNfixed) != FNfixed){
 			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
@@ -116,6 +115,9 @@ compute(void *arg, volatile int *stat, int i)
 	k = d->k;
 	t = k;
 	tol = Tolerance * k;
+	/* heuristic: converge faster with smaller graphs */
+	if(dylen(rnodes) <= 1000)
+		tol /= 2.0f;
 	p0 = d->ptab + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
@@ -129,7 +131,7 @@ compute(void *arg, volatile int *stat, int i)
 			fixed = pp->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
-			w = pp->w;
+			w = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			z = r->pos[2];
@@ -142,9 +144,9 @@ compute(void *arg, volatile int *stat, int i)
 				δz = z - v->pos[2];
 				δ = Δ(δx, δy, δz);
 				f = Fr(δ, k);
-				Δx += w * f * δx / δ;
-				Δy += w * f * δy / δ;
-				Δz += w * f * δz / δ;
+				Δx += (w / v->len) * f * δx / δ;
+				Δy += (w / v->len) * f * δy / δ;
+				Δz += (w / v->len) * f * δz / δ;
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
@@ -155,9 +157,9 @@ compute(void *arg, volatile int *stat, int i)
 				δz = v->pos[2] - z;
 				δ = Δ(δx, δy, δz);
 				f = Fa(δ, k);
-				Δx += f * δx / δ;
-				Δy += f * δy / δ;
-				Δz += f * δz / δ;
+				Δx += (w / v->len) * f * δx / δ;
+				Δy += (w / v->len) * f * δy / δ;
+				Δz += (w / v->len) * f * δz / δ;
 			}
 			δ = Δ(Δx, Δy, Δz);
 			if((fixed & FNfixedx) == 0){
