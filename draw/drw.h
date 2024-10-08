@@ -5,8 +5,8 @@ typedef struct Color Color;
 #pragma incomplete Color
 
 enum{
-	Nodesz = 5,
-	Ptsz = 2,
+	Nodesz = 4,
+	Ptsz = 3,
 };
 
 struct Quad{
@@ -61,6 +61,8 @@ void	worldview(Vertex);
 ioff	mousepick(int, int);
 void	drawselected(void);
 int	redraw(void);
+
+void	fixlengths(int, int);
 
 enum{
 	Cbg,

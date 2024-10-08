@@ -12,13 +12,13 @@ u32int *theme;
 static u32int theme1[Cend] = {
 	[Cbg]	= 0x000000ff,
 	[Ctext]	= 0xbb1100ff,
-	[Cedge]	= 0xbbbbbb90,
+	[Cedge]	= 0xbbbbbb40,
 	[Cemph]	= 0xff0000ff,
 };
 static u32int theme2[Cend] = {
 	[Cbg]	= 0xffffffff,
 	[Ctext]	= 0xeeee00ff,
-	[Cedge]	= 0x77777790,
+	[Cedge]	= 0x77777740,
 	[Cemph]	= 0xff0000ff,
 };
 

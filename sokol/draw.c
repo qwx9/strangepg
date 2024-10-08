@@ -43,7 +43,7 @@ struct Color{
 };
 
 #define	FNodesz	((float)Nodesz)
-#define	Nodethiccc	(FNodesz/Ptsz)
+#define	Nodethiccc	((float)Ptsz)
 
 typedef struct Params Params;
 typedef struct GLNode GLNode;
