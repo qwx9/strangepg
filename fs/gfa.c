@@ -2,6 +2,7 @@
 #include "graph.h"
 #include "fs.h"
 #include "threads.h"
+#include "drw.h"
 #include "cmd.h"
 
 /* assumptions:
@@ -47,21 +48,6 @@ settag(Node *n, ioff id, char *tag, char *val)
 		n->flags |= FNinity;
 	}
 	pushcmd("%s[label[%d]] = \"%s\"", tag, id, val);
-}
-
-static inline void
-fixlengths(int minl, int maxl)
-{
-	int Δ;
-	double max;
-	RNode *r, *re;
-
-	Δ = maxl - minl;
-	if(Δ < 1)	/* all size 1 */
-		return;
-	max = 1.0 + log10(1.0 + Δ);	/* len - minl ∈ [0,Δ] */
-	for(r=rnodes, re=r+dylen(r); r<re; r++)
-		r->len = max * (1.0 + log10(1.0 + r->len - minl)) / max;
 }
 
 static int

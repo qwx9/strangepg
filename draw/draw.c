@@ -5,12 +5,30 @@
 #include "ui.h"
 #include "threads.h"
 
-/* FIXME: right now the renderer just redraws everything, which is fine
- * up until some size of graph, at which point performance starts to drop
- * even though many objects likely have not changed at all */
 View view;
 RNode *rnodes;
 REdge *redges;
+
+#define	Maxsz	45.0f
+#define	Minsz	0.15f
+
+/* FIXME: not great */
+void
+fixlengths(int min, int max)
+{
+	int Δ;
+	RNode *r, *re;
+
+	Δ = max - min;
+	if(Δ < 1)
+		return;
+	for(r=rnodes, re=r+dylen(r); r<re; r++){
+		if(Δ < 1)
+			r->len = Nodesz;
+		else
+			r->len = Maxsz - (Maxsz - Minsz) * exp(-r->len / (float)Δ);
+	}
+}
 
 static inline void
 drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
