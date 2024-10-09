@@ -55,7 +55,7 @@ collectgfanodes(Graph *g, File *f)
 {
 	char *s, *t;
 	int c, r, l, nerr, minl, maxl;
-	ioff i, ie;
+	ioff id, i, ie;
 	vlong *off;
 	Node *n;
 
@@ -73,17 +73,20 @@ collectgfanodes(Graph *g, File *f)
 			}
 			continue;
 		}
-		n = g->nodes + i;
-		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", i, f->trunc, s);
+		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", id, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
-		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* id */
+		|| (t = nextfield(f, s, nil, '\t')) == nil)     /* id */
 			continue;
+		if((id = getid(g, s)) < 0)
+			sysfatal("collectgfanodes: bug: %s not found", s);
+		n = g->nodes + id;
+		s = t;
 		t = nextfield(f, s, &l, '\t');	/* seq */
 		if(l > 1 || s[0] != '*'){
-			pushcmd("LN[label[%d]] = %d", i, l);
+			pushcmd("LN[label[%d]] = %d", id, l);
 			c++;
 			n->length = l;
-			rnodes[i].len = l;
+			rnodes[id].len = l;
 			r = 1;
 		}
 		for(s=t; s!=nil; s=t){
@@ -95,10 +98,10 @@ collectgfanodes(Graph *g, File *f)
 			s[2] = 0;
 			/* ignore length if sequence was inlined */
 			if(strcmp(s, "LN") == 0 && r){
-				DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", i);
+				DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", id);
 				continue;
 			}
-			settag(n, i, s, s+5);
+			settag(n, id, s, s+5);
 			c++;
 		}
 		nerr = 0;
@@ -270,7 +273,6 @@ loadgfa1(void *arg)
 		sysfatal("loadgfa1: too many errors, last error: %s\n", error());
 	if(dylen(g.nodeoff) < dylen(g.nodes))
 		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
-	cleargraphtempshit(&g);
 	DPRINT(Debugfs, "done loading gfa");
 	pushgraph(g);
 	if((n = collectgfameta(&g)) < 0)
@@ -279,6 +281,7 @@ loadgfa1(void *arg)
 	else if(n > 0)
 		pushcmd("cmd(\"FHJ142\")");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
+	cleargraphtempshit(&g);
 	clearmetatempshit(&g);
 	closefs(f);
 }
