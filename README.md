@@ -29,18 +29,18 @@ Thanks!_
 
 ## Table of contents
 
-[- Features](#features)
-[- TL;DR](#tldr)
-[- Installation](#installation)
-[- Usage](#usage)
-[- Layouting](#layouting)
-[- Navigation](#navigation)
-[- Interaction](#interaction)
-[- Loading tags from CSV files](#csv)
-[- Additional compilation settings](#compilationsettings)
-[- Known bugs](#bugs)
-[- Used and bundled alien software](#bundled)
-[- 9front](#9front)
+- [Features](#features)
+- [TL;DR](#tldr)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Layouting](#layouting)
+- [Navigation](#navigation)
+- [Interaction](#interaction)
+- [Loading tags from CSV files](#csv)
+- [Additional compilation settings](#compilationsettings)
+- [Known bugs](#bugs)
+- [Used and bundled alien software](#bundled)
+- [9front](#9front)
 
 
 ## <a name="features"></a>Features
@@ -62,7 +62,7 @@ highly modular, extensible and cross-platform by design
 (note: code including bundled header-only libs is as portable as possible and supports multiple backends,
 but it still needs to be actually ported).
 
-Without coarsening, the current layouting algorithm while a parallelized and slightly improved version of the classic Fruchterman-Reingold__[1]__ force-directed algorithm,
+Without coarsening, the current layouting algorithm while a parallelized and slightly improved version of the classic Fruchterman-Reingold __[1]__ force-directed algorithm,
 is still slow for 10k+ node graphs.
 It will however be adequate for a coarsened graph since it only ever works on whatever is currently loaded;
 other algorithms (SGD2, FM3, etc.) could later be implemented as well.
@@ -145,10 +145,9 @@ Installation can be done from source or via [bioconda](https://bioconda.github.i
 #### Hardware requirements
 
 On Linux, a graphics card with OpenGL 4.1 support is required.
-This was introduced in 2010
-(introduced in 2010-2011)
-is required.
-Intel integrated HD Graphics cards from 2013 (Ivy Bridge) and newer should work.
+The standard was introduced in 2010-2011.
+Intel integrated HD Graphics cards from 2013 (Ivy Bridge),
+and nVIDIA and AMD/ATI cards from 2010 on should work.
 
 #### Bioconda
 
@@ -261,7 +260,7 @@ so as to appear as if there is no depth.
 
 Layouting is performed and visualized in real time and in parallel.
 Currently all available layout algorithms are based on a spring model force-directed approach,
-and are variations of the classic Fruchterman-Reingold algorithm__[1]__.
+and are variations of the classic Fruchterman-Reingold algorithm __[1]__.
 Parameters and heuristics are hand-tuned and may require further adjustment
 for better results, or may warrant better approaches.
 Because the initial state is random, results are different every time,
