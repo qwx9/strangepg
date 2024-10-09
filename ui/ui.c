@@ -86,10 +86,10 @@ keyevent(Rune r, int down)
 	if(!down)
 		return 0;
 	switch(r){
-	case Kup: pan(0.0f, -view.w / 2.0f); break;
-	case Kdown: pan(0.0f, +view.h / 2.0f); break;
-	case Kright: pan(+view.w / 2.0f, 0.0f); break;
-	case Kleft: pan(-view.w / 2.0f, 0.0f); break;
+	case Kup: pan(0.0f, -view.w / 4.0f); break;
+	case Kdown: pan(0.0f, +view.h / 4.0f); break;
+	case Kright: pan(+view.w / 4.0f, 0.0f); break;
+	case Kleft: pan(-view.w / 4.0f, 0.0f); break;
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
