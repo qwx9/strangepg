@@ -424,7 +424,7 @@ pushgraph(Graph gp)
 	unlockgraphs(1);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);
-	if(!waitforit && reqlayout(g, Lstart) < 0)
+	if(gottagofast && reqlayout(g, Lstart) < 0)
 		warn("pushgraph: %s\n", error());
 }
 

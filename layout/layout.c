@@ -176,7 +176,7 @@ newlayout(Graph *g, int type)
 		type = deflayout;
 	l->target = ttab[type];
 	/* guarantees initialized state for deferred loading */
-	if(waitforit){
+	if(!gottagofast){
 		if(l->scratch == nil && l->target->new != nil)
 			l->scratch = l->target->new(g);
 	}

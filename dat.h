@@ -109,7 +109,7 @@ struct Clk{
 };
 
 extern int debug;
-extern int waitforit;
+extern int gottagofast;
 
 enum{
 	Vdefw = 1366,
