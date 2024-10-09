@@ -1,7 +1,8 @@
 # Strange pangenome scale visualization
 
-Large graph interactive visualization à la [Bandage](https://github.com/rrwick/Bandage).
-Currently supports graphs in [GFAv1](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md) format.
+Interactive visualization of large genome graphs
+in [GFAv1 format](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md)
+à la [Bandage](https://github.com/rrwick/Bandage).
 
 Sales pitch:
 ```
@@ -28,54 +29,110 @@ Thanks!_
 
 ## Table of contents
 
-[Features](#features)  
-[Installation](#installation)  
-[Usage](#usage)  
-[Layouting](#layouting)  
-[Navigation](#navigation)  
-[Interaction](#interaction)  
-[Loading tags from CSV files](#csv)  
-[Additional compilation settings](#compilationsettings)  
-[Known bugs](#bugs)  
-[Used and bundled alien software](#bundled)  
-[9front](#9front)
+[- Features](#features)
+[- TL;DR](#tldr)
+[- Installation](#installation)
+[- Usage](#usage)
+[- Layouting](#layouting)
+[- Navigation](#navigation)
+[- Interaction](#interaction)
+[- Loading tags from CSV files](#csv)
+[- Additional compilation settings](#compilationsettings)
+[- Known bugs](#bugs)
+[- Used and bundled alien software](#bundled)
+[- 9front](#9front)
 
 
 ## <a name="features"></a>Features
 
-- Scaling to arbitrarily large graphs via coarsening (work in progress)
-- GFA information loaded in two passes in parallel to start layouting as soon as possible
-- High performance graphics with modern and efficient renderer
-- Highly modular, extensible and cross-platform by design
-- Embedded graph manipulation language based on GFA tags
-- Amenable to experimentation with custom layouts
-- Highly responsive: no loading bars, immediate feedback whenever possible
-- GFA files: no assumptions on order or label types (strings or integers)
-- Written from scratch in C with almost no dependencies
+- Scaling to arbitrarily large graphs via coarsening (not yet merged!); expanding/retracting parts of the graph on-demand with the mouse or object lookups and commands.
+- Layouting, rendering, drawing to the screen and handling user interface, file loading, graph manipulation
+all in separate and independent threads to reduce any waiting time to a minimum;
+immediate output and interaction whenever possible.
+- Layouting is in real time and can be interrupted or influenced by moving nodes; it can be saved to or loaded from a file as a final result or an initial/reproducible state, hence guiding/improving previous layouts is possible; tags such as color can be changed at any time.
+- High performance graphics with modern and efficient renderer.
+- Fast GFA loading by splitting topology from sequence/tags in separate passes;
+no assumptions about ordering, type of labels (strings or integers) or tags.
+- Console with an embedded graph manipulation language based on GFA tags
+- Any tags, including user-defined ones, can be loaded from the GFA file,
+CSV files and in the prompt; automatic coloring if one is included.
+- Custom layouting (albeit currently primitive) via special tags and a generic force-directed layout in 2D or 3D space.
+- Written from scratch in C with almost no dependencies: easy and fast to build;
+highly modular, extensible and cross-platform by design
+(note: code including bundled header-only libs is as portable as possible and supports multiple backends,
+but it still needs to be actually ported).
+
+Without coarsening, the current layouting algorithm while a parallelized and slightly improved version of the classic Fruchterman-Reingold__[1]__ force-directed algorithm,
+is still slow for 10k+ node graphs.
+It will however be adequate for a coarsened graph since it only ever works on whatever is currently loaded;
+other algorithms (SGD2, FM3, etc.) could later be implemented as well.
+Right now, because layouting is parallelized, in real-time and can be interacted with,
+not that much is left to make it more useful in practice.
 
 Near finished:
-- Offline coarsening scheme, a few bugs remain
-- Node and edge shaping according to length and other data
-- Further graphics performance improvements on Linux
-- 3D layouting and navigation
+- Offline coarsening and usage
+- Documentation, manpage
+- Proper 3D navigation (also fixing view distorsion); 3d nodes (?)
+- Status, console output and history, proper edit box in window
+- Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
 - Additional capabilities in the graph language
-- Better documentation, manpages
-- Multiple graph handling
 
 Near future:
-- Better UI!
-- Path handling
+- Path handling: highlighting, coloring
+- Better UI: actually usable edit/status window; macros as user-defined buttons
 - macOS support
 - GBZ support
+- Newick format and phylogenetic tree layouts
+- External memory implementation: either improve or replace with S3-fifo
+- Online coarsening without preprocessing
 
 Future:
+- Prettier graphs: node/line thickness and curvature
 - Additional annotation overlays
-- Online graph coarsening, with no preprocessing step
-- Better graph manipulation language: vector language
-- IGV-like subviews
+- Better graph manipulation language; single binary
 - More user-friendly layout specification/implementation
+- IGV-like subviews (?)
+- Multiple graph handling (?)
+- Further graphics performance improvements if warranted
 
 Released under the terms of the MIT license.
+
+
+## <a name="tldr"></a>TL;DR
+
+Mandatory arguments: a graph in GFA format,
+always as the last command line parameter.
+
+Load a gfa file named some.gfa:
+
+```bash
+strangepg some.gfa
+```
+
+Increase number of threads for layouting:
+
+```bash
+strangepg -t 8 some.gfa
+```
+
+Select a different layout algorithm:
+
+```bash
+strangepg -l fr some.gfa
+```
+
+Load a CSV file named some.csv:
+
+```bash
+strangepg -c some.csv some.gfa
+```
+
+Load layout from a file named some.lay
+(note: the layout file format is strangepg-specific):
+
+```bash
+strangepg -f some.lay some.gfa
+```
 
 ## <a name="installation"></a>Installation
 
@@ -85,6 +142,13 @@ for a while.
 
 Installation can be done from source or via [bioconda](https://bioconda.github.io/).
 
+#### Hardware requirements
+
+On Linux, a graphics card with OpenGL 4.1 support is required.
+This was introduced in 2010
+(introduced in 2010-2011)
+is required.
+Intel integrated HD Graphics cards from 2013 (Ivy Bridge) and newer should work.
 
 #### Bioconda
 
@@ -104,14 +168,20 @@ make -j install
 
 _-j_ is an optional flag to enable parallel building using all available cores.
 This installs the binaries ```strangepg``` and ```strawk```,
-by default in *$HOME/.local/bin*.
+by default in **$HOME/.local/bin**.
 If this directory is not in your $PATH or a different installation directory is desired,
 see [Additional compilation settings](#compilationsettings) below.
+
+**NOTE**: manual compilation with **clang is recommended** as it currently produces noticeably faster binaries.
+Use the [CC make variable](#compilationsettings) to force compilation with it.
+To my knowledge, bioconda binaries are built with GCC and thus may have slightly lower performance.
+I do not yet know why.
 
 #### Dependencies
 
 strangepg requires an OpenGL implementation and X11 libraries.
 Those are usually already present on typical Linux systems.
+Wayland is not supported natively.
 
 Command line for ubuntu (adapt to your system):
 ```bash
@@ -120,6 +190,7 @@ apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-d
 
 Tested with gcc 11.4.0 and 13.2.0, and clang 14.0.0 and 17.0.6
 on Void Linux and Ubuntu 22.04/24.04.
+
 
 ## <a name="usage"></a>Usage
 
@@ -139,56 +210,123 @@ strangepg test/03.232.gfa
 
 #### Command-line options
 
-- -b:	white-on-black theme
-- -c file:	load metadata tags from CSV file (see [Loading tags from CSV files](#csv); can be repeated)
-- -f file:	load exported layout from file
-- -t nth:	number of layouting workers (default: 3)
-- -l alg:	select layouting algorithm (see [Layouting](#layouting), default: pfr)
-- -R:	do not reset layout once metadata is done loading
+```bash
+$ strangepg -h
+usage: strangepg [-FRZbhv] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
+-b             White-on-black color theme
+-c FILE        Load tags from csv FILE
+-f FILE        Load layout from FILE
+-l ALG         Set layouting algorithm (default: pfr)
+-t N           Set number of layouting threads (1-128, default: 4)
+-F             Force layouting to start only once all inputs are loaded
+-Z             Minimize node depth (z-axis) offsets in 2d layouts
+```
+
+The most important options are:
+
+- `-l ALG`: select the [layouting algorithm](#layouting) to use.
+The default should be good enough for graphs with more than 1-2 dozen nodes,
+use the `fr` algorithm otherwise.
+- `-t N` sets the number of threads spawned for layouting.
+It's recommended to set it at or near the number of all available cores.
+Single-threaded layout algorithms will only use one of them.
+
+Optional input files:
+
+- `-c FILE` [loads a CSV file](#csv).
+It can be specified multiple times to load tags from more than one CSV file.
+- `-f FILE` loads a layout previous saved to the file.
+
+Additional settings:
+
+- `-b` sets the obligatory dark theme.
+- `-F` forces layouting to wait until both the GFA file and any CSV files are fully loaded.
+Normally layouting begins as soon as the quick first pass over the GFA is done.
+Use this when tags affecting the layout are present in the GFA and/or CSV files,
+instead of having to manually restart layouting.
+Otherwise it's not necessary since colors and other tags can be loaded while layouting.
+
+Drawing options:
+
+- `-Z`: by default, nodes are placed with some slight offset in the z axis,
+ie. a distance away from the viewer,
+both to avoid nodes overlapping and to improve graphics performance
+by allowing the GPU to perform z-buffering,
+but it might look aesthetically unpleasing depending on the camera angle.
+This option squishes nodes as close to each other as possible
+so as to appear as if there is no depth.
+
 
 ## <a name="layouting"></a>Layouting
 
-_strangepg_ ships with a few selectable layouting algorithms currently all based
-on a spring model force-directed approach.
-Select one with the *-l* option.
-Layouting preallocates a pool of worker threads, but depending on the algorithm,
-only one worker may be active. The default is 3, changed via the *-t* option:
+Layouting is performed and visualized in real time and in parallel.
+Currently all available layout algorithms are based on a spring model force-directed approach,
+and are variations of the classic Fruchterman-Reingold algorithm__[1]__.
+Parameters and heuristics are hand-tuned and may require further adjustment
+for better results, or may warrant better approaches.
+Because the initial state is random, results are different every time,
+and due to trade-offs for speed some may be better than others.
+The real-time aspect of the application allows the user to easily restart layouting
+if the result so far is unsatisfactory, or to guide it by loading more information
+or moving nodes manually.
 
-```bash
-# example: parallel FR layout with 8 workers:
-strangepg -l pfr -t 8 file.gfa
-```
+Here the approach to custom or application-specific layouting is
+to combine a basic layout algorithm with specifying a partial or full initial state
+and/or adding constraints.
+For example, a linear layout may be achieved by fixing the x coordinate of some or all nodes to one or more constant values.
+3D layouting works in the same way -- all layouts are actually in 3D space,
+but 2D algorithms ignore the 3rd axis.
+Reproducible layouting is possible by saving layouts to file and later loading them again.
 
-Single-threaded layouts will only use one thread regardless.
+The basic layouting algorithm serves as a backbone for more specific visualizations,
+changing the type of geometry: circular, spherical, non-euclidean, etc.
+These basic additional layouts are currently under development.
 
-Layouting may be paused/unpaused with the 'p' key,
-and can be restarted with the 'r' key at will.
+#### Basic layouting
+
+Available algorithms:
+- `-l pfr`: the default, a slightly optimized and parallelized version
+of the original algorithm. The time complexity is essentially the same,
+so while it may run faster, it will not scale on its own for 10k node graphs and beyond. Because it splits the graph across threads, it will produce nonsense results
+if the number of nodes is less than 2-3 times the number of threads.
+- `-l pfr3d`: same as `pfr` but additionally using the z axis to layout in 3D.
+All layouts are actually in 3D space, but the others do not touch the z coordinate.
+- `-l fr`: the classic algorithm, single-threaded. Use this for very small graphs (<1000 nodes) where `pfr` is not appropriate.
+- `-l circ`: circular layout, where nodes are placed in sequence on a circle or spiral; currently has some issues and requires specific tags, but is currently being rewritten to be fully generic and get rid of both limitations.
+
+Use the [`-t` command line parameter](#usage) to change the number of threads
+used for layouting, 4 by default.
+Single threaded algorithms will always only use one of them.
+
+#### Interaction
+
+The following keyboard shortcuts are available:
+- `r`: restart layouting from scratch
+- `p`: stop layouting, or restart from current state
+
+Nodes may be dragged around with the mouse.
+Moving nodes does not fix their position to a constant position,
+and if layouting is currently underway it will influence the layout as a whole.
+Nodes can be fixed via [tags](#interaction).
+
 Restarting it is cheap; try it if the layout doesn't look good.
+Intermediate or final results can be saved to file,
+then used as an initial state for another round of layouting.
 
-Termination conditions for the algorithms are not yet well tuned wrt. the size of
-the graphs, and layouting may continue with little noticeable changes.
-Use the 'p' key to freeze/unfreeze layouting.
-
-#### Available layouts
-
-- _pfr_: parallelized variant of the Fruchterman-Reingold algorithm (default)
-- _fr_: single threaded version of the above
-- _conga_: fixed node placement on a line by GFA file order
-- _random_: random fixed node placement
-
-Experimental, problem-specific layouts:
-- _linear_: _fr_ layout with the addition of optionally fixed position nodes (_fx_ and _fy_ GFA segment tags) and initial position (via _mv_ segment tag)
-- _circ_: attempt at a circular version of the above
-- _bo_: similar to _pline_ but using BO tags for initial placement along a horizontal line
 
 #### Loading from and saving to file
 
-A pre-existing layout may be loaded with the `-f` flag irrespective of the selected layout algorithm.
-Layouts can't yet be selected at runtime or ran partially but they may be interrupted and resumed with the 'p' key.
+A pre-existing layout file may be loaded with the [`-f` command line parameter](#usage),
+irrespective of the selected layout algorithm.
+The file format is binary and specific to strangepg.
+Currently it's assumed that the layout file contains the exact same number
+of segments (S records) and in the __same order of appearance__
+(in either S or L records) as the originating GFA.
 
-The current layout may be exported or imported at runtime with the `exportlayout("file")` and `importlayout("file")` functions
+The current layout may be exported or imported at runtime
+with the `exportlayout("file")` and `importlayout("file")` functions
 (see [Interaction](#interaction)).
-The output file format is binary.
+
 
 ## <a name="navigation"></a>Navigation
 
@@ -203,13 +341,14 @@ Mouse buttons:
 
 Keyboard shortcuts:
 
-- Pause/unpause layout: 'p' key
-- Re-layout: 'r' key
-- Quit: 'q' key or close window
+- Pause/unpause layout: `p` key
+- Re-layout: `r` key
+- Quit: `q` key or close window
 - Reset initial position: 'escape' key
 - Arrow keys: move view by screenful up/down/left/right
 
 Hovering over an edge or node shows some information on the prompt window.
+
 
 ## <a name="interaction"></a>Interaction
 
@@ -282,7 +421,7 @@ Nodes labels must refer to existing nodes in the input GFA file.
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
 (see [Interaction](#interaction)).
 
-*Loading multiple CSV files one after the other is allowed.*
+**Loading multiple CSV files one after the other is allowed.**
 In other words, variables such as color are not reset between files.
 CSV files thus needn't be merged together.
 
@@ -296,12 +435,13 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 
 Each line must have the same number of fields as the header, but fields can be empty.
 
+
 ## <a name="compilationsettings"></a>Additional compilation settings
 
 #### Installation prefix
 
-By default, the installation path is *$HOME/.local/bin*.
-To install to a different directory, use the _PREFIX_ make variable:
+By default, the installation path is `$HOME/.local/bin`.
+To install to a different directory, use the `PREFIX` make variable:
 
 ```bash
 # example: install in /usr/local/bin via sudo:
@@ -311,20 +451,22 @@ sudo make PREFIX=/usr/local install
 
 #### Compiler
 
-To build using a different compiler, eg. clang, use the _CC_ make variable:
+To build using a different compiler, eg. clang, use the `CC` make variable:
 
 ```bash
 make CC=clang -j
-sudo make PREFIX=/usr/local install
 ```
 
 Tested with clang and gcc only.
 
+
 ## <a name="bugs"></a>Known bugs
 
+Major bugs:
 - strawk leaks some memory; awk wasn't meant to be used this way and plugging
   the leaks is not trivial
 - currently broken on WSL because of GL initialization errors; not sure why
+
 
 ## <a name="bundled"></a>Used and bundled alien software
 
@@ -346,8 +488,14 @@ strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 ![](plan.png)
 
+
 ## <a name="9front"></a>9front
 
 Build with _mk_ instead of _make_ in the usual manner.
 Additionally requires [npe](https://git.sr.ht/~ft/npe); it's really only required to build khash.
 A better solution might exist since SDL2 isn't used at all.
+
+
+## <a name="references"></a>References
+
+[1] Fruchterman, Thomas M. J.; Reingold, Edward M. (1991), "Graph Drawing by Force-Directed Placement", Software: Practice and Experience, 21 (11), Wiley: 1129–1164, doi:10.1002/spe.4380211102, S2CID 31468174
