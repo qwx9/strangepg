@@ -76,11 +76,15 @@ pasteprompt(char *s)
 void
 drawui(nk_context *ctx)
 {
+	float h;
 	nk_flags e;
+	struct nk_style_edit *s;
 
-	if(nk_begin(ctx, "Prompt", nk_rect(8, 8, view.w / 2, 32+24*3-1), NKwopt)){
-		/* FIXME: no wrap */
-		nk_layout_row_dynamic(ctx, 0, 1);
+	if(nk_begin(ctx, "Prompt", nk_rect(8, 8, view.w / 4.5, 122-5), NKwopt)){
+		s = &ctx->style.edit;
+		h = nk_window_get_height(ctx);
+		h = MAX(h - 3*24 - s->padding.y - s->border, 8);
+		nk_layout_row_dynamic(ctx, h, 1);
 		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
 		prompting = (e & NK_EDIT_ACTIVE) != 0;
 		if((e & NK_EDIT_COMMITED) != 0){
