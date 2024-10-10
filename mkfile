@@ -1,6 +1,6 @@
 </$objtype/mkfile
 BIN=$home/bin/$objtype
-VERSION=0.8.6
+VERSION=0.8.8
 TARG=\
 	strangepg\
 
@@ -16,7 +16,6 @@ OFILES=\
 	fs/em.$O\
 	fs/fs.$O\
 	fs/gfa.$O\
-	fs/index.$O\
 	fs/layout.$O\
 	fs/load.$O\
 	fs/metacsv.$O\

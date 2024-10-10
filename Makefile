@@ -1,5 +1,5 @@
 PROGRAM:= strangepg
-VERSION:= 0.8.6
+VERSION:= 0.8.8
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
@@ -28,10 +28,10 @@ OBJS:=\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
+	fs/coarse.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\
-	fs/index.o\
 	fs/layout.o\
 	fs/load.o\
 	fs/metacsv.o\
@@ -132,11 +132,9 @@ ifdef DEBUG
 		WFLAGS+= -Wno-suggest-attribute=format
 	endif
 	WFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
-			 -Winvalid-pch -Wunsafe-loop-optimizations \
-			 -Wmissing-format-attribute -Wpacked \
+			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
-			 -Wswitch-default \
-			 -Wvariadic-macros
+			 -Wswitch-default -Wvariadic-macros
 else
 	# c2x for omitting parameter names in a function definition
 	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
