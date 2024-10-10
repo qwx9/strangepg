@@ -63,6 +63,10 @@ function nodecolor(name, color){
 		print "E no such node", name
 		return
 	}
+	if(length(color) == 0){
+		print "E no such color", name
+		return
+	}
 	CL[name] = color
 	print "c", node[name], color
 }
