@@ -20,9 +20,25 @@ extensible manner, designed to allow substituting different algorithms for most 
 general framework for experimentation with layouting and new visualization techniques.
 ```
 
-<p align="center"><img src="strangelove.png"/></p>
+<p align="center"><img src=".pics/strangelove.png"/></p>
 
-_Note: this is a work in progress.
+Named in reference to the Dr. Strangelove character
+in Stanley Kubrick's __Dr. Strangelove or: how I learned to stop
+worrying and love the bomb__ (1964),
+strangepg provides an interactive visualization of bidirected and undirected graphs
+in a familiar force-directed layout but aims to scale to hundreds of millions of nodes and beyond.
+Such is the size of pangenome graphs today,
+the direct application for this tool.
+A big emphasis is placed on performance, reactivity and immediate feedback.
+While it currently supports only GFA files as input,
+it will in future be extended to support other formats (GraphML, DOT, Newick, etc)
+and types of trees (Newick for phylogenetic trees, etc.).
+
+_Note: this is a work in progress and under heavy development;
+significant or breaking changes happen all the time,
+but always prefer building from source on the latest commit to
+other methods of installation in order to get the latest fixes and
+additions. Git tags do **not** mark stable releases.
 Please consider this to be a public beta of sorts
 and feel free to send bug reports, feature requests or comments.
 Thanks!_
@@ -35,7 +51,7 @@ Thanks!_
 - [Usage](#usage)
 - [Layouting](#layouting)
 - [Navigation](#navigation)
-- [Interaction](#interaction)
+- [Graph manipulation](#interaction)
 - [Loading tags from CSV files](#csv)
 - [Additional compilation settings](#compilationsettings)
 - [Known bugs](#bugs)
@@ -53,7 +69,7 @@ immediate output and interaction whenever possible.
 - High performance graphics with modern and efficient renderer.
 - Fast GFA loading by splitting topology from sequence/tags in separate passes;
 no assumptions about ordering, type of labels (strings or integers) or tags.
-- Console with an embedded graph manipulation language based on GFA tags
+- Console with an embedded graph manipulation language based on GFA tags.
 - Any tags, including user-defined ones, can be loaded from the GFA file,
 CSV files and in the prompt; automatic coloring if one is included.
 - Custom layouting (albeit currently primitive) via special tags and a generic force-directed layout in 2D or 3D space.
@@ -193,7 +209,7 @@ on Void Linux and Ubuntu 22.04/24.04.
 
 ## <a name="usage"></a>Usage
 
-_strangepg_ requires at least one input file as argument.
+strangepg requires at least one input file as argument.
 It currently supports graphs in GFA format.
 
 ```bash
@@ -211,13 +227,13 @@ strangepg test/03.232.gfa
 
 ```bash
 $ strangepg -h
-usage: strangepg [-FRZbhv] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
+usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
 -b             White-on-black color theme
 -c FILE        Load tags from csv FILE
 -f FILE        Load layout from FILE
 -l ALG         Set layouting algorithm (default: pfr)
 -t N           Set number of layouting threads (1-128, default: 4)
--F             Force layouting to start only once all inputs are loaded
+-w             Force layouting to wait until all inputs are loaded
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
 ```
 
@@ -239,7 +255,7 @@ It can be specified multiple times to load tags from more than one CSV file.
 Additional settings:
 
 - `-b` sets the obligatory dark theme.
-- `-F` forces layouting to wait until both the GFA file and any CSV files are fully loaded.
+- `-w` forces layouting to wait until both the GFA file and any CSV files are fully loaded.
 Normally layouting begins as soon as the quick first pass over the GFA is done.
 Use this when tags affecting the layout are present in the GFA and/or CSV files,
 instead of having to manually restart layouting.
@@ -289,7 +305,6 @@ of the original algorithm. The time complexity is essentially the same,
 so while it may run faster, it will not scale on its own for 10k node graphs and beyond. Because it splits the graph across threads, it will produce nonsense results
 if the number of nodes is less than 2-3 times the number of threads.
 - `-l pfr3d`: same as `pfr` but additionally using the z axis to layout in 3D.
-All layouts are actually in 3D space, but the others do not touch the z coordinate.
 - `-l fr`: the classic algorithm, single-threaded. Use this for very small graphs (<1000 nodes) where `pfr` is not appropriate.
 - `-l circ`: circular layout, where nodes are placed in sequence on a circle or spiral; currently has some issues and requires specific tags, but is currently being rewritten to be fully generic and get rid of both limitations.
 
@@ -324,40 +339,74 @@ of segments (S records) and in the __same order of appearance__
 
 The current layout may be exported or imported at runtime
 with the `exportlayout("file")` and `importlayout("file")` functions
-(see [Interaction](#interaction)).
+(see [Graph manipulation](#interaction)).
 
 
 ## <a name="navigation"></a>Navigation
 
-Mouse buttons:
+Moving the graph around is done primarily with the mouse.
 
-- Select object: click left mouse button (click on nothing to unselect)
-- Move (pan) view: drag with right mouse button or press a cursor key to jump
+- Select object: click left mouse button (click on nothing to unselect).
+- Move selected object (nodes only): click and drag the mouse.
+- Move (pan) view: drag with right mouse button or press a cursor key to jump by screenful.
 - Zoom view: three options:
-	* mouse scroll keys
-	* hold control + right mouse
-	* hold left + right mouse button and drag: pull (drag towards bottom right) to zoom in, push (draw towards top left) to zoom out
+	* Mouse scroll.
+	* Hold control + right mouse.
+	* Hold left + right mouse button and drag:
+pull (drag towards bottom right) to zoom in,
+push (draw towards top left) to zoom out.
 
 Keyboard shortcuts:
 
-- Pause/unpause layout: `p` key
-- Re-layout: `r` key
-- Quit: `q` key or close window
-- Reset initial position: 'escape' key
+- `p`: Pause/unpause layout (unpause = restart layout from current state)
+- `r`: Restart layouting from scratch
+- `q`: Quit
+- `Esc`: Reset view to initial position
 - Arrow keys: move view by screenful up/down/left/right
 
-Hovering over an edge or node shows some information on the prompt window.
+A status window currently labeled `Prompt`
+presents a text box to write [commands](#interaction) in,
+and shows selected and hovered over objects.
+Currently, it only shows the name and length (nodes)
+or endpoints, orientation and CIGAR string (edges),
+but will be extended to show all of a node's tags.
 
 
-## <a name="interaction"></a>Interaction
+## <a name="interaction"></a>Graph manipulation
 
-_strangepg_ provides a text prompt for interaction with the graph by issuing commands.
-They are effectively [_awk_](https://awk.dev) one-liners.
-GFA tags and labels are transformed into tables which can then be used to change the state of the graph in arbitrary ways.
+strangepg embeds a simple graph manipulation language,
+which presents tags as tables (associative arrays)
+and provides means to manipulate the graph and its
+properties via those tags.
+Using it involves typing commands in the text prompt
+of the status window.
+
+Whenever a node's tag is loaded from a GFA or CSV file or
+on the prompt, the table with the same name is updated with
+the new value.
+For example, in GFA files the `LN` tag indicates the length of a
+node's sequence.
+Upon loading the GFA file, each S line with a non-empty sequence
+and/or an LN tag will add an element to the `LN` table.
+`LN[name]` then stores the value for a node labeled `name` in the GFA.
+This can be used for instance to change the color of all nodes
+matching some condition such as `LN[name] < 1000` (more examples below).
+
+The editing box is currently ugly and inconvenient due to limitations
+of the UI framework used, but this will be fixed soon.
+It has clipboard support
+(Ctrl-C for copy, Ctrl-V for paste, mouse selection).
+
+The language is a fork of [_awk_](https://awk.dev),
+hacked up to evaluate commands interactively.
+Any awk code valid within a pattern (inside braces)
+is also valid here, but functions cannot be defined yet.
+Currently, it's somewhat limited and a bit hacky, but it works.
+It will be improved later on.
 
 #### Examples
 
-Color nodes with labels matching a regexp:
+Color nodes with labels matching a regular expression:
 ```awk
 CL[i ~ /chr13/] = green
 ```
@@ -391,16 +440,35 @@ Color every other node:
 CL[node[i] % 2 == 1] = orange
 ```
 
-See [strawk.md](strawk.md) for a more detailed overview.
+Look up a node by name, zooming in and centering on it if it exists:
+```awk
+findnode("s14")
+```
 
-Currently most of the functionality is limited to coloring, but editing the graph is next.
-Note that the language is not yet satisfactory, thus not final.
+Save current layout to file:
+```awk
+exportlayout("filepath")
+```
+
+Load existing layout from file:
+```awk
+importlayout("filepath")
+```
+
+Read in [a CSV file](#csv):
+```awk
+readcsv("filepath")
+```
+
+See [strawk.md](strawk.md) for a more detailed overview.
 
 
 ## <a name="csv"></a>Loading tags from CSV files
 
-CSV files can be loaded at start up with the '-c' flag or at runtime to feed or modify tags for existing nodes.
+CSV files can be loaded at start up with the `-c` flag or at runtime
+uuto feed or modify tags for existing nodes.
 The '-c' flag may be used multiple times to load more than one CSV file at startup.
+
 The first column is always reserved for node labels, and all subsequent columns are tags values.
 The first line must be a header specifying a tag name for each column.
 
@@ -415,10 +483,10 @@ utig4-143,0,53,red
 The name of the first column does not matter.
 The `CL` tag is used as a node's color and can thus also be set in this way.
 `Color` can also be used.
-Nodes labels must refer to existing nodes in the input GFA file.
+Node labels must refer to existing nodes from the input GFA file.
 
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
-(see [Interaction](#interaction)).
+(see [Graph manipulation](#interaction)).
 
 **Loading multiple CSV files one after the other is allowed.**
 In other words, variables such as color are not reset between files.
@@ -432,7 +500,7 @@ There are no escape sequences or special quoting rules, ie. quotes are not speci
 Line breaks within a field are disallowed.
 Lines must be terminated with a new line (LF) character, ie. the return character (CR) is not handled.
 
-Each line must have the same number of fields as the header, but fields can be empty.
+Each line must have the same number of fields as the header, but fields may be empty.
 
 
 ## <a name="compilationsettings"></a>Additional compilation settings
@@ -485,7 +553,7 @@ Used but not bundled:
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 
-![](plan.png)
+![](.pics/plan.png)
 
 
 ## <a name="9front"></a>9front
