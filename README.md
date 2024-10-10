@@ -53,6 +53,7 @@ Thanks!_
 - [Navigation](#navigation)
 - [Graph manipulation](#interaction)
 - [Loading tags from CSV files](#csv)
+- [Example applications](#applications)
 - [Additional compilation settings](#compilationsettings)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
@@ -371,6 +372,10 @@ Currently, it only shows the name and length (nodes)
 or endpoints, orientation and CIGAR string (edges),
 but will be extended to show all of a node's tags.
 
+The window can be moved around with the mouse,
+collapsed by clicking the top right button,
+or resized by dragging the lower right corner.
+
 
 ## <a name="interaction"></a>Graph manipulation
 
@@ -503,6 +508,51 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 Each line must have the same number of fields as the header, but fields may be empty.
 
 
+## <a name="applications"></a>Example applications
+
+One of the goals of _strangepg_ is to enable experimentation with layouting.
+Currently, the default layouting algorithm honors a set of tags
+which set initial coordinates and/or fixes them (makes them unmovable).
+
+- **x0:f:xpos**	set initial x coordinate in layout
+- **y0:f:ypos**	set initial y coordinate in layout
+- **fx:f:xpos**	force immutable x coordinate
+- **fy:f:ypos**	force immutable y coordinate
+
+They can be loaded from the GFA itself, from CSV or live by using the prompt.
+
+See [strawk.md](strawk.md) for a more detailed overview.
+
+#### Conga-line: linear layout in GFA segments order
+
+```awk
+fx[1] = 8 * node[i]
+fy[1] = 0
+```
+
+#### Random coordinates
+
+```awk
+fx[1] = 8 * 1024 * node[i]
+fy[1] = 8 * 1280 * rand()
+```
+#### Linear layout using bubble id tags from gaftools
+
+```awk
+min = 999999
+max = -999999
+for(i in BO) if(BO[i] < min) min = BO[i]; if(BO[i] > max) max = BO[i]
+fx[CL[i] == orange] = 8 * (BO[i] - min - (max - min) / 2)
+fy[CL[i] == orange] = 0
+x0[CL[i] != orange] = 8 * (BO[i] - min - (max - min) / 2)
+y0[CL[i] != orange] = 2 - 4 * rand() 
+```
+
+#### Linear layout of a DeBrujin graphs mapped back to a reference
+...
+...
+```
+
 ## <a name="compilationsettings"></a>Additional compilation settings
 
 #### Installation prefix
@@ -530,9 +580,9 @@ Tested with clang and gcc only.
 ## <a name="bugs"></a>Known bugs
 
 Major bugs:
+- currently broken on Windows during of GL initialization
 - strawk leaks some memory; awk wasn't meant to be used this way and plugging
   the leaks is not trivial
-- currently broken on WSL because of GL initialization errors; not sure why
 
 
 ## <a name="bundled"></a>Used and bundled alien software
