@@ -20,14 +20,12 @@ struct Filefmt{
 enum{
 	FFdead,	/* deallocated */
 	FFgfa,
-	FFindex,
 	FFcsv,
 	FFlayout,
 	FFnil,
 };
 
 Filefmt*	reggfa(void);
-Filefmt*	regindex(void);
 Filefmt*	regcsv(void);
 int	readchar(File*);
 char*	nextfield(File*, char*, int*, char);

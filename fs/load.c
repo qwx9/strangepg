@@ -53,6 +53,5 @@ void
 initfs(void)
 {
 	fftab[FFgfa] = reggfa();
-	fftab[FFindex] = regindex();
 	fftab[FFcsv] = regcsv();
 }

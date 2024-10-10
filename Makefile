@@ -28,7 +28,6 @@ OBJS:=\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
-	fs/coarse.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\
