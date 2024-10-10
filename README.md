@@ -583,6 +583,9 @@ Major bugs:
 - currently broken on Windows during of GL initialization
 - strawk leaks some memory; awk wasn't meant to be used this way and plugging
   the leaks is not trivial
+- strawk expressions have some unexpected results in some cases due to the
+hacky implementation, or large changes in awk necessary to fix them
+(see [the strawk document](strawk.md) for this.
 
 
 ## <a name="bundled"></a>Used and bundled alien software

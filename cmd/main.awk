@@ -188,27 +188,27 @@ function fixy(name, y){
 }
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]
-function subexpr(s, fn,	i, j, t, pred){
+function subexpr(s, v, fn,	i, j, t, pred){
 	i = match(s, "\][ 	]*=[^=]")
 	# error check: i not 0; only sub expression up to } or ; etc
 	pred = substr(s, 1, i-1)
 	s = substr(s, RSTART+RLENGTH-1)
-	$0 = "for(i in node) if(" pred "){ " fn "(i, " s ")}"
+	$0 = "for(i in " v ") if(" pred "){ " fn "(i, " s ")}"
 }
 crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)
 	s = substr($0, i + 1)
 	if(v == "CL" || v ~ /[Cc][Oo][Ll][Oo][Rr]/)
-		subexpr(s, "nodecolor")
+		subexpr(s, v, "nodecolor")
 	else if(v == "x0")
-		subexpr(s, "initx")
+		subexpr(s, v, "initx")
 	else if(v == "y0")
-		subexpr(s, "inity")
+		subexpr(s, v, "inity")
 	else if(v == "fx")
-		subexpr(s, "fixx")
+		subexpr(s, v, "fixx")
 	else if(v == "fy")
-		subexpr(s, "fixy")
+		subexpr(s, v, "fixy")
 }
 {
 	eval("{" $0 "}")

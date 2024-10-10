@@ -295,6 +295,7 @@ ioff
 pushnode(Graph *g, char *s)
 {
 	ioff id;
+	RNode *r;
 
 	/* nodes may be defined after an edge references them, should
 	 * not be considered as an error */
@@ -307,7 +308,8 @@ pushnode(Graph *g, char *s)
 		free(s);
 		return -1;
 	}
-	pushcmd("addnode(%d,\"%s\")", id, s);
+	r = rnodes + id;
+	pushcmd("addnode(%d,\"%s\",%d)", id, s, r->col);
 	return id;
 }
 

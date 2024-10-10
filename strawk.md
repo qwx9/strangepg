@@ -179,6 +179,32 @@ which will be addressed in the future.
 Anything affecting how a node or edge is displayed
 must instead be done via the provided built-in functions.
 
+#### Corner cases
+
+Currently, because of design of awk and some of the changes,
+some cases will produce confusing results:
+
+```awk
+# if i is not in LN, it will be instanciated with value 0 anyway
+CL[LN[i] < 1000] = red
+# do this instead:
+for(i in LN) if(LN[i] < 1000) nodecolor(i, red)
+
+# this only updates nodes with a CN tag, rather than all of them
+CN[CL[i] == red] = 4
+# do this instead:
+for(i in node) if(CN[i] == red) CN[i] = 4
+
+# this will update *all* nodes with CL
+CL["s1"] = red
+# do this instead:
+nodecolor("s1", red)
+# or if it doesn't use such a function, even though it's complicated:
+tag[i == "s1"] = red
+```
+
+They will be dealt with as soon as possible.
+
 
 ## Built-in functions and variables
 

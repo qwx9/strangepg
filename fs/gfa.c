@@ -25,8 +25,7 @@ setnamedtag(char *label, char *tag, char *val)
 		pushcmd("initx(\"%s\", %s)", label, val);
 	else if(strcmp(tag, "y0") == 0)
 		pushcmd("inity(\"%s\", %s)", label, val);
-	else
-		pushcmd("%s[\"%s\"] = \"%s\"", tag, label, val);
+	pushcmd("%s[\"%s\"] = \"%s\"", tag, label, val);
 }
 void
 settag(Node *n, ioff id, char *tag, char *val)
@@ -73,12 +72,12 @@ collectgfanodes(Graph *g, File *f)
 			}
 			continue;
 		}
-		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", id, f->trunc, s);
 		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
 		|| (t = nextfield(f, s, nil, '\t')) == nil)     /* id */
 			continue;
 		if((id = getid(g, s)) < 0)
 			sysfatal("collectgfanodes: bug: %s not found", s);
+		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", id, f->trunc, s);
 		n = g->nodes + id;
 		s = t;
 		t = nextfield(f, s, &l, '\t');	/* seq */
