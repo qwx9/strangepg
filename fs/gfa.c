@@ -25,7 +25,8 @@ setnamedtag(char *label, char *tag, char *val)
 		pushcmd("initx(\"%s\", %s)", label, val);
 	else if(strcmp(tag, "y0") == 0)
 		pushcmd("inity(\"%s\", %s)", label, val);
-	pushcmd("%s[\"%s\"] = \"%s\"", tag, label, val);
+	else
+		pushcmd("%s[\"%s\"] = \"%s\"", tag, label, val);
 }
 void
 settag(Node *n, ioff id, char *tag, char *val)
@@ -277,7 +278,7 @@ loadgfa1(void *arg)
 	if((n = collectgfameta(&g)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
 	/* if no actual useful metadata was loaded, don't do anything */
-	else if(n > 0)
+	else if(n > 0 || !gottagofast)
 		pushcmd("cmd(\"FHJ142\")");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
 	cleargraphtempshit(&g);
