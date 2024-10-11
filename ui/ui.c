@@ -203,7 +203,7 @@ mouseevent(Vertex v, Vertex Δ)
 	static int omod;
 
 	m = mod & Mmask;
-	if(m != 0 && (omod & ~Mrmb) == 0)
+	if(m == 0 || (omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(Δ.x != 0.0 || Δ.y != 0.0)
 		shown = mousehover(v.x, v.y);
