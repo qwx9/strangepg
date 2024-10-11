@@ -56,8 +56,7 @@ new(Graph *g)
 			r->pos[1] = u->pos0.y;
 		else
 			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
-		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
-		r->pos[2] = 0.8 * (0.5 - z);
+		r->pos[2] = (float)(W / 2 - nrand(W)) / (W / 2);
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
