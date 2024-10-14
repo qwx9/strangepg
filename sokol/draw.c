@@ -115,23 +115,21 @@ static void
 updateview(void)
 {
 	HMM_Vec3 eye, center, up;
-	HMM_Mat4 vw, proj;
+	HMM_Mat4 vw, rot, proj;
 
 	view.Δeye = subv(view.eye, view.center);
 	view.ar = (float)view.w / view.h;
 	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 10000.0f);
+	rot = HMM_MulM4(
+			HMM_Rotate_RH(view.θ, HMM_V3(0.0f, 1.0f, 0.0f)),
+            HMM_Rotate_RH(view.φ, HMM_V3(1.0f, 0.0f, 0.0f))
+            );
+	proj = HMM_MulM4(proj, rot);
 	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
 	center = HMM_V3(view.center.x, view.center.y, view.center.z);
 	up = HMM_V3(view.up.x, view.up.y, view.up.z);
 	vw = HMM_LookAt_RH(eye, center, up);
 	mvp = HMM_MulM4(proj, vw);
-}
-
-void
-zoomdraw(float Δ)
-{
-	view.eye = subv(view.eye, mulv(view.Δeye, Δ));
-	updateview();
 }
 
 /* FIXME: pan/zoom in world coordinates; standardize this, make mvp global */
@@ -155,10 +153,32 @@ pandraw(float Δx, float Δy)
 {
 	Δx /= view.w;
 	Δy /= view.h;
-	view.eye.x += Δx * 2 * view.Δeye.z * view.ar * view.tfov;
-	view.eye.y -= Δy * 2 * view.Δeye.z * view.tfov;
-	view.center.x = view.eye.x;
-	view.center.y = view.eye.y;
+	Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
+	Δy *= 2 * view.Δeye.z * view.tfov;
+	view.eye.x += Δx;
+	view.eye.y -= Δy;
+	view.center.x += Δx;
+	view.center.y -= Δy;
+	updateview();
+}
+
+/* FIXME: geared towards 2D, where it doesn't make sense to zoom past
+ * the canvas */
+void
+zoomdraw(float Δ, float Δx, float Δy)
+{
+	Vertex v;
+
+	v = mulv(view.Δeye, Δ);
+	view.eye = subv(view.eye, v);
+	pandraw(Δx, Δy);
+}
+
+void
+rotdraw(Vertex v)
+{
+	view.θ += v.x;
+	view.φ += v.y;
 	updateview();
 }
 
@@ -168,17 +188,6 @@ renderedges(Params p)
 	ioff n;
 
 	n = dylen(redges);
-	/*
-	sg_buffer_desc d;
-	d = sg_query_buffer_desc(edgebind.vertex_buffers[1]);
-	if(d.size / sizeof *edgev < n){
-		sg_destroy_buffer(edgebind.vertex_buffers[1]);
-		edgebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-			.size = n * sizeof *edgev,
-			.usage = SG_USAGE_STREAM,
-		});
-	}
-	*/
 	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
 		.ptr = redges,
 		.size = n * sizeof *redges,
@@ -200,18 +209,6 @@ rendernodes(Params p)
 	ioff n;
 
 	n = dylen(rnodes);
-	/*
-	sg_buffer_desc d;
-	d = sg_query_buffer_desc(nodebind.vertex_buffers[1]);
-	if(d.size / sizeof *nodev < n){
-		warn("nodes: yep %x < %x\n", d.size, n);
-		sg_destroy_buffer(nodebind.vertex_buffers[1]);
-		nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-			.size = n * sizeof *nodev,
-			.usage = SG_USAGE_STREAM,
-		});
-	}
-	*/
 	sg_update_buffer(nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
 		.size = n * sizeof *rnodes,

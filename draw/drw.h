@@ -46,6 +46,8 @@ struct View{
 	float ar;
 	float fov;
 	float tfov;
+	float θ;
+	float φ;
 	Vertex eye;
 	Vertex center;
 	Vertex up;
@@ -55,8 +57,9 @@ struct View{
 };
 extern View view;
 
-void	zoomdraw(float);
+void	zoomdraw(float, float, float);
 void	pandraw(float, float);
+void	rotdraw(Vertex);
 void	worldview(Vertex);
 ioff	mousepick(int, int);
 void	drawselected(void);
@@ -79,6 +82,7 @@ Color*	newcolor(u32int);
 Color*	color(u32int);
 u32int	somecolor(ioff, char**);
 void	settheme(void);
+u32int	getcolor(float*);
 void	setcolor(float*, u32int);
 
 enum{

@@ -53,9 +53,27 @@ zoom(float Δx, float Δy)
 		return;
 	view.zoom += Δ;
 	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
-	zoomdraw(Δ);
 	v = mulv(center, Δ);
-	pan(v.x, v.y);
+	zoomdraw(Δ, v.x, v.y);
+	reqdraw(Reqshallowdraw);
+}
+
+static void
+rotate(float Δx, float Δy)
+{
+	Vertex v;
+
+	if(Δx == 0.0f && Δy == 0.0f)
+		return;
+	Δx *= PI / 180.0f;
+	Δy *= PI / 180.0f;
+	Δx *= 0.1f;
+	Δy *= 0.1f;
+	v.x = Δx;
+	v.y = Δy;
+	v.z = 0.0f;
+	rotdraw(v);
+	reqdraw(Reqshallowdraw);
 }
 
 int
@@ -246,7 +264,9 @@ mouseevent(Vertex v, Vertex Δ)
 			zoom(-Δ.x, -Δ.y);
 		else
 			pan(-Δ.x, -Δ.y);
-	}else if(m == (Mlmb | Mrmb))
+	}else if(m == Mmmb)
+		rotate(-Δ.x, -Δ.y);
+	else if(m == (Mlmb | Mrmb))
 		zoom(-Δ.x, -Δ.y);
 	omod = m;
 	return 0;
@@ -256,8 +276,8 @@ void
 resetui(void)
 {
 	view.center = ZV;
-	/* FIXME: eye should be much closer, but our pan and zoom decrease the closer
-	 * we go */
+	view.θ = 0.0f;
+	view.φ = 0.0f;
 	view.eye = V(0.0f, 0.0f, 80.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
 	view.Δeye = subv(view.eye, view.center);
