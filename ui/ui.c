@@ -245,9 +245,14 @@ int
 mouseevent(Vertex v, Vertex Δ)
 {
 	int m;
-	static int omod;
+	static int omod, inwin;
 
 	m = mod & Mmask;
+	if(vinrect(v, view.prompt) || m != 0 && inwin){
+		inwin = 1;
+		goto nope;
+	}else
+		inwin = 0;
 	if(m == 0 || (omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(Δ.x != 0.0 || Δ.y != 0.0)
@@ -268,6 +273,7 @@ mouseevent(Vertex v, Vertex Δ)
 		rotate(-Δ.x, -Δ.y);
 	else if(m == (Mlmb | Mrmb))
 		zoom(-Δ.x, -Δ.y);
+nope:
 	omod = m;
 	return 0;
 }

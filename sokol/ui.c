@@ -78,12 +78,14 @@ drawui(nk_context *ctx)
 {
 	float h;
 	nk_flags e;
+	struct nk_rect r;
+	struct nk_panel *p;
 	struct nk_style_edit *s;
 
 	if(nk_begin(ctx, "Prompt", nk_rect(8, 8, view.w / 4.5, 122-5), NKwopt)){
 		s = &ctx->style.edit;
-		h = nk_window_get_height(ctx);
-		h = MAX(h - 3*24 - s->padding.y - s->border, 8);
+		r = nk_window_get_bounds(ctx);
+		h = MAX(r.h - 3*24 - s->padding.y - s->border, 8);
 		nk_layout_row_dynamic(ctx, h, 1);
 		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
 		prompting = (e & NK_EDIT_ACTIVE) != 0;
@@ -96,6 +98,12 @@ drawui(nk_context *ctx)
 		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_LEFT);
 		if(hoverstr[0] != 0)
 			nk_label(ctx, hoverstr, NK_LEFT);
+		view.prompt = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
+	}else{	/* minimized */
+		if((p = nk_window_get_panel(ctx)) != nil){
+			r = nk_window_get_bounds(ctx);
+			view.prompt = (Box){r.x, r.y, r.x + r.w, r.y + p->header_height};
+		}
 	}
 	nk_end(ctx);
 }

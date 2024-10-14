@@ -1,6 +1,7 @@
 typedef struct Quad Quad;
 typedef struct View View;
 typedef struct Color Color;
+typedef struct Box Box;
 
 #pragma incomplete Color
 
@@ -21,7 +22,7 @@ struct Quad{
 #define	subv(u,v)	((Vertex){(u).x-(v).x, (u).y-(v).y, (u).z-(v).z})
 #define	mulv(u,s)	((Vertex){(u).x*(s), (u).y*(s), (u).z*(s)})
 #define	divv(u,s)	((Vertex){(u).x/(s), (u).y/(s), (u).z/(s)})
-#define	vinrect(u,r)	((u).x>=(q).min.x && (u).x<(q).max.x && (u).y>=(q).min.y && (u).y<(q).may.y)
+#define	vinrect(u,r)	((u).x>=(r).x1 && (u).x<(r).x2 && (u).y>=(r).y1 && (u).y<(r).y2)
 #define	eqv(u,v)	((u).x==(v).x && (u).y==(v).y && (u).z==(v).z)
 #define Q(a,b,c,d)	((Quad){(a), (b), (c), (d)})
 #define qaddv(q,v)	Q(addv((q).tl,(v)), addv((q).tr,(v)), addv((q).bl,(v)), addv((q).br,(v)))
@@ -32,6 +33,13 @@ struct Quad{
 #define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.pan), view.center)
 
 #define	ZV	V(0.0f, 0.0f, 0.0f)
+
+struct Box{
+	float x1;
+	float y1;
+	float x2;
+	float y2;
+};
 
 enum{
 	VFhaxx0rz = 1<<0,
@@ -54,6 +62,7 @@ struct View{
 	Vertex Δeye;
 	Vertex pan;
 	double zoom;
+	Box prompt;
 };
 extern View view;
 
