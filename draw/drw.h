@@ -69,13 +69,15 @@ enum{
 	Ctext,
 	Cedge,
 	Cemph,
+	Chigh,
 	Cend,
 };
 extern u32int *theme;
 
+void	mixcolors(float*, u32int);
 Color*	newcolor(u32int);
 Color*	color(u32int);
-u32int	somecolor(ioff);
+u32int	somecolor(ioff, char**);
 void	settheme(void);
 void	setcolor(float*, u32int);
 

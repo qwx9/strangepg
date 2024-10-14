@@ -137,10 +137,22 @@ mousedrag(float Δx, float Δy)
 	return 1;
 }
 
+static void
+getinfo(ioff id)
+{
+	if((id & (1<<31)) == 0){
+		id = (uint)id - 1;
+		pushcmd("nodeinfo(%d)", id);
+	}else{
+		id = (uint)(id & ~(1<<31)) - 1;
+		pushcmd("edgeinfo(%d)", id);
+	}
+}
+
 static ioff
 mousehover(int x, int y)
 {
-	uint v, id;
+	uint v;
 
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h
 	|| (v = mousepick(x, y)) == -1){
@@ -149,14 +161,21 @@ mousehover(int x, int y)
 	}
 	if(v == shown)
 		return v;
-	if((v & (1<<31)) == 0){
-		id = (uint)v - 1;
-		pushcmd("nodeinfo(%d)", id);
-	}else{
-		id = (uint)(v & ~(1<<31)) - 1;
-		pushcmd("edgeinfo(%d)", id);
-	}
+	getinfo(v);
 	return v;
+}
+
+static void
+unhighlightnode(ioff id)
+{
+	pushcmd("print \"c\", %d, CL[label[%d]]", id, id);
+}
+
+/* FIXME: plan9 */
+static void
+highlightnode(ioff id)
+{
+	mixcolors(rnodes[id].col, theme[Chigh] >> 8);
 }
 
 static int
@@ -164,9 +183,15 @@ mouseselect(ioff id)
 {
 	char *p;
 
+	if(selected == id)
+		return 0;
+	if((selected & 1<<31) == 0)
+		unhighlightnode(selected - 1);
 	if((selected = id) != -1){
 		p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
 		strecpy(p, selstr+sizeof selstr, hoverstr);
+		if((id & 1<<31) == 0)
+			highlightnode(id - 1);
 		reqdraw(Reqshallowdraw);
 		return 1;
 	}
@@ -194,6 +219,8 @@ focusobj(void)
 		return;
 	r = rnodes + focused;
 	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
+	mousehover(view.w / 2, view.h / 2);	/* FIXME: hack, unreliable */
+	mouseselect(focused + 1);
 }
 
 int

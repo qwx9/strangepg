@@ -70,7 +70,6 @@ printgraph(Graph *g)
 	}
 }
 
-
 /*
 // an inactive node is a future child and points to itself
 Node *
@@ -276,7 +275,7 @@ newnode(Graph *g, Node *n)
 }
 
 ioff
-pushinode(Graph *g)
+pushinode(Graph *g, char **cname)
 {
 	ioff id;
 	Node n = {0};
@@ -285,7 +284,7 @@ pushinode(Graph *g)
 	if((id = newnode(g, &n)) < 0)
 		return -1;
 	dypush(g->nodes, n);
-	setcolor(r.col, somecolor(id));
+	setcolor(r.col, somecolor(id, cname));
 	r.len = 1.0f;
 	dypush(rnodes, r);
 	return id;
@@ -295,7 +294,7 @@ ioff
 pushnode(Graph *g, char *s)
 {
 	ioff id;
-	RNode *r;
+	char *cname;
 
 	/* nodes may be defined after an edge references them, should
 	 * not be considered as an error */
@@ -304,12 +303,11 @@ pushnode(Graph *g, char *s)
 		return id;
 	}
 	s = estrdup(s);
-	if((id = pushinode(g)) < 0 || pushid(g, s, id) < 0){
+	if((id = pushinode(g, &cname)) < 0 || pushid(g, s, id) < 0){
 		free(s);
 		return -1;
 	}
-	r = rnodes + id;
-	pushcmd("addnode(%d,\"%s\",%d)", id, s, r->col);
+	pushcmd("addnode(%d,\"%s\",%s)", id, s, cname);
 	return id;
 }
 
