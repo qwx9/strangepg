@@ -43,11 +43,6 @@ OFILES=\
 	glsl/edge.frag.$O\
 	glsl/scr.vert.$O\
 	glsl/scr.frag.$O\
-	glsl/bezier.vert.$O\
-	glsl/bezier.tcs.$O\
-	glsl/bezier.tes.$O\
-	glsl/bezier.geom.$O\
-	glsl/bezier.frag.$O\
 
 OCOARSEN=\
 	coarsen.$O\
