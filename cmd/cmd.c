@@ -113,7 +113,7 @@ fnsetcolor(char *sid, char *col)
 		werrstr("invalid color %s", col);
 		return -1;
 	}
-	v = v << 8 | 0x90;	/* FIXME: need a better way to handle this */
+	v = v << 8 | 0xb0;	/* FIXME: need a better way to handle this */
 	setcolor(rnodes[id].col, v);
 	return 0;
 }
