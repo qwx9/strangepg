@@ -273,6 +273,8 @@ loadgfa1(void *arg)
 		sysfatal("loadgfa1: too many errors, last error: %s\n", error());
 	if(dylen(g.nodeoff) < dylen(g.nodes))
 		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
+	if(dylen(g.nodes) == 0 || dylen(g.edges) == 0)
+		sysfatal("loadgfa1: empty graph: %s", error());
 	DPRINT(Debugfs, "done loading gfa");
 	pushgraph(g);
 	if((n = collectgfameta(&g)) < 0)
