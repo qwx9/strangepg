@@ -55,12 +55,9 @@ struct Node{
 	ioff *in;		/* dynamic array (edge indices) */
 	ioff *out;		/* dynamic array (edge indices) */
 	/* FIXME: attr ht */
-	int weight;
 	int length;
 	Vertex pos0;
 	u32int flags;
-	ioff pid;		/* key (parent) */
-	ioff ch;		/* index */
 };
 struct Edge{
 	ioff u;	/* always packed with direction bit */

@@ -241,10 +241,9 @@ usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
 The most important options are:
 
 - `-l ALG`: select the [layouting algorithm](#layouting) to use.
-The default should be good enough for graphs with more than 1-2 dozen nodes,
-use the `fr` algorithm otherwise.
+The default should be good enough for graphs with more at least 3 times the number of threads. Use fewer threads or the `fr` algorithm otherwise.
 - `-t N` sets the number of threads spawned for layouting.
-It's recommended to set it at or near the number of all available cores.
+It's recommended to set it to or near the number of all available cores.
 Single-threaded layout algorithms will only use one of them.
 
 Optional input files:

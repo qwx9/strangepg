@@ -60,7 +60,6 @@ printgraph(Graph *g)
 	}
 	for(i=0, ie=i+dylen(g->nodes); i<ie; i++){
 		n = g->nodes + i;
-		warn("n[%04x] ch %x → [ ", i, n->ch);
 		for(np=n->out, ne=np+dylen(np); np<ne; np++)
 			warn("%x ", *np);
 		warn("] ← [ ");
@@ -268,9 +267,7 @@ newnode(Graph *g, Node *n)
 	ioff id;
 
 	id = dylen(g->nodes);
-	n->ch = -1;
 	n->length = 1;	/* FIXME */
-	n->weight = 1;	/* FIXME */
 	return id;
 }
 
@@ -424,8 +421,10 @@ pushgraph(Graph gp)
 	unlockgraphs(1);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);
-	if(gottagofast && reqlayout(g, Lstart) < 0)
+	if(gottagofast && reqlayout(g, Lstart) < 0){
 		warn("pushgraph: %s\n", error());
+		pushcmd("cmd(\"FHJ142\")");
+	}
 }
 
 void

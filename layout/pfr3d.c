@@ -34,7 +34,6 @@ static void *
 new(Graph *g)
 {
 	ioff iv, *e, *ee, *etab;
-	double z;
 	float k;
 	Node *u, *ue;
 	RNode *r, *re;

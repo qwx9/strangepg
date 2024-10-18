@@ -1,6 +1,6 @@
 </$objtype/mkfile
 BIN=$home/bin/$objtype
-VERSION=0.8.8
+VERSION=0.8.9
 TARG=\
 	strangepg\
 
