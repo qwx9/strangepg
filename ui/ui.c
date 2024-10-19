@@ -123,7 +123,7 @@ keyevent(Rune r, int down)
 				reqlayout(g, Lstart);
 		}
 		break;
-	case 'a': view.flags ^= VFdrawarrows; reqdraw(Reqshallowdraw); break;
+	case 'a': reqdraw(Reqshape); break;
 	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;
 	}

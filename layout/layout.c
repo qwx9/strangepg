@@ -96,7 +96,7 @@ sac(void *)
 		}
 		l->flags = 0;
 		if((g->flags & GFlayme) == 0){
-			reqdraw(Reqshape);
+			reqdraw(Reqrefresh);
 			continue;
 		}
 		if(l->scratch == nil && l->target->new != nil)

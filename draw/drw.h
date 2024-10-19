@@ -98,7 +98,7 @@ enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
 	Reqresetui = 1<<1,		/* reset view position, etc., redraw */
 	Reqrefresh = 1<<2,		/* render and redraw: while layouting */
-	Reqshape = 1<<3,		/* force refresh: layout end */
+	Reqshape = 1<<3,		/* change node shape */
 	Reqredraw = 1<<4,		/* paint and flush canvas */
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */

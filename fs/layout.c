@@ -50,7 +50,7 @@ end:
 		x = -1;
 	}
 	freefs(fs);
-	reqdraw(Reqshape);
+	reqdraw(Reqrefresh);
 	warn("done reading layout\n");
 	return x;
 }

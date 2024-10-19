@@ -71,6 +71,7 @@ static sg_bindings edgebind;
 static sg_pipeline fsq_pip;
 static sg_bindings fsq_bind;
 static sg_image fb, pickfb, zfb;
+static int nnodev, nedgev;
 
 static Channel *drawc;
 static int reqs;
@@ -196,7 +197,7 @@ renderedges(Params p)
 	sg_apply_pipeline(edgepip);
 	sg_apply_bindings(&edgebind);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
-	sg_draw(0, 2, n);
+	sg_draw(0, nedgev, n);
 	sg_end_pass();
 }
 
@@ -217,7 +218,7 @@ rendernodes(Params p)
 	sg_apply_pipeline(nodepip);
 	sg_apply_bindings(&nodebind);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
-	sg_draw(0, 6, n);
+	sg_draw(0, nnodev, n);
 	sg_end_pass();
 }
 
@@ -298,6 +299,57 @@ resize(void)
 	updateview();
 }
 
+static void
+setnodeshape(int arrow)
+{
+	float quadv[] = {
+		-FNodesz/2.0f, +Nodethiccc/2.0f,
+		+FNodesz/2.0f, +Nodethiccc/2.0f,
+		+FNodesz/2.0f, -Nodethiccc/2.0f,
+		-FNodesz/2.0f, -Nodethiccc/2.0f,
+	}, arrowv[] = {
+		-0.50f * FNodesz,	 0.5f * Nodethiccc,
+		 0.00f * FNodesz,	 0.5f * Nodethiccc,
+		 0.00f * FNodesz,	-0.5f * Nodethiccc,
+		-0.50f * FNodesz,	-0.5f * Nodethiccc,
+		 0.00f * FNodesz,	 1.0f * Nodethiccc,
+		 0.50f * FNodesz,	 0.0f * Nodethiccc,
+		 0.00f * FNodesz,	-1.0f * Nodethiccc,
+	};
+	u16int quadi[] = {
+		0, 2, 1,	// first triangle
+		0, 3, 2,	// second triangle
+	}, arrowi[] = {
+		4, 6, 5,	// tip
+		0, 2, 1,	// shaft
+		0, 3, 2,
+	};
+
+	if(nnodev != 0){
+		sg_destroy_buffer(nodebind.vertex_buffers[0]);
+		sg_destroy_buffer(nodebind.index_buffer);
+	}
+	if(arrow){
+		nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+			.data = SG_RANGE(arrowv),
+		});
+		nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+			.type = SG_BUFFERTYPE_INDEXBUFFER,
+			.data = SG_RANGE(arrowi),
+		}),
+		nnodev = nelem(arrowi);
+	}else{
+		nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+			.data = SG_RANGE(quadv),
+		});
+		nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+			.type = SG_BUFFERTYPE_INDEXBUFFER,
+			.data = SG_RANGE(quadi),
+		}),
+		nnodev = nelem(quadi);
+	}
+}
+
 void
 reqdraw(int r)
 {
@@ -322,7 +374,7 @@ drawproc(void *)
 			stop = 0;
 			sapp_input_wait(false);
 		}
-		if(!stop && (req & (Reqrefresh | Reqshape)) != 0){
+		if(!stop && (req & Reqrefresh) != 0){
 			if(!redraw()){
 				stop = 1;
 				sapp_input_wait(true);
@@ -353,6 +405,10 @@ frame(void)
 		reqs &= ~Reqfocus;
 		focusobj();
 	}
+	if((reqs & Reqshape) != 0){
+		view.flags ^= VFdrawarrows;
+		setnodeshape(view.flags & VFdrawarrows);
+	}
 	reqs &= ~(Reqrefresh | Reqshape | Reqshallowdraw | Reqredraw);
 	drawui(ctx);
 	CLK0(clk);
@@ -367,37 +423,21 @@ initgl(void)
 {
 	Color *c;
 
-	/* geometry */
-	float nodevert[] = {
-		-FNodesz/2.0f, +Nodethiccc/2.0f,
-		+FNodesz/2.0f, +Nodethiccc/2.0f,
-		+FNodesz/2.0f, -Nodethiccc/2.0f,
-		-FNodesz/2.0f, -Nodethiccc/2.0f,
-	};
-	u16int nodeidx[] = {
-		0, 2, 1,	// first triangle
-		0, 3, 2,	// second triangle
-	};
-	float edgevert[] = { -1, 1 };
-	u16int edgeidx[] = { 0, 1 };
-
 	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
 	 * is used for instance data */
 	nodebind = (sg_bindings){
 		.vertex_buffers = {
-			[0] = sg_make_buffer(&(sg_buffer_desc){
-				.data = SG_RANGE(nodevert),
-			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
 				.size = dylen(rnodes) * sizeof *rnodes,
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
-		.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-			.type = SG_BUFFERTYPE_INDEXBUFFER,
-			.data = SG_RANGE(nodeidx),
-		}),
 	};
+	setnodeshape(0);
+
+	float edgevert[] = { -1, 1 };
+	u16int edgeidx[] = { 0, 1 };
+	nedgev = nelem(edgeidx);
 	edgebind = (sg_bindings){
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){
