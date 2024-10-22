@@ -15,6 +15,7 @@ static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
 static Channel *drawc, *ticc, *framec;
 static QLock ticker;
+static ioff selected;	/* FIXME */
 
 #define v2p(v)	Pt((v).x, (v).y)
 
@@ -128,12 +129,17 @@ drawselected(void)
 }
 
 void
-zoomdraw(float)
+zoomdraw(float, float, float)
 {
 }
 
 void
 pandraw(float, float)
+{
+}
+
+void
+rotdraw(Vertex)
 {
 }
 
