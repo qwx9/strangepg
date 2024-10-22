@@ -135,8 +135,8 @@ mousebutev(float x, float y, float Δx, float Δy, int b, int down)
 		break;
 	default: warn("mousebutev: unhandled mouse button %d\n", b); return;
 	}
-	mouseposev(x, y, Δx, Δy);
 	keyevent(r, down);
+	mouseposev(x, y, Δx, Δy);
 }
 
 static int

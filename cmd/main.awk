@@ -46,6 +46,7 @@ BEGIN{
 	white = "0xffffff"
 	yellow = "0xffed6f"
 	srand()
+	OFS = "\t"
 }
 function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
@@ -59,22 +60,18 @@ function addnode(id, name, color){
 		CL[name] = color
 }
 function nodecolor(name, color){
-	if(!(name in node)){
-		print "E no such node", name
+	if(!checknodename(name))
 		return
-	}
 	if(length(color) == 0){
-		print "E no such color", name
+		print "E no such color for node:", name
 		return
 	}
 	CL[name] = color
 	print "c", node[name], color
 }
 function delnode(name){
-	if(!(name in node)){
-		print "E no such node", name
+	if(!checknodename(name))
 		return
-	}
 	delete label[node[name]]
 	delete node[name]
 }
@@ -84,7 +81,7 @@ function addedge(id, name){
 }
 function deledgebyid(id){
 	if(!(name in edge)){
-		print "E no such edge", name
+		print "E no such edge:", name
 		return
 	}
 	delete edge[ledge[id]]
@@ -93,7 +90,7 @@ function deledgebyid(id){
 function deledge(u, urev, v, vrev){
 	pair = u urev "\x1c" v vrev
 	if(!(pair in edge)){
-		print "E no such edge", u urev "," v vrev
+		print "E no such edge:", u urev "," v vrev
 		return
 	}
 	delete ledge[edge[pair]]
@@ -132,57 +129,136 @@ function readcsv(f){
 		relayout = 1
 	}
 }
-function findnode(name){
-	if(!(name in node)){
-		print "E no such node", name
-		return
+function checknodeid(id){
+	if(!(id in label)){
+		print "E", "no such nodeid:", id
+		return 0
 	}
-	print "N", node[name]
+	return 1
 }
-function nodeinfo(id){
-	name = label[id]
-	s = name
-	if(name in LN)
-		s = s ", length=" LN[name]
-	print "I", "Node:", s
+function checknodename(name){
+	if(!(name in node)){
+		print "E", "no such node:", name
+		return 0
+	}
+	return 1
 }
-function edgeinfo(id){
+function edgeinfo(id,	s){
 	name = ledge[id]
 	s = name
 	sub("\x1c", " ", s)
 	if(name in cigar)
 		s = s ", CIGAR=\"" cigar[name] "\""
-	print "I", "Edge:", s
+	print "I", "Edge: " s
 }
-function initx(name, x){
-	if(!(name in node)){
-		print "E no such node", name
+function findnode(name,	id){
+	if(!checknodename(name))
+		return
+	id = node[name]
+	print "N", id
+}
+function selinfostr(	id, name, l){
+	if(length(selected) == 0)
+		return ""
+	l = 0
+	s = ""
+	for(id in selected){
+		name = label[id]
+		if(name in LN)
+			l += LN[name]
+		s = s (length(s) == 0 ? "" : ",") name
+	}
+	if(length(selected) == 1)
+		return s ", length=" l
+	return s "; total length=" l
+}
+function nodeinfostr(id,	s){
+	name = label[id]
+	s = name
+	if(name in LN)
+		s = s ", length=" LN[name]
+	return s
+}
+function nodeinfo(id,	name, s){
+	if(!checknodeid(id))
+		return
+	print "I", "Node: " nodeinfostr(id)
+}
+function deselect(	i){
+	if(length(selected) == 0)
+		return
+	for(i in selected)
+		print "c", i, CL[label[i]]
+	delete selected
+	print "s"
+}
+function deselectnodebyid(id){
+	if(!checknodeid(id))
+		return
+	if(!(id in selected)){
+		print "E", "deselect: not selected:", id
 		return
 	}
+	if(length(selected) == 1){
+		deselect()
+		return
+	}
+	print "c", id, CL[label[id]]
+	delete selected[id]
+	print "s", -1, selinfostr()
+}
+function deselectnode(name,	id){
+	if(!checknodename(name))
+		return
+	deselectnodebyid(node[name])
+}
+function selectnodebyid(id,	name, s, l){
+	if(!checknodeid(id) || id in selected)
+		return
+	selected[id] = 1
+	print "s", id, selinfostr()
+}
+function selectnode(name, id){
+	if(!checknodename(name))
+		return
+	id = node[name]
+	selectnodebyid(id)
+}
+function toggleselect(id){
+	if(!checknodeid(id))
+		return
+	if(id in selected)
+		deselectnodebyid(id)
+	else
+		selectnodebyid(id)
+}
+function reselectnode(id){
+	if(!checknodeid(id))
+		return
+	deselect()
+	selectnodebyid(id)
+}
+function initx(name, x){
+	if(!checknodename(name))
+		return
 	x0[name] = x
 	print "x", node[name], x
 }
 function inity(name, y){
-	if(!(name in node)){
-		print "E no such node", name
+	if(!checknodename(name))
 		return
-	}
 	y0[name] = y
 	print "y", node[name], y
 }
 function fixx(name, x){
-	if(!(name in node)){
-		print "E no such node", name
+	if(!checknodename(name))
 		return
-	}
 	fx[name] = x
 	print "X", node[name], x
 }
 function fixy(name, y){
-	if(!(name in node)){
-		print "E no such node", name
+	if(!checknodename(name))
 		return
-	}
 	fy[name] = y
 	print "Y", node[name], y
 }
@@ -195,6 +271,10 @@ function subexpr(s, v, fn,	i, j, t, pred){
 	s = substr(s, RSTART+RLENGTH-1)
 	$0 = "for(i in " v ") if(" pred "){ " fn "(i, " s ")}"
 }
+#crm114 && $1 == function"{
+#	eval($0)
+#	next
+#}
 crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)

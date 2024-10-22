@@ -34,7 +34,6 @@ pushcmd(char *fmt, ...)
 
 	if(epfd[1] < 0)
 		return;
-	DPRINT(Debugcmd, "pushcmd %c", fmt[0]);
 	va_start(arg, fmt);
 	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
 		if((c = *f++) == 0)
@@ -119,6 +118,16 @@ fnsetcolor(char *sid, char *col)
 }
 
 static inline int
+fnsetsel(Graph *, char *sid, char *s)
+{
+	ioff id;
+
+	id = str2idx(sid);
+	showselected(s, id);
+	return 0;
+}
+
+static inline int
 fnfindnode(char *sid){
 	ioff id;
 
@@ -149,13 +158,18 @@ readcmd(char *s)
 			warn("Error:%s\n", s+1);
 			goto next;
 		case 'I':
-			/* FIXME: error check */
 			showobject(s + 2);
-			req |= Reqredraw;
+			req |= Reqshallowdraw;
 			goto next;
 		case 'R':
 			reqlayout(g, Lreset);
 			goto next;
+		case 's':
+			if(s[1] == 0){
+				showselected(nil, -1);
+				req |= Reqshallowdraw;
+				goto next;
+			}
 		case 'N':
 		case 'X':
 		case 'Y':
@@ -170,7 +184,7 @@ readcmd(char *s)
 			warn("reply: <%s>\n", s);
 			goto next;
 		}
-		if((m = getfields(s+1, fld, nelem(fld), 1, "\t ")) < 1)
+		if((m = getfields(s+1, fld, nelem(fld), 1, "\t")) < 1)
 			goto error;
 		switch(s[0]){
 		invalid:
@@ -184,7 +198,7 @@ readcmd(char *s)
 				goto invalid;
 			if(fnfindnode(fld[0]) < 0)
 				goto error;
-			req |= Reqredraw | Reqfocus;
+			req |= Reqfocus | Reqshallowdraw;
 			break;
 		case 'X':
 			if(m != 2)
@@ -216,13 +230,19 @@ readcmd(char *s)
 				goto invalid;
 			if(importlayout(g, fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
-			req |= Reqredraw;
 			break;
 		case 'o':
 			if(m != 1)
 				goto invalid;
 			if(exportlayout(g, fld[0]) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
+			break;
+		case 's':
+			if(m != 2)
+				goto invalid;
+			if(fnsetsel(g, fld[0], fld[1]) < 0)
+				goto error;
+			req |= Reqshallowdraw;
 			break;
 		case 'x':
 			if(m != 2)

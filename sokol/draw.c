@@ -371,16 +371,21 @@ drawproc(void *)
 		if((req = recvul(drawc)) == 0)
 			break;
 		if((req & Reqredraw) != 0){
+			reqs &= ~Reqredraw;
 			stop = 0;
-			sapp_input_wait(false);
-		}
-		if(!stop && (req & Reqrefresh) != 0){
+			sapp_wakethefup();
+		}else if((reqs & Reqshallowdraw) != 0)
+			sapp_wakethefup();
+		if(!stop){
+			if((req & Reqrefresh) == 0)
+				continue;
+			reqs &= ~Reqrefresh;
 			if(!redraw()){
 				stop = 1;
 				sapp_input_wait(true);
-			}else
-				sapp_wakethefup();
-		}
+			}
+		}else if((reqs & Reqshallowdraw) == 0)
+			sapp_input_wait(true);
 	}
 }
 
@@ -395,21 +400,22 @@ frame(void)
 	if((reqs & Reqresetdraw) != 0){
 		reqs &= ~Reqresetdraw;
 		resize();
-		reqdraw(Reqredraw);
 	}
 	if((reqs & Reqresetui) != 0){
 		reqs &= ~Reqresetui;
 		resetui();
 		updateview();
-	}else if((reqs & Reqfocus) != 0){
+	}
+	if((reqs & Reqfocus) != 0){
 		reqs &= ~Reqfocus;
 		focusobj();
 	}
 	if((reqs & Reqshape) != 0){
+		reqs &= ~Reqshape;
 		view.flags ^= VFdrawarrows;
 		setnodeshape(view.flags & VFdrawarrows);
 	}
-	reqs &= ~(Reqrefresh | Reqshape | Reqshallowdraw | Reqredraw);
+	reqs &= ~Reqshallowdraw;
 	drawui(ctx);
 	CLK0(clk);
 	flush();

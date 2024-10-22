@@ -6,11 +6,10 @@
 #include "layout.h"
 #include "ui.h"
 
-ioff selected = -1;
 int prompting;
 char hoverstr[256], selstr[512];
 
-static ioff shown = -1, focused = -1;
+static ioff selected = -1, shown = -1, focused = -1;
 
 enum{
 	Mctrl = 1<<0,
@@ -130,14 +129,6 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
-void
-showobject(char *s)
-{
-	strecpy(hoverstr, hoverstr+sizeof hoverstr, s);
-}
-
-/* FIXME: make clear that this is called from a different thread: req...
- *	or maybe even its own file */
 static int
 mousedrag(float Δx, float Δy)
 {
@@ -149,85 +140,95 @@ mousedrag(float Δx, float Δy)
 	Δy /= view.h;
 	Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
 	Δy = 2 * Δy * view.Δeye.z * view.tfov;
-	r = rnodes + selected - 1;
+	r = rnodes + selected;
 	r->pos[0] += Δx;
 	r->pos[1] -= Δy;
 	return 1;
 }
 
-static void
-getinfo(ioff id)
-{
-	if((id & (1<<31)) == 0){
-		id = (uint)id - 1;
-		pushcmd("nodeinfo(%d)", id);
-	}else{
-		id = (uint)(id & ~(1<<31)) - 1;
-		pushcmd("edgeinfo(%d)", id);
-	}
-}
-
 static ioff
 mousehover(int x, int y)
 {
-	uint v;
+	u32int id;
 
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h
-	|| (v = mousepick(x, y)) == -1){
+	|| (id = mousepick(x, y)) == -1){
 		hoverstr[0] = 0;
 		return -1;
 	}
-	if(v == shown)
-		return v;
-	getinfo(v);
-	return v;
+	if((id & (1<<31)) == 0){
+		id = (uint)id - 1;
+		if(id == shown)
+			return id;
+		pushcmd("nodeinfo(%d)", id);
+	}else{
+		id = (uint)(id & ~(1<<31)) - 1;
+		if(id == shown)
+			return id;
+		pushcmd("edgeinfo(%d)", id);
+	}
+	return id;
 }
 
-static void
-unhighlightnode(ioff id)
+void
+showobject(char *s)
 {
-	pushcmd("print \"c\", %d, CL[label[%d]]", id, id);
+	strecpy(hoverstr, hoverstr+sizeof hoverstr, s);
 }
 
 /* FIXME: plan9 */
-static void
+static inline void
 highlightnode(ioff id)
 {
 	mixcolors(rnodes[id].col, theme[Chigh] >> 8);
 }
 
-static int
-mouseselect(ioff id)
+void
+showselected(char *s, ioff id)
 {
 	char *p;
 
-	if(selected == id)
+	if(s == nil){
+		selstr[0] = 0;
+		selected = -1;
+		return;
+	}
+	p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
+	strecpy(p, selstr+sizeof selstr, s);
+	if(id != -1)
+		highlightnode(id);
+}
+
+static int
+mouseselect(ioff id, int multi)
+{
+	if(selected >= 0 && selected == id && !multi || prompting)
 		return 0;
-	if((selected & 1<<31) == 0)
-		unhighlightnode(selected - 1);
+	if(id == -1 && multi)	/* prevent accidental discharge */
+		return 0;
 	if((selected = id) != -1){
-		p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
-		strecpy(p, selstr+sizeof selstr, hoverstr);
-		if((id & 1<<31) == 0)
-			highlightnode(id - 1);
+		if((id & 1<<31) == 0){
+			if(multi)
+				pushcmd("toggleselect(%d)", id);
+			else
+				pushcmd("reselectnode(%d)", id);
+		}else{	/* FIXME: edges: not implemented */
+			;
+		}
 		reqdraw(Reqshallowdraw);
 		return 1;
 	}
+	pushcmd("deselect()");
 	selstr[0] = 0;
+	reqdraw(Reqshallowdraw);
 	return 0;
-}
-
-void
-focusnode(ioff i)
-{
-	focused = i;
 }
 
 /* FIXME: naming and shit is stupid; view.pan/zoom are only for plan9
  *	should instead convert to world coordinates *here* and request an
  *	update, which *also* can be here, it just all updates view, and
  *	the mvp, so either in draw/world.c, or ui/view.c or something */
-/* won't touch selection */
+/* called from render thread */
 void
 focusobj(void)
 {
@@ -237,8 +238,14 @@ focusobj(void)
 		return;
 	r = rnodes + focused;
 	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
-	mousehover(view.w / 2, view.h / 2);	/* FIXME: hack, unreliable */
-	mouseselect(focused + 1);
+	mouseselect(focused, 0);
+	focused = -1;
+}
+
+void
+focusnode(ioff i)
+{
+	focused = i;
 }
 
 int
@@ -259,8 +266,9 @@ mouseevent(Vertex v, Vertex Δ)
 		shown = mousehover(v.x, v.y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			mouseselect(shown);
+			mouseselect(shown, mod & Mshift);
 		}else if(Δ.x != 0.0 || Δ.y != 0.0){
+			/* FIXME: would be nice to just redraw the one node */
 			if(mousedrag(Δ.x, Δ.y))
 				reqdraw(Reqredraw);
 		}

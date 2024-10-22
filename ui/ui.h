@@ -6,7 +6,6 @@ enum{
 	Kscrldn = Kmouse | 1<<4,
 };
 
-extern ioff selected;	/* FIXME: only one */
 extern char selstr[], hoverstr[];
 
 void	resetprompt(void);
@@ -14,6 +13,7 @@ void	prompt(Rune);
 void	focusobj(void);
 void	focusnode(ioff);
 void	showobject(char*);
+void	showselected(char*, ioff);
 int	mouseevent(Vertex, Vertex);
 int	keyevent(Rune, int);
 void	evloop(void);
