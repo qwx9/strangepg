@@ -184,13 +184,14 @@ function nodeinfo(id,	name, s){
 		return
 	print "I", "Node: " nodeinfostr(id)
 }
-function deselect(	i){
+function deselect(dontkill,	i){
 	if(length(selected) == 0)
 		return
 	for(i in selected)
 		print "c", i, CL[label[i]]
 	delete selected
-	print "s"
+	if(!dontkill)
+		print "s"
 }
 function deselectnodebyid(id){
 	if(!checknodeid(id))
@@ -235,7 +236,7 @@ function toggleselect(id){
 function reselectnode(id){
 	if(!checknodeid(id))
 		return
-	deselect()
+	deselect(1)
 	selectnodebyid(id)
 }
 function initx(name, x){
@@ -272,7 +273,6 @@ function subexpr(s, v, fn,	i, j, t, pred){
 	# my god man, implement pointers
 	eval("{w = length(" v ") == 0 ? \"node\" : v}")
 	$0 = "for(i in " w ") if(" pred "){ " fn "(i, " s ")}"
-	print "E", ">>>", $0
 }
 #crm114 && $1 == function"{
 #	eval($0)
