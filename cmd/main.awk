@@ -269,7 +269,10 @@ function subexpr(s, v, fn,	i, j, t, pred){
 	# error check: i not 0; only sub expression up to } or ; etc
 	pred = substr(s, 1, i-1)
 	s = substr(s, RSTART+RLENGTH-1)
-	$0 = "for(i in " v ") if(" pred "){ " fn "(i, " s ")}"
+	# my god man, implement pointers
+	eval("{w = length(" v ") == 0 ? \"node\" : v}")
+	$0 = "for(i in " w ") if(" pred "){ " fn "(i, " s ")}"
+	print "E", ">>>", $0
 }
 #crm114 && $1 == function"{
 #	eval($0)
