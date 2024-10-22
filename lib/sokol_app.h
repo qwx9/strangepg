@@ -11525,17 +11525,18 @@ _SOKOL_PRIVATE void _sapp_x11_wait_event(void) {
     FD_SET(cfd, &fds);
     /* in the magical world of linux, select may return ready even
      * though a read would block */
-    do{
+    while(!XPending(_sapp.x11.display)){
         if (select(cfd+1, &fds, NULL, NULL, NULL) < 0) {
             break;
         }
-    }while(!XPending(_sapp.x11.display));
+    };
 }
 
 _SOKOL_PRIVATE void _sapp_x11_wakethefup(void) {
-    if (!_sapp.x11.display || !_sapp.input_wait) {
+    if (!_sapp.x11.display) {
         return;
     }
+    _sapp.input_wait = false;
     int cfd = ConnectionNumber(_sapp.x11.display);
     write(cfd, &cfd, 0);
 }
