@@ -117,7 +117,7 @@ function importlayout(f){
 	if(crm114 == 1)
 		print "i", f
 	else{
-		deferred = deferred "i " f "\n"
+		deferred = deferred "i\t" f "\n"
 		noreset = 1
 	}
 }
@@ -125,7 +125,7 @@ function readcsv(f){
 	if(crm114 == 1)
 		print "f", f
 	else{
-		deferred = deferred "f " f "\n"
+		deferred = deferred "f\t" f "\n"
 		relayout = 1
 	}
 }
