@@ -93,6 +93,7 @@ drawui(nk_context *ctx)
 			plen = nk_str_len_char(&nkprompt.string);
 			ptext[plen] = 0;
 			pushcmd("%s", ptext);
+			nk_edit_unfocus(ctx);
 		}
 		nk_layout_row_dynamic(ctx, 8, 1);
 		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_LEFT);
