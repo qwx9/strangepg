@@ -263,6 +263,9 @@ function fixy(name, y){
 	fy[name] = y
 	print "Y", node[name], y
 }
+function quit(){
+	print "!"
+}
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]
 function subexpr(s, v, fn,	i, j, t, pred){

@@ -154,6 +154,9 @@ readcmd(char *s)
 		switch(*s){
 		case 0:
 			return;
+		case '!':
+			quit();
+			break;
 		case 'E': 
 			warn("Error:%s\n", s+1);
 			goto next;
