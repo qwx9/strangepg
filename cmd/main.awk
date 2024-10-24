@@ -63,7 +63,7 @@ function nodecolor(name, color){
 	if(!checknodename(name))
 		return
 	if(length(color) == 0){
-		print "E no such color for node:", name
+		print "E no such color for node: " name
 		return
 	}
 	CL[name] = color
@@ -81,7 +81,7 @@ function addedge(id, name){
 }
 function deledgebyid(id){
 	if(!(name in edge)){
-		print "E no such edge:", name
+		print "E no such edge: " name
 		return
 	}
 	delete edge[ledge[id]]
@@ -90,7 +90,7 @@ function deledgebyid(id){
 function deledge(u, urev, v, vrev){
 	pair = u urev "\x1c" v vrev
 	if(!(pair in edge)){
-		print "E no such edge:", u urev "," v vrev
+		print "E no such edge: " u urev "," v vrev
 		return
 	}
 	delete ledge[edge[pair]]
@@ -131,14 +131,14 @@ function readcsv(f){
 }
 function checknodeid(id){
 	if(!(id in label)){
-		print "E", "no such nodeid:", id
+		print "E no such nodeid: " id
 		return 0
 	}
 	return 1
 }
 function checknodename(name){
 	if(!(name in node)){
-		print "E", "no such node:", name
+		print "E no such node: " name
 		return 0
 	}
 	return 1
@@ -197,7 +197,7 @@ function deselectnodebyid(id){
 	if(!checknodeid(id))
 		return
 	if(!(id in selected)){
-		print "E", "deselect: not selected:", id
+		print "E deselect: not selected: " id
 		return
 	}
 	if(length(selected) == 1){
