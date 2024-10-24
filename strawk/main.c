@@ -37,8 +37,7 @@ extern	char	**environ;
 extern	int	nfields;
 
 int	dbg	= 0;
-Awkfloat	srand_seed = 1;
-mt19937_64	mtrand;
+Awknum	srand_seed = 1;
 char	*cmdname;	/* gets argv[0] for error messages */
 extern	FILE	*yyin;	/* lex input file */
 char	*lexprog;	/* points to program argument if it exists */
@@ -160,7 +159,7 @@ int main(int argc, char *argv[])
 
 	/* Set and keep track of the random seed */
 	srand_seed = 1;
-	init_genrand64(&mtrand, srand_seed);
+	init_genrand64(srand_seed);
 
 	yyin = NULL;
 	symtab = makesymtab(NSYMTAB/NSYMTAB);

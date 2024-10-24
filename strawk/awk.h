@@ -32,6 +32,15 @@ THIS SOFTWARE.
 #endif
 
 typedef double	Awkfloat;
+typedef int64_t	Awknum;
+typedef uint64_t Awkword;
+union Value{
+	Awknum i;
+	Awkfloat f;
+	Awkword u;
+	unsigned char buf[8];
+};
+typedef union Value Value;
 
 /* unsigned char is more trouble than it's worth */
 
@@ -70,13 +79,13 @@ extern char	**RS;
 extern char	**ORS;
 extern char	**OFS;
 extern char	**OFMT;
-extern Awkfloat *NR;
-extern Awkfloat *FNR;
-extern Awkfloat *NF;
+extern Awknum *NR;
+extern Awknum *FNR;
+extern Awknum *NF;
 extern char	**FILENAME;
 extern char	**SUBSEP;
-extern Awkfloat *RSTART;
-extern Awkfloat *RLENGTH;
+extern Awknum *RSTART;
+extern Awknum *RLENGTH;
 
 extern bool	CSV;		/* true for csv input */
 
@@ -97,8 +106,8 @@ typedef struct Cell {
 	uschar	csub;		/* CCON, CTEMP, CFLD, etc. */
 	char	*nval;		/* name, for variables only */
 	char	*sval;		/* string value */
-	Awkfloat fval;		/* value as number */
-	int	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|CONVC|CONVO */
+	Value val;
+	int	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|CONVC|CONVO|FLT */
 	char	*fmt;		/* CONVFMT/OFMT value used to convert from number */
 	struct Cell *cnext;	/* ptr to next if chained */
 } Cell;
@@ -135,6 +144,7 @@ extern Cell	*symtabloc;	/* SYMTAB */
 #define	REC	0200	/* this is $0 */
 #define CONVC	0400	/* string was converted from number via CONVFMT */
 #define CONVO	01000	/* string was converted from number via OFMT */
+#define	FLT		02000	/* if valid, number is floating point */
 
 
 /* function types */
@@ -144,7 +154,7 @@ enum{
 	FEXP = 3,
 	FLOG = 4,
 	FINT = 5,
-	FRAND = 6,
+	FFRAND = 6,
 	FSRAND = 7,
 	FSIN = 8,
 	FCOS = 9,
@@ -153,6 +163,9 @@ enum{
 	FTOLOWER = 12,
 	FUTF = 13,
 	FEVAL = 14,
+	FFLOAT = 15,
+	FNRAND = 16,
+	FBYTES = 17,
 };
 
 /* Node:  parse tree is made of nodes, with Cell's at bottom */

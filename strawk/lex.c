@@ -49,6 +49,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "NF",		VARNF,		VARNF },
 	{ "atan2",	FATAN,		BLTIN },
 	{ "break",	BREAK,		BREAK },
+	{ "bytes",	FBYTES,		BLTIN },
 	{ "continue",	CONTINUE,	CONTINUE },
 	{ "cos",	FCOS,		BLTIN },
 	{ "delete",	DELETE,		DELETE },
@@ -57,6 +58,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "eval",	FEVAL,		BLTIN },
 	{ "exit",	EXIT,		EXIT },
 	{ "exp",	FEXP,		BLTIN },
+	{ "float",	FFLOAT,		BLTIN },
 	{ "for",	FOR,		FOR },
 	{ "func",	FUNC,		FUNC },
 	{ "function",	FUNC,		FUNC },
@@ -69,9 +71,10 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "log",	FLOG,		BLTIN },
 	{ "match",	MATCHFCN,	MATCHFCN },
 	{ "next",	NEXT,		NEXT },
+	{ "nrand",	FNRAND,		BLTIN },
 	{ "print",	PRINT,		PRINT },
 	{ "printf",	PRINTF,		PRINTF },
-	{ "rand",	FRAND,		BLTIN },
+	{ "rand",	FFRAND,		BLTIN },
 	{ "return",	RETURN,		RETURN },
 	{ "sin",	FSIN,		BLTIN },
 	{ "split",	SPLIT,		SPLIT },
@@ -96,8 +99,8 @@ static int peek(void)
 
 static int gettok(char **pbuf, int *psz)	/* get next input token */
 {
-	int c, retc;
-	char *buf = *pbuf;
+	int c, retc, hex;
+	char *buf = *pbuf, *trail;
 	int sz = *psz;
 	char *bp = buf;
 
@@ -110,6 +113,8 @@ static int gettok(char **pbuf, int *psz)	/* get next input token */
 		return c;
 
 	*bp++ = c;
+	retc = (uschar)c;	/* character is its own type */
+	trail = NULL;
 	if (isalpha(c) || c == '_') {	/* it's a varname */
 		for ( ; (c = input()) != 0; ) {
 			if (bp-buf >= sz)
@@ -125,31 +130,38 @@ static int gettok(char **pbuf, int *psz)	/* get next input token */
 		}
 		*bp = 0;
 		retc = 'a';	/* alphanumeric */
-	} else {	/* maybe it's a number, but could be . */
-		char *rem;
+	} else if(isdigit(c) || c == '.'){
 		/* read input until can't be a number */
-		for ( ; (c = input()) != 0; ) {
+		c = input();
+		if(hex = buf[0] == '0' && (c == 'x' || c == 'X')){
+			*bp++ = c;
+			c = input();
+		}
+		for (; c != 0;) {
 			if (bp-buf >= sz)
 				if (!adjbuf(&buf, &sz, bp-buf+2, 100, &bp, "gettok"))
 					FATAL( "out of space for number %.10s...", buf );
-			if (isdigit(c) || c == 'e' || c == 'E'
-			  || c == '.' || c == '+' || c == '-')
+			if(isdigit(c))
 				*bp++ = c;
-			else {
+			else if(c == '.' || c == 'e' || c == 'E'
+			|| hex && (c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F')
+			|| (c == '-' || c == '+') && (bp[-1] == 'e' || bp[-1] == 'E'))
+				*bp++ = c;
+			else{
 				unput(c);
 				break;
 			}
+			c = input();
 		}
 		*bp = 0;
-		strtod(buf, &rem);	/* parse the number */
-		if (rem == buf) {	/* it wasn't a valid number at all */
+		if(is_valid_number(buf, true, NULL, &trail, NULL)){		
+			unputstr(trail);	/* put rest back for later */
+			trail[0] = 0;	/* truncate buf after number part */
+			retc = '0';	/* type is number */
+		}else{
 			buf[1] = 0;	/* return one character as token */
 			retc = (uschar)buf[0];	/* character is its own type */
-			unputstr(rem+1); /* put rest back for later */
-		} else {	/* some prefix was a number */
-			unputstr(rem);	/* put rest back for later */
-			rem[0] = 0;	/* truncate buf after number part */
-			retc = '0';	/* type is number */
+			unputstr(trail+1); /* put rest back for later */
 		}
 	}
 	*pbuf = buf;
@@ -165,7 +177,9 @@ bool	reg	= false;	/* true => return a REGEXPR now */
 
 int yylex(void)
 {
-	int c;
+	int c, r;
+	char *cp;
+	Value v;
 	static char *buf = NULL;
 	static int bufsize = 5; /* BUG: setting this small causes core dump! */
 
@@ -186,13 +200,12 @@ int yylex(void)
 		if (isalpha(c) || c == '_')
 			return word(buf);
 		if (isdigit(c)) {
-			char *cp = tostring(buf);
-			double result;
-
-			if (is_number(cp, & result))
-				yylval.cp = setsymtab(buf, cp, result, CON|NUM, symtab);
+			cp = tostring(buf);
+			if(r = is_number(cp, &v))
+				r = CON | r;
 			else
-				yylval.cp = setsymtab(buf, cp, 0.0, STR, symtab);
+				r = STR;
+			yylval.cp = setsymtab(buf, cp, v, r, symtab);
 			free(cp);
 			/* should this also have STR set? */
 			RET(NUMBER);
@@ -341,7 +354,8 @@ int yylex(void)
 					unputstr(buf);
 					RET(INDIRECT);
 				}
-				yylval.cp = setsymtab(buf, "", 0.0, STR|NUM, symtab);
+				v.i = 0;
+				yylval.cp = setsymtab(buf, "", v, STR|NUM, symtab);
 				RET(IVAR);
 			} else if (c == 0) {	/*  */
 				SYNTAX( "unexpected end of input after $" );
@@ -389,6 +403,7 @@ int string(void)
 {
 	int c, n;
 	char *s, *bp;
+	Value v;
 	static char *buf = NULL;
 	static int bufsz = 500;
 
@@ -496,7 +511,8 @@ int string(void)
 	*bp = 0;
 	s = tostring(buf);
 	*bp++ = ' '; *bp++ = '\0';
-	yylval.cp = setsymtab(buf, s, 0.0, CON|STR|DONTFREE, symtab);
+	v.i = 0;
+	yylval.cp = setsymtab(buf, s, v, CON|STR|DONTFREE, symtab);
 	free(s);
 	RET(STRING);
 }
@@ -524,7 +540,9 @@ int word(char *w)
 {
 	const Keyword *kp;
 	int c, n;
+	Value v;
 
+	v.i = 0;
 	n = binsearch(w, keywords, sizeof(keywords)/sizeof(keywords[0]));
 	if (n != -1) {	/* found in table */
 		kp = keywords + n;
@@ -541,7 +559,7 @@ int word(char *w)
 				SYNTAX( "return not in function" );
 			RET(kp->type);
 		case VARNF:
-			yylval.cp = setsymtab("NF", "", 0.0, NUM, symtab);
+			yylval.cp = setsymtab("NF", "", v, NUM, symtab);
 			RET(VARNF);
 		default:
 			RET(kp->type);
@@ -552,7 +570,7 @@ int word(char *w)
 		yylval.i = n;
 		RET(ARG);
 	} else {
-		yylval.cp = setsymtab(w, "", 0.0, STR|NUM|DONTFREE, symtab);
+		yylval.cp = setsymtab(w, "", v, STR|NUM|DONTFREE, symtab);
 		if (c == '(') {
 			RET(CALL);
 		} else {

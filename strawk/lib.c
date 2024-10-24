@@ -62,12 +62,12 @@ bool	donerec;	/* true = record is valid (no flds have changed) */
 
 int	lastfld	= 0;	/* last used field */
 int	argno	= 1;	/* current input argument number */
-extern	Awkfloat *ARGC;
+extern	Awknum *ARGC;
 
 extern jmp_buf evalenv;
 
-static Cell dollar0 = { OCELL, CFLD, NULL, EMPTY, 0.0, REC|STR|DONTFREE, NULL, NULL };
-static Cell dollar1 = { OCELL, CFLD, NULL, EMPTY, 0.0, FLD|STR|DONTFREE, NULL, NULL };
+static Cell dollar0 = { OCELL, CFLD, NULL, EMPTY, {0}, REC|STR|DONTFREE, NULL, NULL };
+static Cell dollar1 = { OCELL, CFLD, NULL, EMPTY, {0}, FLD|STR|DONTFREE, NULL, NULL };
 
 void recinit(unsigned int n)
 {
@@ -148,16 +148,17 @@ static bool firsttime = true;
 
 int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record */
 {			/* note: cares whether buf == record */
-	int c;
+	int c, r;
 	char *buf = *pbuf;
 	uschar saveb0;
 	int bufsize = *pbufsize, savebufsize = bufsize;
+	Value v;
 
 	if (firsttime) {
 		firsttime = false;
 		initgetrec();
 	}
-	DPRINTF("RS=<%s>, FS=<%s>, ARGC=%g, FILENAME=%s\n",
+	DPRINTF("RS=<%s>, FS=<%s>, ARGC=%ld, FILENAME=%s\n",
 		*RS, *FS, *ARGC, *FILENAME);
 	saveb0 = buf[0];
 	buf[0] = 0;
@@ -181,29 +182,27 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 			else if ((infile = fopen(file, "r")) == NULL)
 				FATAL("can't open file %s", file);
 			innew = true;
-			setfval(fnrloc, 0.0);
+			setival(fnrloc, 0);
 		}
 		c = readrec(&buf, &bufsize, infile, innew);
 		if (innew)
 			innew = false;
 		if (c != 0 || buf[0] != '\0') {	/* normal record */
 			if (isrecord) {
-				double result;
-
 				if (freeable(fldtab[0]))
 					xfree(fldtab[0]->sval);
 				fldtab[0]->sval = buf;	/* buf == record */
 				fldtab[0]->tval = REC | STR | DONTFREE;
-				if (is_number(fldtab[0]->sval, & result)) {
-					fldtab[0]->fval = result;
-					fldtab[0]->tval |= NUM;
+				if(r = is_number(fldtab[0]->sval, &v)) {
+					fldtab[0]->val = v;
+					fldtab[0]->tval |= r;
 				}
 				donefld = false;
 				donerec = true;
 				savefs();
 			}
-			setfval(nrloc, nrloc->fval+1);
-			setfval(fnrloc, fnrloc->fval+1);
+			setival(nrloc, nrloc->val.i+1);
+			setival(fnrloc, fnrloc->val.i+1);
 			*pbuf = buf;
 			*pbufsize = bufsize;
 			return 1;
@@ -337,13 +336,15 @@ char *getargv(int n)	/* get ARGV[n] */
 	Array *ap;
 	Cell *x;
 	char *s, temp[50];
+	Value v;
 	extern Cell *ARGVcell;
 
 	ap = (Array *)ARGVcell->sval;
 	snprintf(temp, sizeof(temp), "%d", n);
 	if (lookup(temp, ap) == NULL)
 		return NULL;
-	x = setsymtab(temp, "", 0.0, STR, ap);
+	v.i = 0;
+	x = setsymtab(temp, "", v, STR, ap);
 	s = getsval(x);
 	DPRINTF("getargv(%d) returns |%s|\n", n, s);
 	return s;
@@ -351,23 +352,25 @@ char *getargv(int n)	/* get ARGV[n] */
 
 void setclvar(char *s)	/* set var=value from s */
 {
+	int r;
 	char *e, *p;
 	Cell *q;
-	double result;
+	Value v;
 
 /* commit f3d9187d4e0f02294fb1b0e31152070506314e67 broke T.argv test */
 /* I don't understand why it was changed. */
 
+	v.i = 0;
 	for (p=s; *p != '='; p++)
 		;
 	e = p;
 	*p++ = 0;
 	p = qstring(p, '\0');
-	q = setsymtab(s, p, 0.0, STR, symtab);
+	q = setsymtab(s, p, v, STR, symtab);
 	setsval(q, p);
-	if (is_number(q->sval, & result)) {
-		q->fval = result;
-		q->tval |= NUM;
+	if(r = is_number(q->sval, &v)) {
+		q->val = v;
+		q->tval |= r;
 	}
 	DPRINTF("command line set %s to |%s|\n", s, p);
 	free(p);
@@ -382,7 +385,8 @@ void fldbld(void)	/* create fields from current record */
 	/* possibly with a final trailing \0 not associated with any field */
 	char *r, *fr, sep;
 	Cell *p;
-	int i, j, n;
+	int i, j, n, t;
+	Value v;
 
 	if (donefld)
 		return;
@@ -501,15 +505,13 @@ void fldbld(void)	/* create fields from current record */
 	lastfld = i;
 	donefld = true;
 	for (j = 1; j <= lastfld; j++) {
-		double result;
-
 		p = fldtab[j];
-		if(is_number(p->sval, & result)) {
-			p->fval = result;
-			p->tval |= NUM;
+		if(t = is_number(p->sval, &v)) {
+			p->val = v;
+			p->tval |= t;
 		}
 	}
-	setfval(nfloc, (Awkfloat) lastfld);
+	setival(nfloc, (Awknum) lastfld);
 	donerec = true; /* restore */
 	if (dbg) {
 		for (j = 0; j <= lastfld; j++) {
@@ -539,7 +541,7 @@ void newfld(int n)	/* add field n after end of existing lastfld */
 		growfldtab(n);
 	cleanfld(lastfld+1, n);
 	lastfld = n;
-	setfval(nfloc, (Awkfloat) n);
+	setival(nfloc, (Awknum) n);
 }
 
 void setlastfld(int n)	/* set lastfld cleaning fldtab cells if necessary */
@@ -827,7 +829,7 @@ void bclass(int c)
 	}
 }
 
-double errcheck(double x, const char *s)
+Awkfloat errcheck(Awkfloat x, const char *s)
 {
 
 	if (errno == EDOM) {
@@ -872,11 +874,12 @@ int isclvar(const char *s)	/* is s of form var=something ? */
  * is used in getfval().
  */
 
-bool is_valid_number(const char *s, bool trailing_stuff_ok,
-			bool *no_trailing, double *result)
+int is_valid_number(const char *s, bool trailing_stuff_ok,
+			bool *no_trailing, char **trail, Value *result)
 {
-	double r;
-	char *ep;
+	Awkfloat r;
+	Awkword v;
+	char c, *ep;
 	bool retval = false;
 	bool is_nan = false;
 	bool is_inf = false;
@@ -886,10 +889,29 @@ bool is_valid_number(const char *s, bool trailing_stuff_ok,
 
 	while (isspace((int) *s))
 		s++;
+	if(*s == '.')
+		goto fp;
 
+	v = strtoull(s, &ep, 0);
+	if(trail != NULL)
+		*trail = ep;
+	if(ep == s)
+		return 0;
+	if(result != NULL)
+		result->u = v;
+	if((c = *ep) != 0){
+		if(c == '.' || c == 'e' || c == 'E')	/* floating point */
+			goto fp;
+		else if(!trailing_stuff_ok && !isspace(*ep))
+			return 0;
+	}else if(no_trailing != NULL)
+		*no_trailing = true;
+	return NUM;
+
+fp:
 	/* no hex floating point, sorry */
 	if (s[0] == '0' && tolower(s[1]) == 'x')
-		return false;
+		return 0;
 
 	/* allow +nan, -nan, +inf, -inf, any other letter, no */
 	if (s[0] == '+' || s[0] == '-') {
@@ -899,22 +921,23 @@ bool is_valid_number(const char *s, bool trailing_stuff_ok,
 		    && (isspace((int) s[4]) || s[4] == '\0'))
 			goto convert;
 		else if (! isdigit(s[1]) && s[1] != '.')
-			return false;
-	}
-	else if (! isdigit(s[0]) && s[0] != '.')
-		return false;
+			return 0;
+	}else if (! isdigit(s[0]) && s[0] != '.')
+		return 0;
 
 convert:
 	errno = 0;
 	r = strtod(s, &ep);
+	if(trail != NULL)
+		*trail = ep;
 	if (ep == s || errno == ERANGE)
-		return false;
+		return 0;
 
 	if (isnan(r) && s[0] == '-' && signbit(r) == 0)
 		r = -r;
 
 	if (result != NULL)
-		*result = r;
+		result->f = r;
 
 	/*
 	 * check for trailing stuff
@@ -928,5 +951,5 @@ convert:
         /* return true if found the end, or trailing stuff is allowed */
 	retval = *ep == '\0' || trailing_stuff_ok;
 
-	return retval;
+	return retval ? NUM | FLT : 0;
 }

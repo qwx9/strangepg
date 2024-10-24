@@ -95,18 +95,22 @@ extern	Node	*itonp(int);
 
 extern	void	syminit(void);
 extern	void	arginit(int, char **);
-extern	void	envinit(char **);
 extern	Array	*makesymtab(int);
 extern	void	freesymtab(Cell *);
 extern	void	freeelem(Cell *, const char *);
-extern	Cell	*setsymtab(const char *, const char *, double, unsigned int, Array *);
+extern	Cell	*setsym(const char *, const char *, Array *);
+extern	Cell	*setsymtab(const char *, const char *, Value, unsigned int, Array *);
 extern	int	hash(const char *, int);
 extern	void	rehash(Array *);
 extern	Cell	*lookup(const char *, Array *);
-extern	double	setfval(Cell *, double);
+extern	Awkfloat	setfval(Cell *, Awkfloat);
+extern	Awknum	setival(Cell *, Awknum);
+extern	void	setval(Cell *, Cell *);
 extern	void	funnyvar(Cell *, const char *);
 extern	char	*setsval(Cell *, const char *);
-extern	double	getfval(Cell *);
+extern	Value	getval(Cell *);
+extern	Awknum	getival(Cell *);
+extern	Awkfloat	getfval(Cell *);
 extern	char	*getsval(Cell *);
 extern	char	*getpssval(Cell *);     /* for print */
 extern	char	*tostring(const char *);
@@ -142,11 +146,11 @@ extern	void	WARNING(const char *, ...)
 extern	void	error(void);
 extern	void	eprint(void);
 extern	void	bclass(int);
-extern	double	errcheck(double, const char *);
+extern	Awkfloat	errcheck(Awkfloat, const char *);
 extern	int	isclvar(const char *);
-extern	bool	is_valid_number(const char *s, bool trailing_stuff_ok,
-				bool *no_trailing, double *result);
-#define is_number(s, val)	is_valid_number(s, false, NULL, val)
+extern	int	is_valid_number(const char *s, bool trailing_stuff_ok,
+				bool *no_trailing, char **trail, Value *result);
+#define is_number(s, val)	is_valid_number(s, false, NULL, NULL, val)
 
 extern	int	adjbuf(char **pb, int *sz, int min, int q, char **pbp, const char *what);
 extern	void	run(Node *);
@@ -172,7 +176,7 @@ extern	int	format(char **, int *, const char *, Node *);
 extern	Cell	*awksprintf(Node **, int);
 extern	Cell	*awkprintf(Node **, int);
 extern	Cell	*arith(Node **, int);
-extern	double	ipow(double, int);
+extern	Awknum	ipow(Awknum, int);
 extern	Cell	*incrdecr(Node **, int);
 extern	Cell	*assign(Node **, int);
 extern	Cell	*cat(Node **, int);

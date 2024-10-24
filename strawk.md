@@ -305,6 +305,20 @@ to the original parsing tree, then executes the new code.
 Once done it discards the new branch and new allocations.
 Errors within evaluated expressions do notcause the program to exit.
 
+#### Values stored as 64bit integers
+
+Standard awk stores numerical values as double-precision floating point numbers
+(and strings).
+To avoid imprecision with large numbers,
+writing out raw bytes and performing bitwise operations,
+the basic type is now 64-bit integers instead.
+Values are converted automatically to floating point
+if they are floating point constants,
+are used in arithmetic expressions involving floats or functions which take floats
+(such as `exp()`, `log()`, `cos()`, etc.),
+or are explicitely cast using the new `float()` function.
+`rand()` remains the same, returning floating point numbers in the range [0,1).
+
 #### Bitwise operations
 
 Unlike typical approaches to add these to the language,
@@ -324,11 +338,48 @@ v = (a & 1) != 0
 v = a & 1 != 0		# as opposed to C: a & (1 != 0)
 ```
 
+#### Numerical values, base and binary output
+
+Numbers in hexadecimal and octal are now valid:
+
+```awk
+x = 0xdeadbeefcafe
+y = -0xcafebabe
+printf "0x%x", x
+```
+
+The values are 8-byte wide and can overflow.
+Note that numbers may have trailing characters (which will be ignored),
+just like standard awk.
+It is possible to prohibit this, but such a lax rule is easier to handle.
+Note that while a numerical value will be set,
+the type of the variable or constant will be a string.
+Again like standard awk, if one operand in an expression is a string,
+then string comparison will be performed.
+
+```awk
+$ strawk 'BEGIN{print 348.5e-1fas_g}'
+34.85
+$ strawk 'BEGIN{if(3.5a < 17) print "yes"}'
+$ 
+```
+
+A new `bytes(x)` function has been added to output the raw 64-bit representation
+to stdout in native byte order:
+
+```sh
+$ strawk 'BEGIN{x=0xdeadbeefcafebabe; bytes(x)}' | xxd
+00000000: beba feca efbe adde                      ........
+```
+
+This feature's placement is a bit odd, so the interface may change in the future.
+
 #### Other changes
 
 - The exponentiation operator is `**`, `^` is used for bitwise XOR.
 - Removed __getline__, __nextfile__, __system__; removed __--safe__:
 strawk should never read files or execute system commands itself.
+- Removed __ENVIRON__.
 - Different PRNG which handles floating point, instead of using random().
 
 #### TODO

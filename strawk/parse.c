@@ -290,7 +290,7 @@ void defn(Cell *v, Node *vl, Node *st)	/* turn on FCN bit in definition, */
 	n = 0;	/* count arguments */
 	for (p = vl; p; p = p->nnext)
 		n++;
-	v->fval = n;
+	v->val.i = n;
 	DPRINTF("defining func %s (%d args)\n", v->nval, n);
 }
 
