@@ -36,6 +36,18 @@ vadebug(char *type, char *fmt, va_list arg)
 	fprint(2, "\n");
 }
 
+char *
+va(char *fmt, ...)
+{
+	va_list arg;
+	static char buf[512];
+
+	va_start(arg, fmt);
+	vsnprint(buf, sizeof buf, fmt, arg);
+	va_end(arg);
+	return buf;
+}
+
 vlong
 μsec(void)
 {

@@ -1,4 +1,5 @@
 void	warn(char*, ...);
+char*	va(char*, ...);
 void	dprint(int, char*, ...);
 void	vawarn(char*, va_list);
 void	vadebug(char*, char*, va_list);
