@@ -149,24 +149,23 @@ mousedrag(float Δx, float Δy)
 static ioff
 mousehover(int x, int y)
 {
+	int isedge;
 	u32int id;
 
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h
-	|| (id = mousepick(x, y)) == -1){
+	|| (id = mousepick(x, y)) == -1U){
 		hoverstr[0] = 0;
 		return -1;
 	}
-	if((id & (1<<31)) == 0){
-		id = (uint)id - 1;
-		if(id == shown)
-			return id;
+	isedge = id & 1<<31;
+	id--;
+	if(id == shown)
+		return id;
+	if(isedge){
+		pushcmd("edgeinfo(%d)", id & ~(1<<31));
+		id |= 1<<31;	/* safety */
+	}else
 		pushcmd("nodeinfo(%d)", id);
-	}else{
-		id = (uint)(id & ~(1<<31)) - 1;
-		if(id == shown)
-			return id;
-		pushcmd("edgeinfo(%d)", id);
-	}
 	return id;
 }
 
@@ -195,7 +194,7 @@ showselected(char *s, ioff id)
 	}
 	p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
 	strecpy(p, selstr+sizeof selstr, s);
-	if(id != -1)
+	if(id != -1 && (id & 1<<31) == 0)
 		highlightnode(id);
 }
 
