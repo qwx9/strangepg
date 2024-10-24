@@ -112,7 +112,6 @@ collectgfanodes(Graph *g, File *f)
 	}
 	if(maxl > 1)
 		fixlengths(minl, maxl);
-	warn("collectgfanodes: done\n");
 	return c;
 }
 
@@ -277,11 +276,13 @@ loadgfa1(void *arg)
 		sysfatal("loadgfa1: empty graph: %s", error());
 	DPRINT(Debugfs, "done loading gfa");
 	pushgraph(g);
+	logmsg("loadgfa: loading tags...\n");
 	if((n = collectgfameta(&g)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
 	/* if no actual useful metadata was loaded, don't do anything */
 	else if(n > 0 || !gottagofast)
 		pushcmd("cmd(\"FHJ142\")");
+	logmsg("loadgfa: done\n");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
 	cleargraphtempshit(&g);
 	clearmetatempshit(&g);

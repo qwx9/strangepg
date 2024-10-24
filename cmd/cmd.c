@@ -158,7 +158,7 @@ readcmd(char *s)
 			quit();
 			break;
 		case 'E': 
-			warn("Error:%s\n", s+1);
+			logmsg(va("> error:%s\n", s+1));
 			goto next;
 		case 'I':
 			showobject(s + 2);
@@ -184,7 +184,7 @@ readcmd(char *s)
 		case 'y':
 			break;
 		default:
-			warn("reply: <%s>\n", s);
+			logmsg(va("> %s\n", s));
 			goto next;
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t")) < 1)

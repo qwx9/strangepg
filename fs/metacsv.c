@@ -66,13 +66,14 @@ loadcsv(void *arg)
 	path = arg;
 	DPRINT(Debugfs, "loadcsv %s", path);
 	r = -1;
+	nr = 0;
 	tags = nil;
 	f = emalloc(sizeof *f);
 	if(openfs(f, path, OREAD) < 0)
 		goto end;
 	if((tags = csvheader(f)) == nil)
 		goto end;
-	nr = 1;
+	nr++;
 	name[sizeof name-1] = 0;
 	/* beyond the tag names in the header, we leave all input validation to strawk */
 	while((s = readline(f, nil)) != nil){
@@ -102,7 +103,7 @@ end:
 	if(r < 0)
 		warn("loadcsv %s: %s\n", path, error());
 	else
-		warn("done reading csv\n");
+		logmsg(va("loadcsv: done, read %d records\n", nr));
 	free(path);
 }
 

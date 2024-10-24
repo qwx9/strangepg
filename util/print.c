@@ -1,5 +1,43 @@
 #include "strpg.h"
 
+char logbuf[8192], *last[3];
+int nlog, logsz;
+
+void
+logmsg(char *s)
+{
+	int n, m;
+	char *p;
+	static char *lp = logbuf;
+
+	n = strlen(s);
+	if(n > sizeof logbuf)
+		n = sizeof logbuf - 1;
+	while(lp + n >= logbuf + sizeof logbuf){
+		if((p = strchr(logbuf, '\n')) == nil || p >= lp){
+			logbuf[0] = 0;
+			lp = logbuf;
+		}else{
+			p++;
+			m = lp - p + 1;
+			memmove(logbuf, p, m);
+			lp -= p - logbuf;
+		}
+	}
+	memcpy(lp, s, n);
+	lp += n;
+	*lp = 0;
+	logsz = lp - logbuf;
+	free(last[0]);
+	last[0] = last[1];
+	last[1] = last[2];
+	last[2] = estrdup(s);
+	p = last[2] + n - 1;
+	if(*p == '\n')
+		*p = 0;
+	nlog++;
+}
+
 void
 warn(char *fmt, ...)
 {

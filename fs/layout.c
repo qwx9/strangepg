@@ -54,7 +54,7 @@ end:
 	}
 	freefs(fs);
 	reqdraw(Reqrefresh);
-	warn("done reading layout\n");
+	logmsg("importlayout: done\n");
 	return x;
 }
 
@@ -91,6 +91,6 @@ exportlayout(Graph *g, char *path)
 	x = 0;
 end:
 	freefs(fs);
-	warn("done writing layout\n");
+	logmsg("exportlayout: done\n");
 	return x;
 }

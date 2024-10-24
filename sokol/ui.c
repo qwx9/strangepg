@@ -45,6 +45,16 @@ enum{
 		NK_WINDOW_BORDER |
 		NK_WINDOW_MINIMIZABLE |
 		NK_WINDOW_SCROLL_AUTO_HIDE,
+	NKxopt =
+		NK_EDIT_SELECTABLE |
+		NK_EDIT_MULTILINE |
+		NK_EDIT_ALLOW_TAB |
+		NK_EDIT_CLIPBOARD |
+		NK_EDIT_READ_ONLY |
+		NK_EDIT_GOTO_END_ON_ACTIVATE,
+	Fonth = 13,
+	Padh = 8 * 2,
+	Colh = (Fonth + Padh) / 2,
 };
 
 /* FIXME: clear text on escape while prompt active */
@@ -76,29 +86,52 @@ pasteprompt(char *s)
 void
 drawui(nk_context *ctx)
 {
+	int sz;
 	float h;
 	nk_flags e;
 	struct nk_rect r;
 	struct nk_panel *p;
 	struct nk_style_edit *s;
 
-	if(nk_begin(ctx, "Prompt", nk_rect(8, 8, view.w / 4.5, 122-5), NKwopt)){
+	if(nk_begin(ctx, "Console", nk_rect(8, 8, view.w / 4.5, 16*Colh), NKwopt)){
 		s = &ctx->style.edit;
 		r = nk_window_get_bounds(ctx);
-		h = MAX(r.h - 3*24 - s->padding.y - s->border, 8);
-		nk_layout_row_dynamic(ctx, h, 1);
-		e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
-		prompting = (e & NK_EDIT_ACTIVE) != 0;
-		if((e & NK_EDIT_COMMITED) != 0){
-			plen = nk_str_len_char(&nkprompt.string);
-			ptext[plen] = 0;
-			pushcmd("%s", ptext);
-			nk_edit_unfocus(ctx);
-		}
 		nk_layout_row_dynamic(ctx, 8, 1);
 		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_LEFT);
-		if(hoverstr[0] != 0)
-			nk_label(ctx, hoverstr, NK_LEFT);
+		nk_label(ctx, hoverstr[0] == 0 ? "" : hoverstr, NK_LEFT);
+		nk_layout_row_dynamic(ctx, 3 * Colh, 1);
+		if(nk_group_begin(ctx, "last", NK_WINDOW_NO_SCROLLBAR)){
+			nk_layout_row_dynamic(ctx, 8, 1);
+			nk_label(ctx, last[0] != nil ? last[0] : "", NK_LEFT);
+			nk_label(ctx, last[1] != nil ? last[1] : "", NK_LEFT);
+			nk_label(ctx, last[2] != nil ? last[2] : "", NK_LEFT);
+			nk_group_end(ctx);
+		}
+		h = MAX(r.h - 13 * Colh - s->padding.y - s->border, 24);
+		if(nk_tree_push(ctx, NK_TREE_TAB, "Log", NK_MINIMIZED)){
+			nk_layout_row_dynamic(ctx, 6 * Colh, 1);
+			/* nk_text and nk_label do not handle newlines */
+			if(nk_group_begin(ctx, "all", 0)){
+				sz = logsz;
+				nk_layout_row_dynamic(ctx, nlog * 8 * Colh / 2, 1);
+				nk_edit_string(ctx, NKxopt, (char *)logbuf, &sz, logsz, nk_filter_default);
+				nk_group_end(ctx);
+			}
+			nk_tree_pop(ctx);
+		}else
+			h += 1 * Colh;
+		if(nk_tree_push(ctx, NK_TREE_TAB, "Prompt", NK_MAXIMIZED)){
+			nk_layout_row_dynamic(ctx, h, 1);
+			e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
+			prompting = (e & NK_EDIT_ACTIVE) != 0;
+			if((e & NK_EDIT_COMMITED) != 0){
+				plen = nk_str_len_char(&nkprompt.string);
+				ptext[plen] = 0;
+				pushcmd("%s", ptext);
+				nk_edit_unfocus(ctx);
+			}
+			nk_tree_pop(ctx);
+		}
 		view.prompt = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
 	}else{	/* minimized */
 		if((p = nk_window_get_panel(ctx)) != nil){
