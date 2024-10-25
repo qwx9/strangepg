@@ -1,14 +1,12 @@
-int	zoomgraph(Graph*, int);
-void	expandnode(Graph*, Node*);
-void	retractnode(Graph*, Node*);
+ioff	pushinode(Graph*, ioff);
+ioff	pushiedge(Graph*, ioff, ioff);
+
 ioff	str2idx(char*);
-ioff	getid(Graph*, char*);
-ioff	pushnode(Graph*, char*);
-ioff	pushedge(Graph*, char*, char*, int, int);
-void	printgraph(Graph*);
-void	cleargraphtempshit(Graph*);
+
+ioff	newnode(Graph*, char*);
+ioff	newedge(Graph*, ioff, ioff, char*);
 void	nukegraph(Graph*);
-void	pushgraph(Graph);
+void	pushgraph(Graph*);
 void	lockgraphs(int);
 void	unlockgraphs(int);
 Graph	initgraph(int);

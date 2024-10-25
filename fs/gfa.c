@@ -4,12 +4,41 @@
 #include "threads.h"
 #include "drw.h"
 #include "cmd.h"
+#include "lib/khashl.h"
+
+KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
+static namemap *names;
 
 /* assumptions:
  * - required field separator is \t
  * - tags are two characters long as per the spec
  * - length of inlined sequence trumps LN tag
  */
+
+/* usable only during first pass */
+static ioff
+getid(Graph *, char *s)
+{
+	ioff id;
+	khint_t k;
+
+	k = names_get(names, s);
+	if(k == kh_end(names))
+		return -1;
+	id = kh_val(names, k);
+	return id;
+}
+static ioff
+pushid(Graph *, char *s, ioff id)
+{
+	int abs;
+	khint_t k;
+
+	k = names_put(names, s, &abs);
+	assert(abs);
+	kh_val(names, k) = id;
+	return 0;
+}
 
 /* FIXME: no error checking */
 void
@@ -156,13 +185,6 @@ collectgfaedges(Graph *g, File *f)
 	return 0;
 }
 
-static void
-clearmetatempshit(Graph *g)
-{
-	dyfree(g->nodeoff);
-	dyfree(g->edgeoff);
-}
-
 static int
 collectgfameta(Graph *g)
 {
@@ -176,6 +198,80 @@ collectgfameta(Graph *g)
 		return -1;
 	g->flags |= GFarmed;
 	return n + m;
+}
+
+static void
+clearmetatempshit(Graph *g)
+{
+	dyfree(g->nodeoff);
+	dyfree(g->edgeoff);
+}
+
+static void
+cleargraphtempshit(Graph *)
+{
+	khint_t k;
+
+	if(names == nil)
+		return;
+	kh_foreach(names, k)
+		free(kh_key(names, k));
+	names_destroy(names);
+	names = nil;
+}
+
+static ioff
+pushnode(Graph *g, char *s)
+{
+	ioff id;
+
+	/* nodes may be defined after an edge references them, should
+	 * not be considered as an error */
+	if((id = getid(g, s)) >= 0){
+		DPRINT(Debugfs, "duplicate node[%d] %s", id, s);
+		return id;
+	}
+	s = estrdup(s);
+	if((id = newnode(g, s)) < 0 || pushid(g, s, id) < 0){
+		free(s);
+		return -1;
+	}
+	return id;
+}
+
+static ioff
+pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
+{
+	char *s, *sf;
+	ioff id, f, n, u, v;
+
+	if((u = pushnode(g, eu)) < 0 || (v = pushnode(g, ev)) < 0)
+		return -1;
+	n = strlen(eu) + strlen(ev) + 8;
+	s = emalloc(n);
+	sf = nil;
+	snprint(s, n, "%s%c\x1c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
+	/* detect redundancies by always flipping edges such that u<v, or
+	 * for self-edges if u is reversed */
+	if(f = v > u || v == u && d1 == 1){
+		sf = estrdup(s);
+		snprint(s, n, "%s%c\x1c%s%c", ev, d2 ? '+' : '-', eu, d1 ? '+' : '-');
+	}
+	if((id = getid(g, s)) >= 0){
+		DPRINT(Debugfs, "duplicate edge[%d] %s%s", id, s, f ? " (flipped)" : "");
+		free(s);
+		free(sf);
+		return id;
+	}
+	u = u << 1 | d1;
+	v = v << 1 | d2;
+	/* always push only what was actually in the input */
+	if((id = newedge(g, u, v, sf != nil ? sf : s)) < 0 || pushid(g, s, id) < 0){
+		free(s);
+		id = -1;
+	}
+	free(sf);
+	return id;
 }
 
 static int
@@ -254,6 +350,8 @@ loadgfa1(void *arg)
 	if((f = graphopenfs(&g, path, OREAD)) == nil)
 		sysfatal("loadgfa %s: %s", path, error());
 	free(path);
+	if(names == nil)
+		names = names_init();
 	while((s = readline(f, nil)) != nil){
 		p = nextfield(f, s, nil, '\t');
 		switch(s[0]){
@@ -275,7 +373,7 @@ loadgfa1(void *arg)
 	if(dylen(g.nodes) == 0 || dylen(g.edges) == 0)
 		sysfatal("loadgfa1: empty graph: %s", error());
 	DPRINT(Debugfs, "done loading gfa");
-	pushgraph(g);
+	pushgraph(&g);
 	logmsg("loadgfa: loading tags...\n");
 	if((n = collectgfameta(&g)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
@@ -289,16 +387,9 @@ loadgfa1(void *arg)
 	closefs(f);
 }
 
-static int
-save(Graph *)
-{
-	return 0;
-}
-
 static Filefmt ff = {
 	.name = "gfa",
 	.load = loadgfa1,
-	.save = save,
 	.nuke = nukegraph,
 };
 
