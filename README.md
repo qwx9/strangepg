@@ -20,7 +20,9 @@ extensible manner, designed to allow substituting different algorithms for most 
 general framework for experimentation with layouting and new visualization techniques.
 ```
 
-<p align="center"><img src=".pics/strangelove.png"/></p>
+<p align="center"><img src=".pics/bobub.png"/></p>
+
+<p align="center"><img src=".pics/zoom.png"/></p>
 
 Named in reference to the Dr. Strangelove character
 in Stanley Kubrick's __Dr. Strangelove or: how I learned to stop
@@ -33,6 +35,8 @@ A big emphasis is placed on performance, reactivity and immediate feedback.
 While it currently supports only GFA files as input,
 it will in future be extended to support other formats (GraphML, DOT, Newick, etc)
 and types of trees (Newick for phylogenetic trees, etc.).
+
+<p align="center"><img src=".pics/strangelove.png"/></p>
 
 _Note: this is a work in progress and under heavy development;
 significant or breaking changes happen all the time,
@@ -188,7 +192,7 @@ by default in **$HOME/.local/bin**.
 If this directory is not in your $PATH or a different installation directory is desired,
 see [Additional compilation settings](#compilationsettings) below.
 
-**NOTE**: manual compilation with **clang is recommended** as it currently produces noticeably faster binaries.
+**NOTE**: manual compilation with **clang is recommended** as it currently __may__ produce noticeably faster binaries.
 Use the [CC make variable](#compilationsettings) to force compilation with it.
 To my knowledge, bioconda binaries are built with GCC and thus may have slightly lower performance.
 I do not yet know why.
@@ -205,7 +209,7 @@ apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-d
 ```
 
 Tested with gcc 11.4.0 and 13.2.0, and clang 14.0.0 and 17.0.6
-on Void Linux and Ubuntu 22.04/24.04.
+on Arch Linux, Void Linux and Ubuntu 22.04/24.04.
 
 
 ## <a name="usage"></a>Usage
@@ -223,6 +227,8 @@ For example:
 ```bash
 strangepg test/03.232.gfa
 ```
+
+<p align="center"><img src=".pics/232.png"/></p>
 
 #### Command-line options
 
@@ -261,6 +267,8 @@ Use this when tags affecting the layout are present in the GFA and/or CSV files,
 instead of having to manually restart layouting.
 Otherwise it's not necessary since colors and other tags can be loaded while layouting.
 
+<p align="center"><img src=".pics/darkmode.png"/></p>
+
 Drawing options:
 
 - `-Z`: by default, nodes are placed with some slight offset in the z axis,
@@ -297,6 +305,8 @@ The basic layouting algorithm serves as a backbone for more specific visualizati
 changing the type of geometry: circular, spherical, non-euclidean, etc.
 These basic additional layouts are currently under development.
 
+<p align="center"><img src=".pics/bo.png"/></p>
+
 #### Basic layouting
 
 Available algorithms:
@@ -306,7 +316,6 @@ so while it may run faster, it will not scale on its own for 10k node graphs and
 if the number of nodes is less than 2-3 times the number of threads.
 - `-l pfr3d`: same as `pfr` but additionally using the z axis to layout in 3D.
 - `-l fr`: the classic algorithm, single-threaded. Use this for very small graphs (<1000 nodes) where `pfr` is not appropriate.
-- `-l circ`: circular layout, where nodes are placed in sequence on a circle or spiral; currently has some issues and requires specific tags, but is currently being rewritten to be fully generic and get rid of both limitations.
 
 Use the [`-t` command line parameter](#usage) to change the number of threads
 used for layouting, 4 by default.
@@ -327,6 +336,8 @@ Restarting it is cheap; try it if the layout doesn't look good.
 Intermediate or final results can be saved to file,
 then used as an initial state for another round of layouting.
 
+<p align="center"><img src=".pics/3d.png"/></p>
+
 
 #### Loading from and saving to file
 
@@ -341,6 +352,8 @@ The current layout may be exported or imported at runtime
 with the `exportlayout("file")` and `importlayout("file")` functions
 (see [Graph manipulation](#interaction)).
 
+<p align="center"><img src=".pics/export.png"/></p>
+
 
 ## <a name="navigation"></a>Navigation
 
@@ -349,6 +362,7 @@ Moving the graph around is done primarily with the mouse.
 - Select object: click left mouse button (click on nothing to unselect).
 - Move selected object (nodes only): click and drag the mouse.
 - Move (pan) view: drag with right mouse button or press a cursor key to jump by screenful.
+- 3D Rotate (around X/Y axes): click and hold middle button
 - Zoom view: three options:
 	* Mouse scroll.
 	* Hold control + right mouse.
@@ -358,11 +372,14 @@ push (draw towards top left) to zoom out.
 
 Keyboard shortcuts:
 
+- `a`: Toggle showing oriented nodes as arrows
 - `p`: Pause/unpause layout (unpause = restart layout from current state)
 - `r`: Restart layouting from scratch
 - `q`: Quit
 - `Esc`: Reset view to initial position
 - Arrow keys: move view by screenful up/down/left/right
+
+<p align="center"><img src=".pics/arrows.png"/></p>
 
 A status window currently labeled `Prompt`
 presents a text box to write [commands](#interaction) in,
@@ -374,6 +391,11 @@ but will be extended to show all of a node's tags.
 The window can be moved around with the mouse,
 collapsed by clicking the top right button,
 or resized by dragging the lower right corner.
+It now shows the last 3 status messages and command outputs,
+and has a collapsible message log widget for more.
+Feedback from [commands](#interaction) will appear here.
+
+<p align="center"><img src=".pics/log.png"/></p>
 
 
 ## <a name="interaction"></a>Graph manipulation
@@ -407,6 +429,8 @@ Any awk code valid within a pattern (inside braces)
 is also valid here, but functions cannot be defined yet.
 Currently, it's somewhat limited and a bit hacky, but it works.
 It will be improved later on.
+
+<p align="center"><img src=".pics/dbg.png"/></p>
 
 #### Examples
 
@@ -506,6 +530,8 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 
 Each line must have the same number of fields as the header, but fields may be empty.
 
+<p align="center"><img src=".pics/space.png"/></p>
+__Soon, deathmatching in graph space__
 
 ## <a name="applications"></a>Example applications
 
@@ -535,6 +561,7 @@ fy[1] = 0
 fx[1] = 8 * 1024 * node[i]
 fy[1] = 8 * 1280 * rand()
 ```
+
 #### Linear layout using bubble id tags from gaftools
 
 ```awk
@@ -547,10 +574,8 @@ x0[CL[i] != orange] = 8 * (BO[i] - min - (max - min) / 2)
 y0[CL[i] != orange] = 2 - 4 * rand() 
 ```
 
-#### Linear layout of a DeBrujin graphs mapped back to a reference
-...
-...
-```
+<p align="center"><img src=".pics/bo.png"/></p>
+
 
 ## <a name="compilationsettings"></a>Additional compilation settings
 
