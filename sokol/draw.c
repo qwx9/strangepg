@@ -117,7 +117,7 @@ updateview(void)
 
 	view.Δeye = subv(view.eye, view.center);
 	view.ar = (float)view.w / view.h;
-	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 10000.0f);
+	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 100000.0f);
 	rot = HMM_MulM4(
 			HMM_Rotate_RH(view.θ, HMM_V3(0.0f, 1.0f, 0.0f)),
             HMM_Rotate_RH(view.φ, HMM_V3(1.0f, 0.0f, 0.0f))
