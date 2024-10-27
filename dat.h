@@ -28,7 +28,7 @@ struct Vertex{
 	float z;
 };
 
-/* FIXME: later, vertices or HMM vectors? */
+/* FIXME: later, vertices or HMM vectors? also, alignment */
 struct RNode{
 	float pos[3];
 	float dir[3];
@@ -107,7 +107,7 @@ struct Clk{
 
 extern int debug;
 extern int gottagofast;
-extern char logbuf[], *last[3];
+extern char logbuf[], *lastmsg[3];
 extern int nlog, logsz;
 
 enum{

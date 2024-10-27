@@ -102,9 +102,9 @@ drawui(nk_context *ctx)
 		nk_layout_row_dynamic(ctx, 3 * Colh, 1);
 		if(nk_group_begin(ctx, "last", NK_WINDOW_NO_SCROLLBAR)){
 			nk_layout_row_dynamic(ctx, 8, 1);
-			nk_label(ctx, last[0] != nil ? last[0] : "", NK_LEFT);
-			nk_label(ctx, last[1] != nil ? last[1] : "", NK_LEFT);
-			nk_label(ctx, last[2] != nil ? last[2] : "", NK_LEFT);
+			nk_label(ctx, lastmsg[0] != nil ? lastmsg[0] : "", NK_LEFT);
+			nk_label(ctx, lastmsg[1] != nil ? lastmsg[1] : "", NK_LEFT);
+			nk_label(ctx, lastmsg[2] != nil ? lastmsg[2] : "", NK_LEFT);
 			nk_group_end(ctx);
 		}
 		h = MAX(r.h - 13 * Colh - s->padding.y - s->border, 24);
