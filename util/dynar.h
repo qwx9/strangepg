@@ -1,10 +1,9 @@
 /* ideas from klib and stb */
 typedef struct Dyhdr Dyhdr;
 struct Dyhdr{
-	void *buf;
-	usize len;
 	usize sz;
-};
+	usize len;
+} __attribute__((packed));	/* alignment */
 
 /* private, do not use directly */
 #define dyhdr(a)	((Dyhdr*)(a) - 1)
@@ -37,20 +36,20 @@ struct Dyhdr{
 		dyprealloc(a, (i)); \
 		break; \
 	} \
-	Dyhdr*__h = dyhdr(a); \
-	if(__h->sz <= (i)){ \
-		(a) = dychecksz((a),__h,(i)); \
-		while(__h->sz <= (i))	\
-			(a) = dyextend((a), __h, sizeof(*(a)) * __h->sz);	\
+	Dyhdr*___h = dyhdr(a); \
+	if(___h->sz <= (i)){ \
+		(a) = dychecksz((a),___h,(i)); \
+		while(___h->sz <= (i))	\
+			(a) = dyextend((a), ___h, sizeof(*(a)) * ___h->sz);	\
 	}}while(0)
 #define dyresize(a,i) do{ \
-	Dyhdr*__h = dyhdr(a); \
-	if((a) == nil || __h->sz < (i)){ \
-		dygrow(a, i); \
-		__h = dyhdr(a); \
-		__h->len = (i); \
-	}else if(__h->len < (i)) \
-		__h->len = (i); \
+	Dyhdr*_h = dyhdr(a); \
+	if((a) == nil || _h->sz < (i)){ \
+		dygrow(a, (i)); \
+		_h = dyhdr(a); \
+		_h->len = (i); \
+	}else if(_h->len < (i)) \
+		_h->len = (i); \
 	}while(0)
 #define dyinsert(a,i,v)	do{ \
 	dyresize(a, (i)+1); \
