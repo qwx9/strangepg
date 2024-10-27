@@ -105,7 +105,7 @@ struct Clk{
 
 extern int debug;
 extern int gottagofast;
-extern char logbuf[], *lastmsg[3];
+extern char logbuf[], *lastmsg[3], iserrmsg[3];
 extern int nlog, logsz;
 
 enum{

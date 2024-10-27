@@ -177,7 +177,7 @@ readcmd(char *s)
 			quit();
 			break;
 		case 'E': 
-			logmsg(va("> error:%s\n", s+1));
+			logerr(va("> error:%s\n", s+1));
 			continue;
 		case 'I':
 			showobject(s + 2);
@@ -192,6 +192,7 @@ readcmd(char *s)
 				req |= Reqshallowdraw;
 				continue;
 			}
+			break;
 		case 'N':
 		case 'X':
 		case 'Y':

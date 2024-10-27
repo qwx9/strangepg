@@ -86,7 +86,7 @@ pasteprompt(char *s)
 void
 drawui(nk_context *ctx)
 {
-	int sz;
+	int i, sz;
 	float h;
 	nk_flags e;
 	struct nk_rect r;
@@ -97,14 +97,17 @@ drawui(nk_context *ctx)
 		s = &ctx->style.edit;
 		r = nk_window_get_bounds(ctx);
 		nk_layout_row_dynamic(ctx, 8, 1);
-		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_LEFT);
-		nk_label(ctx, hoverstr[0] == 0 ? "" : hoverstr, NK_LEFT);
+		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_TEXT_LEFT);
+		nk_label(ctx, hoverstr[0] == 0 ? "" : hoverstr, NK_TEXT_LEFT);
 		nk_layout_row_dynamic(ctx, 3 * Colh, 1);
 		if(nk_group_begin(ctx, "last", NK_WINDOW_NO_SCROLLBAR)){
 			nk_layout_row_dynamic(ctx, 8, 1);
-			nk_label(ctx, lastmsg[0] != nil ? lastmsg[0] : "", NK_LEFT);
-			nk_label(ctx, lastmsg[1] != nil ? lastmsg[1] : "", NK_LEFT);
-			nk_label(ctx, lastmsg[2] != nil ? lastmsg[2] : "", NK_LEFT);
+			for(i=0; i<3; i++){
+				if(!iserrmsg[i])
+					nk_label(ctx, lastmsg[i] != nil ? lastmsg[i] : "", NK_TEXT_LEFT);
+				else
+					nk_label_colored(ctx, lastmsg[i], NK_TEXT_LEFT, nk_rgb(160,0,0));
+			}
 			nk_group_end(ctx);
 		}
 		h = MAX(r.h - 13 * Colh - s->padding.y - s->border, 24);

@@ -396,7 +396,7 @@ loadgfa1(void *arg)
 	if(dylen(a.nodeoff) < nn)
 		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
 	if(ne == 0)
-		logmsg("loadgfa: no edges\n");
+		logerr("warning: loadgfa: no edges\n");
 	pushgraph(&a.g);
 	logmsg("loadgfa: loading tags...\n");
 	if((n = collectgfameta(&a)) < 0)

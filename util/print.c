@@ -1,10 +1,10 @@
 #include "strpg.h"
 
-char logbuf[8192], *lastmsg[3];
+char logbuf[8192], *lastmsg[3], iserrmsg[3];
 int nlog, logsz;
 
-void
-logmsg(char *s)
+static inline void
+writelog(char *s, int iserr)
 {
 	int n, m;
 	char *p;
@@ -35,7 +35,23 @@ logmsg(char *s)
 	p = lastmsg[2] + n - 1;
 	if(*p == '\n')
 		*p = 0;
+	iserrmsg[0] = iserrmsg[1];
+	iserrmsg[1] = iserrmsg[2];
+	iserrmsg[2] = iserr;
 	nlog++;
+
+}
+
+void
+logmsg(char *s)
+{
+	writelog(s, 0);
+}
+
+void
+logerr(char *s)
+{
+	writelog(s, 1);
 }
 
 void

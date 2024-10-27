@@ -1,5 +1,6 @@
 void	warn(char*, ...);
 void	logmsg(char*);
+void	logerr(char*);
 char*	va(char*, ...);
 void	dprint(int, char*, ...);
 void	vawarn(char*, va_list);
