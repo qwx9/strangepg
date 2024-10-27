@@ -170,6 +170,10 @@ readcmd(char *s)
 	e = s;
 	while((s = nexttok(e, &e)) != nil){
 		g = graphs;
+		if(s[1] != 0 && s[1] != '\t'){
+			logerr(va("%s\n", s));
+			continue;
+		}
 		switch(*s){
 		case 0:
 			return;
