@@ -19,18 +19,19 @@ static char **
 csvheader(File *f)
 {
 	char c;
-	int nf;
-	char *p, *s, *t, **tags;
+	char *p, *s, **tags;
 
-	if((s = readline(f, nil)) == nil){
+	if(readline(f) == nil){
 		werrstr("empty file");
 		return nil;
 	}
 	tags = nil;
 	/* FIXME: currently node-only (use cistrcmp) */
-	s = nextfield(f, s, nil, ',');
-	for(nf=0; s!=nil; s=t, nf++){
-		t = nextfield(f, s, nil, ',');
+	if(nextfield(f) == nil){
+		werrstr("no header");
+		return nil;
+	}
+	for(; (s = nextfield(f)) != nil;){
 		for(p=s; (c=*p)!=0; p++){
 			if(p == s){
 				if(!isalpha(c)){
@@ -60,26 +61,27 @@ static void
 loadcsv(void *arg)
 {
 	int r, nf, nr;
-	char *s, *t, *path, *tag, **tags, name[512];
+	char *s, *path, *tag, **tags, name[512];
 	File *f;
 
 	path = arg;
 	DPRINT(Debugfs, "loadcsv %s", path);
+	if((f = openfs(path, OREAD)) == nil){
+		warn("loadcsv %s: %s\n", path, error());
+		free(path);
+		return;
+	}
 	r = -1;
 	nr = 0;
-	tags = nil;
-	f = emalloc(sizeof *f);
-	if(openfs(f, path, OREAD) < 0)
-		goto end;
+	splitfs(f, ',');
 	if((tags = csvheader(f)) == nil)
 		goto end;
 	nr++;
 	name[sizeof name-1] = 0;
 	/* beyond the tag names in the header, we leave all input validation to strawk */
-	while((s = readline(f, nil)) != nil){
+	while(readline(f) != nil){
 		*name = 0;
-		for(nf=0; s!=nil; s=t, nf++){
-			t = nextfield(f, s, nil, ',');
+		for(nf=0; (s = nextfield(f)) != nil; nf++){
 			if(nf == 0){
 				strecpy(name, name+sizeof name, s);
 				continue;
@@ -95,15 +97,15 @@ loadcsv(void *arg)
 	r = 0;
 end:
 	pushcmd("cmd(\"FHJ142\")");
+	if(r < 0)
+		warn("loadcsv %s: %s\n", path, error());
+	else
+		logmsg(va("loadcsv: done, read %d records\n", nr));
 	for(nf=0; nf<dylen(tags); nf++)
 		free(tags[nf]);
 	dyfree(tags);
 	USED(tags);
 	freefs(f);
-	if(r < 0)
-		warn("loadcsv %s: %s\n", path, error());
-	else
-		logmsg(va("loadcsv: done, read %d records\n", nr));
 	free(path);
 }
 

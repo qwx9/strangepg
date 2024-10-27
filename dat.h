@@ -72,8 +72,6 @@ struct Graph{
 	int type;
 	u32int flags;
 	File *f;
-	vlong *nodeoff;
-	vlong *edgeoff;
 	Coarse *c;
 	int nlevels;
 	Node *nodes;	/* dynamic array */

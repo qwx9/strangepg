@@ -7,21 +7,21 @@ sysfdopen(File *f, int fd, int mode)
 {
 	f->aux = emalloc(sizeof(Biobufhdr));	/* FIXME: danger zone */
 	/* for line parsing, extra byte to always insures 0-terminated string */
-	if(Binits(f->aux, fd, mode, f->buf, sizeof f->buf - 1) < 0)
+	if(Binits(f->aux, fd, mode, (uchar*)f->buf + Readsz, Readsz) < 0)
 		return -1;
 	return 0;
 }
 
 int
-sysopen(File *f, int mode)
+sysopen(File *f, char *path, int mode)
 {
 	int fd;
 
 	if(mode != OWRITE && (mode & OTRUNC) == 0){
-		if((fd = open(f->path, mode)) < 0)
+		if((fd = open(path, mode)) < 0)
 			return -1;
 	}else{
-		if((fd = create(f->path, mode, 0644)) < 0)
+		if((fd = create(path, mode, 0644)) < 0)
 			return -1;
 	}
 	return sysfdopen(f, fd, mode);
@@ -118,15 +118,14 @@ readchar(File *f)
 /* Brdline sucks but Brdstr will choke us when lines are very long;
  * so instead of removing bio, we break Brdline. */
 char *
-readfrag(File *f, int *len)
+readfrag(File *f)
 {
 	int l;
 	char *s;
 	Biobuf *bf;
 
 	assert(f != nil && f->aux != nil);
-	if(len != nil)
-		*len = 0;
+	f->len = 0;
 	bf = f->aux;
 	/* hack 1: force Brdline to discard truncated line and
 	 * continue reading, which this bullshit should do itself */
@@ -144,7 +143,7 @@ readfrag(File *f, int *len)
 		}
 	}else if(l > 0)
 		s[--l] = 0;
-	if(len != nil)
-		*len = l;
+	f->len = l;
+	f->end = s + l;
 	return s;
 }

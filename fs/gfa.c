@@ -6,37 +6,59 @@
 #include "cmd.h"
 #include "lib/khashl.h"
 
-KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
-static namemap *names;
-
 /* assumptions:
  * - required field separator is \t
  * - tags are two characters long as per the spec
  * - length of inlined sequence trumps LN tag
  */
 
-/* usable only during first pass */
+KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
+
+typedef struct Aux Aux;
+struct Aux{
+	Graph g;
+	namemap *names;
+	vlong *nodeoff;
+	vlong *edgeoff;
+};
+
+static void
+cleanup(Aux *a)
+{
+	khint_t k;
+	namemap *h;
+
+	if((h = a->names) != nil){
+		kh_foreach(h, k)
+			free(kh_key(h, k));
+		names_destroy(h);
+	}
+	dyfree(a->nodeoff);
+	dyfree(a->edgeoff);
+	closefs(a->g.f);	/* closed but reopenable */
+}
+
 static ioff
-getid(Graph *, char *s)
+getid(namemap *h, char *s)
 {
 	ioff id;
 	khint_t k;
 
-	k = names_get(names, s);
-	if(k == kh_end(names))
+	k = names_get(h, s);
+	if(k == kh_end(h))
 		return -1;
-	id = kh_val(names, k);
+	id = kh_val(h, k);
 	return id;
 }
 static ioff
-pushid(Graph *, char *s, ioff id)
+pushid(namemap *h, char *s, ioff id)
 {
 	int abs;
 	khint_t k;
 
-	k = names_put(names, s, &abs);
+	k = names_put(h, s, &abs);
 	assert(abs);
-	kh_val(names, k) = id;
+	kh_val(h, k) = id;
 	return 0;
 }
 
@@ -79,55 +101,63 @@ settag(Node *n, ioff id, char *tag, char *val)
 	pushcmd("%s[label[%d]] = \"%s\"", tag, id, val);
 }
 
-static int
-collectgfanodes(Graph *g, File *f)
+static inline void
+setlength(Node *n, ioff id, int len)
 {
-	char *s, *t;
-	int c, r, l, nerr, minl, maxl;
+	n->length = len;
+	pushcmd("LN[label[%d]] = %d", id, len);
+	rnodes[id].len = len;
+}
+
+static int
+collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
+{
+	char *s;
+	int c, m, l, nerr, minl, maxl;
 	ioff id, i, ie;
 	vlong *off;
 	Node *n;
 
 	minl = 0x7fffffff;
 	maxl = 1;
-	off = g->nodeoff;
-	for(i=0,ie=dylen(g->nodes),nerr=c=0; i<ie; i++, off++){
-		r = 0;
+	for(off=offs,i=0,ie=dylen(offs),nerr=c=0; i<ie; i++, off++){
 		seekfs(f, *off);
-		if((s = readline(f, &l)) == nil){
-			warn("collectmeta: %s\n", error());
-			if(++nerr > 10){
-				werrstr("too many errors");
-				return -1;
-			}
-			continue;
-		}
-		if((s = nextfield(f, s, nil, '\t')) == nil	/* S */
-		|| (t = nextfield(f, s, nil, '\t')) == nil)     /* id */
-			continue;
-		if((id = getid(g, s)) < 0)
+		if(readline(f) == nil)
+			goto err;
+		if(nextfield(f) == nil	/* S */
+		|| (s = nextfield(f)) == nil)	/* id */
+			goto err;
+		if((id = getid(h, s)) < 0)
 			sysfatal("collectgfanodes: bug: %s not found", s);
-		DPRINT(Debugmeta, "collectgfanodes node[%d]: %d %s", id, f->trunc, s);
-		n = g->nodes + id;
-		s = t;
-		t = nextfield(f, s, &l, '\t');	/* seq */
-		if(l > 1 || s[0] != '*'){
-			pushcmd("LN[label[%d]] = %d", id, l);
+		n = nodes + id;
+		DPRINT(Debugmeta, "collectgfanodes node[%d]: %s %d", id, s, f->trunc);
+		if((s = nextfield(f)) != nil){
+			if((l = f->toksz) > 0){
+				if(l > 1 || *s != '*'){
+					setlength(n, id, l);
+					c++;
+				}
+			/* do not tolerate empty field here */
+			}else
+				goto err;
+		}else if((l = f->toksz) > 0){	/* field just too long */
+			setlength(n, id, l);
 			c++;
-			n->length = l;
-			rnodes[id].len = l;
-			r = 1;
-		}
-		for(s=t; s!=nil; s=t){
-			t = nextfield(f, s, &l, '\t');
-			if(l < 5 || s[2] != ':' || s[4] != ':'){
-				warn("node[%zd]: invalid segment metadata field \"%s\"\n", n-g->nodes, s);
+		}else
+			goto err;
+		while((s = nextfield(f)) != nil){
+			DPRINT(Debugmeta, "f: \"%s\"%s", s, f->trunc?" (trunc)":"");
+			if(f->toksz < 5 || s[2] != ':' || s[4] != ':'){
+				warn("segment id=%d: invalid tag \"%s\"\n", id, s);
 				continue;
 			}
 			s[2] = 0;
 			/* ignore length if sequence was inlined */
-			if(strcmp(s, "LN") == 0 && r){
-				DPRINT(Debugmeta, "node[%x]: ignoring redundant length field", id);
+			if(strcmp(s, "LN") == 0 && l > 0){
+				m = atoi(s + 5);
+				if(m != l)
+					warn("segment[%d]: conflicting sequence length %d with LN=%d\n", id, l, m);
+
 				continue;
 			}
 			settag(n, id, s, s+5);
@@ -138,6 +168,13 @@ collectgfanodes(Graph *g, File *f)
 			maxl = n->length;
 		if(minl > n->length)
 			minl = n->length;
+		continue;
+err:
+		warn("collectgfanodes: invalid S record %d\n", i);
+		if(++nerr > 10){
+			werrstr("too many errors");
+			return -1;
+		}
 	}
 	if(maxl > 1)
 		fixlengths(minl, maxl);
@@ -145,107 +182,83 @@ collectgfanodes(Graph *g, File *f)
 }
 
 static int
-collectgfaedges(Graph *g, File *f)
+collectgfaedges(File *f, vlong *offs)
 {
-	int l, nerr;
+	int nerr;
 	ioff i, ie;
 	vlong *off;
-	char *s, *t;
+	char *s;
 
-	off = g->edgeoff;
-	for(i=0,ie=dylen(g->edges),nerr=0; i<ie; i++, off++){
+	for(off=offs,i=0,ie=dylen(offs),nerr=0; i<ie; i++, off++){
 		seekfs(f, *off);
-		if((s = readline(f, &l)) == nil){
-			warn("collectmeta: %s\n", error());
-			if(++nerr > 10){
-				werrstr("too many errors");
-				return -1;
-			}
-			continue;
-		}
+		if((s = readline(f)) == nil)
+			goto err;
 		DPRINT(Debugmeta, "collectgfaedges edges[%d]: %d %s", i, f->trunc, s);
-		if((s = nextfield(f, s, nil, '\t')) == nil	/* L */
-		|| (s = nextfield(f, s, nil, '\t')) == nil	/* u */
-		|| (s = nextfield(f, s, nil, '\t')) == nil	/* du */
-		|| (s = nextfield(f, s, nil, '\t')) == nil	/* v */
-		|| (s = nextfield(f, s, nil, '\t')) == nil)	/* dv */
-			continue;
-		t = nextfield(f, s, nil, '\t');
-		if(l > 0)
-			pushcmd("cigar[ledge[%d]] = \"%s\"", i, s);
-		for(s=t; s!=nil; s=t){
-			t = nextfield(f, s, nil, '\t');
-			if(l < 6 || s[2] != ':' || s[4] != ':')
+		if(nextfield(f) == nil	/* L */
+		|| nextfield(f) == nil	/* u */
+		|| nextfield(f) == nil	/* du */
+		|| nextfield(f) == nil	/* v */
+		|| nextfield(f) == nil	/* dv */
+		|| (s = nextfield(f)) == nil)	/* cigar */
+			goto err;
+		pushcmd("cigar[ledge[%d]] = \"%s\"", i, s);
+		while((s = nextfield(f)) != nil){
+			if(f->toksz < 6 || s[2] != ':' || s[4] != ':')
 				continue;
 			s[2] = 0;
 			pushcmd("%s[ledge[%d]] = \"%s\"", s, i, s+5);
 		}
 		nerr = 0;
+		continue;
+err:
+		warn("collectgfaedges: invalid L record %d\n", i);
+		if(++nerr > 10){
+			werrstr("too many errors");
+			return -1;
+		}
 	}
 	return 0;
 }
 
 static int
-collectgfameta(Graph *g)
+collectgfameta(Aux *a)
 {
 	int n, m;
-	File *f;
 
-	f = g->f;
-	if((n = collectgfanodes(g, f)) < 0)
+	if((n = collectgfanodes(a->g.f, a->nodeoff, a->g.nodes, a->names)) < 0)
 		return -1;
-	if((m = collectgfaedges(g, f)) < 0)
+	if((m = collectgfaedges(a->g.f, a->edgeoff)) < 0)
 		return -1;
-	g->flags |= GFarmed;
+	a->g.flags |= GFarmed;
 	return n + m;
 }
 
-static void
-clearmetatempshit(Graph *g)
-{
-	dyfree(g->nodeoff);
-	dyfree(g->edgeoff);
-}
-
-static void
-cleargraphtempshit(Graph *)
-{
-	khint_t k;
-
-	if(names == nil)
-		return;
-	kh_foreach(names, k)
-		free(kh_key(names, k));
-	names_destroy(names);
-	names = nil;
-}
-
-static ioff
-pushnode(Graph *g, char *s)
+static inline ioff
+pushnode(Graph *g, namemap *h, char *s)
 {
 	ioff id;
 
 	/* nodes may be defined after an edge references them, should
 	 * not be considered as an error */
-	if((id = getid(g, s)) >= 0){
+	if((id = getid(h, s)) >= 0){
 		DPRINT(Debugfs, "duplicate node[%d] %s", id, s);
 		return id;
 	}
 	s = estrdup(s);
-	if((id = newnode(g, s)) < 0 || pushid(g, s, id) < 0){
+	if((id = newnode(g, s)) < 0 || pushid(h, s, id) < 0){
 		free(s);
 		return -1;
 	}
 	return id;
 }
 
-static ioff
-pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
+static inline ioff
+pushedge(Graph *g, namemap *h, char *eu, char *ev, int d1, int d2)
 {
 	char *s, *sf;
 	ioff id, f, n, u, v;
 
-	if((u = pushnode(g, eu)) < 0 || (v = pushnode(g, ev)) < 0)
+	if((u = pushnode(g, h, eu)) < 0 || (v = pushnode(g, h, ev)) < 0)
 		return -1;
 	n = strlen(eu) + strlen(ev) + 8;
 	s = emalloc(n);
@@ -257,7 +270,7 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 		sf = estrdup(s);
 		snprint(s, n, "%s%c\x1c%s%c", ev, d2 ? '+' : '-', eu, d1 ? '+' : '-');
 	}
-	if((id = getid(g, s)) >= 0){
+	if((id = getid(h, s)) >= 0){
 		DPRINT(Debugfs, "duplicate edge[%d] %s%s", id, s, f ? " (flipped)" : "");
 		free(s);
 		free(sf);
@@ -266,7 +279,7 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 	u = u << 1 | d1;
 	v = v << 1 | d2;
 	/* always push only what was actually in the input */
-	if((id = newedge(g, u, v, sf != nil ? sf : s)) < 0 || pushid(g, s, id) < 0){
+	if((id = newedge(g, u, v, sf != nil ? sf : s)) < 0 || pushid(h, s, id) < 0){
 		free(s);
 		id = -1;
 	}
@@ -274,24 +287,22 @@ pushedge(Graph *g, char *eu, char *ev, int d1, int d2)
 	return id;
 }
 
-static int
-gfa1hdr(Graph *, File *, char *)
+static inline int
+gfa1seg(Aux *a)
 {
-	return 0;
-}
+	char *s;
+	File *f;
 
-static int
-gfa1seg(Graph *g, File *f, char *s)
-{
-	nextfield(f, s, nil, '\t');
+	f = a->g.f;
+	s = nextfield(f);
 	DPRINT(Debugfs, "gfa pushnode %s", s);
-	if(pushnode(g, s) < 0)
+	if(pushnode(&a->g, a->names, s) < 0)
 		return -1;
-	dypush(g->nodeoff, f->foff);
+	dypush(a->nodeoff, f->foff);
 	return 0;
 }
 
-static int
+static inline int
 todir(char *s)
 {
 	if(strncmp(s, "+", 2) == 0)
@@ -300,91 +311,102 @@ todir(char *s)
 		return Vreverse;
 	return -1;
 }
-
-static int
-gfa1link(Graph *g, File *f, char *s)
+static inline int
+gfa1link(Aux *a)
 {
 	int d1, d2;
-	char *t, *fld[4], **fp;
+	char *s, *fld[4], **fp;
+	File *f;
 
-	for(fp=fld; fp<fld+nelem(fld); fp++, s=t){
-		if(s == nil){
+	f = a->g.f;
+	for(fp=fld; fp<fld+nelem(fld); fp++){
+		if((s = nextfield(f)) == nil){
 			werrstr("malformed link");
 			return -1;
 		}
-		t = nextfield(f, s, nil, '\t');
 		*fp = s;
 	}
 	if((d1 = todir(fld[1])) < 0 || (d2 = todir(fld[3])) < 0){
 		werrstr("malformed link orientation");
 		return -1;
 	}
-	DPRINT(Debugfs, "gfa pushedge %c%s,%c%s", d1?'-':'+', fld[0], d2?'-':'+', fld[2]);
-	if(pushedge(g, fld[0], fld[2], d1, d2) < 0)
+	DPRINT(Debugfs, "gfa pushedge %c%s,%c%s", *fld[1], fld[0], *fld[3], fld[2]);
+	if(pushedge(&a->g, a->names, fld[0], fld[2], d1, d2) < 0)
 		return -1;
-	dypush(g->edgeoff, f->foff);
+	dypush(a->edgeoff, f->foff);
 	return 0;
 }
 
-static int
-gfa1path(Graph *, File *, char *)
+static File *
+opengfa(Aux *a, char *path)
 {
-	return 0;
+	File *f;
+
+	a->g = initgraph(FFgfa);
+	if((f = openfs(path, OREAD)) == nil)
+		sysfatal("loadgfa %s: %s", path, error());
+	free(path);
+	a->g.f = f;
+	a->names = names_init();
+	return f;
 }
 
-// FIXME: actually handle bad input
 static void
 loadgfa1(void *arg)
 {
-	int (*parse)(Graph*, File*, char*);
 	int n;
-	char *s, *p, *path;
-	ioff nnodes, nedges;
-	Graph g;
+	char *s;
+	ioff nerr, nn, ne;
 	File *f;
+	Aux a = {0};
 
-	path = arg;
-	nnodes = nedges = 0;
-	DPRINT(Debugfs, "loadgfa1 %s", path);
-	g = initgraph(FFgfa);
-	if((f = graphopenfs(&g, path, OREAD)) == nil)
-		sysfatal("loadgfa %s: %s", path, error());
-	free(path);
-	if(names == nil)
-		names = names_init();
-	while((s = readline(f, nil)) != nil){
-		p = nextfield(f, s, nil, '\t');
-		switch(s[0]){
-		case 'H': parse = gfa1hdr; break;
-		case 'S': parse = gfa1seg; if(++nnodes % 100000 == 0) warn("loadgfa: %de5 nodes...\n", nnodes/100000); break;
-		case 'L': parse = gfa1link; if(++nedges % 100000 == 0) warn("loadgfa: %de5 edges...\n", nedges/100000); break;
-		case 'P': parse = gfa1path; break;
-		default: DPRINT(Debugfs, "line %d: unknown record type %c", f->nr, s[0]); continue;
+	f = opengfa(&a, arg);
+	nn = ne = nerr = 0;
+	while(readline(f) != nil){
+		if(nerr >= 10)
+			sysfatal("loadgfa1: too many errors, last error: %s\n", error());
+		if((s = nextfield(f)) == nil){
+			warn("null pointer\n");
+			break;
 		}
-		if(parse(&g, f, p) < 0){
+		switch(s[0]){
+		err:
 			warn("loadgfa1: line %d: %s\n", f->nr, error());
-			f->err++;
+			nerr++;
+			break;
+		case 'H':
+		case 'P': continue;
+		case 'S':
+			if(gfa1seg(&a) < 0)
+				goto err;
+			if(++nn % 100000 == 0)
+				warn("loadgfa: %de5 nodes...\n", nn / 100000);
+			break;
+		case 'L':
+			if(gfa1link(&a) < 0)
+				goto err;
+			if(++ne % 100000 == 0)
+				warn("loadgfa: %de5 edges...\n", ne/ 100000);
+			break;
+		default: DPRINT(Debugfs, "line %d: unknown record type %c", f->nr, s[0]);
 		}
 	}
-	if(f->err >= 10)
-		sysfatal("loadgfa1: too many errors, last error: %s\n", error());
-	if(dylen(g.nodeoff) < dylen(g.nodes))
-		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
-	if(dylen(g.nodes) == 0 || dylen(g.edges) == 0)
+	if(nn == 0)
 		sysfatal("loadgfa1: empty graph: %s", error());
-	DPRINT(Debugfs, "done loading gfa");
-	pushgraph(&g);
+	if(dylen(a.nodeoff) < nn)
+		sysfatal("loadgfa1: invalid GFA: missing S lines, links reference non-existent segments");
+	if(ne == 0)
+		logmsg("loadgfa: no edges\n");
+	pushgraph(&a.g);
 	logmsg("loadgfa: loading tags...\n");
-	if((n = collectgfameta(&g)) < 0)
+	if((n = collectgfameta(&a)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
 	/* if no actual useful metadata was loaded, don't do anything */
 	else if(n > 0 || !gottagofast)
 		pushcmd("cmd(\"FHJ142\")");
 	logmsg("loadgfa: done\n");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
-	cleargraphtempshit(&g);
-	clearmetatempshit(&g);
-	closefs(f);
+	cleanup(&a);
 }
 
 static Filefmt ff = {

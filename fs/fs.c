@@ -203,60 +203,101 @@ tellfs(File *f)
 	return sysftell(f);
 }
 
-/* FIXME: sucks */
-char *
-nextfield(File *f, char *s, int *len, char sep)
+static inline char *
+terminate(File *f, char *cur, char *end)
 {
-	int n;
-	char *t;
-
-	if(len != nil)
-		*len = 0;
-	if(s == nil || *s == 0)
-		return nil;
-	if((t = strchr(s, sep)) != nil){
-		if(len != nil)
-			*len = t - s;
-		*t++ = 0;
-		return t;
-	}
-	if(len != nil)
-		*len = strlen(s);
-	while(f != nil && f->trunc){
-		if((s = readfrag(f, &n)) == nil)
-			return nil;
-		if((t = strchr(s, sep)) != nil){
-			if(len != nil)
-				*len += t - s;
-			*t++ = 0;
-			break;
-		}else
-			*len += n;
-	}
-	return t;
+	f->toksz += end - cur;
+	*end++ = 0;
+	f->tok = end;
+	return cur;
 }
 
 char *
-readline(File *f, int *len)
+nextfield(File *f)
+{
+	int n;
+	char *s, *t, *p;
+
+	s = f->tok;
+	n = f->end - s;
+	f->toksz = 0;
+	if(n <= 0)
+		return nil;
+	if((t = memchr(s, f->sep, n)) != nil)
+		return terminate(f, s, t);
+	else if(!f->trunc)	/* EOL */
+		return terminate(f, s, s + n);
+	p = f->end - f->len - n;
+	memmove(p, s, n);
+	if((s = readfrag(f)) == nil)
+		goto err;
+	else if((t = memchr(s, f->sep, f->len)) != nil)
+		return terminate(f, p, t);
+	else if(!f->trunc)	/* EOL */
+		return terminate(f, p, s + f->len);
+	/* field is longer than the read size, giving up for this one */
+	f->toksz += f->end - p;
+	while(f->trunc){
+		if((s = readfrag(f)) == nil)
+			goto err;
+		else if((t = memchr(s, f->sep, f->len)) != nil){
+			terminate(f, s, t);
+			return nil;
+		}else
+			f->toksz += f->len;
+	}
+	f->tok = s + f->len;	/* EOL */
+	return nil;
+err:
+	f->tok = f->end;
+	f->toksz = 0;
+	return nil;
+}
+
+void
+splitfs(File *f, char sep)
+{
+	f->sep = sep;
+}
+
+char *
+readline(File *f)
 {
 	/* previous line unterminated, longer than size of buffer */
 	while(f->trunc)
-		readfrag(f, nil);
+		readfrag(f);
 	f->foff = sysftell(f);
 	f->nr++;
-	return readfrag(f, len);
+	f->toksz = 0;
+	f->tok = readfrag(f);
+	return f->tok;
 }
 
-int
-openfs(File *f, char *path, int mode)
+File *
+openfs(char *path, int mode)
 {
-	assert(f->aux == nil && f->path == nil);
+	File *f;
+
+	f = emalloc(sizeof *f);
+	if(sysopen(f, path, mode) < 0){
+		free(f);
+		return nil;
+	}
+	f->sep = '\t';
 	f->path = estrdup(path);
-	return sysopen(f, mode);
+	return f;
 }
 
-int
-fdopenfs(File *f, int fd, int mode)
+File *
+fdopenfs(int fd, int mode)
 {
-	return sysfdopen(f, fd, mode);
+	File *f;
+
+	f = emalloc(sizeof *f);
+	if(sysfdopen(f, fd, mode) < 0){
+		free(f);
+		return nil;
+	}
+	f->sep = '\t';
+	return f;
 }

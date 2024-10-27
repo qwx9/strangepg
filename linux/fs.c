@@ -25,14 +25,13 @@ sysclose(File *f)
 }
 
 int
-sysopen(File *f, int omode)
+sysopen(File *f, char *path, int omode)
 {
 	char *mode;
 	FILE *bf;
 
-	assert(f->path != nil);
 	mode = modestr(omode);
-	if((bf = fopen(f->path, mode)) == NULL)
+	if((bf = fopen(path, mode)) == NULL)
 		return -1;
 	f->aux = bf;
 	return 0;
@@ -134,23 +133,23 @@ sysread(File *f, void *buf, int n)
  * buffer, which defeats our purpose;  we have to use fgets(2)
  * instead, which doesn't handle NULs in input and doesn't give read
  * length information */
+/* FIXME: get rid of this, just use fread instead */
 char *
-readfrag(File *f, int *len)
+readfrag(File *f)
 {
 	int n, m;
 	char *s;
 
 	assert(f != nil && f->aux != nil);
-	if(len != nil)
-		*len = 0;
+	f->len = 0;
 	if(f->trunc)
 		f->trunc = 0;
-	s = (char *)f->buf;
-	if(fgets(s, sizeof f->buf, f->aux) == NULL)
+	s = (char *)f->buf + Readsz;
+	if(fgets(s, Readsz, f->aux) == NULL)
 		return nil;
 	n = strlen(s);
 	/* handle NULs in input */
-	while(n < sizeof f->buf - 1 && (n < 1 || s[n-1] != '\n')){
+	while(n < Readsz - 1 && (n < 1 || s[n-1] != '\n')){
 		s[n] = '\x15';	/* nak */
 		m = strlen(s + n);
 		assert(m > 0);
@@ -160,7 +159,7 @@ readfrag(File *f, int *len)
 		s[--n] = 0;
 	else
 		f->trunc = 1;
-	if(len != nil)
-		*len = n;
+	f->len = n;
+	f->end = s + n;
 	return s;
 }

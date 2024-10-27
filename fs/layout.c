@@ -21,14 +21,8 @@ importlayout(Graph *g, char *path)
 
 	if((g->flags & GFdrawme) != 0)
 		reqlayout(g, Lstop);
-	x = -1;
-	fs = emalloc(sizeof *fs);
-	if(g == nil || path == nil){
-		werrstr("invalid %s", g == nil ? "graph" : "path");
-		goto end;
-	}
-	if((x = openfs(fs, path, OREAD)) < 0)
-		goto end;
+	if((fs = openfs(path, OREAD)) == nil)
+		return -1;
 	for(r=rnodes;; r++){
 		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
 			break;
@@ -47,7 +41,6 @@ importlayout(Graph *g, char *path)
 		u.u = GBIT32(p);
 		r->pos[2] = u.f;
 	}
-end:
 	if(x > 0 && x < sizeof buf){
 		werrstr("unexpected EOF: truncated input");
 		x = -1;
@@ -58,8 +51,9 @@ end:
 	return x;
 }
 
+/* technically rnodes are shared with all graphs */
 int
-exportlayout(Graph *g, char *path)
+exportlayout(Graph *, char *path)
 {
 	union { u32int u; float f; } u;
 	int x;
@@ -67,14 +61,9 @@ exportlayout(Graph *g, char *path)
 	File *fs;
 	RNode *r, *re;
 
-	x = -1;
-	fs = emalloc(sizeof *fs);
-	if(g == nil || path == nil){
-		werrstr("invalid %s", g == nil ? "graph" : "path");
-		goto end;
-	}
-	if((x = openfs(fs, path, OWRITE)) < 0)
-		goto end;
+	if((fs = openfs(path, OWRITE)) == nil)
+		return -1;
+	x = 0;
 	for(r=rnodes, re=r+dylen(r); r<re; r++){
 		p = buf;
 		u.f = r->pos[0];
@@ -85,11 +74,9 @@ exportlayout(Graph *g, char *path)
 		p += sizeof u.u;
 		u.f = r->pos[2];
 		PBIT32(p, u.u);
-		if(writefs(fs, buf, sizeof buf) < 0)
-			goto end;
+		if((x = writefs(fs, buf, sizeof buf)) < 0)
+			break;
 	}
-	x = 0;
-end:
 	freefs(fs);
 	logmsg("exportlayout: done\n");
 	return x;

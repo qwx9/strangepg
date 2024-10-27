@@ -5,17 +5,6 @@
 
 static Filefmt *fftab[FFnil];
 
-// FIXME: stupid; fix fs interface
-File *
-graphopenfs(Graph *g, char *path, int mode)
-{
-	assert(g->f == nil);
-	g->f = emalloc(sizeof *g->f);
-	if(openfs(g->f, path, mode) < 0)
-		return nil;
-	return g->f;
-}
-
 int
 loadfs(char *path, int type)
 {

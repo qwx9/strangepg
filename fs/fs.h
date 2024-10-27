@@ -1,13 +1,22 @@
 typedef struct Filefmt Filefmt;
 
+/* in case a field is in between reads in a long line,
+ * leave one chance to save it */
+enum{
+	Readsz = IOUNIT,
+};
 struct File{
 	char *path;
 	void *aux;
-	uchar buf[IOUNIT+1];
+	char buf[2 * Readsz + 1];
+	char *end;	/* end of current read */
+	int len;
 	int trunc;
-	int nr;
-	int err;	// FIXME: not here
 	vlong foff;
+	int nr;
+	char *tok;	/* if tokenizing, end of current token */
+	int toksz;
+	char sep;
 };
 
 struct Filefmt{
@@ -28,9 +37,10 @@ enum{
 Filefmt*	reggfa(void);
 Filefmt*	regcsv(void);
 int	readchar(File*);
-char*	nextfield(File*, char*, int*, char);
-char*	readfrag(File*, int*);
-char*	readline(File*, int*);
+char*	nextfield(File*);
+char*	readfrag(File*);
+char*	readline(File*);
+void	splitfs(File*, char);
 void	regfs(Filefmt*);
 
 int	importlayout(Graph*, char*);
@@ -38,7 +48,7 @@ int	exportlayout(Graph*, char*);
 void	setnamedtag(char*, char*, char*);
 void	settag(Node*, ioff, char*, char*);
 
-int	sysopen(File*, int);
+int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);
 int	syswrite(File*, void*, int);
 int	sysread(File*, void*, int);
@@ -78,9 +88,8 @@ int	put16(File*, u16int);
 int	put32(File*, u32int);
 int	put64(File*, u64int);
 
-int	openfs(File*, char*, int);
-int	fdopenfs(File*, int, int);
-File*	graphopenfs(Graph*, char*, int);
+File*	openfs(char*, int);
+File*	fdopenfs(int, int);
 int	chlevel(Graph*, int);
 int	readfs(File*, void*, int);
 int	setsizefs(File*, vlong);
