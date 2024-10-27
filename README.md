@@ -92,20 +92,19 @@ not that much is left to make it more useful in practice.
 
 Near finished:
 - Offline coarsening and usage
-- Documentation, manpage
-- Proper 3D navigation (also fixing view distorsion); 3d nodes (?)
-- Status, console output and history, proper edit box in window
+- Proper 3D navigation, 3d nodes
 - Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
-- Additional capabilities in the graph language
+- Online coarsening without preprocessing
+- Manpage
 
 Near future:
 - Path handling: highlighting, coloring
-- Better UI: actually usable edit/status window; macros as user-defined buttons
+- Better UI; macros as user-defined buttons
 - macOS support
 - GBZ support
 - Newick format and phylogenetic tree layouts
 - External memory implementation: either improve or replace with S3-fifo
-- Online coarsening without preprocessing
+- Additional capabilities in the graph language
 
 Future:
 - Prettier graphs: node/line thickness and curvature

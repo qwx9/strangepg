@@ -137,19 +137,38 @@ fnfindnode(char *sid){
 	return 0;
 }
 
+static char *
+nexttok(char *s, char **end)
+{
+	int n;
+	char *t;
+
+	if(s == nil || *s == 0)
+		return nil;
+	n = strlen(s);
+	if((t = memchr(s, '\n', n)) != nil){
+		*t++ = 0;
+		if(end != nil)
+			*end = t;
+		return s;
+	}else if(end != nil)
+		*end = s + n;
+	return s;
+}
+
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
- * how do we dispatch user queries? would be useful to do queries
- * on multiple ones! */
+* how do we dispatch user queries? would be useful to do queries
+* on multiple ones! */
 void
 readcmd(char *s)
 {
 	int m, req;
-	char *fld[8], *t;
+	char *fld[8], *e;
 	Graph *g;
 
 	req = 0;
-	t = nextfield(nil, s, nil, '\n');
-	while(s != nil){
+	e = s;
+	while((s = nexttok(e, &e)) != nil){
 		g = graphs;
 		switch(*s){
 		case 0:
@@ -159,19 +178,19 @@ readcmd(char *s)
 			break;
 		case 'E': 
 			logmsg(va("> error:%s\n", s+1));
-			goto next;
+			continue;
 		case 'I':
 			showobject(s + 2);
 			req |= Reqshallowdraw;
-			goto next;
+			continue;
 		case 'R':
 			reqlayout(g, Lreset);
-			goto next;
+			continue;
 		case 's':
 			if(s[1] == 0){
 				showselected(nil, -1);
 				req |= Reqshallowdraw;
-				goto next;
+				continue;
 			}
 		case 'N':
 		case 'X':
@@ -185,7 +204,7 @@ readcmd(char *s)
 			break;
 		default:
 			logmsg(va("> %s\n", s));
-			goto next;
+			continue;
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t")) < 1)
 			goto error;
@@ -260,9 +279,6 @@ readcmd(char *s)
 				goto error;
 			break;
 		}
-	next:
-		s = t;
-		t = nextfield(nil, s, nil, '\n');
 	}
 	if(req != 0)
 		reqdraw(req);
@@ -271,15 +287,13 @@ readcmd(char *s)
 static void
 readcproc(void *fd)
 {
-	int n;
 	char *s;
 	File *f;
 
-	f = emalloc(sizeof *f);
-	if(fdopenfs(f, (intptr)fd, OREAD) < 0)
+	if((f = fdopenfs((intptr)fd, OREAD)) == nil)
 		sysfatal("readcproc: %s", error());
-	while((s = readline(f, &n)) != nil){
-		DPRINT(Debugcmd, "← cproc:[%d][%s]", n, s);
+	while((s = readline(f)) != nil){
+		DPRINT(Debugcmd, "← cproc:[%d][%s]", f->len, s);
 		if(f->trunc){
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
