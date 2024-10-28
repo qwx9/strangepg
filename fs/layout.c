@@ -46,7 +46,7 @@ importlayout(Graph *g, char *path)
 		x = -1;
 	}
 	freefs(fs);
-	reqdraw(Reqrefresh);
+	reqdraw(Reqredraw);
 	logmsg("importlayout: done\n");
 	return x;
 }
