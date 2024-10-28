@@ -156,7 +156,7 @@ strangepg -f some.lay some.gfa
 
 ## <a name="installation"></a>Installation
 
-Currently only Linux (and 9front) are supported.
+Currently only Linux and Plan9front are supported.
 A macOS port will arrive as soon as someone kindly sacrifices their laptop
 for a while.
 
@@ -164,8 +164,8 @@ Installation can be done from source or via [bioconda](https://bioconda.github.i
 
 #### Hardware requirements
 
-On Linux, a graphics card with OpenGL 4.1 support is required.
-The standard was introduced in 2010-2011.
+On Linux, a graphics card with OpenGL 4.3 support is required.
+The standard was introduced around 2011.
 Intel integrated HD Graphics cards from 2013 (Ivy Bridge),
 and nVIDIA and AMD/ATI cards from 2010 on should work.
 
@@ -603,12 +603,11 @@ Tested with clang and gcc only.
 ## <a name="bugs"></a>Known bugs
 
 Major bugs:
-- currently broken on Windows during of GL initialization
-- strawk leaks some memory; awk wasn't meant to be used this way and plugging
-  the leaks is not trivial
-- strawk expressions have some unexpected results in some cases due to the
-hacky implementation, or large changes in awk necessary to fix them
-(see [the strawk document](strawk.md) for this.
+- currently broken on Windows (WSL) during of GL initialization (Wayland? OpenGL ES? Windows OpenGL limitation? Don't know),
+see [issue #1](https://github.com/qwx9/strangepg/issues/1).
+Should work via X11 forwarding if remote and local GPUs meet the requirements.
+- strawk leaks some small amount of memory;
+awk wasn't meant to be used this way and plugging the leaks is not trivial
 
 
 ## <a name="bundled"></a>Used and bundled alien software
@@ -624,7 +623,7 @@ Linux graphics:
 
 Used but not bundled:
 - GL extension loading via [flextGL](https://github.com/mosra/flextGL)
-- GNU Bison or Plan9 yacc(1) for awk
+- GNU Bison or Plan9 yacc(1) for strawk
 
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
@@ -637,6 +636,8 @@ strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 Build with _mk_ instead of _make_ in the usual manner.
 Additionally requires [npe](https://git.sr.ht/~ft/npe); it's really only required to build khash.
 A better solution might exist since SDL2 isn't used at all.
+
+Currently broken until the rendering component is brought up to date.
 
 
 ## <a name="references"></a>References
