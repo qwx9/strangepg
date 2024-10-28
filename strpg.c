@@ -78,8 +78,6 @@ help(void)
 		" fr            Fruchterman-Reingold algorithm\n"
 		" pfr           Parallelized variant of FR (default)\n"
 		" pfr3d         Experimental 3d version of the above\n"
-		" conga         Fixed linear layout based on segment order in input file\n"
-		" random        Random fixed positions\n"
 		" linear        Linear layout with fixed-position nodes (wip)\n"
 		" circ          Circular layout with fixed-position nodes (wip)\n"
 	);
@@ -139,11 +137,7 @@ parseargs(int argc, char **argv)
 	case 'h': help(); break;
 	case 'l':
 		s = EARGF(usage());
-		if(strcmp(s, "random") == 0)
-			deflayout = LLrandom;
-		else if(strcmp(s, "conga") == 0)
-			deflayout = LLconga;
-		else if(strcmp(s, "linear") == 0)
+		if(strcmp(s, "linear") == 0)
 			deflayout = LLlinear;
 		else if(strcmp(s, "fr") == 0)
 			deflayout = LLfr;

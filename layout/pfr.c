@@ -29,9 +29,10 @@ struct D{
 #define Fr(x, k)	((k) * (k) / (x))
 #define	cool(t)	(0.99985f * (t))
 #define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
+#define	Δ3(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.0001f)
 
 static void *
-new(Graph *g)
+new_(Graph *g, int is3d)
 {
 	ioff iv, *e, *ee, *etab;
 	double z;
@@ -53,10 +54,13 @@ new(Graph *g)
 			r->pos[1] = u->pos0.y;
 		else
 			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
-		z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
-		r->pos[2] = (view.flags & VFnodepth) == 0
-			? 0.8 * (0.5 - z)
-			: 0.00001 * z;
+		if(!is3d){
+			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
+			r->pos[2] = (view.flags & VFnodepth) == 0
+				? 0.8 * (0.5 - z)
+				: 0.00001 * z;
+		}else
+			r->pos[2] = (float)(W / 2 - nrand(W)) / (W / 2);
 	}
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
@@ -83,6 +87,18 @@ new(Graph *g)
 	return aux;
 }
 
+static void *
+new(Graph *g)
+{
+	return new_(g, 0);
+}
+
+static void *
+new3d(Graph *g)
+{
+	return new_(g, 1);
+}
+
 static void
 cleanup(void *p)
 {
@@ -92,6 +108,103 @@ cleanup(void *p)
 	dyfree(aux->ptab);
 	dyfree(aux->etab);
 	free(aux);
+}
+
+/* FIXME: find more intelligent way to merge the two */
+static int
+compute3d(void *arg, volatile int *stat, int i)
+{
+	int fixed, skip;
+	ioff *e, *ee;
+	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, w, uw, vw, Δr;
+	RNode *r0, *r1, *r, *v;
+	P *pp, *p0;
+	D *d;
+	Clk clk = {.lab = "layiter"};
+
+	d = arg;
+	k = d->k;
+	t = k;
+	tol = Tolerance * k;
+	p0 = d->ptab + i;
+	r0 = rnodes + i;
+	r1 = rnodes + dylen(rnodes);
+	skip = nlaythreads;
+	for(;;){
+		CLK0(clk);
+		Δr = 0;
+		for(pp=p0, r=r0; r<r1; r+=skip, pp+=skip){
+			if((*stat & LFstop) != 0)
+				return 0;
+			fixed = pp->flags & FNfixed;
+			if(fixed == FNfixed)
+				continue;
+			uw = r->len;
+			x = r->pos[0];
+			y = r->pos[1];
+			z = r->pos[2];
+			Δx = Δy = Δz = 0.0f;
+			for(v=rnodes; v<r1; v++){
+				if(r == v)
+					continue;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
+				δz = z - v->pos[2];
+				δ = Δ3(δx, δy, δz);
+				f = Fr(δ, k);
+				vw = v->len;
+				w = C * MIN(uw, vw);
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
+				Δz += w * f * δz / δ;
+			}
+			if((*stat & LFstop) != 0)
+				return 0;
+			for(e=d->etab+pp->e, ee=e+pp->ne; e<ee; e++){
+				v = rnodes + *e;
+				δx = v->pos[0] - x;
+				δy = v->pos[1] - y;
+				δz = v->pos[2] - z;
+				δ = Δ3(δx, δy, δz);
+				f = Fa(δ, k);
+				vw = v->len;
+				if(uw < vw)
+					w = uw / vw;
+				else
+					w = vw / uw;
+				w *= C;
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
+				Δz += w * f * δz / δ;
+			}
+			δ = Δ3(Δx, Δy, Δz);
+			if((fixed & FNfixedx) == 0){
+				f = MIN(t, fabsf(Δx));
+				Δx = f * Δx / δ;
+				x += Δx;
+				r->pos[0] = x;
+				if(Δr < Δx)
+					Δr = Δx;
+			}
+			if((fixed & FNfixedy) == 0){
+				f = MIN(t, fabsf(Δy));
+				Δy = f * Δy / δ;
+				y += Δy;
+				r->pos[1] = y;
+				if(Δr < Δy)
+					Δr = Δy;
+			}
+			f = MIN(t, fabs(Δz));
+			z += f * Δz / δ;
+			r->pos[2] = z;
+			if(Δr < Δz)
+				Δr = Δz;
+		}
+		if(Δr < tol)
+			return 0;
+		t = cool(t);
+		CLK1(clk);
+	}
 }
 
 /* skipping through nodes ensures that each thread works on a more
@@ -195,6 +308,18 @@ static Target ll = {
 	.compute = compute,
 };
 
+static Target ll3d = {
+	.name = "pfr3d",
+	.new = new3d,
+	.cleanup = cleanup,
+	.compute = compute3d,
+};
+
+Target *
+regpfr3d(void)
+{
+	return &ll3d;
+}
 Target *
 regpfr(void)
 {

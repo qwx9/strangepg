@@ -36,13 +36,10 @@ OBJS:=\
 	fs/metacsv.o\
 	graph/graph.o\
 	layout/circ.o\
-	layout/conga.o\
 	layout/fr.o\
 	layout/layout.o\
 	layout/linear.o\
 	layout/pfr.o\
-	layout/pfr3d.o\
-	layout/random.o\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\

@@ -187,8 +187,6 @@ newlayout(Graph *g, int type)
 void
 initlayout(void)
 {
-	ttab[LLconga] = regconga();
-	ttab[LLrandom] = regrandom();
 	ttab[LLfr] = regfr();
 	ttab[LLlinear] = reglinear();
 	ttab[LLpfr] = regpfr();

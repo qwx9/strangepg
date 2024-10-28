@@ -5,8 +5,6 @@ enum{
 
 typedef struct Target Target;
 enum{
-	LLrandom,
-	LLconga,
 	LLfr,
 	LLpfr,
 	LLpfr3d,
@@ -26,8 +24,6 @@ struct Target{
 extern int deflayout;
 extern int nlaythreads;
 
-Target*	regrandom(void);
-Target*	regconga(void);
 Target*	regfr(void);
 Target*	regpfr(void);
 Target*	regpfr3d(void);
