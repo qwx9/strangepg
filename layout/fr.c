@@ -25,7 +25,6 @@ typedef struct D D;
 struct D{
 	P *ptab;
 	Node *nodes;
-	Edge *edges;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -55,7 +54,6 @@ new(Graph *g)
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->nodes = g->nodes;
-	aux->edges = g->edges;
 	return aux;
 }
 
@@ -111,7 +109,7 @@ compute(void *arg, volatile int *stat, int idx)
 		for(u=ptab, n=d->nodes, ne=n+dylen(n); n<ne; n++, u++){
 			uw = u->w;
 			for(ep=n->out, ee=ep+dylen(ep); ep<ee; ep++){
-				v = ptab + (d->edges[*ep].v >> 1);
+				v = ptab + (*ep >> 2);
 				if(u == v)
 					continue;
 				δx = u->x - v->x;

@@ -35,7 +35,6 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	REdge *r;
 	RNode *n1, *n2;
 
-	/* FIXME */
 	assert(u >= 0 && u < dylen(rnodes) && v >= 0 && v < dylen(rnodes));
 	n1 = rnodes + u;
 	n2 = rnodes + v;
@@ -71,11 +70,16 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 static int
 drawedges(Graph *g)
 {
-	ioff i;
-	Edge *e, *ee;
+	ioff u, i, v, *e, *ee;
+	Node *n, *ne;
 
-	for(i=0, e=g->edges, ee=e+dylen(e); e<ee; e++, i++)
-		drawedge(i, e->u >> 1, e->v >> 1, e->u & 1, e->v & 1);
+	for(i=u=0, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++){
+		for(e=n->out, ee=e+dylen(e); e<ee; e++, i++){
+			v = *e;
+			drawedge(i, u, v >> 2, v & 2, v & 1);
+		}
+	}
+	assert(i == dylen(redges));
 	return 0;
 }
 
@@ -84,21 +88,20 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 {
 	float x, y, Δ, Δx, Δy;
 	float θ, c, s;
-	ioff *i, *ie;
-	Edge *e;
+	ioff e, *i, *ie;
 	RNode *rv;
 
 	x = ru->pos[0];
 	y = ru->pos[1];
 	c = s = 0.0;
 	for(i=u->in, ie=i+dylen(i); i<ie; i++){
-		e = g->edges + *i;
-		rv = rnodes + (e->u >> 1);
+		e = *i;
+		rv = rnodes + (e >> 2);
 		if(rv == ru)
 			continue;
 		Δx = rv->pos[0] - x;
 		Δy = rv->pos[1] - y;
-		if((e->v & 1) != 0){
+		if((e & 2) != 0){
 			Δx = -Δx;
 			Δy = -Δy;
 		}
@@ -107,13 +110,13 @@ faceyourfears(Graph *g, Node *u, RNode *ru)
 		s += Δy / Δ;
 	}
 	for(i=u->out, ie=i+dylen(i); i<ie; i++){
-		e = g->edges + *i;
-		rv = rnodes + (e->v >> 1);
+		e = *i;
+		rv = rnodes + (e >> 2);
 		if(rv == ru)
 			continue;
 		Δx = x - rv->pos[0];
 		Δy = y - rv->pos[1];
-		if((e->u & 1) != 0){
+		if((e & 2) != 0){
 			Δx = -Δx;
 			Δy = -Δy;
 		}

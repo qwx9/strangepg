@@ -1,7 +1,6 @@
 typedef struct Vertex Vertex;
 typedef struct Graph Graph;
 typedef struct Node Node;
-typedef struct Edge Edge;
 typedef struct Layout Layout;
 typedef struct File File;
 typedef struct Coarse Coarse;
@@ -16,11 +15,6 @@ typedef struct REdge REdge;
 #pragma incomplete Thread
 
 typedef	s32int	ioff;
-
-enum{
-	Vforward = 0,
-	Vreverse = 1,
-};
 
 struct Vertex{
 	float x;
@@ -59,10 +53,6 @@ struct Node{
 	Vertex pos0;
 	u32int flags;
 };
-struct Edge{
-	ioff u;	/* always packed with direction bit */
-	ioff v;
-};
 enum{
 	GFlayme = 1<<0,
 	GFdrawme = 1<<1,
@@ -75,7 +65,6 @@ struct Graph{
 	Coarse *c;
 	int nlevels;
 	Node *nodes;	/* dynamic array */
-	Edge *edges;	/* dynamic array */
 	Layout *layout;
 };
 extern Graph *graphs;	/* dynamic array */

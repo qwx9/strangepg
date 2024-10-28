@@ -162,7 +162,7 @@ newlayout(Graph *g, int type)
 		werrstr("newlayout: invalid layout %d\n", type);
 		return -1;
 	}
-	if(dylen(g->nodes) < 1 || dylen(g->edges) < 1){
+	if(dylen(rnodes) < 1 || dylen(redges) < 1){
 		werrstr("newlayout: nothing to layout\n");
 		return -1;
 	}
@@ -177,6 +177,7 @@ newlayout(Graph *g, int type)
 	l->target = ttab[type];
 	/* guarantees initialized state for deferred loading */
 	if(!gottagofast){
+		warn("not going fast\n");
 		if(l->scratch == nil && l->target->new != nil)
 			l->scratch = l->target->new(g);
 	}

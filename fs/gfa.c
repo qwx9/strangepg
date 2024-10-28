@@ -276,10 +276,8 @@ pushedge(Graph *g, namemap *h, char *eu, char *ev, int d1, int d2)
 		free(sf);
 		return id;
 	}
-	u = u << 1 | d1;
-	v = v << 1 | d2;
 	/* always push only what was actually in the input */
-	if((id = newedge(g, u, v, sf != nil ? sf : s)) < 0 || pushid(h, s, id) < 0){
+	if((id = newedge(g, u, v, d1, d2, sf != nil ? sf : s)) < 0 || pushid(h, s, id) < 0){
 		free(s);
 		id = -1;
 	}
@@ -306,9 +304,9 @@ static inline int
 todir(char *s)
 {
 	if(strncmp(s, "+", 2) == 0)
-		return Vforward;
+		return 0;
 	else if(strncmp(s, "-", 2) == 0)
-		return Vreverse;
+		return 1;
 	return -1;
 }
 static inline int
@@ -401,7 +399,7 @@ loadgfa1(void *arg)
 	logmsg("loadgfa: loading tags...\n");
 	if((n = collectgfameta(&a)) < 0)
 		warn("loadgfa: loading metadata failed: %s\n", error());
-	/* if no actual useful metadata was loaded, don't do anything */
+	/* if no actual useful metadata was loaded, don't restart anything */
 	else if(n > 0 || !gottagofast)
 		pushcmd("cmd(\"FHJ142\")");
 	logmsg("loadgfa: done\n");

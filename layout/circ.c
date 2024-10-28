@@ -32,7 +32,7 @@ static void *
 new(Graph *g)
 {
 	uint min, max;
-	ioff i, iv, *e, *ee, *etab;
+	ioff i, *e, *ee, *etab;
 	float n, ρ, ρ1, θ, x, y;
 	Node *u, *ue;
 	RNode *r, *re;
@@ -47,14 +47,10 @@ new(Graph *g)
 		p.e = dylen(etab);
 		p.nout = dylen(u->out);
 		p.nin = dylen(u->in);
-		for(e=u->out, ee=e+p.nout; e<ee; e++){
-			iv = g->edges[*e].v >> 1;
-			dypush(etab, iv);
-		}
-		for(e=u->in, ee=e+p.nin; e<ee; e++){
-			iv = g->edges[*e].u >> 1;
-			dypush(etab, iv);
-		}
+		for(e=u->out, ee=e+p.nout; e<ee; e++)
+			dypush(etab, *e >> 2);
+		for(e=u->in, ee=e+p.nin; e<ee; e++)
+			dypush(etab, *e >> 2);
 		x = 0;
 		y = 0;
 		/* FIXME: bug in data prod? */

@@ -47,23 +47,29 @@ new(Graph *g)
 		p.nout = dylen(u->out);
 		p.nin = dylen(u->in);
 		p.fixed = 0;
+		x = y = 0;
 		for(e=u->out, ee=e+p.nout; e<ee; e++){
-			iv = g->edges[*e].v >> 1;
+			iv = *e >> 2;
 			dypush(etab, iv);
+			x = rnodes[iv].pos[0] + 1.0f;		// may be uninitialized
+			y = rnodes[iv].pos[1] + 1.0f;
 		}
 		for(e=u->in, ee=e+p.nin; e<ee; e++){
-			iv = g->edges[*e].u >> 1;
+			iv = *e >> 2;
 			dypush(etab, iv);
+			x = rnodes[iv].pos[0] + 1.0f;
+			y = rnodes[iv].pos[1] + 1.0f;
 		}
 		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			x = u->pos0.x * Nodesz;
-			y = u->pos0.y * Nodesz * Ptsz;
+			if((u->flags & FNfixed) == 0){
+				x = u->pos0.x * Nodesz;
+				y = u->pos0.y * Nodesz * Ptsz;
+			}
 			if((u->flags & FNfixed) != 0)
 				p.fixed = 1;
 			else
 				p.fixed = 2;
-		}else
-			x = y = 0.0f;
+		}
 		if(max < x)
 			max = x;
 		if(min > x)
@@ -75,7 +81,7 @@ new(Graph *g)
 		dypush(ptab, p);
 	}
 	for(pp=ptab, r=rnodes, re=r+dylen(r); r<re; r++, pp++){
-		if(pp->fixed)
+		//if(pp->fixed)
 			r->pos[0] -= (max - min) / 2.0f;
 	}
 	aux = emalloc(sizeof *aux);
@@ -134,6 +140,8 @@ compute(void *arg, volatile int *stat, int i)
 			x = r->pos[0];
 			y = r->pos[1];
 			Δx = Δy = 0.0f;
+			//if(u->nout == 0 && u->nin == 0)
+			//	continue;
 			/*
 			for(v=rnodes, vp=pp; v<rnodes+dylen(rnodes); v++, vp++){
 				// movable nodes don't repulse each other

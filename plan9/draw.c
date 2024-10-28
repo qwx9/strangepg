@@ -122,8 +122,9 @@ drawselected(void)
 		USED(n);
 	}else{
 		id = (uint)selected & ~(1<<31);
-		e = g->edges + id;
-		snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);
+		// FIXME: update
+		//e = g->edges + id;
+		//snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);
 	}
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
 }

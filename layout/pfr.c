@@ -34,7 +34,7 @@ struct D{
 static void *
 new_(Graph *g, int is3d)
 {
-	ioff iv, *e, *ee, *etab;
+	ioff *e, *ee, *etab;
 	double z;
 	float k;
 	Node *u, *ue;
@@ -69,14 +69,10 @@ new_(Graph *g, int is3d)
 		/* FIXME: have to look at twice as many edges because it's not
 		 * global... */
 		if((u->flags & FNfixed) != FNfixed){
-			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
-				iv = g->edges[*e].v >> 1;
-				dypush(etab, iv);
-			}
-			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++){
-				iv = g->edges[*e].u >> 1;
-				dypush(etab, iv);
-			}
+			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++)
+				dypush(etab, *e >> 2);
+			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++)
+				dypush(etab, *e >> 2);
 		}
 		dypush(ptab, p);
 	}

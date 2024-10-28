@@ -38,6 +38,7 @@ newnode(Graph *g, char *s)
 	col = "";
 	setcolor(r.col, somecolor(off, &col));
 	dypush(rnodes, r);
+	DPRINT(Debugfs, "addnode %d:%s\n", off, s != nil ? s : "");
 	if(s != nil)
 		pushcmd("addnode(%d,\"%s\",%s)", off, s, col);
 	else
@@ -45,24 +46,21 @@ newnode(Graph *g, char *s)
 	return off;
 }
 
-/* u and v both already shifted */
 ioff
-newedge(Graph *g, ioff u, ioff v, char *label)
+newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
 {
 	ioff off;
-	Edge e = {0};
 	REdge r = {0};
 
-	off = dylen(g->edges);
-	e.u = u;
-	e.v = v;
-	dypush(g->edges, e);
+	off = dylen(redges);
+	assert((off & 3 << 30) == 0);	/* give up for now */
 	setcolor(r.col, theme[Cedge]);
 	dypush(redges, r);
 	/* FIXME: won't work if we delete edges; must be a better way to store
 	 * these (with both orientations) */
-	dypush(g->nodes[u>>1].out, off);
-	dypush(g->nodes[v>>1].in, off);
+	DPRINT(Debugfs, "addedge %d%c:out%c → %d, %d%c:in ← %d\n", u, urev?'-':'+', v, vrev?'-':'+');
+	dypush(g->nodes[u].out, v << 2 | urev << 1 & 2 | vrev & 1);
+	dypush(g->nodes[v].in, u << 2 | vrev << 1 & 2 | urev & 1);
 	if(label != nil)
 		pushcmd("addedge(%d,\"%s\")", off, label);
 	else
@@ -80,7 +78,6 @@ cleargraph(Graph *g)
 		dyfree(n->out);
 	}
 	dyfree(g->nodes);
-	dyfree(g->edges);
 }
 
 void
