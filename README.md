@@ -22,8 +22,6 @@ general framework for experimentation with layouting and new visualization techn
 
 <p align="center"><img src=".pics/bobub.png"/></p>
 
-<p align="center"><img src=".pics/zoom.png"/></p>
-
 Named in reference to the Dr. Strangelove character
 in Stanley Kubrick's __Dr. Strangelove or: how I learned to stop
 worrying and love the bomb__ (1964),
@@ -46,6 +44,8 @@ additions. Git tags do **not** mark stable releases.
 Please consider this to be a public beta of sorts
 and feel free to send bug reports, feature requests or comments.
 Thanks!_
+
+<p align="center"><img src=".pics/zoom.png"/></p>
 
 ## Table of contents
 
@@ -224,10 +224,10 @@ Some test examples exist in the `test/` directory.
 For example:
 
 ```bash
-strangepg test/03.232.gfa
+strangepg test/02.chrX:153000002-153400000.gfa
 ```
 
-<p align="center"><img src=".pics/232.png"/></p>
+<p align="center"><img src=".pics/02.png"/></p>
 
 #### Command-line options
 
