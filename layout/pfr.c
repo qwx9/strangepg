@@ -9,8 +9,8 @@ enum{
 	Area = W * H,
 };
 
-#define C	0.065f
-#define Tolerance	3.0f
+#define	C	((float)Nodesz / (Maxsz - Minsz) * 0.7f)
+#define Tolerance	0.001f
 
 typedef struct P P;
 typedef struct D D;
@@ -27,7 +27,7 @@ struct D{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.9995f * (t))
+#define	cool(t)	(0.99985f * (t))
 #define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
 
 static void *
@@ -44,9 +44,6 @@ new(Graph *g)
 	ptab = nil;
 	etab = nil;
 	k = C * sqrtf((float)Area / dylen(rnodes));
-	/* force shrink edges for smaller graphs */
-	if(dylen(rnodes) < 1000)
-		k /= log10(dylen(redges));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
@@ -65,6 +62,8 @@ new(Graph *g)
 		p.e = dylen(etab);
 		p.ne = 0;
 		p.flags = u->flags & FNfixed;
+		/* FIXME: have to look at twice as many edges because it's not
+		 * global... */
 		if((u->flags & FNfixed) != FNfixed){
 			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++){
 				iv = g->edges[*e].v >> 1;
@@ -107,7 +106,7 @@ compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, Δr;
+	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	P *pp, *p0;
 	D *d;
@@ -117,9 +116,6 @@ compute(void *arg, volatile int *stat, int i)
 	k = d->k;
 	t = k;
 	tol = Tolerance * k;
-	/* heuristic: converge faster with smaller graphs */
-	if(dylen(rnodes) <= 1000)
-		tol /= 2.0f;
 	p0 = d->ptab + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
@@ -133,7 +129,7 @@ compute(void *arg, volatile int *stat, int i)
 			fixed = pp->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
-			w = r->len;
+			uw = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			Δx = Δy = 0.0f;
@@ -144,8 +140,10 @@ compute(void *arg, volatile int *stat, int i)
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				Δx += (w / v->len) * f * δx / δ;
-				Δy += (w / v->len) * f * δy / δ;
+				vw = v->len;
+				w = C * MIN(uw, vw);
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
@@ -155,23 +153,33 @@ compute(void *arg, volatile int *stat, int i)
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				Δx += (w / v->len) * f * δx / δ;
-				Δy += (w / v->len) * f * δy / δ;
+				vw = v->len;
+				if(uw < vw)
+					w = uw / vw;
+				else
+					w = vw / uw;
+				w *= C;
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
 			}
 			δ = Δ(Δx, Δy);
 			/* limiting layouting area doesn't work well for long linear graphs */
 			if((fixed & FNfixedx) == 0){
-				f = MIN(t, fabs(Δx));
-				x += f * Δx / δ;
+				f = MIN(t, fabsf(Δx));
+				Δx = f * Δx / δ;
+				x += Δx;
 				r->pos[0] = x;
+				if(Δr < Δx)
+					Δr = Δx;
 			}
 			if((fixed & FNfixedy) == 0){
-				f = MIN(t, fabs(Δy));
-				y += f * Δy / δ;
+				f = MIN(t, fabsf(Δy));
+				Δy = f * Δy / δ;
+				y += Δy;
 				r->pos[1] = y;
+				if(Δr < Δy)
+					Δr = Δy;
 			}
-			if(Δr < δ)
-				Δr = δ;
 		}
 		if(Δr < tol)
 			return 0;

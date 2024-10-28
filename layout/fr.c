@@ -7,20 +7,25 @@
 
 enum{
 	Nrep = 1000,
-	W = 256,
-	L = 256,
+	W = 1024,
+	L = 1024,
 	Area = W * L,
 };
-#define	C	0.25f
+#define	C	((float)Nodesz / (Maxsz - Minsz) * 0.7f)
 
 typedef struct P P;
 struct P{
-	Graph *g;
+	float w;
 	float x;
 	float y;
 	float Δx;
 	float Δy;
-	ioff i;
+};
+typedef struct D D;
+struct D{
+	P *ptab;
+	Node *nodes;
+	Edge *edges;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -31,53 +36,62 @@ struct P{
 static void *
 new(Graph *g)
 {
-	ioff i, ie;
+	ioff i;
 	P *ptab, p = {0};
 	RNode *r;
+	Node *n, *ne;
+	D *aux;
 
 	ptab = nil;
-	for(i=0, ie=dylen(g->nodes); i<ie; i++){
-		p.i = i;
-		p.x = -W/4 + nrand(W/2);
-		p.y = -L/4 + nrand(L/2);
-		dypush(ptab, p);
+	for(i=0, n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++, i++){
+		p.x = (float)(W / 2 - nrand(W)) / (W / 2);
+		p.y = (float)(L / 2 - nrand(L)) / (L / 2);
 		r = rnodes + i;
 		r->pos[0] = p.x;
 		r->pos[1] = p.y;
+		p.w = r->len;
+		dypush(ptab, p);
 	}
-	ptab->g = g;
-	return ptab;
+	aux = emalloc(sizeof *aux);
+	aux->ptab = ptab;
+	aux->nodes = g->nodes;
+	aux->edges = g->edges;
+	return aux;
 }
 
 static void
 cleanup(void *p)
 {
-	dyfree(p);
-	USED(p);	/* shut compiler up */
+	D *aux;
+
+	aux = p;
+	dyfree(aux->ptab);
+	free(aux);
 }
 
 static int
 compute(void *arg, volatile int *stat, int idx)
 {
-	ioff i, ie;
-	float k, t, f, x, y, rx, ry, Δx, Δy, Δr, δx, δy, δ;
+	ioff *ep, *ee;
+	float k, t, f, x, y, w, uw, vw, rx, ry, Δx, Δy, Δr, δx, δy, δ;
 	P *ptab, *u, *v;
-	RNode *r, *r1, *r2, *re;
-	Edge *e;
-	Graph *g;
+	RNode *r, *re;
+	Node *n, *ne;
+	D *d;
 
 	if(idx > 0)	/* single thread */
 		return 0;
-	ptab = arg;
-	g = ptab->g;
+	d = arg;
+	ptab = d->ptab;
 	k = C * sqrtf((float)Area / dylen(ptab));
 	t = 1.0f;
 	for(;;){
 		Δr = 0;
-		for(u=ptab; u<ptab+dylen(ptab); u++){
+		for(n=d->nodes, u=ptab; u<ptab+dylen(ptab); u++, n++){
 			if((*stat & LFstop) != 0)
 				return 0;
 			Δx = Δy = 0.0f;
+			uw = u->w;
 			for(v=ptab; v<ptab+dylen(ptab); v++){
 				if(u == v)
 					continue;
@@ -85,30 +99,38 @@ compute(void *arg, volatile int *stat, int idx)
 				δy = u->y - v->y;
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				Δx += f * δx / δ;
-				Δy += f * δy / δ;
+				vw = v->w;
+				w = (uw + vw);
+				w = C * MIN(uw, vw);
+				Δx += w * f * δx / δ;
+				Δy += w * f * δy / δ;
 			}
 			u->Δx = Δx;
 			u->Δy = Δy;
 		}
-		for(i=0, ie=dylen(g->edges); i<ie; i++){
-			e = g->edges + i;
-			r1 = rnodes + (e->u >> 1);
-			r2 = rnodes + (e->v >> 1);
-			if(r1 == r2)
-				continue;
-			δx = r1->pos[0] - r2->pos[0];
-			δy = r1->pos[1] - r2->pos[1];
-			δ = Δ(δx, δy);
-			f = Fa(δ, k);
-			rx = f * δx / δ;
-			ry = f * δy / δ;
-			u = ptab + (e->u >> 1);
-			v = ptab + (e->v >> 1);
-			u->Δx -= rx;
-			u->Δy -= ry;
-			v->Δx += rx;
-			v->Δy += ry;
+		for(u=ptab, n=d->nodes, ne=n+dylen(n); n<ne; n++, u++){
+			uw = u->w;
+			for(ep=n->out, ee=ep+dylen(ep); ep<ee; ep++){
+				v = ptab + (d->edges[*ep].v >> 1);
+				if(u == v)
+					continue;
+				δx = u->x - v->x;
+				δy = u->y - v->y;
+				δ = Δ(δx, δy);
+				f = Fa(δ, k);
+				vw = v->w;
+				if(uw < vw)
+					w = uw / vw;
+				else
+					w = vw / uw;
+				w *= C;
+				rx = w * f * δx / δ;
+				ry = w * f * δy / δ;
+				u->Δx -= rx;
+				u->Δy -= ry;
+				v->Δx += rx;
+				v->Δy += ry;
+			}
 		}
 		if((*stat & LFstop) != 0)
 			break;
@@ -120,12 +142,13 @@ compute(void *arg, volatile int *stat, int idx)
 			y = u->y + δy / δ * t;
 			r->pos[0] = u->x = x;
 			r->pos[1] = u->y = y;
+			δ *= t;
 			if(Δr < δ)
 				Δr = δ;
 		}
-		t = cool(t);
-		if(Δr < 1)
+		if(Δr < 0.1f)
 			break;
+		t = cool(t);
 	}
 	return 0;
 }

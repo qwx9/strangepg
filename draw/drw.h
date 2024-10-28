@@ -6,9 +6,12 @@ typedef struct Box Box;
 #pragma incomplete Color
 
 enum{
-	Nodesz = 4,
-	Ptsz = 3,
+	Nodesz = 5,
+	Ptsz = 2,
 };
+
+#define	Maxsz	45.0f
+#define	Minsz	0.05f
 
 struct Quad{
 	Vertex tl;

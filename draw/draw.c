@@ -9,9 +9,6 @@ View view;
 RNode *rnodes;
 REdge *redges;
 
-#define	Maxsz	45.0f
-#define	Minsz	0.15f
-
 /* FIXME: not great */
 void
 fixlengths(int min, int max)
