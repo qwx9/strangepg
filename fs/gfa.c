@@ -136,7 +136,8 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 				if(l > 1 || *s != '*'){
 					setlength(n, id, l);
 					c++;
-				}
+				}else
+					l = 0;
 			/* do not tolerate empty field here */
 			}else
 				goto err;
