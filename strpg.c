@@ -129,7 +129,6 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
-	case 'F': gottagofast = 0; break;
 	case 'Z': view.flags |= VFnodepth; break;
 	case 'b': view.flags |= VFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
@@ -163,6 +162,7 @@ parseargs(int argc, char **argv)
 	case 'v':
 		print(VERSION "\n");
 		quit();
+	case 'w': gottagofast = 0; break;
 	default: usage();
 	}ARGEND
 	if(*argv == nil)
