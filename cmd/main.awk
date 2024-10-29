@@ -75,6 +75,19 @@ function delnode(name){
 	delete label[node[name]]
 	delete node[name]
 }
+function reorderedge(u, v, id,	name, oid, d1, d2){
+	d1 = v & 2 ? "-" : "+"
+	d2 = v & 1 ? "-" : "+"
+	v >>= 2
+	if(!checknodeid(u) || !checknodeid(v))
+		return
+	name = label[u] d1 label[v] d2
+	oid = edge[name]
+	ledge[oid] = ledge[id]
+	edge[ledge[id]] = oid
+	ledge[id] = name
+	edge[name] = id
+}
 function addedge(id, name){
 	edge[name] = id
 	ledge[id] = name
