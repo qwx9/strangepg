@@ -253,36 +253,44 @@ pushnode(Graph *g, namemap *h, char *s)
 	return id;
 }
 
+/* FIXME: this SUCKS */
+/* NOTE: for add/delete edge, just update ids from awk */
+static void
+reorderedges(Graph *g)
+{
+	ioff i, u, *e, *ee;
+	Node *n, *ne;
+
+	for(u=i=0, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++)
+		for(e=n->out, ee=e+dylen(e); e<ee; e++, i++)
+			pushcmd("reorderedge(%d,%d,%d)", u, *e, i);
+}
+
 static inline ioff
 pushedge(Graph *g, namemap *h, char *eu, char *ev, int d1, int d2)
 {
-	char *s, *sf;
+	char *s;
 	ioff id, f, n, u, v;
 
 	if((u = pushnode(g, h, eu)) < 0 || (v = pushnode(g, h, ev)) < 0)
 		return -1;
 	n = strlen(eu) + strlen(ev) + 8;
 	s = emalloc(n);
-	sf = nil;
 	snprint(s, n, "%s%c\x1c%s%c", eu, d1 ? '-' : '+', ev, d2 ? '-' : '+');
 	/* detect redundancies by always flipping edges such that u<v, or
 	 * for self-edges if u is reversed */
-	if(f = v > u || v == u && d1 == 1){
-		sf = estrdup(s);
+	if(f = v > u || v == u && d1 == 1)
 		snprint(s, n, "%s%c\x1c%s%c", ev, d2 ? '+' : '-', eu, d1 ? '+' : '-');
-	}
 	if((id = getid(h, s)) >= 0){
 		DPRINT(Debugfs, "duplicate edge[%d] %s%s", id, s, f ? " (flipped)" : "");
 		free(s);
-		free(sf);
 		return id;
 	}
 	/* always push only what was actually in the input */
-	if((id = newedge(g, u, v, d1, d2, sf != nil ? sf : s)) < 0 || pushid(h, s, id) < 0){
+	if((id = newedge(g, u, v, d1, d2, s)) < 0 || pushid(h, s, id) < 0){
 		free(s);
 		id = -1;
 	}
-	free(sf);
 	return id;
 }
 
@@ -405,6 +413,7 @@ loadgfa1(void *arg)
 		pushcmd("cmd(\"FHJ142\")");
 	logmsg("loadgfa: done\n");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
+	reorderedges(&a.g);	/* can do it after everything else, doesn't matter */
 	cleanup(&a);
 }
 
