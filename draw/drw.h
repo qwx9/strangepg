@@ -7,7 +7,7 @@ typedef struct Box Box;
 
 enum{
 	Nodesz = 5,
-	Ptsz = 2,
+	Ptsz = 4,
 };
 
 #define	Maxsz	45.0f
