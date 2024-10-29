@@ -308,21 +308,21 @@ setnodeshape(int arrow)
 		+FNodesz/2.0f, -Nodethiccc/2.0f,
 		-FNodesz/2.0f, -Nodethiccc/2.0f,
 	}, arrowv[] = {
-		-0.50f * FNodesz,	 0.5f * Nodethiccc,
-		 0.00f * FNodesz,	 0.5f * Nodethiccc,
-		 0.00f * FNodesz,	-0.5f * Nodethiccc,
-		-0.50f * FNodesz,	-0.5f * Nodethiccc,
-		 0.00f * FNodesz,	 1.0f * Nodethiccc,
-		 0.50f * FNodesz,	 0.0f * Nodethiccc,
-		 0.00f * FNodesz,	-1.0f * Nodethiccc,
+		 0.50f * FNodesz,	-0.5f * Nodethiccc,
+		-0.00f * FNodesz,	-0.5f * Nodethiccc,
+		-0.00f * FNodesz,	 0.5f * Nodethiccc,
+		 0.50f * FNodesz,	 0.5f * Nodethiccc,
+		-0.00f * FNodesz,	-1.0f * Nodethiccc,
+		-0.50f * FNodesz,	-0.0f * Nodethiccc,
+		-0.00f * FNodesz,	 1.0f * Nodethiccc,
 	};
 	u16int quadi[] = {
 		0, 2, 1,	// first triangle
 		0, 3, 2,	// second triangle
 	}, arrowi[] = {
-		4, 6, 5,	// tip
-		0, 2, 1,	// shaft
-		0, 3, 2,
+		2, 0, 3,	// shaft
+		2, 1, 0,
+		6, 5, 4,	// tip
 	};
 
 	if(nnodev != 0){
