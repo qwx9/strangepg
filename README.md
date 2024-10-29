@@ -239,7 +239,7 @@ usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
 -f FILE        Load layout from FILE
 -l ALG         Set layouting algorithm (default: pfr)
 -t N           Set number of layouting threads (1-128, default: 4)
--w             Force layouting to wait until all inputs are loaded
+-w             Do not wait for all files to load to start layouting
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
 ```
 
@@ -260,11 +260,20 @@ It can be specified multiple times to load tags from more than one CSV file.
 Additional settings:
 
 - `-b` sets the obligatory dark theme.
-- `-w` forces layouting to wait until both the GFA file and any CSV files are fully loaded.
-Normally layouting begins as soon as the quick first pass over the GFA is done.
-Use this when tags affecting the layout are present in the GFA and/or CSV files,
-instead of having to manually restart layouting.
-Otherwise it's not necessary since colors and other tags can be loaded while layouting.
+- `-w` enables layouting to start as soon as the first pass over the GFA file is over.
+GFA loading is done in two passes.
+The first loads just the topology of the graph (segments and links between them)
+and skips over everything else.
+The second pass loads all tags for each segment, and overlap string for links.
+If there are no tags affecting layout
+(see [Applications](#applications) below)
+are present in the GFA, or any CSV file,
+and no layout file is specified at the command line,
+then there is no reason to wait after the first pass completes,
+and layouting can begin immediately, much faster.
+This is disabled by default because layouting may contend for CPU time with file loading threads and slow them down,
+then potentially have to restart anyway.
+Use `-w` if you aren't loading a layout file and if the GFA or CSV inputs only contain tags like color, etc.
 
 <p align="center"><img src=".pics/darkmode.png"/></p>
 

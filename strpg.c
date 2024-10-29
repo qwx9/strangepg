@@ -7,7 +7,7 @@
 #include "fs.h"
 #include "ui.h"
 
-int gottagofast = 1;
+int gottagofast = 0;
 
 typedef struct Input Input;
 struct Input{
@@ -72,7 +72,7 @@ help(void)
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
 		"-v             Print version and exit\n"
-		"-w             Force layouting to wait until all inputs are loaded\n"
+		"-w             Do not wait for all files to load to start layouting\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"
 		" fr            Fruchterman-Reingold algorithm\n"
@@ -162,7 +162,7 @@ parseargs(int argc, char **argv)
 	case 'v':
 		print(VERSION "\n");
 		quit();
-	case 'w': gottagofast = 0; break;
+	case 'w': gottagofast = 1; break;
 	default: usage();
 	}ARGEND
 	if(*argv == nil)
