@@ -108,7 +108,6 @@ drawselected(void)
 {
 	ioff id;
 	char s[128];
-	Edge *e;
 	Node *n;
 	Graph *g;
 
@@ -121,7 +120,7 @@ drawselected(void)
 		snprint(s, sizeof s, "V[%x]", id);
 		USED(n);
 	}else{
-		id = (uint)selected & ~(1<<31);
+		//id = (uint)selected & ~(1<<31);
 		// FIXME: update
 		//e = g->edges + id;
 		//snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);

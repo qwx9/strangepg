@@ -84,7 +84,7 @@ drawedges(Graph *g)
 }
 
 static inline void
-faceyourfears(Graph *g, Node *u, RNode *ru)
+faceyourfears(Node *u, RNode *ru)
 {
 	float x, y, Δ, Δx, Δy;
 	float θ, c, s;
@@ -137,7 +137,7 @@ drawnodes(Graph *g)
 	RNode *r;
 
 	for(r=rnodes, n=g->nodes, e=n+dylen(n); n<e; n++, r++)
-		faceyourfears(g, n, r);
+		faceyourfears(n, r);
 }
 
 static int

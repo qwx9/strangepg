@@ -58,7 +58,6 @@ newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
 	dypush(redges, r);
 	/* FIXME: won't work if we delete edges; must be a better way to store
 	 * these (with both orientations) */
-	DPRINT(Debugfs, "addedge %d%c:out%c → %d, %d%c:in ← %d\n", u, urev?'-':'+', v, vrev?'-':'+');
 	dypush(g->nodes[u].out, v << 2 | urev << 1 & 2 | vrev & 1);
 	dypush(g->nodes[v].in, u << 2 | vrev << 1 & 2 | urev & 1);
 	if(label != nil)
