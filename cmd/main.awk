@@ -8,7 +8,7 @@ BEGIN{
 	brightred = "0xff0000"
 	brightyellow = "0xffff00"
 	brown = "0xb15928"
-	cyan = "0x00ffff"
+	cyan = "0x7acdcd"
 	darkgray = "0x3f3f3f"
 	darkgreen = "0x33a02c"
 	darkpink = "0xc96088"
