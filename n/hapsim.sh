@@ -26,47 +26,57 @@ awk \
 	-v "frag=$frag" \
 '
 function nrand(n){
-	return 1 + int((n-1) * rand() + 0.5)
+	return n < 1 ? 0 : int((n-1) * rand() + 0.5)
 }
 function wrhdr(){
 	print "H", "VN:Z:1.0"
 }
 function wrsegs(	i, m, t){
-	i = 1
-	for(m=1; m<=frag; m++){
-		t = "\tfx:f:" i*8*N
-		for(i=i; i<=m*N; i++){
-			print "S", i, "*" t
-			t = ""
-		}
-	}
+	t = ""
+	for(i=1; i<=N; i++)
+		print "S", i, "*" t
 }
-function wrlink(u, v, i, j){
-	print "L", u, i, v, j, "0M"
+function wrlink(left, right, ldir, rdir){
+	print "L", left, ldir, right, rdir, "0M"
 }
 function newlink(n){
-	v = n
-	j = rand() < pi ? "-" : "+"
-	wrlink(u, v, i, j)
-	u = v
-	i = j
+	right = n
+	rdir = rand() < pi ? "-" : "+"
+	wrlink(left, right, ldir, rdir)
+	left = right
+	ldir = rdir
 }
 BEGIN{
 	OFS = "\t"
 	srand()
 	wrhdr()
 	wrsegs()
-	u = 1
-	i = "+"
-	n = 2
-	for(m=1; m<=frag; m++){
-		k += N
+	frag--
+	if(frag >= 1)
+		k = N / 2 + nrand(N / 2 - frag)
+	else
+		k = N
+	left = 1
+	ldir = "+"
+	for(n=2; n<=k; n++){
+		while(rand() < pd)
+			newlink(1 + nrand(N))
 		newlink(n)
-		for(n=n; n<=k; n++){
-			while(rand() < pd)
-				newlink((m-1)*N + nrand(N-1))
-			newlink(n)
-		}
 	}
+	if(k == N)
+		exit
+	# FIXME: not quite
+	ldir = "+"
+	for(n=k; n<=N-1;){
+		l = left = 1 + nrand(k)
+		c = 1 + nrand(N - n)
+		m = n + c - 1
+		while(n <= m)
+			newlink(n++)
+		#if(n < N)
+			newlink(l + c)
+		ldir = rand() < pi ? "-" : "+"
+	}
+	newlink(N)
 }
 '
