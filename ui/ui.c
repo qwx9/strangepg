@@ -209,8 +209,6 @@ dragselect(int x, int y)
 	ioff Δx, Δy, id, oid;
 	Rekt rx, ry;
 
-	if(selected != -1)
-		return -1;
 	if(rsel.x1 < 0){
 		rsel.x1 = rsel.x2 = x;
 		rsel.y1 = rsel.y2 = y;
@@ -332,12 +330,9 @@ showselected(char *s, ioff id)
 static int
 mouseselect(ioff id, int multi)
 {
-	if(selected >= 0 && selected == id && !multi || prompting)
+	if(selected >= 0 && selected == id || prompting)
 		return 0;
-	if(id == -1 && multi)	/* prevent accidental discharge */
-		return 0;
-	if(id != -1){
-		selected = id;
+	if((selected = id) != -1){
 		if((id & 1<<31) == 0){
 			if(multi)
 				pushcmd("toggleselect(%d)", id);
@@ -351,7 +346,6 @@ mouseselect(ioff id, int multi)
 	}
 	if(!multi){
 		pushcmd("deselect()");
-		selected = -1;
 		selstr[0] = 0;
 	}
 	resetbox();
