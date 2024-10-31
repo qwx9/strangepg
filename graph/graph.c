@@ -56,8 +56,6 @@ newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
 	assert((off & 3 << 30) == 0);	/* give up for now */
 	setcolor(r.col, theme[Cedge]);
 	dypush(redges, r);
-	/* FIXME: won't work if we delete edges; must be a better way to store
-	 * these (with both orientations) */
 	dypush(g->nodes[u].out, v << 2 | urev << 1 & 2 | vrev & 1);
 	dypush(g->nodes[v].in, u << 2 | vrev << 1 & 2 | urev & 1);
 	if(label != nil)
@@ -93,6 +91,17 @@ nukegraph(Graph *g)
 void
 pushgraph(Graph *g)
 {
+	/* FIXME: selection box kludge */
+	REdge r = {
+		.pos1 = {0.0f, 0.0f, 0.0f},
+		.pos2 = {0.0f, 0.0f, 0.0f},
+		.col = {1.0f, 0.0f, 0.0f, 0.8f},
+	};
+
+	dypush(redges, r);
+	dypush(redges, r);
+	dypush(redges, r);
+	dypush(redges, r);
 	lockgraphs(1);
 	dypush(graphs, *g);
 	unlockgraphs(1);

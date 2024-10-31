@@ -10,6 +10,7 @@ int prompting;
 char hoverstr[256], selstr[512];
 
 static ioff selected = -1, shown = -1, focused = -1;
+static Rekt rsel;
 
 enum{
 	Mctrl = 1<<0,
@@ -23,6 +24,11 @@ enum{
 };
 static int mod;
 static Vertex center;
+
+#define scr2world(x,y)	do{ \
+	(x) = 2.0f * (((x) - view.w * 0.5f) / view.w) * view.Δeye.z * view.ar * view.tfov; \
+	(y) = 2.0f * ((-(y) + view.h * 0.5f) / view.h) * view.Δeye.z * view.tfov; \
+}while(0)
 
 static void
 pan(float Δx, float Δy)
@@ -129,12 +135,137 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
+/* FIXME: separate pipeline, quads? */
+static void
+resetbox(void)
+{
+	REdge *r;
+
+	rsel.x1 = -1;
+	r = redges + dylen(redges) - 4;
+	r->pos1[0] = r->pos2[0];
+	r->pos1[1] = r->pos2[1];
+	r->pos1[2] = r->pos2[2];
+	r++;
+	r->pos1[0] = r->pos2[0];
+	r->pos1[1] = r->pos2[1];
+	r->pos1[2] = r->pos2[2];
+	r++;
+	r->pos1[0] = r->pos2[0];
+	r->pos1[1] = r->pos2[1];
+	r->pos1[2] = r->pos2[2];
+	r++;
+	r->pos1[0] = r->pos2[0];
+	r->pos1[1] = r->pos2[1];
+	r->pos1[2] = r->pos2[2];
+}
+
+static inline void
+selectionbox(float x1, float y1, float x2, float y2)
+{
+	float z;
+	REdge *r;
+
+	scr2world(x1, y1);
+	scr2world(x2, y2);
+	x1 += view.eye.x;
+	y1 += view.eye.y;
+	x2 += view.eye.x;
+	y2 += view.eye.y;
+	z = view.center.z;
+	r = redges + dylen(redges) - 4;
+	r->pos1[0] = x1;
+	r->pos1[1] = y1;
+	r->pos2[0] = x2;
+	r->pos2[1] = y1;
+	r->pos1[2] = r->pos2[2] = z;
+	r++;
+	r->pos1[0] = x2;
+	r->pos1[1] = y1;
+	r->pos2[0] = x2;
+	r->pos2[1] = y2;
+	r->pos1[2] = r->pos2[2] = z;
+	r++;
+	r->pos1[0] = x1;
+	r->pos1[1] = y2;
+	r->pos2[0] = x2;
+	r->pos2[1] = y2;
+	r->pos1[2] = r->pos2[2] = z;
+	r++;
+	r->pos1[0] = x1;
+	r->pos1[1] = y1;
+	r->pos2[0] = x1;
+	r->pos2[1] = y2;
+	r->pos1[2] = r->pos2[2] = z;
+}
+
+/* FIXME: this all SUCKS */
+/* x1,y1----
+ *  |   ↘  |
+ *  |___ x2,y2 */
+static int
+dragselect(int x, int y)
+{
+	ioff Δx, Δy, id, oid;
+	Rekt rx, ry;
+
+	if(selected != -1)
+		return -1;
+	if(rsel.x1 < 0){
+		rsel.x1 = rsel.x2 = x;
+		rsel.y1 = rsel.y2 = y;
+	}
+	Δx = x - rsel.x1;
+	Δy = y - rsel.y1;
+	if(Δx <= 0 || Δy <= 0)
+		return 0;
+	x = rsel.x1 + Δx;
+	y = rsel.y1 + Δy;
+	if(rsel.x1 == x && rsel.y1 == y)
+		return 0;
+	Δx = x - rsel.x2;
+	Δy = y - rsel.y2;
+	rx.x1 = rsel.x1;
+	rx.x2 = x;
+	rx.y1 = rsel.y2;
+	rx.y2 = y;
+	ry.x1 = rsel.x2;
+	ry.x2 = x;
+	ry.y1 = rsel.y1;
+	ry.y2 = rsel.y2;
+	oid = -1;
+	rsel.x2 = x;
+	rsel.y2 = y;
+	for(x=rx.x1; x<rx.x2; x++)
+		for(y=rx.y1; y<rx.y2; y++)
+			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
+				if((id & 1<<31) != 0)
+					continue;
+				if(--id == oid)
+					continue;
+				pushcmd("selectnodebyid(%d)", id);
+				oid = id;
+			}
+	for(x=ry.x1; x<ry.x2; x++)
+		for(y=ry.y1; y<ry.y2; y++)
+			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
+				if((id & 1<<31) != 0)
+					continue;
+				if(--id == oid)
+					continue;
+				pushcmd("selectnodebyid(%d)", id);
+				oid = id;
+			}
+	selectionbox(rsel.x1, rsel.y1, rsel.x2, rsel.y2);
+	return 0;
+}
+
 static int
 mousedrag(float Δx, float Δy)
 {
 	RNode *r;
 
-	if(selected == -1 || (selected & 1<<31) != 0)
+	if((selected & 1<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
@@ -205,7 +336,8 @@ mouseselect(ioff id, int multi)
 		return 0;
 	if(id == -1 && multi)	/* prevent accidental discharge */
 		return 0;
-	if((selected = id) != -1){
+	if(id != -1){
+		selected = id;
 		if((id & 1<<31) == 0){
 			if(multi)
 				pushcmd("toggleselect(%d)", id);
@@ -217,8 +349,12 @@ mouseselect(ioff id, int multi)
 		reqdraw(Reqshallowdraw);
 		return 1;
 	}
-	pushcmd("deselect()");
-	selstr[0] = 0;
+	if(!multi){
+		pushcmd("deselect()");
+		selected = -1;
+		selstr[0] = 0;
+	}
+	resetbox();
 	reqdraw(Reqshallowdraw);
 	return 0;
 }
@@ -259,17 +395,25 @@ mouseevent(Vertex v, Vertex Δ)
 		goto nope;
 	}else
 		inwin = 0;
+	if(m == 0)
+		resetbox();
 	if(m == 0 || (omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
-	if(Δ.x != 0.0 || Δ.y != 0.0)
+	if(Δ.x != 0.0f || Δ.y != 0.0f)
 		shown = mousehover(v.x, v.y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			mouseselect(shown, mod & Mshift);
-		}else if(Δ.x != 0.0 || Δ.y != 0.0){
+			if(mouseselect(shown, mod & (Mshift|Mctrl)))
+				reqdraw(Reqrefresh);
+			else if(dragselect(v.x, v.y))
+				reqdraw(Reqrefresh);
+		}else if(Δ.x != 0.0f || Δ.y != 0.0f){
 			/* FIXME: would be nice to just redraw the one node */
-			if(mousedrag(Δ.x, Δ.y))
-				reqdraw(Reqredraw);
+			if(selected != -1){
+				if(mousedrag(Δ.x, Δ.y))
+					reqdraw(Reqredraw);
+			}else if(dragselect(v.x, v.y))
+				reqdraw(Reqrefresh);
 		}
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)

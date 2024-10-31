@@ -6,8 +6,6 @@ typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
-typedef struct RNode RNode;
-typedef struct REdge REdge;
 
 #pragma incomplete File
 #pragma incomplete Coarse
@@ -21,21 +19,6 @@ struct Vertex{
 	float y;
 	float z;
 };
-
-/* FIXME: later, vertices or HMM vectors? also, alignment */
-struct RNode{
-	float pos[3];
-	float dir[3];
-	float col[4];
-	float len;
-};
-struct REdge{
-	float pos1[3];
-	float pos2[3];
-	float col[4];
-};
-extern RNode *rnodes;
-extern REdge *redges;
 
 enum{
 	FNfixedx = 1<<0,
@@ -63,7 +46,6 @@ struct Graph{
 	u32int flags;
 	File *f;
 	Coarse *c;
-	int nlevels;
 	Node *nodes;	/* dynamic array */
 	Layout *layout;
 };

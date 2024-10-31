@@ -1,7 +1,10 @@
+typedef struct RNode RNode;
+typedef struct REdge REdge;
 typedef struct Quad Quad;
 typedef struct View View;
 typedef struct Color Color;
 typedef struct Box Box;
+typedef	struct Rekt Rekt;
 
 #pragma incomplete Color
 
@@ -13,11 +16,34 @@ enum{
 #define	Maxsz	45.0f
 #define	Minsz	0.05f
 
+/* FIXME: later, vertices or HMM vectors? also, alignment */
+struct RNode{
+	float pos[3];
+	float dir[3];
+	float col[4];
+	float len;
+};
+struct REdge{
+	float pos1[3];
+	float pos2[3];
+	float col[4];
+};
+extern RNode *rnodes;
+extern REdge *redges;
+
+
 struct Quad{
 	Vertex tl;
 	Vertex tr;
 	Vertex br;
 	Vertex bl;
+};
+
+struct Rekt{
+	int x1;
+	int y1;
+	int x2;
+	int y2;
 };
 
 #define	V(x,y,z)	((Vertex){(x), (y), (z)})

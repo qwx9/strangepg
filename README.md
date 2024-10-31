@@ -385,6 +385,13 @@ Moving the graph around is done primarily with the mouse.
 pull (drag towards bottom right) to zoom in,
 push (draw towards top left) to zoom out.
 
+To select multiple nodes, click and drag a selection box.
+Currently, it only works when dragging in one direction only,
+from northwest to southeast, and does not deselect anything.
+Clicking on empty space deselects everything;
+to avoid it, hold Control or Shift when clicking
+or dragging another selection box.
+
 Keyboard shortcuts:
 
 - `a`: Toggle showing oriented nodes as arrows
@@ -659,6 +666,10 @@ All required libraries and headers are already included in the distribution.
 The only additional build dependency is `gmake`.
 I tried making a BSD makefile, but some things started to get complicated,
 and in the end I decided against wasting more time on that.
+
+```bash
+$ gmake -f Makefile.openbsd -j install
+```
 
 #### Usage
 

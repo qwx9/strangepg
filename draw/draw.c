@@ -79,7 +79,7 @@ drawedges(Graph *g)
 			drawedge(i, u, v >> 2, v & 2, v & 1);
 		}
 	}
-	assert(i == dylen(redges));
+	//assert(i == dylen(redges));
 	return 0;
 }
 
