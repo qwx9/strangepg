@@ -249,7 +249,7 @@ int yylex(void)
 			} else if (peek() == '=') {
 				input(); yylval.i = BANDEQ; RET(ASGNOP);
 			} else {
- 				RET('&');
+ 				RET(BAND);
 			}
 		case '|':
 			if (peek() == '|') {
@@ -257,7 +257,7 @@ int yylex(void)
 			} else if (peek() == '=') {
 				input(); yylval.i = BOREQ; RET(ASGNOP);
 			} else
-				RET('|');
+				RET(BOR);
 		case '`':
 			RET(CMPL);
 		case '!':
@@ -339,7 +339,7 @@ int yylex(void)
 			if (peek() == '=') {
 				input(); yylval.i = XOREQ; RET(ASGNOP);
 			} else
-				RET('^');
+				RET(XOR);
 
 		case '$':
 			/* BUG: awkward, if not wrong */

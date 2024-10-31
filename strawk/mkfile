@@ -27,7 +27,7 @@ default:V: all
 
 </sys/src/cmd/mkone
 
-YFLAGS=$YFLAGS -S -s awkgram.plan9
+YFLAGS=$YFLAGS -v -S -s awkgram.plan9
 CC=pcc
 CFLAGS=-c -D_POSIX_SOURCE -D_BSD_EXTENSION -D_PLAN9_SOURCE -DOS=plan9
 

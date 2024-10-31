@@ -355,13 +355,13 @@ term:
 	| term '*' term			{ $$ = op2(MULT, $1, $3); }
 	| term '/' term			{ $$ = op2(DIVIDE, $1, $3); }
 	| term '%' term			{ $$ = op2(MOD, $1, $3); }
-	| term '^' term			{ $$ = op2(XOR, $1, $3); }
-	| term '|' term			{ $$ = op2(BOR, $1, $3); }
-	| term '&' term			{ $$ = op2(BAND, $1, $3); }
+	| term XOR term			{ $$ = op2(XOR, $1, $3); }
+	| term BOR term			{ $$ = op2(BOR, $1, $3); }
+	| term BAND term		{ $$ = op2(BAND, $1, $3); }
 	| term POWER term		{ $$ = op2(POWER, $1, $3); }
 	| term LSHIFT term		{ $$ = op2(LSHIFT, $1, $3); }
 	| term RSHIFT term		{ $$ = op2(RSHIFT, $1, $3); }
-	| CMPL term %prec UMINUS	{ $$ = op1(CMPL, $2); }
+	| CMPL term %prec CMPL	{ $$ = op1(CMPL, $2); }
 	| '-' term %prec UMINUS		{ $$ = op1(UMINUS, $2); }
 	| '+' term %prec UMINUS		{ $$ = op1(UPLUS, $2); }
 	| NOT term %prec UMINUS		{ $$ = op1(NOT, notnull($2)); }
