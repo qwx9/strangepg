@@ -61,6 +61,7 @@ Thanks!_
 - [Additional compilation settings](#compilationsettings)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
+- [OpenBSD](#openbsd)
 - [9front](#9front)
 
 
@@ -156,9 +157,11 @@ strangepg -f some.lay some.gfa
 
 ## <a name="installation"></a>Installation
 
-Currently only Linux and Plan9front are supported.
+Currently only Linux, OpenBSD and Plan9front are supported (x86, amd64)..
+Other BSDs might work as well, but it's untested.
 A macOS port will arrive as soon as someone kindly sacrifices their laptop
 for a while.
+A native Windows port is also planned.
 
 Installation can be done from source or via [bioconda](https://bioconda.github.io/).
 
@@ -169,6 +172,10 @@ The standard was introduced around 2011.
 Intel integrated HD Graphics cards from 2013 (Ivy Bridge),
 and nVIDIA and AMD/ATI cards from 2010 on should work.
 
+It's unknown if this "just works" on arm64 (aarch64),
+but please assume that it probably doesn't.
+I currently have no access to such hardware to test or fix it.
+
 #### Bioconda
 
 Install conda, add the bioconda channel, then:
@@ -177,7 +184,7 @@ Install conda, add the bioconda channel, then:
 conda install strangepg
 ```
 
-#### Compilation
+#### Compilation from source
 
 ```bash
 git clone https://github.com/qwx9/strangepg
@@ -618,6 +625,11 @@ Should work via X11 forwarding if remote and local GPUs meet the requirements.
 - strawk leaks some small amount of memory;
 awk wasn't meant to be used this way and plugging the leaks is not trivial
 
+Less major bugs:
+- Layouting currently doesn't place some of the nodes nicely;
+many plots look ugly by default but can be fixed by just moving the nodes around.
+- 3d navigation is a kludge on top of 2d navigation
+
 
 ## <a name="bundled"></a>Used and bundled alien software
 
@@ -638,6 +650,22 @@ strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 
 ![](.pics/plan.png)
+
+## <a name="openbsd"></a>OpenBSD
+
+#### Installation
+
+All required libraries and headers are already included in the distribution.
+The only additional build dependency is `gmake`.
+I tried making a BSD makefile, but some things started to get complicated,
+and in the end I decided against wasting more time on that.
+
+#### Usage
+
+The same hardware requirements apply,
+but you might want to enable SMT/Hyperthreading or lose much of the performance.
+Check the [OpenBSD FAQ](https://www.openbsd.org/faq/faq10.html#SMT)
+on how and why this is disabled by default.
 
 
 ## <a name="9front"></a>9front

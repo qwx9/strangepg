@@ -122,7 +122,7 @@ sysread(File *f, void *buf, int n)
 	int m;
 
 	m = fread(buf, 1, n, f->aux);
-	if(ferror(f->aux))
+	if(ferror((FILE*)f->aux))
 		return -1;
 	else
 		return m;
