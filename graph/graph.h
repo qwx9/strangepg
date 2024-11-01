@@ -1,5 +1,6 @@
 ioff	pushinode(Graph*, ioff);
 ioff	pushiedge(Graph*, ioff, ioff);
+int	mergenodes(Graph*, ioff, ioff);
 
 ioff	str2idx(char*);
 

@@ -9,7 +9,7 @@
 /* assumptions:
  * - required field separator is \t
  * - tags are two characters long as per the spec
- * - length of inlined sequence trumps LN tag
+ * - length of inlined sequence trumps LN tag unless '*'
  */
 
 KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
@@ -82,10 +82,9 @@ setnamedtag(char *label, char *tag, char *val)
 void
 settag(Node *n, ioff id, char *tag, char *val)
 {
-	if(strcmp(tag, "LN") == 0){
-		n->length = atoi(val);
-		rnodes[id].len = n->length;
-	}else if(strcmp(tag, "fx") == 0){
+	if(strcmp(tag, "LN") == 0)
+		rnodes[id].len = atoi(val);
+	else if(strcmp(tag, "fx") == 0){
 		n->pos0.x = atof(val);
 		n->flags |= FNfixedx | FNinitx;
 	}else if(strcmp(tag, "fy") == 0){
@@ -102,9 +101,8 @@ settag(Node *n, ioff id, char *tag, char *val)
 }
 
 static inline void
-setlength(Node *n, ioff id, int len)
+setlength(ioff id, int len)
 {
-	n->length = len;
 	pushcmd("LN[label[%d]] = %d", id, len);
 	rnodes[id].len = len;
 }
@@ -113,7 +111,7 @@ static int
 collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 {
 	char *s;
-	int c, m, l, nerr, minl, maxl;
+	int c, m, w, nerr, minl, maxl;
 	ioff id, i, ie;
 	vlong *off;
 	Node *n;
@@ -132,17 +130,17 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 		n = nodes + id;
 		DPRINT(Debugmeta, "collectgfanodes node[%d]: %s %d", id, s, f->trunc);
 		if((s = nextfield(f)) != nil){
-			if((l = f->toksz) > 0){
-				if(l > 1 || *s != '*'){
-					setlength(n, id, l);
+			if((w = f->toksz) > 0){
+				if(w > 1 || *s != '*'){
+					setlength(id, w);
 					c++;
 				}else
-					l = 0;
+					w = 0;
 			/* do not tolerate empty field here */
 			}else
 				goto err;
-		}else if((l = f->toksz) > 0){	/* field just too long */
-			setlength(n, id, l);
+		}else if((w = f->toksz) > 0){	/* field just too long */
+			setlength(id, w);
 			c++;
 		}else
 			goto err;
@@ -154,10 +152,10 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 			}
 			s[2] = 0;
 			/* ignore length if sequence was inlined */
-			if(strcmp(s, "LN") == 0 && l > 0){
+			if(strcmp(s, "LN") == 0 && w > 0){
 				m = atoi(s + 5);
-				if(m != l)
-					warn("segment[%d]: conflicting sequence length %d with LN=%d\n", id, l, m);
+				if(m != w)
+					warn("segment[%d]: conflicting sequence length %d with LN=%d\n", id, w, m);
 
 				continue;
 			}
@@ -165,10 +163,10 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 			c++;
 		}
 		nerr = 0;
-		if(maxl < n->length)
-			maxl = n->length;
-		if(minl > n->length)
-			minl = n->length;
+		if(maxl < w)
+			maxl = w;
+		if(minl > w)
+			minl = w;
 		continue;
 err:
 		warn("collectgfanodes: invalid S record %d\n", i);
