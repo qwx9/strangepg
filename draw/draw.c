@@ -8,6 +8,7 @@
 View view;
 RNode *rnodes;
 REdge *redges;
+ssize ndnodes, ndedges;
 
 /* FIXME: not great */
 void
@@ -28,37 +29,31 @@ fixlengths(int min, int max)
 }
 
 static inline void
-drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
+drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 {
 	float m;
 	Vertex p1, p2, du, dv;
-	REdge *r;
-	RNode *n1, *n2;
 
-	assert(u >= 0 && u < dylen(rnodes) && v >= 0 && v < dylen(rnodes));
-	n1 = rnodes + u;
-	n2 = rnodes + v;
-	du.x = n1->dir[0];
-	du.y = n1->dir[1];
-	du.z = n1->dir[2];
-	p1.x = n1->pos[0];
-	p1.y = n1->pos[1];
-	p1.z = n1->pos[2];
-	dv.x = n2->dir[0];
-	dv.y = n2->dir[1];
-	dv.z = n2->dir[2];
-	p2.x = n2->pos[0];
-	p2.y = n2->pos[1];
-	p2.z = n2->pos[2];
+	du.x = u->dir[0];
+	du.y = u->dir[1];
+	du.z = u->dir[2];
+	p1.x = u->pos[0];
+	p1.y = u->pos[1];
+	p1.z = u->pos[2];
+	dv.x = v->dir[0];
+	dv.y = v->dir[1];
+	dv.z = v->dir[2];
+	p2.x = v->pos[0];
+	p2.y = v->pos[1];
+	p2.z = v->pos[2];
 	m = sqrtf(du.x * du.x + du.y * du.y) + 0.000001;
 	du = divv(du, m);
-	du = mulv(du, n1->len * Nodesz / 2.0f);
+	du = mulv(du, u->len * Nodesz / 2.0f);
 	du = urev ? addv(p1, du) : subv(p1, du);
 	m = sqrtf(dv.x * dv.x + dv.y * dv.y) + 0.000001;
 	dv = divv(dv, m);
-	dv = mulv(dv, n2->len * Nodesz / 2.0f);
+	dv = mulv(dv, v->len * Nodesz / 2.0f);
 	dv = vrev ? subv(p2, dv) : addv(p2, dv);
-	r = redges + i;
 	r->pos1[0] = du.x;
 	r->pos1[1] = du.y;
 	r->pos1[2] = du.z;
@@ -67,24 +62,26 @@ drawedge(ioff i, ioff u, ioff v, int urev, int vrev)
 	r->pos2[2] = dv.z;
 }
 
-static int
-drawedges(Graph *g)
+static REdge *
+drawedges(REdge *r, RNode *rn, Graph *g)
 {
-	ioff u, i, v, *e, *ee;
+	ioff x, *e, *ee;
 	Node *n, *ne;
+	RNode *u, *v;
 
-	for(i=u=0, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++){
-		for(e=n->out, ee=e+dylen(e); e<ee; e++, i++){
-			v = *e;
-			drawedge(i, u, v >> 2, v & 2, v & 1);
+	for(u=rn, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++){
+		for(e=n->out, ee=e+dylen(e); e<ee; e++, r++){
+			x = *e;
+			v = rnodes + (x >> 2);
+			assert(v >= rn && v < rnodes + dylen(rnodes));
+			drawedge(r, u, v, x & 2, x & 1);
 		}
 	}
-	//assert(i == dylen(redges));
-	return 0;
+	return r;
 }
 
 static inline void
-faceyourfears(Node *u, RNode *ru)
+faceyourfears(RNode *ru, Node *u)
 {
 	float x, y, Δ, Δx, Δy;
 	float θ, c, s;
@@ -130,14 +127,14 @@ faceyourfears(Node *u, RNode *ru)
 	ru->dir[2] = 0.0f;
 }
 
-static void
-drawnodes(Graph *g)
+static RNode *
+drawnodes(RNode *r, Graph *g)
 {
 	Node *n, *e;
-	RNode *r;
 
-	for(r=rnodes, n=g->nodes, e=n+dylen(n); n<e; n++, r++)
-		faceyourfears(n, r);
+	for(n=g->nodes, e=n+dylen(n); n<e; n++, r++)
+		faceyourfears(r, n);
+	return r;
 }
 
 static int
@@ -145,19 +142,26 @@ drawworld(void)
 {
 	int r;
 	Graph *g;
+	RNode *rn, *rne;
+	REdge *re;
 
 	r = 0;
-	lockgraphs(0);
+	rn = rnodes;
+	re = redges;
 	for(g=graphs; g<graphs+dylen(graphs); g++){
 		if(g->type <= FFdead || g->layout == nil)
 			continue;
 		if((g->flags & GFdrawme) != 0)
 			r++;
 		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
-		drawnodes(g);
-		drawedges(g);
+		lockgraph(g, 0);
+		rne = drawnodes(rn, g);
+		re = drawedges(re, rn, g);
+		unlockgraph(g, 0);
+		rn = rne;
 	}
-	unlockgraphs(0);
+	ndnodes = rn - rnodes;
+	ndedges = re - redges;
 	return r;
 }
 

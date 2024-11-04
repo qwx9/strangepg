@@ -9,7 +9,6 @@
 #include "lib/khashl.h"
 
 Graph *graphs;
-RWLock graphlock;
 
 /* usable once topology has been loaded */
 ioff
@@ -101,9 +100,7 @@ pushgraph(Graph *g)
 	dypush(redges, r);
 	dypush(redges, r);
 	dypush(redges, r);
-	lockgraphs(1);
 	dypush(graphs, *g);
-	unlockgraphs(1);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);
 	if(gottagofast && reqlayout(g, Lstart) < 0){
@@ -113,21 +110,21 @@ pushgraph(Graph *g)
 }
 
 void
-lockgraphs(int w)
+lockgraph(Graph *g, int w)
 {
 	if(w)
-		wlock(&graphlock);
+		wlock(&g->lock);
 	else
-		rlock(&graphlock);
+		rlock(&g->lock);
 }
 
 void
-unlockgraphs(int w)
+unlockgraph(Graph *g, int w)
 {
 	if(w)
-		wunlock(&graphlock);
+		wunlock(&g->lock);
 	else
-		runlock(&graphlock);
+		runlock(&g->lock);
 }
 
 Graph

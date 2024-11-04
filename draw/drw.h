@@ -30,7 +30,7 @@ struct REdge{
 };
 extern RNode *rnodes;
 extern REdge *redges;
-
+extern ssize ndnodes, ndedges;
 
 struct Quad{
 	Vertex tl;

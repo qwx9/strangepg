@@ -46,6 +46,7 @@ struct Graph{
 	u32int flags;
 	File *f;
 	Coarse *c;
+	RWLock lock;
 	Node *nodes;	/* dynamic array */
 	Layout *layout;
 };

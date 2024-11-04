@@ -185,7 +185,8 @@ renderedges(Params p)
 {
 	ioff n;
 
-	n = dylen(redges);
+	if((n = ndedges) < 1)
+		return;
 	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
 		.ptr = redges,
 		.size = n * sizeof *redges,
@@ -206,7 +207,8 @@ rendernodes(Params p)
 {
 	ioff n;
 
-	n = dylen(rnodes);
+	if((n = ndnodes) < 1)
+		return;
 	sg_update_buffer(nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
 		.size = n * sizeof *rnodes,
