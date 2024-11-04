@@ -48,8 +48,8 @@ struct Dyhdr{
 		dygrow(a, (i)); \
 		_h = dyhdr(a); \
 		_h->len = (i); \
-	}else if(_h->len < (i)) \
-		_h->len = (i); \
+	} \
+	_h->len = (i); \
 	}while(0)
 #define dyinsert(a,i,v)	do{ \
 	dyresize(a, (i)+1); \
