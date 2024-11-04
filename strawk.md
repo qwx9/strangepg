@@ -60,7 +60,7 @@ FC["s1+","s2+"] = 1
 ```
 
 `node` is a hash table mapping GFA labels to an internal id,
-likewise for `edge`
+likewise for `edge`.
 
 
 Notice that for segment `s2` when both an inlined sequence exists (character string other than '\*') and an `LN` tag is specified,
@@ -203,7 +203,7 @@ nodecolor("s1", red)
 tag[i == "s1"] = red
 ```
 
-They will be dealt with as soon as possible.
+This will be dealt with as soon as possible.
 
 
 ## Built-in functions and variables
@@ -226,52 +226,52 @@ In addition, the following tag functions are to be used to update some specific 
 
 The following color constants are provided as well:
 
-- `black`: `#000000`
-- `blue`: `#1f78b4`
-- `bluegreen`: `#5fc69f`
-- `brightblue`: `#0000ff`
-- `brightgreen`: `#00ff00`
-- `brightpurple`: `#00ffff`
-- `brightred`: `#ff0000`
-- `brightyellow`: `#ffff00`
-- `brown`: `#b15928`
-- `cyan`: `#00ffff`
-- `darkgray`: `#3f3f3f`
-- `darkgreen`: `#33a02c`
-- `darkpink`: `#c96088`
-- `darkpurple`: `#6a3d9a`
-- `gray`: `#777777`
-- `green`: `#8ec65e`
-- `greyblue`: `#bebada`
-- `greybrown`: `#7f5f67`
-- `greygreen`: `#ccebc5`
-- `greyred`: `#c76758`
-- `lightblue`: `#80b1d3`
-- `lightbrown`: `#ca9560`
-- `lightgray`: `#c0c0c0`
-- `lightgreen`: `#d5f65f`
-- `lightgrey`: `#d9d9d9`
-- `lightorange`: `#fdb462`
-- `lightpink`: `#fccde5`
-- `lightpurple`: `#bc80bd`
-- `lightred`: `#fb8072`
-- `lightteal`: `#8dd3c7`
-- `orange`: `#ff7f00`
-- `paleblue`: `#a6cee3`
-- `palegray`: `#dcdcdc`
-- `palegreen`: `#b2df8a`
-- `paleorange`: `#fdbf6f`
-- `palepurple`: `#c893f0`
-- `palered`: `#fb9a99`
-- `paleviolet`: `#cab2d6`
-- `paleyellow`: `#ffffb3`
-- `purple`: `#b160c9`
-- `purpleblue`: `#8080ff`
-- `red`: `#e31a1c`
-- `teal`: `#009696`
+- `black`: `0x000000`
+- `blue`: `0x1f78b4`
+- `bluegreen`: `0x5fc69f`
+- `brightblue`: `0x0000ff`
+- `brightgreen`: `0x00ff00`
+- `brightpurple`: `0x00ffff`
+- `brightred`: `0xff0000`
+- `brightyellow`: `0xffff00`
+- `brown`: `0xb15928`
+- `cyan`: `0x7acdcd`
+- `darkgray`: `0x3f3f3f`
+- `darkgreen`: `0x33a02c`
+- `darkpink`: `0xc96088`
+- `darkpurple`: `0x6a3d9a`
+- `gray`: `0x777777`
+- `green`: `0x8ec65e`
+- `greyblue`: `0xbebada`
+- `greybrown`: `0x7f5f67`
+- `greygreen`: `0xccebc5`
+- `greyred`: `0xc76758`
+- `lightblue`: `0x80b1d3`
+- `lightbrown`: `0xca9560`
+- `lightgray`: `0xc0c0c0`
+- `lightgreen`: `0xd5f65f`
+- `lightgrey`: `0xd9d9d9`
+- `lightorange`: `0xfdb462`
+- `lightpink`: `0xfccde5`
+- `lightpurple`: `0xbc80bd`
+- `lightred`: `0xfb8072`
+- `lightteal`: `0x8dd3c7`
+- `orange`: `0xff7f00`
+- `paleblue`: `0xa6cee3`
+- `palegray`: `0xdcdcdc`
+- `palegreen`: `0xb2df8a`
+- `paleorange`: `0xfdbf6f`
+- `palepurple`: `0xc893f0`
+- `palered`: `0xfb9a99`
+- `paleviolet`: `0xcab2d6`
+- `paleyellow`: `0xffffb3`
+- `purple`: `0xb160c9`
+- `purpleblue`: `0x8080ff`
+- `red`: `0xe31a1c`
+- `teal`: `0x009696`
 - `violet` = `purple`
-- `white`: `#ffffff`
-- `yellow`: `#ffed6f`
+- `white`: `0xffffff`
+- `yellow`: `0xffed6f`
 
 
 ## User definitions
@@ -309,12 +309,12 @@ Errors within evaluated expressions do notcause the program to exit.
 
 Standard awk stores numerical values as double-precision floating point numbers
 (and strings).
-To avoid imprecision with large numbers,
-writing out raw bytes and performing bitwise operations,
+To avoid imprecision with large numbers
+and allow writing out raw bytes or performing bitwise operations,
 the basic type is now 64-bit integers instead.
 Values are converted automatically to floating point
 if they are floating point constants,
-are used in arithmetic expressions involving floats or functions which take floats
+are used in arithmetic expressions involving floats or functions which take or return floats
 (such as `exp()`, `log()`, `cos()`, etc.),
 or are explicitely cast using the new `float()` function.
 `rand()` remains the same, returning floating point numbers in the range [0,1).
@@ -352,8 +352,8 @@ The values are 8-byte wide and can overflow.
 Note that numbers may have trailing characters (which will be ignored),
 just like standard awk.
 It is possible to prohibit this, but such a lax rule is easier to handle.
-Note that while a numerical value will be set,
-the type of the variable or constant will be a string.
+While a numerical value will be set,
+the type of the variable or constant will then be a string.
 Again like standard awk, if one operand in an expression is a string,
 then string comparison will be performed.
 
@@ -386,9 +386,6 @@ strawk should never read files or execute system commands itself.
 
 Needed changes:
 
-- Values stored as 32 or 64bit unsigned integers instead of floating point.
-- C-style hexadecimal and octal numeric constants.
-- eval: function definitions.
 - Pointer objects: variables referencing other variables
 - Become a vector language
 
@@ -430,7 +427,7 @@ _GNU bison_ is then needed to regenerate some of the files.
 To use a different _YACC_ implementation, edit the _makefile_.
 
 ```bash
-cd strawk
-make nuke
-make install
+$ cd strawk
+$ make nuke
+$ make install
 ```

@@ -221,8 +221,8 @@ dragselect(int x, int y)
 	y = rsel.y1 + Δy;
 	if(rsel.x1 == x && rsel.y1 == y)
 		return 0;
-	Δx = x - rsel.x2;
-	Δy = y - rsel.y2;
+	x - rsel.x2;
+	y - rsel.y2;
 	rx.x1 = rsel.x1;
 	rx.x2 = x;
 	rx.y1 = rsel.y2;

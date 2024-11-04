@@ -553,7 +553,8 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 Each line must have the same number of fields as the header, but fields may be empty.
 
 <p align="center"><img src=".pics/space.png"/></p>
-__Soon, deathmatching in graph space__
+
+_Soon, deathmatching in graph space_
 
 ## <a name="applications"></a>Example applications
 
@@ -636,6 +637,9 @@ Less major bugs:
 - Layouting currently doesn't place some of the nodes nicely;
 many plots look ugly by default but can be fixed by just moving the nodes around.
 - 3d navigation is a kludge on top of 2d navigation
+
+Minor:
+- Web colors with a # are not parsed, but hex values with 0x are
 
 
 ## <a name="bundled"></a>Used and bundled alien software

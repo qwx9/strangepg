@@ -98,7 +98,6 @@ compute(void *arg, volatile int *stat, int idx)
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				vw = v->w;
-				w = (uw + vw);
 				w = C * MIN(uw, vw);
 				Δx += w * f * δx / δ;
 				Δy += w * f * δy / δ;
