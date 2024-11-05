@@ -60,6 +60,7 @@ newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
 		pushcmd("addedge(%d,\"%s\")", off, label);
 	else
 		pushcmd("addedge(%d,\"%d\")", off, off);
+	g->nedges++;
 	return off;
 }
 
@@ -89,17 +90,8 @@ nukegraph(Graph *g)
 void
 pushgraph(Graph *g)
 {
-	/* FIXME: selection box kludge */
-	REdge r = {
-		.pos1 = {0.0f, 0.0f, 0.0f},
-		.pos2 = {0.0f, 0.0f, 0.0f},
-		.col = {1.0f, 0.0f, 0.0f, 0.8f},
-	};
-
-	dypush(redges, r);
-	dypush(redges, r);
-	dypush(redges, r);
-	dypush(redges, r);
+	if(g->nedges + nelem(selbox) >= dylen(redges))
+		dygrow(redges, g->nedges + nelem(selbox));
 	dypush(graphs, *g);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);

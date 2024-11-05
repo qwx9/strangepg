@@ -29,7 +29,7 @@ struct REdge{
 	float col[4];
 };
 extern RNode *rnodes;
-extern REdge *redges;
+extern REdge *redges, selbox[4];
 extern ssize ndnodes, ndedges;
 
 struct Quad{

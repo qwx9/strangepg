@@ -48,6 +48,7 @@ struct Graph{
 	Coarse *c;
 	RWLock lock;
 	Node *nodes;	/* dynamic array */
+	ssize nedges;
 	Layout *layout;
 };
 extern Graph *graphs;	/* dynamic array */

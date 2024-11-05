@@ -165,6 +165,14 @@ drawworld(void)
 	return r;
 }
 
+static void
+drawui(void)
+{
+	if(ndedges + nelem(selbox) >= dylen(redges))
+		dygrow(redges, ndedges + nelem(selbox));
+	ndedges += nelem(selbox);
+}
+
 int
 redraw(void)
 {
@@ -175,6 +183,7 @@ redraw(void)
 	CLK0(clk);
 	if(!drawworld())
 		go = 0;
+	drawui();
 	CLK1(clk);
 	return go;
 }

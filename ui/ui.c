@@ -8,6 +8,7 @@
 
 int prompting;
 char hoverstr[256], selstr[512];
+REdge selbox[4];
 
 static ioff selected = -1, shown = -1, focused = -1;
 static Rekt rsel;
@@ -141,8 +142,10 @@ resetbox(void)
 {
 	REdge *r;
 
+	if(rsel.x1 < 0)
+		return;
 	rsel.x1 = -1;
-	r = redges + dylen(redges) - 4;
+	r = selbox;
 	r->pos1[0] = r->pos2[0];
 	r->pos1[1] = r->pos2[1];
 	r->pos1[2] = r->pos2[2];
@@ -173,7 +176,7 @@ selectionbox(float x1, float y1, float x2, float y2)
 	x2 += view.eye.x;
 	y2 += view.eye.y;
 	z = view.center.z;
-	r = redges + dylen(redges) - 4;
+	r = selbox;
 	r->pos1[0] = x1;
 	r->pos1[1] = y1;
 	r->pos2[0] = x2;
@@ -221,8 +224,6 @@ dragselect(int x, int y)
 	y = rsel.y1 + Δy;
 	if(rsel.x1 == x && rsel.y1 == y)
 		return 0;
-	x - rsel.x2;
-	y - rsel.y2;
 	rx.x1 = rsel.x1;
 	rx.x2 = x;
 	rx.y1 = rsel.y2;
@@ -439,8 +440,16 @@ resetui(void)
 void
 initui(void)
 {
+	REdge *rp, r = {
+		.pos1 = {0.0f, 0.0f, 0.0f},
+		.pos2 = {0.0f, 0.0f, 0.0f},
+		.col = {1.0f, 0.0f, 0.0f, 0.8f},
+	};
+
 	initsysui();
 	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);
+	for(rp=selbox; rp<selbox+nelem(selbox); rp++)
+		*rp = r;
 	resetui();
 }

@@ -452,7 +452,7 @@ initgl(void)
 				.data = SG_RANGE(edgevert),
 			}),
 			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = dylen(redges) * sizeof *redges,
+				.size = (dylen(redges) + nelem(selbox)) * sizeof *redges,
 				.usage = SG_USAGE_STREAM,
 			}),
 		},

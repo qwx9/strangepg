@@ -82,6 +82,12 @@ pasteprompt(char *s)
 	plen = s - ptext;
 }
 
+static void
+drawsel(void)
+{
+	memcpy(redges + ndedges - nelem(selbox), selbox, sizeof selbox);
+}
+
 /* must be called after a new frame was started and before flushing */
 void
 drawui(nk_context *ctx)
@@ -143,6 +149,7 @@ drawui(nk_context *ctx)
 		}
 	}
 	nk_end(ctx);
+	drawsel();
 }
 
 static void
