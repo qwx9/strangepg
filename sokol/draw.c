@@ -186,9 +186,12 @@ static inline void
 renderedges(Params p)
 {
 	ioff n;
+	double t;
 
 	if((n = ndedges) < 1)
 		return;
+	if((debug & Debugperf) != 0)
+		t = μsec();
 	sg_update_buffer(edgebind.vertex_buffers[1], &(sg_range){
 		.ptr = redges,
 		.size = n * sizeof *redges,
@@ -202,15 +205,19 @@ renderedges(Params p)
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
 	sg_draw(0, nedgev, n);
 	sg_end_pass();
+	DPRINT(Debugperf, "renderedges: %.2f ms", (μsec() - t) / 1000);
 }
 
 static inline void
 rendernodes(Params p)
 {
 	ioff n;
+	double t;
 
 	if((n = ndnodes) < 1)
 		return;
+	if((debug & Debugperf) != 0)
+		t = μsec();
 	sg_update_buffer(nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
 		.size = n * sizeof *rnodes,
@@ -224,11 +231,16 @@ rendernodes(Params p)
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
 	sg_draw(0, nnodev, n);
 	sg_end_pass();
+	DPRINT(Debugperf, "rendernodes: %.2f ms", (μsec() - t) / 1000);
 }
 
 static inline void
 renderscreen(Params p)
 {
+	double t;
+
+	if((debug & Debugperf) != 0)
+		t = μsec();
 	sg_begin_pass(&(sg_pass){
 		.action = default_pass_action,
 		.swapchain = sglue_swapchain(),
@@ -238,6 +250,7 @@ renderscreen(Params p)
 	sg_draw(0, 4, 1);
 	snk_render(view.w, view.h);
 	sg_end_pass();
+	DPRINT(Debugperf, "renderscreen: %.2f ms", (μsec() - t) / 1000);
 }
 
 static void
@@ -397,9 +410,7 @@ void
 frame(void)
 {
 	struct nk_context *ctx;
-	Clk clk = {.lab = "flush"}, fclk = {.lab = "frame"};
 
-	CLK0(fclk);
 	ctx = snk_new_frame();
 	if((reqs & Reqresetdraw) != 0){
 		reqs &= ~Reqresetdraw;
@@ -421,10 +432,7 @@ frame(void)
 	}
 	reqs &= ~Reqshallowdraw;
 	drawui(ctx);
-	CLK0(clk);
 	flush();
-	CLK1(clk);
-	CLK1(fclk);
 	reqdraw(Reqrefresh);
 }
 

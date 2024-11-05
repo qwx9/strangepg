@@ -149,7 +149,8 @@ drawui(nk_context *ctx)
 		}
 	}
 	nk_end(ctx);
-	drawsel();
+	if(ndedges > 0 && selbox[0].pos2[0] - selbox[0].pos1[0] != 0.0f)
+		drawsel();
 }
 
 static void

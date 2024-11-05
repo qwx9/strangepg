@@ -153,7 +153,6 @@ drawworld(void)
 			continue;
 		if((g->flags & GFdrawme) != 0)
 			r++;
-		DPRINT(Debugdraw, "drawworld: draw graph %#p", g);
 		lockgraph(g, 0);
 		rne = drawnodes(rn, g);
 		re = drawedges(re, rn, g);
@@ -177,14 +176,15 @@ int
 redraw(void)
 {
 	int go;
-	static Clk clk = {.lab = "redraw"};
+	double t;
 
+	if((debug & Debugperf) != 0)
+		t = μsec();
 	go = 1;
-	CLK0(clk);
 	if(!drawworld())
 		go = 0;
 	drawui();
-	CLK1(clk);
+	DPRINT(Debugperf, "redraw: %.2f ms", (μsec() - t) / 1000);
 	return go;
 }
 
