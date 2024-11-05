@@ -7,6 +7,8 @@
 #define	SOKOL_IMPL
 #define	SOKOL_GLCORE
 #define	SOKOL_NO_ENTRY
+#define SOKOL_GL_FUNCS_EXT	\
+	_SG_XMACRO(glDebugMessageCallback,	void, (DEBUGPROC callback, const void * userParam))
 //#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
@@ -446,6 +448,8 @@ initgl(void)
 	float edgevert[] = { -1, 1 };
 	u16int edgeidx[] = { 0, 1 };
 	nedgev = nelem(edgeidx);
+	if(debug & Debugdraw)
+		sg_enable_debug_log();
 	edgebind = (sg_bindings){
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){

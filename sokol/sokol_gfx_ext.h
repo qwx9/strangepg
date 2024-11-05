@@ -94,6 +94,11 @@ static uint32_t _sg_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
 	return u.i;
 }
 
+static void _sg_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
+	warn("[%#x:%#x] %s GL_CALLBACK: %s\n",
+		severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
+}
+
 #endif	// _SOKOL_ANY_GL
 
 void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size) {
@@ -111,6 +116,13 @@ uint32_t sg_query_image_pixel(int x, int y, sg_image img_id) {
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
     return _sg_gl_query_image_pixel(x, y, img);
+#endif
+}
+
+void sg_enable_debug_log(void) {
+#if defined(_SOKOL_ANY_GL)
+	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageCallback(_sg_gl_debug_callback, 0);
 #endif
 }
 
