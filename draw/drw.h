@@ -95,6 +95,7 @@ struct View{
 };
 extern View view;
 
+void	endmove(void);
 void	zoomdraw(float, float, float);
 void	pandraw(float, float);
 void	rotdraw(Vertex);
@@ -130,9 +131,11 @@ enum{
 	Reqredraw = 1<<4,		/* paint and flush canvas */
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */
+	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
+void	setnodeshape(int);
 void	reqdraw(int);
 void	initcol(void);
 void	initsysdraw(void);

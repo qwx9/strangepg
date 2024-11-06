@@ -13,6 +13,7 @@ BINDIR:= $(PREFIX)/bin
 
 OBJS:=\
 	sokol/draw.o\
+	sokol/shaders.o\
 	sokol/ui.o\
 	lib/chan.o\
 	lib/flextgl/flextGL.o\
@@ -45,8 +46,12 @@ OBJS:=\
 	strpg.o\
 	glsl/node.vert.o\
 	glsl/node.frag.o\
+	glsl/nodeidx.vert.o\
+	glsl/nodeidx.frag.o\
 	glsl/edge.vert.o\
 	glsl/edge.frag.o\
+	glsl/edgeidx.vert.o\
+	glsl/edgeidx.frag.o\
 	glsl/scr.vert.o\
 	glsl/scr.frag.o\
 
@@ -138,10 +143,6 @@ else
 endif
 
 all:	$(ALLTARGETS) dirall
-
-# FIXME
-strindex:	index.sh
-	cp -x $^ $@
 
 $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)

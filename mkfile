@@ -34,10 +34,14 @@ OFILES=\
 	plan9/ui.$O\
 	ui/ui.$O\
 	util/print.$O\
-	glsl/node.vert.$O\
-	glsl/node.frag.$O\
 	glsl/edge.vert.$O\
 	glsl/edge.frag.$O\
+	glsl/edgeidx.vert.$O\
+	glsl/edgeidx.frag.$O\
+	glsl/node.vert.$O\
+	glsl/node.frag.$O\
+	glsl/nodeidx.vert.$O\
+	glsl/nodeidx.frag.$O\
 	glsl/scr.vert.$O\
 	glsl/scr.frag.$O\
 

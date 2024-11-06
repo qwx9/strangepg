@@ -74,6 +74,11 @@ newcolor(u32int v)
 	return alloccolor(v);
 }
 
+void
+endmove(void)
+{
+}
+
 ioff
 mousepick(int x, int y)
 {

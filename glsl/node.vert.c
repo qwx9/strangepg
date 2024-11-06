@@ -9,7 +9,6 @@ char *node_vertsh = \
 	"layout(location=3) in vec4 col0;\n"
 	"layout(location=4) in float len;\n"
 	"out vec4 col;\n"
-	"flat out uint idx;\n"
 	"vec2 rotatez(vec2 v, float c, float s){\n"
 	"	return mat2(c, s, -s, c) * v;\n"
 	"}\n"
@@ -18,5 +17,4 @@ char *node_vertsh = \
 	"	vec3 r = vec3(rotatez(g, dir.x, dir.y), 0.0);\n"
 	"	gl_Position = mvp * vec4(r + pos, 1.0);\n"
 	"	col = col0;\n"
-	"	idx = gl_InstanceID + 1;\n"
 	"}\n";

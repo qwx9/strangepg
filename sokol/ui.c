@@ -1,4 +1,8 @@
 #include "strpg.h"
+#include "lib/flextgl/flextGL.h"
+#define	HANDMADE_MATH_IMPLEMENTATION
+//#define	HANDMADE_MATH_NO_SIMD
+#include "lib/HandmadeMath.h"
 #define	SOKOL_GLCORE
 //#define	NDEBUG
 #include "lib/sokol_app.h"
@@ -18,6 +22,7 @@
 #include "lib/nuklear.h"
 #define	SOKOL_NUKLEAR_IMPL
 #include "lib/sokol_nuklear.h"
+#include "sokol.h"
 #include "ui.h"
 #include "threads.h"
 #include "cmd.h"
@@ -58,7 +63,6 @@ enum{
 };
 
 /* FIXME: clear text on escape while prompt active */
-/* FIXME: implement wrap or sth (see old nuklear repo issues) */
 void
 resetprompt(void)
 {
@@ -80,12 +84,6 @@ pasteprompt(char *s)
 	plen = nk_str_len_char(&nkprompt.string);
 	s = strecpy(ptext+plen, ptext+sizeof ptext, s);
 	plen = s - ptext;
-}
-
-static void
-drawsel(void)
-{
-	memcpy(redges + ndedges - nelem(selbox), selbox, sizeof selbox);
 }
 
 /* must be called after a new frame was started and before flushing */
@@ -149,8 +147,6 @@ drawui(nk_context *ctx)
 		}
 	}
 	nk_end(ctx);
-	if(ndedges > 0 && selbox[0].pos2[0] - selbox[0].pos1[0] != 0.0f)
-		drawsel();
 }
 
 static void

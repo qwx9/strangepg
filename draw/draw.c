@@ -167,8 +167,11 @@ drawworld(void)
 static void
 drawui(void)
 {
+	if(ndedges < 0 || selbox[0].pos2[0] - selbox[0].pos1[0] == 0.0f)
+		return;
 	if(ndedges + nelem(selbox) >= dylen(redges))
 		dygrow(redges, ndedges + nelem(selbox));
+	memcpy(redges + ndedges, selbox, sizeof selbox);
 	ndedges += nelem(selbox);
 }
 

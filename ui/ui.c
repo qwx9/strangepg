@@ -390,7 +390,10 @@ mouseevent(Vertex v, Vertex Δ)
 		goto nope;
 	}else
 		inwin = 0;
+	/* FIXME: clean up */
 	if(m == 0)
+		endmove();
+	if((m & Mlmb) == 0)
 		resetbox();
 	if(m == 0 || (omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
