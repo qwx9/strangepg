@@ -40,7 +40,7 @@ mousepick(int x, int y)
 			render.stalepick = 0;
 		}
 	}
-	if((i = render.pickfb[(view.h - y) * view.w + x]) == 0)
+	if((i = render.pickfb[(view.h - y - 1) * view.w + x]) == 0)
 		return -1;
 	return i;
 }
