@@ -1,0 +1,17 @@
+char *edgeidx_vertsh = \
+	"#version 430\n"
+	"//precision mediump float;\n"
+	"precision lowp float;\n"
+	"uniform mat4 mvp;\n"
+	"layout(location=0) in float v;\n"
+	"layout(location=1) in vec3 p1;\n"
+	"layout(location=2) in vec3 p2;\n"
+	"layout(location=3) in vec4 col0;\n"
+	"out vec4 col;\n"
+	"flat out uint idx;\n"
+	"void main(){\n"
+	"	vec3 p = gl_VertexID == 0 ? p1 : p2;\n"
+	"	gl_Position = mvp * vec4(p, 1.0);\n"
+	"	col = col0;\n"
+	"	idx = gl_InstanceID + 1 | 1<<31;\n"
+	"}\n";
