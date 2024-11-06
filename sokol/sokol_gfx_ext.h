@@ -15,7 +15,9 @@
 #endif
 
 SOKOL_GFX_API_DECL uint32_t sg_query_image_pixel(int x, int y, sg_image img_id);
+SOKOL_GFX_API_DECL void sg_query_image_pixels(sg_image img_id, void* pixels);
 SOKOL_GFX_API_DECL void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size);
+SOKOL_GFX_API_DECL void sg_enable_debug_log(void);
 
 #endif // SOKOL_GFX_EXT_INCLUDED
 
@@ -32,12 +34,14 @@ SOKOL_GFX_API_DECL void sg_query_pixels(int x, int y, int w, int h, bool origin_
 static void _sg_gl_query_image_pixels(_sg_image_t* img, void* pixels) {
     SOKOL_ASSERT(img->gl.target == GL_TEXTURE_2D);
     SOKOL_ASSERT(0 != img->gl.tex[img->cmn.active_slot]);
-#if defined(SOKOL_GLCORE33)
-    _sg_gl_cache_store_buffer_binding(0);
-    _sg_gl_cache_bind_buffer(img->gl.target, img->gl.tex[img->cmn.active_slot]);
-    glGetTexImage(img->gl.target, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+#if defined(SOKOL_GLCORE)
+    _sg_gl_cache_store_texture_sampler_binding(0);
+    _sg_gl_cache_bind_texture_sampler(0, img->gl.target, img->gl.tex[img->cmn.active_slot], 0);
+    const GLenum gl_format = _sg_gl_teximage_format(img->cmn.pixel_format);
+    const GLenum gl_type = _sg_gl_teximage_type(img->cmn.pixel_format);
+    glGetTexImage(img->gl.target, 0, gl_format, gl_type, pixels);
     _SG_GL_CHECK_ERROR();
-    _sg_gl_cache_restore_buffer_binding(0);
+    _sg_gl_cache_restore_texture_sampler_binding(0);
 #else
     static GLuint newFbo = 0;
     GLuint oldFbo = 0;
@@ -107,6 +111,15 @@ void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pix
     _SOKOL_UNUSED(size);
 #if defined(_SOKOL_ANY_GL)
     _sg_gl_query_pixels(x, y, w, h, origin_top_left, pixels);
+#endif
+}
+
+void sg_query_image_pixels(sg_image img_id, void* pixels) {
+    SOKOL_ASSERT(img_id.id != SG_INVALID_ID);
+    _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+    SOKOL_ASSERT(img);
+#if defined(_SOKOL_ANY_GL)
+    _sg_gl_query_image_pixels(img, pixels);
 #endif
 }
 
