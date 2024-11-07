@@ -3,12 +3,19 @@
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
+
+#define GL_VIEWPORT 0x0BA2
+#define GL_DEBUG_OUTPUT 0x92E0
+#define GL_DEBUG_TYPE_ERROR 0x824C
+#define SG_GL_FUNCS_EXT	\
+	_SG_XMACRO(glDebugMessageCallback,	void, (GLDEBUGPROC callback, const void * userParam)) \
+	_SG_XMACRO(glGetTexImage,	void, (GLenum target, GLint level, GLenum format, GLenum type, void * pixels)) \
+	_SG_XMACRO(glReadPixels,	void, (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void * pixels)) \
+
+//#define	NDEBUG
 #define	SOKOL_IMPL
 #define	SOKOL_GLCORE
 #define	SOKOL_NO_ENTRY
-#define SOKOL_GL_FUNCS_EXT	\
-	_SG_XMACRO(glDebugMessageCallback,	void, (DEBUGPROC callback, const void * userParam))
-//#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
