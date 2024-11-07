@@ -61,6 +61,7 @@ Thanks!_
 - [Additional compilation settings](#compilationsettings)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
+- [Windows](#windows)
 - [OpenBSD](#openbsd)
 - [9front](#9front)
 
@@ -157,24 +158,25 @@ strangepg -f some.lay some.gfa
 
 ## <a name="installation"></a>Installation
 
-Currently only Linux, OpenBSD and Plan9front are supported (x86, amd64)..
+Currently only Linux, OpenBSD, Windows (through Cygwin) and Plan9front
+are supported (x86, amd64).
 Other BSDs might work as well, but it's untested.
-A macOS port will arrive as soon as someone kindly sacrifices their laptop
+A macOS (Metal) port will arrive as soon as someone kindly sacrifices their laptop
 for a while.
-A native Windows port is also planned.
+A native Windows port (MSVC + D3D11) is also planned.
 
 Installation can be done from source or via [bioconda](https://bioconda.github.io/).
 
 #### Hardware requirements
 
-On Linux, a graphics card with OpenGL 4.3 support is required.
+A graphics card with OpenGL 4.3 support is required.
 The standard was introduced around 2011.
 Intel integrated HD Graphics cards from 2013 (Ivy Bridge),
 and nVIDIA and AMD/ATI cards from 2010 on should work.
 
-It's unknown if this "just works" on arm64 (aarch64),
-but please assume that it probably doesn't.
-I currently have no access to such hardware to test or fix it.
+This won't "just work" on arm64 (aarch64), although a port wouldn't be hard.
+I don't have the hardware at hand, 
+but boards such as the Raspberry Pi 4 and up are in theory compatible.
 
 #### Bioconda
 
@@ -627,7 +629,7 @@ Tested with clang and gcc only.
 ## <a name="bugs"></a>Known bugs
 
 Major bugs:
-- currently broken on Windows (WSL) during of GL initialization (Wayland? OpenGL ES? Windows OpenGL limitation? Don't know),
+- currently broken on WSL, it bails during of GL initialization (Wayland? OpenGL ES? Windows OpenGL limitation? Don't know),
 see [issue #1](https://github.com/qwx9/strangepg/issues/1).
 Should work via X11 forwarding if remote and local GPUs meet the requirements.
 - strawk leaks some small amount of memory;
@@ -637,6 +639,8 @@ Less major bugs:
 - Layouting currently doesn't place some of the nodes nicely;
 many plots look ugly by default but can be fixed by just moving the nodes around.
 - 3d navigation is a kludge on top of 2d navigation
+- the selection box is a kludge and is resource-heavy; the renderer is
+fairly efficient, but it could be made orders of magnitude faster
 
 Minor:
 - Web colors with a # are not parsed, but hex values with 0x are
@@ -654,13 +658,48 @@ Linux graphics:
 - [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear)
 
 Used but not bundled:
-- GL extension loading via [flextGL](https://github.com/mosra/flextGL)
 - GNU Bison or Plan9 yacc(1) for strawk
 
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 
 ![](.pics/plan.png)
+
+## <a name="windows"></a>Windows
+
+#### Installation
+
+Only Cygwin (not MinGW) is currently supported,
+and has only been tested through MobaXterm.
+WSL1/2 may or may not work, but if it does,
+performance is significantly worse because of upstream bugs.
+
+To build and run the Cygwin port, install the following packages
+and their dependencies:
+
+```bash
+apt install make gcc-core libgl-devel libxcursor-devel libxi-devel
+```
+
+Then run make against the Cygwin makefile:
+
+```bash
+make -j -f Makefile.cygwin
+```
+
+The `install` target will copy the binaries to `$HOME/.local/bin`,
+which is not in the `$PATH` by default.
+
+#### Usage
+
+It is no longer possible to build static binaries with Cygwin.
+As such, strangepg can only be ran from within Cygwin's environment.
+In other words, the .exe file built cannot be used outside of the Cygwin or MobaXterm terminal it was built in.
+
+```bash
+./strangepg.exe test/test/02.chrX:153000002-153400000.gfa
+# or install it somewhere and point $PATH to it
+```
 
 ## <a name="openbsd"></a>OpenBSD
 
@@ -672,7 +711,7 @@ I tried making a BSD makefile, but some things started to get complicated,
 and in the end I decided against wasting more time on that.
 
 ```bash
-$ gmake -f Makefile.openbsd -j install
+gmake -f Makefile.openbsd -j install
 ```
 
 #### Usage
