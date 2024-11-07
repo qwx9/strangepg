@@ -1,24 +1,8 @@
-# Strange pangenome scale visualization
+# Strange pangenome scale graph visualization
 
 Interactive visualization of large genome graphs
 in [GFAv1 format](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md)
 à la [Bandage](https://github.com/rrwick/Bandage).
-
-Sales pitch:
-```
-Visualizing large graphs in the million node scale and beyond remains a challenge and is relevant to multiple fields of study. In
-pangenomics, as databases are continuously enriched by new and high quality assemblies, there is a growing need for tools and
-methods tailored to handle extremely large volumes of data. As pangenome sizes multiply, available techniques quickly hit
-operational limits in terms of processing time and memory. In particular, visualizing graphs in a general, intuitive and interactive
-manner is useful for analysis and interpretation, yet computationally prohibitive at such a scale. The main objective of this
-project is the development of strangepg, a new tool and visualization workflow aiming to address these limitations by employing
-the combination of offline indexing and graph coarsening with the extensive use of a generic external memory layer. By
-offloading the major computational effort to a preprocessing step, the interactive visualizer loads only a small fraction of the
-total data and fetches more from disk only on request. The use of external memory ensures that every step can be performed on
-commodity hardware for arbitrary sized graphs. strangepg is being implemented in C in a highly modular, portable and
-extensible manner, designed to allow substituting different algorithms for most steps with minimal effort, and aims to provide a
-general framework for experimentation with layouting and new visualization techniques.
-```
 
 <p align="center"><img src=".pics/bobub.png"/></p>
 
@@ -52,21 +36,35 @@ Thanks!_
 - [Features](#features)
 - [TL;DR](#tldr)
 - [Installation](#installation)
+  + [Hardware requirements](#hardware-requirements)
+  + [Software requirements](#software-requirements)
+  + [Bioconda](#bioconda)
+  + [Linux](#linux)
+  + [Windows (Cygwin)](#windows-cygwin)
+  + [Windows (WSL2)](#windows-wsl2)
+  + [OpenBSD](#openbsd)
+  + [9front](#9front)
 - [Usage](#usage)
+  + [Command-line options](#command-line-options)
 - [Layouting](#layouting)
+  + [Basic layouting](#basic-layouting)
+  + [Interaction](#interaction)
+  + [Loading from and saving to file](#loading-from-and-saving-to-file)
 - [Navigation](#navigation)
 - [Graph manipulation](#interaction)
-- [Loading tags from CSV files](#csv)
-- [Example applications](#applications)
-- [Additional compilation settings](#compilationsettings)
+  + [Examples](#examples)
+- [Loading tags from CSV files](#loading-tags-from-csv-files)
+  + [Format notes](#format-notes)
+- [Example applications](#example-applications)
+  + [Conga-line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segment-order)
+  + [Random coordinates](#random-coordinates)
+  + [Linear layout using bubble id tags from gaftools](#linear-layout-using-bubble-id-tags-from-gaftools)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
-- [Windows](#windows)
-- [OpenBSD](#openbsd)
-- [9front](#9front)
+- [References](#references)
 
 
-## <a name="features"></a>Features
+## Features
 
 - Scaling to arbitrarily large graphs via coarsening (not yet merged!); expanding/retracting parts of the graph on-demand with the mouse or object lookups and commands.
 - Layouting, rendering, drawing to the screen and handling user interface, file loading, graph manipulation
@@ -120,7 +118,7 @@ Future:
 Released under the terms of the MIT license.
 
 
-## <a name="tldr"></a>TL;DR
+## TL;DR
 
 Mandatory arguments: a graph in GFA format,
 always as the last command line parameter.
@@ -156,16 +154,17 @@ Load layout from a file named some.lay
 strangepg -f some.lay some.gfa
 ```
 
-## <a name="installation"></a>Installation
+## Installation
 
 Currently only Linux, OpenBSD, Windows (through Cygwin) and Plan9front
 are supported (x86, amd64).
+MinGW is not suppored due to missing compiler features (extended identifiers).
 Other BSDs might work as well, but it's untested.
 A macOS (Metal) port will arrive as soon as someone kindly sacrifices their laptop
 for a while.
 A native Windows port (MSVC + D3D11) is also planned.
 
-Installation can be done from source or via [bioconda](https://bioconda.github.io/).
+Installation can be done from source or (for Linux only) via [bioconda](https://bioconda.github.io/).
 
 #### Hardware requirements
 
@@ -178,7 +177,22 @@ This won't "just work" on arm64 (aarch64), although a port wouldn't be hard.
 I don't have the hardware at hand, 
 but boards such as the Raspberry Pi 4 and up are in theory compatible.
 
+#### Software requirements
+
+strangepg requires an OpenGL 4.3+ implementation
+and X11 libraries.
+Those are usually already present on typical Unix-like systems.
+Wayland is currently not supported natively.
+
+Compilation has been tested with clang and gcc on Unix-like environments,
+and kencc on 9front.
+It is known to work with gcc 11.4.0+ and clang 14.0.0+,
+but the theoretical minimum versions are resp. 10.1 and 3.3
+because of extensive use of utf8 and extended identifiers.
+
 #### Bioconda
+
+Currently only for Linux.
 
 Install conda, add the bioconda channel, then:
 
@@ -186,7 +200,15 @@ Install conda, add the bioconda channel, then:
 conda install strangepg
 ```
 
-#### Compilation from source
+#### Linux
+
+Installing dependencies (command line for Ubuntu systems, adapt for your own):
+
+```bash
+apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev
+```
+
+Building and installing strangepg:
 
 ```bash
 git clone https://github.com/qwx9/strangepg
@@ -198,29 +220,90 @@ _-j_ is an optional flag to enable parallel building using all available cores.
 This installs the binaries ```strangepg``` and ```strawk```,
 by default in **$HOME/.local/bin**.
 If this directory is not in your $PATH or a different installation directory is desired,
-see [Additional compilation settings](#compilationsettings) below.
+use the `PREFIX` make variable:
 
-**NOTE**: manual compilation with **clang is recommended** as it currently __may__ produce noticeably faster binaries.
-Use the [CC make variable](#compilationsettings) to force compilation with it.
-To my knowledge, bioconda binaries are built with GCC and thus may have slightly lower performance.
-I do not yet know why.
-
-#### Dependencies
-
-strangepg requires an OpenGL implementation and X11 libraries.
-Those are usually already present on typical Linux systems.
-Wayland is not supported natively.
-
-Command line for ubuntu (adapt to your system):
 ```bash
-apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev 
+sudo make PREFIX=/usr/local install
 ```
 
-Tested with gcc 11.4.0 and 13.2.0, and clang 14.0.0 and 17.0.6
-on Arch Linux, Void Linux and Ubuntu 22.04/24.04.
+**NOTE**: manual compilation with **clang is recommended** as it currently __may__ produce somewhat faster binaries.
+
+To set the compiler, use the `CC` make variable:
+
+```bash
+make CC=clang -j install
+```
+
+Known to work on Ubuntu 22.04/24.04, Arch Linux and Void Linux.
+
+#### Windows (Cygwin)
+
+Tested only via MobaXterm (v24.2+, or any version with gcc 10.1+).
+To build and run the Cygwin port, install the following packages
+and their dependencies:
+
+```bash
+apt install make gcc-core libgl-devel libxcursor-devel libxi-devel
+```
+
+The command may be `apt` or `apt-get` depending on version.
+
+Then run make against the Cygwin makefile:
+
+```bash
+git clone https://github.com/qwx9/strangepg
+cd strangepg
+make -j -f Makefile.cygwin install
+```
+
+This will install the binaries in `/usr/bin` by default.
+
+It is no longer possible to build static binaries with Cygwin.
+As such, strangepg can only be run from within Cygwin's environment.
+In other words, the .exe files built cannot be used outside of a Cygwin (or MobaXterm) terminal.
+
+#### Windows (WSL2)
+
+The installation procedure is identical as with Linux above.
+Whether it works or crashes on OpenGL initialization seems hit-or-miss,
+for unknown reasons, possibly related to Wayland replacing X11 on WSL.
+Where it worked, WSL2 with Ubuntu 24.04 suffered very poor performance due to upstream bugs;
+for the time being, if it does in fact work, prefer Ubuntu 22.04.
+
+#### OpenBSD
+
+All required libraries and headers are already included in the distribution.
+The only additional build dependency is `gmake`.
+I tried making a BSD makefile, but some things started to get complicated,
+and in the end I decided against wasting more time on that.
+
+```sh
+pkg_add -a gmake
+```
+
+Install with:
+
+```sh
+gmake -f Makefile.openbsd -j install
+```
+
+The default `PREFIX` is `$HOME/.local/bin`.
+Change this by adding a `PREFIX=` to your gmake command line.
+
+You might want to enable SMT/Hyperthreading or lose much of the performance.
+Check the [OpenBSD FAQ](https://www.openbsd.org/faq/faq10.html#SMT)
+on how and why this is disabled by default.
+
+#### 9front
+
+Build with _mk_ instead of _make_ in the usual manner.
+Additionally requires [npe](https://git.sr.ht/~ft/npe); it's really only required to build khash.
+A better solution might exist since SDL2 isn't used at all.
+
+Currently broken until the rendering component is brought up to date.
 
 
-## <a name="usage"></a>Usage
+## Usage
 
 strangepg requires at least one input file as argument.
 It currently supports graphs in GFA format.
@@ -297,7 +380,7 @@ This option squishes nodes as close to each other as possible
 so as to appear as if there is no depth.
 
 
-## <a name="layouting"></a>Layouting
+## Layouting
 
 Layouting is performed and visualized in real time and in parallel.
 Currently all available layout algorithms are based on a spring model force-directed approach,
@@ -372,7 +455,7 @@ with the `exportlayout("file")` and `importlayout("file")` functions
 <p align="center"><img src=".pics/export.png"/></p>
 
 
-## <a name="navigation"></a>Navigation
+## Navigation
 
 Moving the graph around is done primarily with the mouse.
 
@@ -422,7 +505,7 @@ Feedback from [commands](#interaction) will appear here.
 <p align="center"><img src=".pics/log.png"/></p>
 
 
-## <a name="interaction"></a>Graph manipulation
+## Graph manipulation
 
 strangepg embeds a simple graph manipulation language,
 which presents tags as tables (associative arrays)
@@ -515,7 +598,7 @@ readcsv("filepath")
 See [strawk.md](strawk.md) for a more detailed overview.
 
 
-## <a name="csv"></a>Loading tags from CSV files
+## Loading tags from CSV files
 
 CSV files can be loaded at start up with the `-c` flag or at runtime
 uuto feed or modify tags for existing nodes.
@@ -558,7 +641,7 @@ Each line must have the same number of fields as the header, but fields may be e
 
 _Soon, deathmatching in graph space_
 
-## <a name="applications"></a>Example applications
+## Example applications
 
 One of the goals of _strangepg_ is to enable experimentation with layouting.
 Currently, the default layouting algorithm honors a set of tags
@@ -602,31 +685,7 @@ y0[CL[i] != orange] = 2 - 4 * rand()
 <p align="center"><img src=".pics/bo.png"/></p>
 
 
-## <a name="compilationsettings"></a>Additional compilation settings
-
-#### Installation prefix
-
-By default, the installation path is `$HOME/.local/bin`.
-To install to a different directory, use the `PREFIX` make variable:
-
-```bash
-# example: install in /usr/local/bin via sudo:
-make -j
-sudo make PREFIX=/usr/local install
-```
-
-#### Compiler
-
-To build using a different compiler, eg. clang, use the `CC` make variable:
-
-```bash
-make CC=clang -j
-```
-
-Tested with clang and gcc only.
-
-
-## <a name="bugs"></a>Known bugs
+## Known bugs
 
 Major bugs:
 - currently broken on WSL, it bails during of GL initialization (Wayland? OpenGL ES? Windows OpenGL limitation? Don't know),
@@ -646,7 +705,7 @@ Minor:
 - Web colors with a # are not parsed, but hex values with 0x are
 
 
-## <a name="bundled"></a>Used and bundled alien software
+## Used and bundled alien software
 
 Data structures:
 - [khashl](https://github.com/attractivechaos/khashl)
@@ -665,72 +724,6 @@ strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
 ![](.pics/plan.png)
 
-## <a name="windows"></a>Windows
-
-#### Installation
-
-Only Cygwin (not MinGW) is currently supported,
-and has only been tested through MobaXterm.
-WSL1/2 may or may not work, but if it does,
-performance is significantly worse because of upstream bugs.
-
-To build and run the Cygwin port, install the following packages
-and their dependencies:
-
-```bash
-apt install make gcc-core libgl-devel libxcursor-devel libxi-devel
-```
-
-Then run make against the Cygwin makefile:
-
-```bash
-make -j -f Makefile.cygwin
-```
-
-The `install` target will copy the binaries to `$HOME/.local/bin`,
-which is not in the `$PATH` by default.
-
-#### Usage
-
-It is no longer possible to build static binaries with Cygwin.
-As such, strangepg can only be ran from within Cygwin's environment.
-In other words, the .exe file built cannot be used outside of the Cygwin or MobaXterm terminal it was built in.
-
-```bash
-./strangepg.exe test/test/02.chrX:153000002-153400000.gfa
-# or install it somewhere and point $PATH to it
-```
-
-## <a name="openbsd"></a>OpenBSD
-
-#### Installation
-
-All required libraries and headers are already included in the distribution.
-The only additional build dependency is `gmake`.
-I tried making a BSD makefile, but some things started to get complicated,
-and in the end I decided against wasting more time on that.
-
-```bash
-gmake -f Makefile.openbsd -j install
-```
-
-#### Usage
-
-The same hardware requirements apply,
-but you might want to enable SMT/Hyperthreading or lose much of the performance.
-Check the [OpenBSD FAQ](https://www.openbsd.org/faq/faq10.html#SMT)
-on how and why this is disabled by default.
-
-
-## <a name="9front"></a>9front
-
-Build with _mk_ instead of _make_ in the usual manner.
-Additionally requires [npe](https://git.sr.ht/~ft/npe); it's really only required to build khash.
-A better solution might exist since SDL2 isn't used at all.
-
-Currently broken until the rendering component is brought up to date.
-
-
-## <a name="references"></a>References
+## References
 
 [1] Fruchterman, Thomas M. J.; Reingold, Edward M. (1991), "Graph Drawing by Force-Directed Placement", Software: Practice and Experience, 21 (11), Wiley: 1129–1164, doi:10.1002/spe.4380211102, S2CID 31468174
