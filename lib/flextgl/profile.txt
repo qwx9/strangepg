@@ -1,4 +1,0 @@
-# This file is used as input for flextGLgen.py
-# It defines the targetted OpenGL version and lists the used extensions.
-
-version 4.3 core

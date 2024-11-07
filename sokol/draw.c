@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include <signal.h>
-#include "lib/flextgl/flextGL.h"
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
@@ -345,8 +344,6 @@ end:
 static void
 init(void)
 {
-	if(!flextInit())
-		sysfatal("flextGL: failed to initialize: %s", error());
 	sg_setup(&(sg_desc){
 		.environment = sglue_environment(),
 		.logger.func = slog_func,

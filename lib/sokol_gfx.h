@@ -6824,9 +6824,6 @@ _SOKOL_PRIVATE void _sg_dummy_update_image(_sg_image_t* img, const sg_image_data
 #endif
 
 // X Macro list of GL function names and signatures
-#ifdef FLEXT_CORE_PROFILE
-#define _SG_GL_FUNCS
-#else
 #define _SG_GL_FUNCS \
     SG_GL_FUNCS_EXT \
     _SG_XMACRO(glBindVertexArray,                 void, (GLuint array)) \
@@ -6933,8 +6930,6 @@ _SOKOL_PRIVATE void _sg_dummy_update_image(_sg_image_t* img, const sg_image_data
     _SG_XMACRO(glSamplerParameterfv,              void, (GLuint sampler, GLenum pname, const GLfloat* params)) \
     _SG_XMACRO(glDeleteSamplers,                  void, (GLsizei n, const GLuint* samplers)) \
     _SG_XMACRO(glBindBufferBase,                  void, (GLenum target, GLuint index, GLuint buffer))
-
-#endif	/* FLEXT_CORE_PROFILE */
 
 // generate GL function pointer typedefs
 #define _SG_XMACRO(name, ret, args) typedef ret (GL_APIENTRY* PFN_ ## name) args;

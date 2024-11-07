@@ -16,7 +16,6 @@ OBJS:=\
 	sokol/shaders.o\
 	sokol/ui.o\
 	lib/chan.o\
-	lib/flextgl/flextGL.o\
 	lib/queue.o\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
