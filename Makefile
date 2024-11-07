@@ -118,6 +118,11 @@ CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
 LDFLAGS?=
 LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 
+ifdef EGL
+	CFLAGS+= -DSOKOL_FORCE_EGL
+	LDLIBS+= -lEGL
+endif
+
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
 	ifeq ($(CC), clang)
