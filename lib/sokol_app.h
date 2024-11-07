@@ -7683,12 +7683,8 @@ _SOKOL_PRIVATE void _sapp_win32_init_console(void) {
             con_valid = AttachConsole(ATTACH_PARENT_PROCESS);
         }
         if (con_valid) {
-            FILE* res_fp = 0;
-            errno_t err;
-            err = freopen_s(&res_fp, "CON", "w", stdout);
-            (void)err;
-            err = freopen_s(&res_fp, "CON", "w", stderr);
-            (void)err;
+            freopen("CON", "w", stdout);
+            freopen("CON", "w", stderr);
         }
     }
     if (_sapp.desc.win32_console_utf8) {
