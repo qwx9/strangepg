@@ -7,8 +7,7 @@ ALLTARGETS:=\
 DIRS:=\
 	strawk\
 
-#PREFIX:= /usr/local
-PREFIX?= $(HOME)/.local
+PREFIX?= /usr
 BINDIR:= $(PREFIX)/bin
 
 OBJS:=\
