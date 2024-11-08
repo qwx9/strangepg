@@ -56,7 +56,7 @@ Thanks!_
 - [Loading tags from CSV files](#loading-tags-from-csv-files)
   + [Format notes](#format-notes)
 - [Example applications](#example-applications)
-  + [Conga-line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segment-order)
+  + [Conga line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segments-order)
   + [Random coordinates](#random-coordinates)
   + [Linear layout using bubble id tags from gaftools](#linear-layout-using-bubble-id-tags-from-gaftools)
 - [Known bugs](#bugs)
@@ -656,7 +656,7 @@ They can be loaded from the GFA itself, from CSV or live by using the prompt.
 
 See [strawk.md](strawk.md) for a more detailed overview.
 
-#### Conga-line: linear layout in GFA segments order
+#### Conga line: linear layout in GFA segments order
 
 ```awk
 fx[1] = 8 * node[i]

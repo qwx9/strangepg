@@ -191,7 +191,8 @@ compute3d(void *arg, volatile int *stat, int i)
 					Δr = Δy;
 			}
 			f = MIN(t, fabs(Δz));
-			z += f * Δz / δ;
+			Δz = f * Δz / δ;
+			z += Δz;
 			r->pos[2] = z;
 			if(Δr < Δz)
 				Δr = Δz;
