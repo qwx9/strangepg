@@ -6,6 +6,7 @@ typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
+typedef struct Attr Attr;
 
 #pragma incomplete File
 #pragma incomplete Coarse
@@ -28,13 +29,17 @@ enum{
 	FNinity = 1<<3,
 	FNinitpos = FNinitx | FNinity,
 };
+struct Attr{
+	u32int color;
+	int length;
+	u32int flags;
+	Vertex pos0;
+};
 struct Node{
 	ioff *in;		/* dynamic array (edge indices) */
 	ioff *out;		/* dynamic array (edge indices) */
-	/* FIXME: attr ht */
-	int length;
-	Vertex pos0;
-	u32int flags;
+	ioff cid;
+	Attr attr;
 };
 enum{
 	GFlayme = 1<<0,
@@ -45,7 +50,7 @@ struct Graph{
 	int type;
 	u32int flags;
 	File *f;
-	Coarse *c;
+	Coarse *ctree;
 	RWLock lock;
 	Node *nodes;	/* dynamic array */
 	ssize nedges;

@@ -20,7 +20,7 @@ fixlengths(Graph *g, int min, int max)
 
 	Δ = MAX(1, max - min);
 	for(n=g->nodes, ne=n+dylen(n), r=rnodes; n<ne; n++, r++)
-		r->len = Maxsz - (Maxsz - Minsz) * exp(-n->length / (float)Δ);
+		r->len = Maxsz - (Maxsz - Minsz) * exp(-n->attr.length / (float)Δ);
 }
 
 static inline void

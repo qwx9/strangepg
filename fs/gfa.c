@@ -83,19 +83,19 @@ void
 settag(Node *n, ioff id, char *tag, char *val)
 {
 	if(strcmp(tag, "LN") == 0)
-		n->length = atoi(val);
+		n->attr.length = atoi(val);
 	else if(strcmp(tag, "fx") == 0){
-		n->pos0.x = atof(val);
-		n->flags |= FNfixedx | FNinitx;
+		n->attr.pos0.x = atof(val);
+		n->attr.flags |= FNfixedx | FNinitx;
 	}else if(strcmp(tag, "fy") == 0){
-		n->pos0.y = atof(val);
-		n->flags |= FNfixedy | FNinity;
+		n->attr.pos0.y = atof(val);
+		n->attr.flags |= FNfixedy | FNinity;
 	}else if(strcmp(tag, "x0") == 0){
-		n->pos0.x = atof(val);
-		n->flags |= FNinitx;
+		n->attr.pos0.x = atof(val);
+		n->attr.flags |= FNinitx;
 	}else if(strcmp(tag, "y0") == 0){
-		n->pos0.y = atof(val);
-		n->flags |= FNinity;
+		n->attr.pos0.y = atof(val);
+		n->attr.flags |= FNinity;
 	}
 	pushcmd("%s[label[%d]] = \"%s\"", tag, id, val);
 }
@@ -104,7 +104,7 @@ static inline void
 setlength(Node *n, ioff id, int len)
 {
 	pushcmd("LN[label[%d]] = %d", id, len);
-	n->length = len;
+	n->attr.length = len;
 }
 
 static int

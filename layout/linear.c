@@ -60,12 +60,12 @@ new(Graph *g)
 			x = rnodes[iv].pos[0] + 1.0f;
 			y = rnodes[iv].pos[1] + 1.0f;
 		}
-		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			if((u->flags & FNfixed) == 0){
-				x = u->pos0.x * Nodesz;
-				y = u->pos0.y * Nodesz * Ptsz;
+		if((u->attr.flags & (FNfixed|FNinitpos)) != 0){
+			if((u->attr.flags & FNfixed) == 0){
+				x = u->attr.pos0.x * Nodesz;
+				y = u->attr.pos0.y * Nodesz * Ptsz;
 			}
-			if((u->flags & FNfixed) != 0)
+			if((u->attr.flags & FNfixed) != 0)
 				p.fixed = 1;
 			else
 				p.fixed = 2;

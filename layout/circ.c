@@ -58,14 +58,14 @@ new(Graph *g)
 			p.dafuq = 1;
 			goto skip;
 		}
-		if((u->flags & (FNfixed|FNinitpos)) != 0){
-			x = u->pos0.x;
-			y = u->pos0.y;
+		if((u->attr.flags & (FNfixed|FNinitpos)) != 0){
+			x = u->attr.pos0.x;
+			y = u->attr.pos0.y;
 			if(max < x)
 				max = x;
 			if(min > x)
 				min = x;
-			if((u->flags & FNfixed) != 0)
+			if((u->attr.flags & FNfixed) != 0)
 				p.fixed = 1;
 			else
 				p.fixed = 2;

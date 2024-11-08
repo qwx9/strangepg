@@ -89,11 +89,11 @@ fnsetpos(Graph *g, char *sid, char *pos, int fix, int axis)
 		return -1;
 	}
 	if(axis == 0){
-		n->flags |= fix ? FNfixedx | FNinitx : FNinitx;
-		n->pos0.x = c;
+		n->attr.flags |= fix ? FNfixedx | FNinitx : FNinitx;
+		n->attr.pos0.x = c;
 	}else{
-		n->flags |= fix ? FNfixedy | FNinity : FNinity;
-		n->pos0.y = c;
+		n->attr.flags |= fix ? FNfixedy | FNinity : FNinity;
+		n->attr.pos0.y = c;
 	}
 	return 0;
 }
@@ -118,12 +118,9 @@ fnsetcolor(char *sid, char *col)
 }
 
 static inline int
-fnsetsel(Graph *, char *sid, char *s)
+fnsetsel(Graph *, char *s)
 {
-	ioff id;
-
-	id = str2idx(sid);
-	showselected(s, id);
+	showselected(s);
 	return 0;
 }
 
@@ -192,7 +189,7 @@ readcmd(char *s)
 			continue;
 		case 's':
 			if(s[1] == 0){
-				showselected(nil, -1);
+				showselected(nil);
 				req |= Reqshallowdraw;
 				continue;
 			}
@@ -265,9 +262,9 @@ readcmd(char *s)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
 			break;
 		case 's':
-			if(m != 2)
+			if(m != 1)
 				goto invalid;
-			if(fnsetsel(g, fld[0], fld[1]) < 0)
+			if(fnsetsel(g, fld[0]) < 0)
 				goto error;
 			req |= Reqshallowdraw;
 			break;

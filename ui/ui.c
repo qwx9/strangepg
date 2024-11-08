@@ -136,6 +136,25 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
+static inline void
+highlightnode(ioff id)
+{
+	RNode *r;
+
+	r = rnodes + id;
+	if(theme[Cbg] >> 8 == 0 && r->col[0] > 0.6f && r->col[1] > 0.6f && r->col[2] > 0.6f
+	|| r->col[0] < 0.35f && r->col[1] < 0.35f && r->col[2] < 0.35f)	/* FIXME: gigakludge */
+		return;
+	mixcolors(r->col, theme[Chigh] >> 8);
+}
+
+/* FIXME: will fire off without cause */
+static void
+commitselect(void)
+{
+	pushcmd("selinfo()");
+}
+
 /* FIXME: separate pipeline, quads? */
 static void
 resetbox(void)
@@ -243,6 +262,7 @@ dragselect(int x, int y)
 				if(--id == oid)
 					continue;
 				pushcmd("selectnodebyid(%d)", id);
+				highlightnode(id);
 				oid = id;
 			}
 	for(x=ry.x1; x<ry.x2; x++)
@@ -253,6 +273,7 @@ dragselect(int x, int y)
 				if(--id == oid)
 					continue;
 				pushcmd("selectnodebyid(%d)", id);
+				highlightnode(id);
 				oid = id;
 			}
 	selectionbox(rsel.x1, rsel.y1, rsel.x2, rsel.y2);
@@ -306,14 +327,8 @@ showobject(char *s)
 }
 
 /* FIXME: plan9 */
-static inline void
-highlightnode(ioff id)
-{
-	mixcolors(rnodes[id].col, theme[Chigh] >> 8);
-}
-
 void
-showselected(char *s, ioff id)
+showselected(char *s)
 {
 	char *p;
 
@@ -324,8 +339,6 @@ showselected(char *s, ioff id)
 	}
 	p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
 	strecpy(p, selstr+sizeof selstr, s);
-	if(id != -1 && (id & 1<<31) == 0)
-		highlightnode(id);
 }
 
 static int
@@ -339,6 +352,7 @@ mouseselect(ioff id, int multi)
 				pushcmd("toggleselect(%d)", id);
 			else
 				pushcmd("reselectnode(%d)", id);
+			highlightnode(id);
 		}else{	/* FIXME: edges: not implemented */
 			;
 		}
@@ -391,11 +405,16 @@ mouseevent(Vertex v, Vertex Δ)
 	}else
 		inwin = 0;
 	/* FIXME: clean up */
-	if(m == 0)
+	if(m == 0){
 		endmove();
-	if((m & Mmask) != Mlmb)
+		if((omod & Mmask) == Mlmb){
+			commitselect();
+			resetbox();
+		}
+		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
+	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
 		resetbox();
-	if(m == 0 || (omod & Mrmb) == 0)
+	if((omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(Δ.x != 0.0f || Δ.y != 0.0f)
 		shown = mousehover(v.x, v.y);

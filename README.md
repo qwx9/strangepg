@@ -219,7 +219,7 @@ make -j install
 _-j_ is an optional flag to enable parallel building using all available cores.
 This installs the binaries ```strangepg``` and ```strawk```,
 by default in **$HOME/.local/bin**.
-If this directory is not in your $PATH or a different installation directory is desired,
+If this directory is not in your `$PATH` or a different installation directory is desired,
 use the `PREFIX` make variable:
 
 ```bash
@@ -232,7 +232,14 @@ To set the compiler, use the `CC` make variable:
 
 ```bash
 make CC=clang -j install
+
+It can also be forced to use EGL:
+
+```bash
+make EGL=1 -j install
 ```
+
+Multiple make variables may be specified at the same time.
 
 Known to work on Ubuntu 22.04/24.04, Arch Linux and Void Linux.
 
@@ -698,8 +705,8 @@ Less major bugs:
 - Layouting currently doesn't place some of the nodes nicely;
 many plots look ugly by default but can be fixed by just moving the nodes around.
 - 3d navigation is a kludge on top of 2d navigation
-- the selection box is a kludge and is resource-heavy; the renderer is
-fairly efficient, but it could be made orders of magnitude faster
+- The selection box is a kludge and is stupidly resource-heavy
+- The renderer is fairly efficient, but it could be made orders of magnitude faster
 
 Minor:
 - Web colors with a # are not parsed, but hex values with 0x are

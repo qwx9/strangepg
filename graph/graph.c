@@ -30,12 +30,12 @@ newnode(Graph *g, char *s)
 	Node n = {0};
 	RNode r = {0};
 
-	n.length = 1;
-	r.len = 1.0f;
 	off = dylen(g->nodes);
+	n.attr.length = 1;
+	n.attr.color = somecolor(off, &col);
+	r.len = 1.0f;
 	dypush(g->nodes, n);
-	col = "";
-	setcolor(r.col, somecolor(off, &col));
+	setcolor(r.col, n.attr.color);
 	dypush(rnodes, r);
 	DPRINT(Debugfs, "addnode %d:%s\n", off, s != nil ? s : "");
 	if(s != nil)

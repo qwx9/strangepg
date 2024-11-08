@@ -170,20 +170,27 @@ function findnode(name,	id){
 	id = node[name]
 	print "N", id
 }
-function selinfostr(	id, name, l){
+function selinfostr(	id, name, l, n, m, s){
 	if(length(selected) == 0)
 		return ""
 	l = 0
 	s = ""
+	n = m = 0
 	for(id in selected){
 		name = label[id]
 		if(name in LN)
 			l += LN[name]
-		s = s (length(s) == 0 ? "" : ",") name
+		if(m < 28){
+			s = s (length(s) == 0 ? "" : ",") name
+			m = length(s)
+		}else if(n == 0){
+			n++
+			s = s ",..."
+		}
 	}
 	if(length(selected) == 1)
 		return s ", length=" l
-	return s "; total length=" l
+	return s "; total length=" l " in " length(selected) " nodes"
 }
 function nodeinfostr(id,	s){
 	name = label[id]
@@ -191,6 +198,12 @@ function nodeinfostr(id,	s){
 	if(name in LN)
 		s = s ", length=" LN[name]
 	return s
+}
+function selinfo(){
+	if(length(selected) != 0)
+		print "s", selinfostr()
+	#else
+	#	print "E bug: nothing selected"
 }
 function nodeinfo(id,	name, s){
 	if(!checknodeid(id))
@@ -217,9 +230,8 @@ function deselectnodebyid(id){
 		deselect()
 		return
 	}
-	print "c", id, CL[label[id]]
 	delete selected[id]
-	print "s", -1, selinfostr()
+	print "c", id, CL[label[id]]
 }
 function deselectnode(name,	id){
 	if(!checknodename(name))
@@ -230,7 +242,6 @@ function selectnodebyid(id,	name, s, l){
 	if(!checknodeid(id) || id in selected)
 		return
 	selected[id] = 1
-	print "s", id, selinfostr()
 }
 function selectnode(name, id){
 	if(!checknodename(name))

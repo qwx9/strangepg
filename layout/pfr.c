@@ -46,12 +46,12 @@ new_(Graph *g, int is3d)
 	etab = nil;
 	k = C * sqrtf((float)Area / dylen(rnodes));
 	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
-		if((u->flags & FNinitx) != 0)
-			r->pos[0] = u->pos0.x;
+		if((u->attr.flags & FNinitx) != 0)
+			r->pos[0] = u->attr.pos0.x;
 		else
 			r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
-		if((u->flags & FNinity) != 0)
-			r->pos[1] = u->pos0.y;
+		if((u->attr.flags & FNinity) != 0)
+			r->pos[1] = u->attr.pos0.y;
 		else
 			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
 		if(!is3d){
@@ -65,10 +65,10 @@ new_(Graph *g, int is3d)
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
 		p.ne = 0;
-		p.flags = u->flags & FNfixed;
+		p.flags = u->attr.flags & FNfixed;
 		/* FIXME: have to look at twice as many edges because it's not
 		 * global... */
-		if((u->flags & FNfixed) != FNfixed){
+		if((u->attr.flags & FNfixed) != FNfixed){
 			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++)
 				dypush(etab, *e >> 2);
 			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++)

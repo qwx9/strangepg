@@ -13,7 +13,7 @@ void	prompt(Rune);
 void	focusobj(void);
 void	focusnode(ioff);
 void	showobject(char*);
-void	showselected(char*, ioff);
+void	showselected(char*);
 int	mouseevent(Vertex, Vertex);
 int	keyevent(Rune, int);
 void	evloop(void);
