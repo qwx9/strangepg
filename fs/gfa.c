@@ -83,7 +83,7 @@ void
 settag(Node *n, ioff id, char *tag, char *val)
 {
 	if(strcmp(tag, "LN") == 0)
-		rnodes[id].len = atoi(val);
+		n->length = atoi(val);
 	else if(strcmp(tag, "fx") == 0){
 		n->pos0.x = atof(val);
 		n->flags |= FNfixedx | FNinitx;
@@ -101,14 +101,14 @@ settag(Node *n, ioff id, char *tag, char *val)
 }
 
 static inline void
-setlength(ioff id, int len)
+setlength(Node *n, ioff id, int len)
 {
 	pushcmd("LN[label[%d]] = %d", id, len);
-	rnodes[id].len = len;
+	n->length = len;
 }
 
 static int
-collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
+collectgfanodes(File *f, vlong *offs, Graph *g, namemap *h)
 {
 	char *s;
 	int c, m, w, nerr, minl, maxl;
@@ -127,12 +127,12 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 			goto err;
 		if((id = getid(h, s)) < 0)
 			sysfatal("collectgfanodes: bug: %s not found", s);
-		n = nodes + id;
+		n = g->nodes + id;
 		DPRINT(Debugmeta, "collectgfanodes node[%d]: %s %d", id, s, f->trunc);
 		if((s = nextfield(f)) != nil){
 			if((w = f->toksz) > 0){
 				if(w > 1 || *s != '*'){
-					setlength(id, w);
+					setlength(n, id, w);
 					c++;
 				}else
 					w = 0;
@@ -140,7 +140,7 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 			}else
 				goto err;
 		}else if((w = f->toksz) > 0){	/* field just too long */
-			setlength(id, w);
+			setlength(n, id, w);
 			c++;
 		}else
 			goto err;
@@ -152,11 +152,13 @@ collectgfanodes(File *f, vlong *offs, Node *nodes, namemap *h)
 			}
 			s[2] = 0;
 			/* ignore length if sequence was inlined */
-			if(strcmp(s, "LN") == 0 && w > 0){
+			if(strcmp(s, "LN") == 0){
 				m = atoi(s + 5);
-				if(m != w)
+				if(w == 0){
+					w = m;
+					setlength(n, id, w);
+				}else if(m != w)
 					warn("segment[%d]: conflicting sequence length %d with LN=%d\n", id, w, m);
-
 				continue;
 			}
 			settag(n, id, s, s+5);
@@ -176,7 +178,7 @@ err:
 		}
 	}
 	if(maxl > 1)
-		fixlengths(minl, maxl);
+		fixlengths(g, minl, maxl);
 	return c;
 }
 
@@ -224,7 +226,7 @@ collectgfameta(Aux *a)
 {
 	int n, m;
 
-	if((n = collectgfanodes(a->g.f, a->nodeoff, a->g.nodes, a->names)) < 0)
+	if((n = collectgfanodes(a->g.f, a->nodeoff, &a->g, a->names)) < 0)
 		return -1;
 	if((m = collectgfaedges(a->g.f, a->edgeoff)) < 0)
 		return -1;

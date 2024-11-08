@@ -101,9 +101,8 @@ void	pandraw(float, float);
 void	rotdraw(Vertex);
 void	worldview(Vertex);
 ioff	mousepick(int, int);
+void	fixlengths(Graph *g, int, int);
 int	redraw(int);
-
-void	fixlengths(int, int);
 
 enum{
 	Cbg,

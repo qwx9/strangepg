@@ -30,6 +30,7 @@ newnode(Graph *g, char *s)
 	Node n = {0};
 	RNode r = {0};
 
+	n.length = 1;
 	r.len = 1.0f;
 	off = dylen(g->nodes);
 	dypush(g->nodes, n);

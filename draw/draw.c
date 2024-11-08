@@ -12,20 +12,15 @@ ssize ndnodes, ndedges;
 
 /* FIXME: not great */
 void
-fixlengths(int min, int max)
+fixlengths(Graph *g, int min, int max)
 {
 	int Δ;
-	RNode *r, *re;
+	Node *n, *ne;
+	RNode *r;
 
-	Δ = max - min;
-	if(Δ < 1)
-		return;
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
-		if(Δ < 1)
-			r->len = Nodesz;
-		else
-			r->len = Maxsz - (Maxsz - Minsz) * exp(-r->len / (float)Δ);
-	}
+	Δ = MAX(1, max - min);
+	for(n=g->nodes, ne=n+dylen(n), r=rnodes; n<ne; n++, r++)
+		r->len = Maxsz - (Maxsz - Minsz) * exp(-n->length / (float)Δ);
 }
 
 static inline void
