@@ -148,8 +148,11 @@ drawworld(int go)
 			continue;
 		if((g->flags & GFdrawme) != 0)
 			r++;
-		else if(!go)
+		else if(!go){
+			rn += dylen(g->nodes);
+			re += g->nedges;
 			continue;
+		}
 		lockgraph(g, 0);
 		rne = drawnodes(rn, g);
 		re = drawedges(re, rn, g);
