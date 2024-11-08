@@ -91,7 +91,7 @@ void
 pushgraph(Graph *g)
 {
 	if(g->nedges + nelem(selbox) >= dylen(redges))
-		dygrow(redges, g->nedges + nelem(selbox));
+		dyresize(redges, g->nedges + nelem(selbox));
 	dypush(graphs, *g);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);

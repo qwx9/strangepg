@@ -101,7 +101,7 @@ void	pandraw(float, float);
 void	rotdraw(Vertex);
 void	worldview(Vertex);
 ioff	mousepick(int, int);
-int	redraw(void);
+int	redraw(int);
 
 void	fixlengths(int, int);
 

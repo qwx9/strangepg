@@ -138,7 +138,7 @@ drawnodes(RNode *r, Graph *g)
 }
 
 static int
-drawworld(void)
+drawworld(int go)
 {
 	int r;
 	Graph *g;
@@ -153,6 +153,8 @@ drawworld(void)
 			continue;
 		if((g->flags & GFdrawme) != 0)
 			r++;
+		else if(!go)
+			continue;
 		lockgraph(g, 0);
 		rne = drawnodes(rn, g);
 		re = drawedges(re, rn, g);
@@ -167,25 +169,21 @@ drawworld(void)
 static void
 drawui(void)
 {
-	if(ndedges < 0 || selbox[0].pos2[0] - selbox[0].pos1[0] == 0.0f)
+	if(ndedges < 1 || selbox[0].pos2[0] - selbox[0].pos1[0] == 0.0f)
 		return;
-	if(ndedges + nelem(selbox) >= dylen(redges))
-		dygrow(redges, ndedges + nelem(selbox));
+	assert(ndedges + nelem(selbox) <= dylen(redges));	/* realloc would race */
 	memcpy(redges + ndedges, selbox, sizeof selbox);
 	ndedges += nelem(selbox);
 }
 
 int
-redraw(void)
+redraw(int go)
 {
-	int go;
 	double t;
 
 	if((debug & Debugperf) != 0)
 		t = μsec();
-	go = 1;
-	if(!drawworld())
-		go = 0;
+	go = drawworld(go);
 	drawui();
 	DPRINT(Debugperf, "redraw: %.2f ms", (μsec() - t) / 1000);
 	return go;
