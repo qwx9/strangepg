@@ -393,7 +393,7 @@ mouseevent(Vertex v, Vertex Δ)
 	/* FIXME: clean up */
 	if(m == 0)
 		endmove();
-	if((m & Mlmb) == 0)
+	if((m & Mmask) != Mlmb)
 		resetbox();
 	if(m == 0 || (omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
