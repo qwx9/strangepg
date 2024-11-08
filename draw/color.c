@@ -12,7 +12,7 @@ u32int *theme;
 static u32int theme1[Cend] = {
 	[Cbg]	= 0x000000ff,
 	[Ctext]	= 0xbb1100ff,
-	[Cedge]	= 0xbbbbbb40,
+	[Cedge]	= 0xbbbbbb70,
 	[Cemph]	= 0xff0000ff,
 	[Chigh] = 0xffffffff,
 };
@@ -232,7 +232,7 @@ somecolor(ioff i, char **name)
 	i %= nelem(pal);
 	if(name != nil)
 		*name = pal[i].name;
-	return pal[i].col << 8 | 0xb0;
+	return pal[i].col << 8 | 0xc0;
 }
 
 void

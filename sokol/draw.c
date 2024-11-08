@@ -61,13 +61,15 @@ setcolor(float *col, u32int v)
 Color *
 newcolor(u32int v)
 {
+	float a;
 	Color *c;
 
+	a = (v & 0xff) / 255.f;
 	c = emalloc(sizeof *c);
-	c->col[0] = (v >> 24 & 0xff) / 255.f;
-	c->col[1] = (v >> 16 & 0xff) / 255.f;
-	c->col[2] = (v >> 8 & 0xff) / 255.f;
-	c->col[3] = (v & 0xff) / 255.f;
+	c->col[0] = a * ((v >> 24 & 0xff) / 255.f);
+	c->col[1] = a * ((v >> 16 & 0xff) / 255.f);
+	c->col[2] = a * ((v >> 8 & 0xff) / 255.f);
+	c->col[3] = a;
 	return c;
 }
 

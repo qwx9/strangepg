@@ -186,12 +186,12 @@ initgl(void)
 			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
-				.clear_value = { c->col[0], c->col[1], c->col[2], 0.0f },
+				.clear_value = { c->col[0], c->col[1], c->col[2], c->col[3] },
 			},
 			[1] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.store_action = SG_STOREACTION_DONTCARE,
-				.clear_value = { 0 },
+				.clear_value = { 0.0f },
 			},
 		},
 	};
@@ -272,7 +272,7 @@ initgl(void)
 			[0] = {
 				.blend = {
 					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
 					.src_factor_alpha = SG_BLENDFACTOR_ONE,
@@ -348,7 +348,7 @@ initgl(void)
 			[0] = {
 				.blend = {
 					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
 					.src_factor_alpha = SG_BLENDFACTOR_ONE,
@@ -420,7 +420,7 @@ initgl(void)
 			[0] = {
 				.blend = {
 					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
 					.src_factor_alpha = SG_BLENDFACTOR_ONE,
@@ -490,7 +490,7 @@ initgl(void)
 			[0] = {
 				.blend = {
 					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
 					.src_factor_alpha = SG_BLENDFACTOR_ONE,
