@@ -34,6 +34,7 @@ struct D{
 static void *
 new_(Graph *g, int is3d)
 {
+	int orphans;
 	ioff *e, *ee, *etab;
 	double z;
 	float k;
@@ -62,6 +63,7 @@ new_(Graph *g, int is3d)
 		}else
 			r->pos[2] = (float)(W / 2 - nrand(W)) / (W / 2);
 	}
+	orphans = 0;
 	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
 		p.e = dylen(etab);
 		p.ne = 0;
@@ -74,8 +76,12 @@ new_(Graph *g, int is3d)
 			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++)
 				dypush(etab, *e >> 2);
 		}
+		if(p.ne == 0)
+			orphans++;
 		dypush(ptab, p);
 	}
+	if(orphans > 1)
+		logmsg(va("layout: ignoring %d nodes with no adjacencies", orphans));
 	aux = emalloc(sizeof *aux);
 	aux->ptab = ptab;
 	aux->etab = etab;
@@ -133,7 +139,7 @@ compute3d(void *arg, volatile int *stat, int i)
 			if((*stat & LFstop) != 0)
 				return 0;
 			fixed = pp->flags & FNfixed;
-			if(fixed == FNfixed)
+			if(fixed == FNfixed || pp->ne == 0)
 				continue;
 			uw = r->len;
 			x = r->pos[0];
