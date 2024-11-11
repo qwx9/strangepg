@@ -4,9 +4,6 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 
-DIRS:=\
-	strawk\
-
 #PREFIX:= /usr/local
 PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
@@ -24,6 +21,7 @@ OBJS:=\
 	linux/fs.o\
 	linux/sys.o\
 	linux/threads.o\
+	cmd/awk.o\
 	cmd/awkprog.o\
 	cmd/cmd.o\
 	draw/color.o\
@@ -53,6 +51,15 @@ OBJS:=\
 	glsl/edgeidx.frag.o\
 	glsl/scr.vert.o\
 	glsl/scr.frag.o\
+	strawk/awkgram.tab.o\
+	strawk/b.o\
+	strawk/parse.o\
+	strawk/proctab.o\
+	strawk/tran.o\
+	strawk/lib.o\
+	strawk/run.o\
+	strawk/lex.o\
+	strawk/mt19937-64.o
 
 COARSENOBJS:=\
 	coarsen.o\

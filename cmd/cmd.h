@@ -7,4 +7,5 @@ void	readcmd(char*);
 void	pushcmd(char*, ...);
 int	sysinitcmd(void);
 int	initrepl(void);
+void	awk(void*);
 int	initcmd(void);

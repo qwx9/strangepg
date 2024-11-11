@@ -4,17 +4,6 @@
 
 static int fucker[2];	/* children's pipes, mandrake */
 
-static void
-cproc(void)
-{
-	close(epfd[1]);
-	close(fucker[0]);
-	dup(epfd[0], STDIN_FILENO);
-	dup(fucker[1], STDOUT_FILENO);
-	dup(fucker[1], STDERR_FILENO);
-	execl("/usr/bin/env", "env", "strawk", awkprog, nil);
-}
-
 int
 initrepl(void)
 {
@@ -26,9 +15,13 @@ initrepl(void)
 	switch(r){
 	case -1: return -1;
 	case 0:
-		cproc();
-		sysfatal("execl: %s", error());
-		break;
+		close(epfd[1]);
+		close(fucker[0]);
+		dup(epfd[0], STDIN_FILENO);
+		dup(fucker[1], STDOUT_FILENO);
+		dup(fucker[1], STDERR_FILENO);
+		awk(awkprog);
+		exit(0);
 	default:
 		close(epfd[0]);
 		close(fucker[1]);
