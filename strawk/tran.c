@@ -22,7 +22,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#define	DEBUG
 #include <stdio.h>
 #include <math.h>
 #include <ctype.h>
@@ -65,7 +64,7 @@ Cell	*subseploc;	/* SUBSEP */
 Cell	*symtabloc;	/* SYMTAB */
 
 Cell	*nullloc;	/* a guaranteed empty cell */
-Node	*nullnode;	/* zero&null, converted into a node for comparisons */
+TNode	*nullnode;	/* zero&null, converted into a node for comparisons */
 Cell	*literal0;
 
 extern Cell **fldtab;
@@ -80,11 +79,11 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	nullloc = setsymtab("$zero&null", "", v, NUM|STR|CON|DONTFREE, symtab);
 	nullnode = celltonode(nullloc, CCON);
 
-	fsloc = setsymtab("FS", " ", v, STR|DONTFREE, symtab);
+	fsloc = setsymtab("FS", "\t", v, STR|DONTFREE, symtab);
 	FS = &fsloc->sval;
 	rsloc = setsymtab("RS", "\n", v, STR|DONTFREE, symtab);
 	RS = &rsloc->sval;
-	ofsloc = setsymtab("OFS", " ", v, STR|DONTFREE, symtab);
+	ofsloc = setsymtab("OFS", "\t", v, STR|DONTFREE, symtab);
 	OFS = &ofsloc->sval;
 	orsloc = setsymtab("ORS", "\n", v, STR|DONTFREE, symtab);
 	ORS = &orsloc->sval;
@@ -380,10 +379,6 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		(void*)vp, NN(vp->nval), s, vp->tval, donerec, donefld);
 	if ((vp->tval & (NUM | STR)) == 0)
 		funnyvar(vp, "assign to");
-	if (CSV && (vp == rsloc))
-		WARNING("danger: don't set RS when --csv is in effect");
-	if (CSV && (vp == fsloc))
-		WARNING("danger: don't set FS when --csv is in effect");
 	if (isfld(vp)) {
 		donerec = false;	/* mark $0 invalid */
 		fldno = atoi(vp->nval);

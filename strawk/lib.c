@@ -22,7 +22,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#define DEBUG
 #include <stdio.h>
 #include <string.h>
 #ifndef _PLAN9_SOURCE
@@ -219,8 +218,6 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 	return 0;	/* true end of file */
 }
 
-extern int readcsvrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag);
-
 int readrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag)	/* read one record into buf */
 {
 	int sep, c, isrec; // POTENTIAL BUG? isrec is a macro in awk.h
@@ -228,10 +225,7 @@ int readrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag)	/* read one rec
 	int bufsize = *pbufsize;
 	char *rs = getsval(rsloc);
 
-	if (CSV) {
-		c = readcsvrec(&buf, &bufsize, inf, newflag);
-		isrec = (c == EOF && rr == buf) ? false : true;
-	} else if (*rs && rs[1]) {
+	if (*rs && rs[1]) {
 		bool found;
 
 		memset(buf, 0, bufsize);
@@ -283,52 +277,6 @@ int readrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag)	/* read one rec
 	*pbufsize = bufsize;
 	DPRINTF("readrec saw <%s>, returns %d\n", buf, isrec);
 	return isrec;
-}
-
-
-/*******************
- * loose ends here:
- *   \r\n should become \n
- *   what about bare \r?  Excel uses that for embedded newlines
- *   can't have "" in unquoted fields, according to RFC 4180
-*/
-
-
-int readcsvrec(char **pbuf, int *pbufsize, FILE *inf, bool newflag) /* csv can have \n's */
-{			/* so read a complete record that might be multiple lines */
-	int sep, c;
-	char *rr = *pbuf, *buf = *pbuf;
-	int bufsize = *pbufsize;
-	bool in_quote = false;
-
-	sep = '\n'; /* the only separator; have to skip over \n embedded in "..." */
-	rr = buf;
-	while ((c = getc(inf)) != EOF) {
-		if (c == sep) {
-			if (! in_quote)
-				break;
-			if (rr > buf && rr[-1] == '\r')	// remove \r if was \r\n
-				rr--;
-		}
-
-		if (rr-buf+1 > bufsize)
-			if (!adjbuf(&buf, &bufsize, 1+rr-buf,
-			    recsize, &rr, "readcsvrec 1"))
-				FATAL("input record `%.30s...' too long", buf);
-		*rr++ = c;
-		if (c == '"')
-			in_quote = ! in_quote;
- 	}
-	if (c == '\n' && rr > buf && rr[-1] == '\r') 	// remove \r if was \r\n
-		rr--;
-
-	if (!adjbuf(&buf, &bufsize, 1+rr-buf, recsize, &rr, "readcsvrec 4"))
-		FATAL("input record `%.30s...' too long", buf);
-	*rr = 0;
-	*pbuf = buf;
-	*pbufsize = bufsize;
-	DPRINTF("readcsvrec saw <%s>, returns %d\n", buf, c);
-	return c;
 }
 
 char *getargv(int n)	/* get ARGV[n] */
@@ -404,9 +352,9 @@ void fldbld(void)	/* create fields from current record */
 	i = 0;	/* number of fields accumulated here */
 	if (inputFS == NULL)	/* make sure we have a copy of FS */
 		savefs();
-	if (!CSV && strlen(inputFS) > 1) {	/* it's a regular expression */
+	if (strlen(inputFS) > 1) {	/* it's a regular expression */
 		i = refldbld(r, inputFS);
-	} else if (!CSV && (sep = *inputFS) == ' ') {	/* default whitespace */
+	} else if ((sep = *inputFS) == ' ') {	/* default whitespace */
 		for (i = 0; ; ) {
 			while (*r == ' ' || *r == '\t' || *r == '\n')
 				r++;
@@ -423,40 +371,6 @@ void fldbld(void)	/* create fields from current record */
 				*fr++ = *r++;
 			while (*r != ' ' && *r != '\t' && *r != '\n' && *r != '\0');
 			*fr++ = 0;
-		}
-		*fr = 0;
-	} else if (CSV) {	/* CSV processing.  no error handling */
-		if (*r != 0) {
-			for (;;) {
-				i++;
-				if (i > nfields)
-					growfldtab(i);
-				if (freeable(fldtab[i]))
-					xfree(fldtab[i]->sval);
-				fldtab[i]->sval = fr;
-				fldtab[i]->tval = FLD | STR | DONTFREE;
-				if (*r == '"' ) { /* start of "..." */
-					for (r++ ; *r != '\0'; ) {
-						if (*r == '"' && r[1] != '\0' && r[1] == '"') {
-							r += 2; /* doubled quote */
-							*fr++ = '"';
-						} else if (*r == '"' && (r[1] == '\0' || r[1] == ',')) {
-							r++; /* skip over closing quote */
-							break;
-						} else {
-							*fr++ = *r++;
-						}
-					}
-					*fr++ = 0;
-				} else {	/* unquoted field */
-					while (*r != ',' && *r != '\0')
-						*fr++ = *r++;
-					*fr++ = 0;
-				}
-				if (*r++ == 0)
-					break;
-	
-			}
 		}
 		*fr = 0;
 	} else if ((sep = *inputFS) == 0) {	/* new: FS="" => 1 char/field */
@@ -734,7 +648,7 @@ void FATAL(const char *fmt, ...)
 	va_start(varg, fmt);
 	vfprintf(stderr, fmt, varg);
 	va_end(varg);
-	error();
+	ERROR();
 	if(runnerup != NULL){
 		fflush(stderr);
 		longjmp(evalenv, -1);
@@ -754,12 +668,12 @@ void WARNING(const char *fmt, ...)
 	va_start(varg, fmt);
 	vfprintf(stderr, fmt, varg);
 	va_end(varg);
-	error();
+	ERROR();
 }
 
-void error(void)
+void ERROR(void)
 {
-	extern Node *curnode;
+	extern TNode *curnode;
 
 	fprintf(stderr, "\n");
 	if (compile_time != ERROR_PRINTING) {

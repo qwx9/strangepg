@@ -74,15 +74,15 @@
 #include <stdlib.h>
 #include "awk.h"
 
-void checkdup(Node *list, Cell *item);
+void checkdup(TNode *list, Cell *item);
 int yywrap(void) { return(1); }
 
-Node	*beginloc = 0;
-Node	*endloc = 0;
+TNode	*beginloc = 0;
+TNode	*endloc = 0;
 bool	infunc	= false;	/* = true if in arglist or body of func */
 int	inloop	= 0;	/* >= 1 if in while, for, do; can't be bool, since loops can next */
 char	*curfname = 0;	/* current function name */
-Node	*arglist = 0;	/* list of args for current function */
+TNode	*arglist = 0;	/* list of args for current function */
 
 #line 88 "awkgram.tab.c"
 
@@ -2375,9 +2375,9 @@ yyreduce:
 #line 106 "awkgram.y"
           { if (errorflag == 0){
 			if(winner == NULL)
-				winner = (Node *)stat3(PROGRAM, beginloc, (yyvsp[0].p), endloc);
+				winner = (TNode *)stat3(PROGRAM, beginloc, (yyvsp[0].p), endloc);
 			else
-				runnerup = (Node *)stat3(PROGRAM, (yyvsp[0].p), NIL, NIL);
+				runnerup = (TNode *)stat3(PROGRAM, (yyvsp[0].p), NIL, NIL);
 		}
 	  }
 #line 2384 "awkgram.tab.c"
@@ -2571,16 +2571,16 @@ yyreduce:
 
   case 53: /* ppattern: ppattern MATCHOP reg_expr  */
 #line 219 "awkgram.y"
-                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (Node*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
 #line 2576 "awkgram.tab.c"
     break;
 
   case 54: /* ppattern: ppattern MATCHOP ppattern  */
 #line 221 "awkgram.y"
                 { if (constnode((yyvsp[0].p)))
-			(yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (Node*)makedfa(strnode((yyvsp[0].p)), 0));
+			(yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa(strnode((yyvsp[0].p)), 0));
 		  else
-			(yyval.p) = op3((yyvsp[-1].i), (Node *)1, (yyvsp[-2].p), (yyvsp[0].p)); }
+			(yyval.p) = op3((yyvsp[-1].i), (TNode *)1, (yyvsp[-2].p), (yyvsp[0].p)); }
 #line 2585 "awkgram.tab.c"
     break;
 
@@ -2664,16 +2664,16 @@ yyreduce:
 
   case 70: /* pattern: pattern MATCHOP reg_expr  */
 #line 246 "awkgram.y"
-                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (Node*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
 #line 2669 "awkgram.tab.c"
     break;
 
   case 71: /* pattern: pattern MATCHOP pattern  */
 #line 248 "awkgram.y"
                 { if (constnode((yyvsp[0].p)))
-			(yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (Node*)makedfa(strnode((yyvsp[0].p)), 0));
+			(yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa(strnode((yyvsp[0].p)), 0));
 		  else
-			(yyval.p) = op3((yyvsp[-1].i), (Node *)1, (yyvsp[-2].p), (yyvsp[0].p)); }
+			(yyval.p) = op3((yyvsp[-1].i), (TNode *)1, (yyvsp[-2].p), (yyvsp[0].p)); }
 #line 2678 "awkgram.tab.c"
     break;
 
@@ -2727,7 +2727,7 @@ yyreduce:
 
   case 92: /* re: reg_expr  */
 #line 289 "awkgram.y"
-                { (yyval.p) = op3(MATCH, NIL, rectonode(), (Node*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                { (yyval.p) = op3(MATCH, NIL, rectonode(), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
 #line 2732 "awkgram.tab.c"
     break;
 
@@ -3050,7 +3050,7 @@ yyreduce:
   case 155: /* term: INDEX '(' pattern comma reg_expr ')'  */
 #line 380 "awkgram.y"
                 { SYNTAX("index() doesn't permit regular expressions");
-		  (yyval.p) = op2(INDEX, (yyvsp[-3].p), (Node*)(yyvsp[-1].s)); }
+		  (yyval.p) = op2(INDEX, (yyvsp[-3].p), (TNode*)(yyvsp[-1].s)); }
 #line 3055 "awkgram.tab.c"
     break;
 
@@ -3062,16 +3062,16 @@ yyreduce:
 
   case 157: /* term: MATCHFCN '(' pattern comma reg_expr ')'  */
 #line 384 "awkgram.y"
-                { (yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (Node*)makedfa((yyvsp[-1].s), 1)); free((yyvsp[-1].s)); }
+                { (yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (TNode*)makedfa((yyvsp[-1].s), 1)); free((yyvsp[-1].s)); }
 #line 3067 "awkgram.tab.c"
     break;
 
   case 158: /* term: MATCHFCN '(' pattern comma pattern ')'  */
 #line 386 "awkgram.y"
                 { if (constnode((yyvsp[-1].p)))
-			(yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (Node*)makedfa(strnode((yyvsp[-1].p)), 1));
+			(yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (TNode*)makedfa(strnode((yyvsp[-1].p)), 1));
 		  else
-			(yyval.p) = op3(MATCHFCN, (Node *)1, (yyvsp[-3].p), (yyvsp[-1].p)); }
+			(yyval.p) = op3(MATCHFCN, (TNode *)1, (yyvsp[-3].p), (yyvsp[-1].p)); }
 #line 3076 "awkgram.tab.c"
     break;
 
@@ -3083,19 +3083,19 @@ yyreduce:
 
   case 160: /* term: SPLIT '(' pattern comma varname comma pattern ')'  */
 #line 392 "awkgram.y"
-                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (yyvsp[-1].p), (Node*)STRING); }
+                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (yyvsp[-1].p), (TNode*)STRING); }
 #line 3088 "awkgram.tab.c"
     break;
 
   case 161: /* term: SPLIT '(' pattern comma varname comma reg_expr ')'  */
 #line 394 "awkgram.y"
-                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (Node*)makedfa((yyvsp[-1].s), 1), (Node *)REGEXPR); free((yyvsp[-1].s)); }
+                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (TNode*)makedfa((yyvsp[-1].s), 1), (TNode *)REGEXPR); free((yyvsp[-1].s)); }
 #line 3094 "awkgram.tab.c"
     break;
 
   case 162: /* term: SPLIT '(' pattern comma varname ')'  */
 #line 396 "awkgram.y"
-                { (yyval.p) = op4(SPLIT, (yyvsp[-3].p), makearr((yyvsp[-1].p)), NIL, (Node*)STRING); }
+                { (yyval.p) = op4(SPLIT, (yyvsp[-3].p), makearr((yyvsp[-1].p)), NIL, (TNode*)STRING); }
 #line 3100 "awkgram.tab.c"
     break;
 
@@ -3113,31 +3113,31 @@ yyreduce:
 
   case 165: /* term: subop '(' reg_expr comma pattern ')'  */
 #line 400 "awkgram.y"
-                { (yyval.p) = op4((yyvsp[-5].i), NIL, (Node*)makedfa((yyvsp[-3].s), 1), (yyvsp[-1].p), rectonode()); free((yyvsp[-3].s)); }
+                { (yyval.p) = op4((yyvsp[-5].i), NIL, (TNode*)makedfa((yyvsp[-3].s), 1), (yyvsp[-1].p), rectonode()); free((yyvsp[-3].s)); }
 #line 3118 "awkgram.tab.c"
     break;
 
   case 166: /* term: subop '(' pattern comma pattern ')'  */
 #line 402 "awkgram.y"
                 { if (constnode((yyvsp[-3].p)))
-			(yyval.p) = op4((yyvsp[-5].i), NIL, (Node*)makedfa(strnode((yyvsp[-3].p)), 1), (yyvsp[-1].p), rectonode());
+			(yyval.p) = op4((yyvsp[-5].i), NIL, (TNode*)makedfa(strnode((yyvsp[-3].p)), 1), (yyvsp[-1].p), rectonode());
 		  else
-			(yyval.p) = op4((yyvsp[-5].i), (Node *)1, (yyvsp[-3].p), (yyvsp[-1].p), rectonode()); }
+			(yyval.p) = op4((yyvsp[-5].i), (TNode *)1, (yyvsp[-3].p), (yyvsp[-1].p), rectonode()); }
 #line 3127 "awkgram.tab.c"
     break;
 
   case 167: /* term: subop '(' reg_expr comma pattern comma var ')'  */
 #line 407 "awkgram.y"
-                { (yyval.p) = op4((yyvsp[-7].i), NIL, (Node*)makedfa((yyvsp[-5].s), 1), (yyvsp[-3].p), (yyvsp[-1].p)); free((yyvsp[-5].s)); }
+                { (yyval.p) = op4((yyvsp[-7].i), NIL, (TNode*)makedfa((yyvsp[-5].s), 1), (yyvsp[-3].p), (yyvsp[-1].p)); free((yyvsp[-5].s)); }
 #line 3133 "awkgram.tab.c"
     break;
 
   case 168: /* term: subop '(' pattern comma pattern comma var ')'  */
 #line 409 "awkgram.y"
                 { if (constnode((yyvsp[-5].p)))
-			(yyval.p) = op4((yyvsp[-7].i), NIL, (Node*)makedfa(strnode((yyvsp[-5].p)), 1), (yyvsp[-3].p), (yyvsp[-1].p));
+			(yyval.p) = op4((yyvsp[-7].i), NIL, (TNode*)makedfa(strnode((yyvsp[-5].p)), 1), (yyvsp[-3].p), (yyvsp[-1].p));
 		  else
-			(yyval.p) = op4((yyvsp[-7].i), (Node *)1, (yyvsp[-5].p), (yyvsp[-3].p), (yyvsp[-1].p)); }
+			(yyval.p) = op4((yyvsp[-7].i), (TNode *)1, (yyvsp[-5].p), (yyvsp[-3].p), (yyvsp[-1].p)); }
 #line 3142 "awkgram.tab.c"
     break;
 
@@ -3205,7 +3205,7 @@ yyreduce:
 
   case 181: /* varname: VARNF  */
 #line 438 "awkgram.y"
-                                { (yyval.p) = op1(VARNF, (Node *) (yyvsp[0].cp)); }
+                                { (yyval.p) = op1(VARNF, (TNode *) (yyvsp[0].cp)); }
 #line 3210 "awkgram.tab.c"
     break;
 
@@ -3421,17 +3421,17 @@ void setfname(Cell *p)
 	curfname = p->nval;
 }
 
-int constnode(Node *p)
+int constnode(TNode *p)
 {
 	return isvalue(p) && ((Cell *) (p->narg[0]))->csub == CCON;
 }
 
-char *strnode(Node *p)
+char *strnode(TNode *p)
 {
 	return ((Cell *)(p->narg[0]))->sval;
 }
 
-Node *notnull(Node *n)
+TNode *notnull(TNode *n)
 {
 	switch (n->nobj) {
 	case LE: case LT: case EQ: case NE: case GT: case GE:
@@ -3442,7 +3442,7 @@ Node *notnull(Node *n)
 	}
 }
 
-void checkdup(Node *vl, Cell *cp)	/* check if name already in list */
+void checkdup(TNode *vl, Cell *cp)	/* check if name already in list */
 {
 	char *s = cp->nval;
 	for ( ; vl; vl = vl->nnext) {

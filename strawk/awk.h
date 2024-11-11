@@ -55,12 +55,7 @@ typedef	unsigned char uschar;
 
 #define	NN(p)	((p) ? (p) : "(null)")	/* guaranteed non-null for DPRINTF
 */
-#define	DEBUG
-#ifdef	DEBUG
-#	define	DPRINTF(...)	if (dbg) printf(__VA_ARGS__)
-#else
-#	define	DPRINTF(...)
-#endif
+#define	DPRINTF(...)	if (dbg) printf(__VA_ARGS__)
 
 extern enum compile_states {
 	RUNNING,
@@ -70,8 +65,6 @@ extern enum compile_states {
 
 #define	RECSIZE	(8 * 1024)	/* sets limit on records, fields, etc., etc. */
 extern int	recsize;	/* size of current record, orig RECSIZE */
-
-extern size_t	awk_mb_cur_max;	/* max size of a multi-byte character */
 
 extern char	EMPTY[];	/* this avoid -Wwritable-strings issues */
 extern char	**FS;
@@ -87,14 +80,14 @@ extern char	**SUBSEP;
 extern Awknum *RSTART;
 extern Awknum *RLENGTH;
 
-extern bool	CSV;		/* true for csv input */
-
 extern char	*record;	/* points to $0 */
 extern int	lineno;		/* line number in awk program */
 extern int	errorflag;	/* 1 if error has occurred */
 extern bool	donefld;	/* true if record broken into fields */
 extern bool	donerec;	/* true if record is valid (no fld has changed */
 extern int	dbg;
+extern char	*lexprog, *cmdname;
+extern Awknum	srand_seed;
 
 extern const char *patbeg;	/* beginning of pattern matched */
 extern	int	patlen;		/* length of pattern matched.  set in b.c */
@@ -118,7 +111,7 @@ typedef struct Array {		/* symbol table array */
 	Cell	**tab;		/* hash table pointers */
 } Array;
 
-#define	NSYMTAB	50	/* initial size of a symbol table */
+#define	NSYMTAB	128	/* initial size of a symbol table */
 extern Array	*symtab;
 
 extern Cell	*nrloc;		/* NR */
@@ -168,21 +161,21 @@ enum{
 	FBYTES = 17,
 };
 
-/* Node:  parse tree is made of nodes, with Cell's at bottom */
+/* TNode:  parse tree is made of nodes, with Cell's at bottom */
 
-typedef struct Node {
+typedef struct TNode {
 	int	ntype;
-	struct	Node *nnext;
+	struct	TNode *nnext;
 	int	lineno;
 	int	nobj;
-	struct	Node *narg[1];	/* variable: actual size set by calling malloc */
-} Node;
+	struct	TNode *narg[1];	/* variable: actual size set by calling malloc */
+} TNode;
 
-#define	NIL	((Node *) 0)
+#define	NIL	((TNode *) 0)
 
-extern Node	*winner;
-extern Node	*nullnode;
-extern Node *runnerup;
+extern TNode	*winner;
+extern TNode	*nullnode;
+extern TNode *runnerup;
 
 /* ctypes */
 #define OCELL	1
@@ -251,7 +244,7 @@ typedef struct rrow {
 	long	ltype;	/* long avoids pointer warnings on 64-bit */
 	union {
 		int i;
-		Node *np;
+		TNode *np;
 		uschar *up;
 		int *rp; /* rune representation of char class */
 	} lval;		/* because Al stores a pointer in it! */

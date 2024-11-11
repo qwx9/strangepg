@@ -24,8 +24,6 @@ THIS SOFTWARE.
 
 /* lasciate ogne speranza, voi ch'intrate. */
 
-#define	DEBUG
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
@@ -46,7 +44,7 @@ THIS SOFTWARE.
 #define ELEAF	case EMPTYRE:		/* empty string in regexp */
 #define UNARY	case STAR: case PLUS: case QUEST:
 
-/* encoding in tree Nodes:
+/* encoding in tree TNodes:
 	leaf (CCL, NCCL, CHAR, DOT, FINAL, ALL, EMPTYRE):
 		left is index, right contains value or pointer to value
 	unary (STAR, PLUS, QUEST): left is child, right is null
@@ -224,7 +222,7 @@ fa *makedfa(const char *s, bool anchor)	/* returns dfa for reg expr s */
 fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 				/* anchor = true for anchored matches, else false */
 {
-	Node *p, *p1;
+	TNode *p, *p1;
 	fa *f;
 
 	firstbasestr = (const uschar *) s;
@@ -284,7 +282,7 @@ int makeinit(fa *f, bool anchor)
 	return f->curstat;
 }
 
-void penter(Node *p)	/* set up parent pointers and leaf indices */
+void penter(TNode *p)	/* set up parent pointers and leaf indices */
 {
 	switch (type(p)) {
 	ELEAF
@@ -311,7 +309,7 @@ void penter(Node *p)	/* set up parent pointers and leaf indices */
 	}
 }
 
-void freetr(Node *p)	/* free parse tree */
+void freetr(TNode *p)	/* free parse tree */
 {
 	switch (type(p)) {
 	ELEAF
@@ -483,7 +481,7 @@ void overflo(const char *s)
 	FATAL("regular expression too big: out of space in %.30s...", s);
 }
 
-void cfoll(fa *f, Node *v)	/* enter follow set of each leaf of vertex v into lfollow[leaf] */
+void cfoll(fa *f, TNode *v)	/* enter follow set of each leaf of vertex v into lfollow[leaf] */
 {
 	int i;
 	int *p;
@@ -522,7 +520,7 @@ void cfoll(fa *f, Node *v)	/* enter follow set of each leaf of vertex v into lfo
 	}
 }
 
-int first(Node *p)	/* collects initially active leaves of p into setvec */
+int first(TNode *p)	/* collects initially active leaves of p into setvec */
 			/* returns 0 if p matches empty string */
 {
 	int b, lp;
@@ -567,9 +565,9 @@ int first(Node *p)	/* collects initially active leaves of p into setvec */
 	return(-1);
 }
 
-void follow(Node *v)	/* collects leaves that can follow v into setvec */
+void follow(TNode *v)	/* collects leaves that can follow v into setvec */
 {
-	Node *p;
+	TNode *p;
 
 	if (type(v) == FINAL)
 		return;
@@ -878,14 +876,14 @@ bool fnematch(fa *pfa, FILE *f, char **pbuf, int *pbufsize, int quantum)
 
 	do {
 		/*
-		 * Call u8_rune with at least awk_mb_cur_max ahead in
+		 * Call u8_rune with at least MB_CUR_MAX ahead in
 		 * the buffer until EOF interferes.
 		 */
-		if (k - j < (int)awk_mb_cur_max) {
-			if (k + awk_mb_cur_max > buf + bufsize) {
+		if (k - j < (int)MB_CUR_MAX) {
+			if (k + MB_CUR_MAX > buf + bufsize) {
 				char *obuf = buf;
 				adjbuf((char **) &buf, &bufsize,
-				    bufsize + awk_mb_cur_max,
+				    bufsize + MB_CUR_MAX,
 				    quantum, 0, "fnematch");
 
 				/* buf resized, maybe moved. update pointers */
@@ -899,7 +897,7 @@ bool fnematch(fa *pfa, FILE *f, char **pbuf, int *pbufsize, int quantum)
 						patbeg = buf + (patbeg - obuf);
 				}
 			}
-			for (n = awk_mb_cur_max ; n > 0; n--) {
+			for (n = MB_CUR_MAX ; n > 0; n--) {
 				*k++ = (c = getc(f)) != EOF ? c : 0;
 				if (c == EOF) {
 					if (ferror(f))
@@ -959,9 +957,9 @@ bool fnematch(fa *pfa, FILE *f, char **pbuf, int *pbufsize, int quantum)
 		return false;
 }
 
-Node *reparse(const char *p)	/* parses regular expression pointed to by p */
+TNode *reparse(const char *p)	/* parses regular expression pointed to by p */
 {			/* uses relex() to scan regular expression */
-	Node *np;
+	TNode *np;
 
 	DPRINTF("reparse <%s>\n", p);
 	lastre = prestr = (const uschar *) p;	/* prestr points to string to be parsed */
@@ -977,14 +975,14 @@ Node *reparse(const char *p)	/* parses regular expression pointed to by p */
 	return(np);
 }
 
-Node *regexp(void)	/* top-level parse of reg expr */
+TNode *regexp(void)	/* top-level parse of reg expr */
 {
 	return (alt(concat(primary())));
 }
 
-Node *primary(void)
+TNode *primary(void)
 {
-	Node *np;
+	TNode *np;
 	int savelastatom;
 
 	switch (rtok) {
@@ -1004,12 +1002,12 @@ Node *primary(void)
 		rtok = relex();
 		return (unary(op2(DOT, NIL, NIL)));
 	case CCL:
-		np = op2(CCL, NIL, (Node*) cclenter((const char *) rlxstr));
+		np = op2(CCL, NIL, (TNode*) cclenter((const char *) rlxstr));
 		lastatom = starttok;
 		rtok = relex();
 		return (unary(np));
 	case NCCL:
-		np = op2(NCCL, NIL, (Node *) cclenter((const char *) rlxstr));
+		np = op2(NCCL, NIL, (TNode *) cclenter((const char *) rlxstr));
 		lastatom = starttok;
 		rtok = relex();
 		return (unary(np));
@@ -1025,7 +1023,7 @@ Node *primary(void)
 		rtok = relex();
 		if (rtok == ')') {	/* special pleading for () */
 			rtok = relex();
-			return unary(op2(CCL, NIL, (Node *) cclenter("")));
+			return unary(op2(CCL, NIL, (TNode *) cclenter("")));
 		}
 		np = regexp();
 		if (rtok == ')') {
@@ -1041,20 +1039,20 @@ Node *primary(void)
 	return 0;	/*NOTREACHED*/
 }
 
-Node *concat(Node *np)
+TNode *concat(TNode *np)
 {
 	switch (rtok) {
 	case CHAR: case DOT: case ALL: case CCL: case NCCL: case '$': case '(':
 		return (concat(op2(CAT, np, primary())));
 	case EMPTYRE:
 		rtok = relex();
-		return (concat(op2(CAT, op2(CCL, NIL, (Node *) cclenter("")),
+		return (concat(op2(CAT, op2(CCL, NIL, (TNode *) cclenter("")),
 				primary())));
 	}
 	return (np);
 }
 
-Node *alt(Node *np)
+TNode *alt(TNode *np)
 {
 	if (rtok == OR) {
 		rtok = relex();
@@ -1063,7 +1061,7 @@ Node *alt(Node *np)
 	return (np);
 }
 
-Node *unary(Node *np)
+TNode *unary(TNode *np)
 {
 	switch (rtok) {
 	case STAR:

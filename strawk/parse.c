@@ -22,7 +22,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#define DEBUG
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,7 +31,7 @@ THIS SOFTWARE.
 enum{
 	POOLSZ = 512,
 };
-static Node **pool0, **pool, *tail;
+static TNode **pool0, **pool, *tail;
 static size_t npool, poolsz;
 
 void initnodepool(void)
@@ -61,9 +60,9 @@ void freenodes(void)
 	tail = pool[0];
 }
 
-Node *nodealloc(size_t n)
+TNode *nodealloc(size_t n)
 {
-	Node *x;
+	TNode *x;
 
 	if(tail + n - pool[npool-1] > 512){
 		if(npool == poolsz){
@@ -82,15 +81,15 @@ Node *nodealloc(size_t n)
 	return(x);
 }
 
-Node *exptostat(Node *a)
+TNode *exptostat(TNode *a)
 {
 	a->ntype = NSTAT;
 	return(a);
 }
 
-Node *node1(int a, Node *b)
+TNode *node1(int a, TNode *b)
 {
-	Node *x;
+	TNode *x;
 
 	x = nodealloc(1);
 	x->nobj = a;
@@ -98,9 +97,9 @@ Node *node1(int a, Node *b)
 	return(x);
 }
 
-Node *node2(int a, Node *b, Node *c)
+TNode *node2(int a, TNode *b, TNode *c)
 {
-	Node *x;
+	TNode *x;
 
 	x = nodealloc(2);
 	x->nobj = a;
@@ -109,9 +108,9 @@ Node *node2(int a, Node *b, Node *c)
 	return(x);
 }
 
-Node *node3(int a, Node *b, Node *c, Node *d)
+TNode *node3(int a, TNode *b, TNode *c, TNode *d)
 {
-	Node *x;
+	TNode *x;
 
 	x = nodealloc(3);
 	x->nobj = a;
@@ -121,9 +120,9 @@ Node *node3(int a, Node *b, Node *c, Node *d)
 	return(x);
 }
 
-Node *node4(int a, Node *b, Node *c, Node *d, Node *e)
+TNode *node4(int a, TNode *b, TNode *c, TNode *d, TNode *e)
 {
-	Node *x;
+	TNode *x;
 
 	x = nodealloc(4);
 	x->nobj = a;
@@ -134,96 +133,96 @@ Node *node4(int a, Node *b, Node *c, Node *d, Node *e)
 	return(x);
 }
 
-Node *stat1(int a, Node *b)
+TNode *stat1(int a, TNode *b)
 {
-	Node *x;
+	TNode *x;
 
 	x = node1(a,b);
 	x->ntype = NSTAT;
 	return(x);
 }
 
-Node *stat2(int a, Node *b, Node *c)
+TNode *stat2(int a, TNode *b, TNode *c)
 {
-	Node *x;
+	TNode *x;
 
 	x = node2(a,b,c);
 	x->ntype = NSTAT;
 	return(x);
 }
 
-Node *stat3(int a, Node *b, Node *c, Node *d)
+TNode *stat3(int a, TNode *b, TNode *c, TNode *d)
 {
-	Node *x;
+	TNode *x;
 
 	x = node3(a,b,c,d);
 	x->ntype = NSTAT;
 	return(x);
 }
 
-Node *stat4(int a, Node *b, Node *c, Node *d, Node *e)
+TNode *stat4(int a, TNode *b, TNode *c, TNode *d, TNode *e)
 {
-	Node *x;
+	TNode *x;
 
 	x = node4(a,b,c,d,e);
 	x->ntype = NSTAT;
 	return(x);
 }
 
-Node *op1(int a, Node *b)
+TNode *op1(int a, TNode *b)
 {
-	Node *x;
+	TNode *x;
 
 	x = node1(a,b);
 	x->ntype = NEXPR;
 	return(x);
 }
 
-Node *op2(int a, Node *b, Node *c)
+TNode *op2(int a, TNode *b, TNode *c)
 {
-	Node *x;
+	TNode *x;
 
 	x = node2(a,b,c);
 	x->ntype = NEXPR;
 	return(x);
 }
 
-Node *op3(int a, Node *b, Node *c, Node *d)
+TNode *op3(int a, TNode *b, TNode *c, TNode *d)
 {
-	Node *x;
+	TNode *x;
 
 	x = node3(a,b,c,d);
 	x->ntype = NEXPR;
 	return(x);
 }
 
-Node *op4(int a, Node *b, Node *c, Node *d, Node *e)
+TNode *op4(int a, TNode *b, TNode *c, TNode *d, TNode *e)
 {
-	Node *x;
+	TNode *x;
 
 	x = node4(a,b,c,d,e);
 	x->ntype = NEXPR;
 	return(x);
 }
 
-Node *celltonode(Cell *a, int b)
+TNode *celltonode(Cell *a, int b)
 {
-	Node *x;
+	TNode *x;
 
 	a->ctype = OCELL;
 	a->csub = b;
-	x = node1(0, (Node *) a);
+	x = node1(0, (TNode *) a);
 	x->ntype = NVALUE;
 	return(x);
 }
 
-Node *rectonode(void)	/* make $0 into a Node */
+TNode *rectonode(void)	/* make $0 into a TNode */
 {
 	extern Cell *literal0;
 	return op1(INDIRECT, celltonode(literal0, CUNK));
 }
 
-Node *makearr(Node *p)
+TNode *makearr(TNode *p)
 {
 	Cell *cp;
 
@@ -244,9 +243,9 @@ Node *makearr(Node *p)
 int	paircnt;		/* number of them in use */
 int	pairstack[PA2NUM];	/* state of each pat,pat */
 
-Node *pa2stat(Node *a, Node *b, Node *c)	/* pat, pat {...} */
+TNode *pa2stat(TNode *a, TNode *b, TNode *c)	/* pat, pat {...} */
 {
-	Node *x;
+	TNode *x;
 
 	x = node4(PASTAT2, a, b, c, itonp(paircnt));
 	if (paircnt++ >= PA2NUM)
@@ -255,9 +254,9 @@ Node *pa2stat(Node *a, Node *b, Node *c)	/* pat, pat {...} */
 	return(x);
 }
 
-Node *linkum(Node *a, Node *b)
+TNode *linkum(TNode *a, TNode *b)
 {
-	Node *c;
+	TNode *c;
 
 	if (errorflag)	/* don't link things that are wrong */
 		return a;
@@ -271,9 +270,9 @@ Node *linkum(Node *a, Node *b)
 	return(a);
 }
 
-void defn(Cell *v, Node *vl, Node *st)	/* turn on FCN bit in definition, */
+void defn(Cell *v, TNode *vl, TNode *st)	/* turn on FCN bit in definition, */
 {					/*   body of function, arglist */
-	Node *p;
+	TNode *p;
 	int n;
 
 	if (isarr(v)) {
@@ -296,8 +295,8 @@ void defn(Cell *v, Node *vl, Node *st)	/* turn on FCN bit in definition, */
 
 int isarg(const char *s)		/* is s in argument list for current function? */
 {			/* return -1 if not, otherwise arg # */
-	extern Node *arglist;
-	Node *p = arglist;
+	extern TNode *arglist;
+	TNode *p = arglist;
 	int n;
 
 	for (n = 0; p != NULL; p = p->nnext, n++)
@@ -311,7 +310,7 @@ int ptoi(void *p)	/* convert pointer to integer */
 	return (int) (long) p;	/* swearing that p fits, of course */
 }
 
-Node *itonp(int i)	/* and vice versa */
+TNode *itonp(int i)	/* and vice versa */
 {
-	return (Node *) (long) i;
+	return (TNode *) (long) i;
 }

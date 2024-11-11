@@ -22,7 +22,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#define DEBUG
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -42,6 +41,10 @@ THIS SOFTWARE.
 #include "awk.h"
 #include AWKTAB
 
+int dbg;
+Awknum	srand_seed = 1;
+enum compile_states	compile_time = ERROR_PRINTING;
+
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
 #if 1
@@ -60,10 +63,9 @@ void tempfree(Cell *p) {
 jmp_buf env;
 jmp_buf evalenv;
 extern	int	pairstack[];
-extern	Awknum	srand_seed;
 
-Node	*winner = NULL;	/* root of parse tree */
-Node	*runnerup;
+TNode	*winner = NULL;	/* root of parse tree */
+TNode	*runnerup;
 Cell	*tmps;		/* free temporary cells for execution */
 
 static Cell	truecell	={ OBOOL, BTRUE, 0, 0, {1}, NUM, NULL, NULL };
@@ -82,7 +84,7 @@ static Cell	retcell		={ OJUMP, JRET, 0, 0, {0}, NUM, NULL, NULL };
 Cell	*jret	= &retcell;
 static Cell	tempcell	={ OCELL, CTEMP, 0, EMPTY, {0}, NUM|STR|DONTFREE, NULL, NULL };
 
-Node	*curnode = NULL;	/* the node being executed, for debugging */
+TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
 /* buffer memory management */
 int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
@@ -119,17 +121,17 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
 	return 1;
 }
 
-void run(Node *a)	/* execution of parse tree starts here */
+void run(TNode *a)	/* execution of parse tree starts here */
 {
 
 	execute(a);
 }
 
-Cell *execute(Node *u)	/* execute a node of the parse tree */
+Cell *execute(TNode *u)	/* execute a node of the parse tree */
 {
-	Cell *(*proc)(Node **, int);
+	Cell *(*proc)(TNode **, int);
 	Cell *x;
-	Node *a;
+	TNode *a;
 
 	if (u == NULL)
 		return(True);
@@ -162,7 +164,7 @@ Cell *execute(Node *u)	/* execute a node of the parse tree */
 }
 
 
-Cell *program(Node **a, int n)	/* execute an awk program */
+Cell *program(TNode **a, int n)	/* execute an awk program */
 {				/* a[0] = BEGIN, a[1] = body, a[2] = END */
 	Cell *x;
 
@@ -209,16 +211,16 @@ struct Frame {	/* stack frame for awk function calls */
 
 #define	NARGS	50	/* max args in a call */
 
-struct Frame *frame = NULL;	/* base of stack frames; dynamically allocated */
-int	nframe = 0;		/* number of frames allocated */
-struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
+static struct Frame *awkframe = NULL;	/* base of stack frames; dynamically allocated */
+static int	nframe = 0;		/* number of frames allocated */
+static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
-Cell *call(Node **a, int n)	/* function call.  very kludgy and fragile */
+Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
 	static const Cell newcopycell = { OCELL, CCOPY, 0, EMPTY, {0}, NUM|STR|DONTFREE, NULL, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
-	Node *x;
+	TNode *x;
 	Cell *args[NARGS], *oargs[NARGS];	/* BUG: fixed size arrays */
 	Cell *y, *z, *fcn;
 	char *s;
@@ -227,22 +229,22 @@ Cell *call(Node **a, int n)	/* function call.  very kludgy and fragile */
 	s = fcn->nval;
 	if (!isfcn(fcn))
 		FATAL("calling undefined function %s", s);
-	if (frame == NULL) {
-		frp = frame = (struct Frame *) calloc(nframe += 100, sizeof(*frame));
-		if (frame == NULL)
+	if (awkframe == NULL) {
+		frp = awkframe = (struct Frame *) calloc(nframe += 100, sizeof(*awkframe));
+		if (awkframe == NULL)
 			FATAL("out of space for stack frames calling %s", s);
 	}
 	for (ncall = 0, x = a[1]; x != NULL; x = x->nnext)	/* args in call */
 		ncall++;
 	ndef = fcn->val.i;			/* args in defn */
-	DPRINTF("calling %s, %d args (%d in defn), frp=%d\n", s, ncall, ndef, (int) (frp-frame));
+	DPRINTF("calling %s, %d args (%d in defn), frp=%d\n", s, ncall, ndef, (int) (frp-awkframe));
 	if (ncall > ndef)
 		WARNING("function %s called with %d args, uses only %d",
 			s, ncall, ndef);
 	if (ncall + ndef > NARGS)
 		FATAL("function %s has %d arguments, limit %d", s, ncall+ndef, NARGS);
 	for (i = 0, x = a[1]; x != NULL; i++, x = x->nnext) {	/* get call args */
-		DPRINTF("evaluate args[%d], frp=%d:\n", i, (int) (frp-frame));
+		DPRINTF("evaluate args[%d], frp=%d:\n", i, (int) (frp-awkframe));
 		y = execute(x);
 		oargs[i] = y;
 		DPRINTF("args[%d]: %s i=%ld f=%f <%s>, t=%o\n",
@@ -260,21 +262,21 @@ Cell *call(Node **a, int n)	/* function call.  very kludgy and fragile */
 		*args[i] = newcopycell;
 	}
 	frp++;	/* now ok to up frame */
-	if (frp >= frame + nframe) {
-		int dfp = frp - frame;	/* old index */
-		frame = (struct Frame *) realloc(frame, (nframe += 100) * sizeof(*frame));
-		if (frame == NULL)
+	if (frp >= awkframe + nframe) {
+		int dfp = frp - awkframe;	/* old index */
+		awkframe = (struct Frame *) realloc(awkframe, (nframe += 100) * sizeof(*awkframe));
+		if (awkframe == NULL)
 			FATAL("out of space for stack frames in %s", s);
-		frp = frame + dfp;
+		frp = awkframe + dfp;
 	}
 	frp->fcncell = fcn;
 	frp->args = args;
 	frp->nargs = ndef;	/* number defined with (excess are locals) */
 	frp->retval = gettemp();
 
-	DPRINTF("start exec of %s, frp=%d\n", s, (int) (frp-frame));
-	y = execute((Node *)(fcn->sval));	/* execute body */
-	DPRINTF("finished exec of %s, frp=%d\n", s, (int) (frp-frame));
+	DPRINTF("start exec of %s, frp=%d\n", s, (int) (frp-awkframe));
+	y = execute((TNode *)(fcn->sval));	/* execute body */
+	DPRINTF("finished exec of %s, frp=%d\n", s, (int) (frp-awkframe));
 
 	for (i = 0; i < ndef; i++) {
 		Cell *t = frp->args[i];
@@ -331,7 +333,7 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 	return y;
 }
 
-Cell *arg(Node **a, int n)	/* nth argument of a function */
+Cell *arg(TNode **a, int n)	/* nth argument of a function */
 {
 
 	n = ptoi(a[0]);	/* argument number, counting from 0 */
@@ -342,7 +344,7 @@ Cell *arg(Node **a, int n)	/* nth argument of a function */
 	return frp->args[n];
 }
 
-Cell *jump(Node **a, int n)	/* break, continue, next, nextfile, return */
+Cell *jump(TNode **a, int n)	/* break, continue, next, nextfile, return */
 {
 	Cell *y;
 
@@ -384,7 +386,7 @@ Cell *jump(Node **a, int n)	/* break, continue, next, nextfile, return */
 	return 0;	/* not reached */
 }
 
-Cell *getnf(Node **a, int n)	/* get NF */
+Cell *getnf(TNode **a, int n)	/* get NF */
 {
 	if (!donefld)
 		fldbld();
@@ -392,7 +394,7 @@ Cell *getnf(Node **a, int n)	/* get NF */
 }
 
 static char *
-makearraystring(Node *p, const char *func)
+makearraystring(TNode *p, const char *func)
 {
 	char *buf;
 	int bufsz = recsize;
@@ -428,7 +430,7 @@ makearraystring(Node *p, const char *func)
 	return buf;
 }
 
-Cell *array(Node **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
+Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
 	Cell *x, *z;
 	char *buf;
@@ -453,7 +455,7 @@ Cell *array(Node **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	return(z);
 }
 
-Cell *awkdelete(Node **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
+Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
 	Cell *x;
 
@@ -477,7 +479,7 @@ Cell *awkdelete(Node **a, int n)	/* a[0] is symtab, a[1] is list of subscripts *
 	return True;
 }
 
-Cell *intest(Node **a, int n)	/* a[0] is index (list), a[1] is symtab */
+Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 {
 	Cell *ap, *k;
 	char *buf;
@@ -527,7 +529,7 @@ int u8_isutf(const char *s)
 	unsigned char c;
 
 	c = s[0];
-	if (c < 128 || awk_mb_cur_max == 1)
+	if (c < 128 || MB_CUR_MAX == 1)
 		return 1; /* what if it's 0? */
 
 	n = strlen(s);
@@ -554,7 +556,7 @@ int u8_rune(int *rune, const char *s)
 	unsigned char c;
 
 	c = s[0];
-	if (c < 128 || awk_mb_cur_max == 1) {
+	if (c < 128 || MB_CUR_MAX == 1) {
 		*rune = c;
 		return 1;
 	}
@@ -601,7 +603,7 @@ int u8_strlen(const char *s)
 	totlen = 0;
 	for (i = 0; i < n; i += len) {
 		c = s[i];
-		if (c < 128 || awk_mb_cur_max == 1) {
+		if (c < 128 || MB_CUR_MAX == 1) {
 			len = 1;
 		} else {
 			len = u8_nextlen(&s[i]);
@@ -715,7 +717,7 @@ int runetochar(char *str, int c)
 
 
 
-Cell *matchop(Node **a, int n)	/* ~ and match() */
+Cell *matchop(TNode **a, int n)	/* ~ and match() */
 {
 	Cell *x, *y, *z;
 	char *s, *t;
@@ -771,7 +773,7 @@ Cell *matchop(Node **a, int n)	/* ~ and match() */
 }
 
 
-Cell *boolop(Node **a, int n)	/* a[0] || a[1], a[0] && a[1], !a[0] */
+Cell *boolop(TNode **a, int n)	/* a[0] || a[1], a[0] && a[1], !a[0] */
 {
 	Cell *x, *y;
 	int i;
@@ -803,7 +805,7 @@ Cell *boolop(Node **a, int n)	/* a[0] || a[1], a[0] && a[1], !a[0] */
 	return 0;	/*NOTREACHED*/
 }
 
-Cell *relop(Node **a, int n)	/* a[0 < a[1], etc. */
+Cell *relop(TNode **a, int n)	/* a[0 < a[1], etc. */
 {
 	Cell *x, *y;
 	Awkfloat i, j;
@@ -875,7 +877,7 @@ Cell *gettemp(void)	/* get a tempcell */
 	return(x);
 }
 
-Cell *indirect(Node **a, int n)	/* $( a[0] ) */
+Cell *indirect(TNode **a, int n)	/* $( a[0] ) */
 {
 	Awknum val;
 	Cell *x;
@@ -897,7 +899,7 @@ Cell *indirect(Node **a, int n)	/* $( a[0] ) */
 	return(x);
 }
 
-Cell *substr(Node **a, int nnn)		/* substr(a[0], a[1], a[2]) */
+Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 {
 	int k, m, n;
 	int mb, nb;
@@ -950,7 +952,7 @@ Cell *substr(Node **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 	return(y);
 }
 
-Cell *sindex(Node **a, int nnn)		/* index(a[0], a[1]) */
+Cell *sindex(TNode **a, int nnn)		/* index(a[0], a[1]) */
 {
 	Cell *x, *y, *z;
 	char *s1, *s2, *p1, *p2, *q;
@@ -998,7 +1000,7 @@ int has_utf8(char *s)	/* return 1 if s contains any utf-8 (2 bytes or more) char
 
 #define	MAXNUMSIZE	50
 
-int format(char **pbuf, int *pbufsize, const char *s, Node *a)	/* printf-like conversions */
+int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like conversions */
 {
 	char *fmt;
 	char *p, *t;
@@ -1211,7 +1213,7 @@ int format(char **pbuf, int *pbufsize, const char *s, Node *a)	/* printf-like co
 				int charval = getival(x);
 
 				if (charval != 0) {
-					if (charval < 128 || awk_mb_cur_max == 1)
+					if (charval < 128 || MB_CUR_MAX == 1)
 						snprintf(p, BUFSZ(p), fmt, charval);
 					else {
 						// possible unicode character
@@ -1308,10 +1310,10 @@ int format(char **pbuf, int *pbufsize, const char *s, Node *a)	/* printf-like co
 	return p - buf;
 }
 
-Cell *awksprintf(Node **a, int n)		/* sprintf(a[0]) */
+Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 {
 	Cell *x;
-	Node *y;
+	TNode *y;
 	char *buf;
 	int bufsz=3*recsize;
 
@@ -1328,10 +1330,10 @@ Cell *awksprintf(Node **a, int n)		/* sprintf(a[0]) */
 	return(x);
 }
 
-Cell *awkprintf(Node **a, int n)		/* printf */
+Cell *awkprintf(TNode **a, int n)		/* printf */
 {	/* a[0] is list of args, starting with format string */
 	Cell *x;
-	Node *y;
+	TNode *y;
 	char *buf;
 	int len;
 	int bufsz=3*recsize;
@@ -1409,7 +1411,7 @@ Cell *farith(Cell *x, Cell *y, int n)
 	return(z);
 }
 
-Cell *arith(Node **a, int n)	/* a[0] + a[1], etc.  also -a[0], `a[0] */
+Cell *arith(TNode **a, int n)	/* a[0] + a[1], etc.  also -a[0], `a[0] */
 {
 	Awknum i, j;
 	Value u, v;
@@ -1506,7 +1508,7 @@ Awknum ipow(Awknum x, int n)	/* x**n.  ought to be done by pow, but isn't always
 		return x * v * v;
 }
 
-Cell *incrdecr(Node **a, int n)		/* a[0]++, etc.; allowed for floats */
+Cell *incrdecr(TNode **a, int n)		/* a[0]++, etc.; allowed for floats */
 {
 	Cell *x, *z;
 	int k;
@@ -1579,7 +1581,7 @@ Cell *fassign(Cell *x, Cell *y, int n)
 	return x;
 }
 
-Cell *assign(Node **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
+Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 {		/* this is subtle; don't muck with it. */
 	Cell *x, *y;
 	int xf, yf;
@@ -1663,7 +1665,7 @@ Cell *assign(Node **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 	return(x);
 }
 
-Cell *cat(Node **a, int q)	/* a[0] cat a[1] */
+Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 {
 	Cell *x, *y, *z;
 	int n1, n2;
@@ -1692,7 +1694,7 @@ Cell *cat(Node **a, int q)	/* a[0] cat a[1] */
 	return(z);
 }
 
-Cell *pastat(Node **a, int n)	/* a[0] { a[1] } */
+Cell *pastat(TNode **a, int n)	/* a[0] { a[1] } */
 {
 	Cell *x;
 
@@ -1708,7 +1710,7 @@ Cell *pastat(Node **a, int n)	/* a[0] { a[1] } */
 	return x;
 }
 
-Cell *dopa2(Node **a, int n)	/* a[0], a[1] { a[2] } */
+Cell *dopa2(TNode **a, int n)	/* a[0], a[1] { a[2] } */
 {
 	Cell *x;
 	int pair;
@@ -1731,7 +1733,7 @@ Cell *dopa2(Node **a, int n)	/* a[0], a[1] { a[2] } */
 	return(False);
 }
 
-Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
+Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 {
 	Cell *x = NULL, *y, *ap;
 	const char *s, *origs, *t;
@@ -1747,7 +1749,7 @@ Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	origs = s = strdup(getsval(y));
 	tempfree(y);
 	arg3type = ptoi(a[3]);
-	if (a[2] == NULL) {		/* BUG: CSV should override implicit fs but not explicit */
+	if (a[2] == NULL) {
 		fs = getsval(fsloc);
 	} else if (arg3type == STRING) {	/* split(str,arr,"string") */
 		x = execute(a[2]);
@@ -1810,37 +1812,7 @@ Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
   spdone:
 		pfa = NULL;
 
-	} else if (a[2] == NULL && CSV) {	/* CSV only if no explicit separator */
-		char *newt = (char *) malloc(strlen(s)); /* for building new string; reuse for each field */
-		for (;;) {
-			char *fr = newt;
-			n++;
-			if (*s == '"' ) { /* start of "..." */
-				for (s++ ; *s != '\0'; ) {
-					if (*s == '"' && s[1] != '\0' && s[1] == '"') {
-						s += 2; /* doubled quote */
-						*fr++ = '"';
-					} else if (*s == '"' && (s[1] == '\0' || s[1] == ',')) {
-						s++; /* skip over closing quote */
-						break;
-					} else {
-						*fr++ = *s++;
-					}
-				}
-				*fr++ = 0;
-			} else {	/* unquoted field */
-				while (*s != ',' && *s != '\0')
-					*fr++ = *s++;
-				*fr++ = 0;
-			}
-			snprintf(num, sizeof(num), "%d", n);
-			setsym(num, newt, (Array *) ap->sval);
-			if (*s++ == '\0')
-				break;
-		}
-		free(newt);
-
-	} else if (!CSV && sep == ' ') { /* usual case: split on white space */
+	} else if (sep == ' ') { /* usual case: split on white space */
 		for (n = 0; ; ) {
 #define ISWS(c)	((c) == ' ' || (c) == '\t' || (c) == '\n')
 			while (ISWS(*s))
@@ -1898,7 +1870,7 @@ Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	return(x);
 }
 
-Cell *condexpr(Node **a, int n)	/* a[0] ? a[1] : a[2] */
+Cell *condexpr(TNode **a, int n)	/* a[0] ? a[1] : a[2] */
 {
 	Cell *x;
 
@@ -1913,7 +1885,7 @@ Cell *condexpr(Node **a, int n)	/* a[0] ? a[1] : a[2] */
 	return(x);
 }
 
-Cell *ifstat(Node **a, int n)	/* if (a[0]) a[1]; else a[2] */
+Cell *ifstat(TNode **a, int n)	/* if (a[0]) a[1]; else a[2] */
 {
 	Cell *x;
 
@@ -1928,7 +1900,7 @@ Cell *ifstat(Node **a, int n)	/* if (a[0]) a[1]; else a[2] */
 	return(x);
 }
 
-Cell *whilestat(Node **a, int n)	/* while (a[0]) a[1] */
+Cell *whilestat(TNode **a, int n)	/* while (a[0]) a[1] */
 {
 	Cell *x;
 
@@ -1948,7 +1920,7 @@ Cell *whilestat(Node **a, int n)	/* while (a[0]) a[1] */
 	}
 }
 
-Cell *dostat(Node **a, int n)	/* do a[0]; while(a[1]) */
+Cell *dostat(TNode **a, int n)	/* do a[0]; while(a[1]) */
 {
 	Cell *x;
 
@@ -1966,7 +1938,7 @@ Cell *dostat(Node **a, int n)	/* do a[0]; while(a[1]) */
 	}
 }
 
-Cell *forstat(Node **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
+Cell *forstat(TNode **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
 {
 	Cell *x;
 
@@ -1989,7 +1961,7 @@ Cell *forstat(Node **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
 	}
 }
 
-Cell *instat(Node **a, int n)	/* for (a[0] in a[1]) a[2] */
+Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 {
 	Cell *x, *vp, *arrayp, *cp, *ncp;
 	Array *tp;
@@ -2029,7 +2001,7 @@ static char *nawk_convert(const char *s, int (*fun_c)(int),
 	const char *ps = NULL;
 	size_t n       = 0;
 	wchar_t wc;
-	const size_t sz = awk_mb_cur_max;
+	const size_t sz = MB_CUR_MAX;
 
 	if (sz == 1) {
 		buf = tostring(s);
@@ -2099,12 +2071,13 @@ static char *nawk_tolower(const char *s)
 	return nawk_convert(s, tolower, towlower);
 }
 
-static Cell *fbltin(Node **a, int n, int t)
+static Cell *fbltin(TNode **a, int n, int t)
 {
 	Cell *x, *y;
 	Awkfloat u;
-	Node *nextarg;
+	TNode *nextarg;
 
+	u = 0.0f;	/* shut compiler up */
 	x = execute(a[1]);
 	nextarg = a[1]->nnext;
 	switch(t){
@@ -2160,13 +2133,13 @@ static Cell *fbltin(Node **a, int n, int t)
 	return(x);
 }
 
-Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg list */
+Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg list */
 {
 	Cell *x, *y;
 	Awknum u = 0, tmp;
 	int t;
 	char *buf;
-	Node *nextarg;
+	TNode *nextarg;
 	extern char *lexprog;
 
 	t = ptoi(a[0]);
@@ -2253,9 +2226,9 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 	return(x);
 }
 
-Cell *printstat(Node **a, int n)	/* print a[0] */
+Cell *printstat(TNode **a, int n)	/* print a[0] */
 {
-	Node *x;
+	TNode *x;
 	Cell *y;
 	FILE *fp;
 
@@ -2275,14 +2248,14 @@ Cell *printstat(Node **a, int n)	/* print a[0] */
 	return(True);
 }
 
-Cell *nullproc(Node **a, int n)
+Cell *nullproc(TNode **a, int n)
 {
 	return 0;
 }
 
 void backsub(char **pb_ptr, const char **sptr_ptr);
 
-Cell *dosub(Node **a, int subop)        /* sub and gsub */
+Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 {
 	fa *pfa;
 	int tempstat = 0;

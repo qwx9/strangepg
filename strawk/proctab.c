@@ -108,7 +108,7 @@ static const char * const printname[102] = {
 };
 
 
-Cell *(*proctab[102])(Node **, int) = {
+Cell *(*proctab[102])(TNode **, int) = {
 	nullproc,	/* FIRSTTOKEN */
 	program,	/* PROGRAM */
 	pastat,	/* PASTAT */

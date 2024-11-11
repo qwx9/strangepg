@@ -24,7 +24,6 @@ THIS SOFTWARE.
 
 const char	*version = "version 20240731";
 
-#define DEBUG
 #include <stdio.h>
 #include <ctype.h>
 #include <locale.h>
@@ -36,22 +35,10 @@ const char	*version = "version 20240731";
 extern	char	**environ;
 extern	int	nfields;
 
-int	dbg	= 0;
-Awknum	srand_seed = 1;
-char	*cmdname;	/* gets argv[0] for error messages */
 extern	FILE	*yyin;	/* lex input file */
-char	*lexprog;	/* points to program argument if it exists */
 extern	int errorflag;	/* non-zero if any syntax errors; set by yyerror */
-enum compile_states	compile_time = ERROR_PRINTING;
 
-static char	**pfile;	/* program filenames from -f's */
-static size_t	maxpfile;	/* max program filename */
-static size_t	npfile;		/* number of filenames */
-static size_t	curpfile;	/* current filename */
-
-bool	CSV = false;	/* true for csv input */
-
-size_t	awk_mb_cur_max = 1;
+extern	size_t	npfile;
 
 static noreturn void fpecatch(int n
 #ifdef SA_SIGINFO
@@ -100,13 +87,6 @@ static noreturn void fpecatch(int n
 	    );
 }
 
-/* Can this work with recursive calls?  I don't think so.
-void segvcatch(int n)
-{
-	FATAL("segfault.  Do you have an unbounded recursive call?", n);
-}
-*/
-
 static const char *
 setfs(char *p)
 {
@@ -136,11 +116,10 @@ int main(int argc, char *argv[])
 
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
-	awk_mb_cur_max = MB_CUR_MAX;
 	cmdname = argv[0];
 	if (argc == 1) {
 		fprintf(stderr,
-		  "usage: %s [-F fs | --csv] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
+		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
 		  cmdname);
 		exit(1);
 	}
@@ -173,22 +152,10 @@ int main(int argc, char *argv[])
 			argv++;
 			break;
 		}
-		if (strcmp(argv[1], "--csv") == 0) {	/* turn on csv input processing */
-			CSV = true;
-			argc--;
-			argv++;
-			continue;
-		}
 		switch (argv[1][1]) {
 		case 'f':	/* next argument is program filename */
 			fn = getarg(&argc, &argv, "no program filename");
-			if (npfile >= maxpfile) {
-				maxpfile += 20;
-				pfile = (char **) realloc(pfile, maxpfile * sizeof(*pfile));
-				if (pfile == NULL)
-					FATAL("error allocating space for -f options");
- 			}
-			pfile[npfile++] = fn;
+			addfile(fn);
  			break;
 		case 'F':	/* set field separator */
 			fs = setfs(getarg(&argc, &argv, "no field separator"));
@@ -213,9 +180,6 @@ int main(int argc, char *argv[])
 		argc--;
 		argv++;
 	}
-
-	if (CSV && (fs != NULL || lookup("FS", symtab) != NULL))
-		WARNING("danger: don't set FS when --csv is in effect");
 
 	/* argv[1] is now the first argument */
 	if (npfile == 0) {	/* no -f; first argument is program */
@@ -251,35 +215,4 @@ int main(int argc, char *argv[])
 	} else
 		bracecheck();
 	return(errorflag);
-}
-
-int pgetc(void)		/* get 1 character from awk program */
-{
-	int c;
-
-	for (;;) {
-		if (yyin == NULL) {
-			if (curpfile >= npfile)
-				return EOF;
-			if (strcmp(pfile[curpfile], "-") == 0)
-				yyin = stdin;
-			else if ((yyin = fopen(pfile[curpfile], "r")) == NULL)
-				FATAL("can't open file %s", pfile[curpfile]);
-			lineno = 1;
-		}
-		if ((c = getc(yyin)) != EOF)
-			return c;
-		if (yyin != stdin)
-			fclose(yyin);
-		yyin = NULL;
-		curpfile++;
-	}
-}
-
-char *cursource(void)	/* current source file name */
-{
-	if (npfile > 0)
-		return pfile[curpfile < npfile ? curpfile : curpfile - 1];
-	else
-		return NULL;
 }

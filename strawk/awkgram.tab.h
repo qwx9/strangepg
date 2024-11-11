@@ -166,7 +166,7 @@ union YYSTYPE
 {
 #line 42 "awkgram.y"
 
-	Node	*p;
+	TNode	*p;
 	Cell	*cp;
 	int	i;
 	char	*s;

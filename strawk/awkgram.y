@@ -28,19 +28,19 @@ THIS SOFTWARE.
 #include <stdlib.h>
 #include "awk.h"
 
-void checkdup(Node *list, Cell *item);
+void checkdup(TNode *list, Cell *item);
 int yywrap(void) { return(1); }
 
-Node	*beginloc = 0;
-Node	*endloc = 0;
+TNode	*beginloc = 0;
+TNode	*endloc = 0;
 bool	infunc	= false;	/* = true if in arglist or body of func */
 int	inloop	= 0;	/* >= 1 if in while, for, do; can't be bool, since loops can next */
 char	*curfname = 0;	/* current function name */
-Node	*arglist = 0;	/* list of args for current function */
+TNode	*arglist = 0;	/* list of args for current function */
 %}
 
 %union {
-	Node	*p;
+	TNode	*p;
 	Cell	*cp;
 	int	i;
 	char	*s;
@@ -105,9 +105,9 @@ program:
 	  pas
 	  { if (errorflag == 0){
 			if(winner == NULL)
-				winner = (Node *)stat3(PROGRAM, beginloc, $1, endloc);
+				winner = (TNode *)stat3(PROGRAM, beginloc, $1, endloc);
 			else
-				runnerup = (Node *)stat3(PROGRAM, $1, NIL, NIL);
+				runnerup = (TNode *)stat3(PROGRAM, $1, NIL, NIL);
 		}
 	  }
 	| error	{ yyclearin; bracecheck(); SYNTAX("bailing out"); }
@@ -216,12 +216,12 @@ ppattern:
 		{ $$ = op2(LOR, notnull($1), notnull($3)); }
 	| ppattern land ppattern %prec LAND
 		{ $$ = op2(LAND, notnull($1), notnull($3)); }
-	| ppattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (Node*)makedfa($3, 0)); free($3); }
+	| ppattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); free($3); }
 	| ppattern MATCHOP ppattern
 		{ if (constnode($3))
-			$$ = op3($2, NIL, $1, (Node*)makedfa(strnode($3), 0));
+			$$ = op3($2, NIL, $1, (TNode*)makedfa(strnode($3), 0));
 		  else
-			$$ = op3($2, (Node *)1, $1, $3); }
+			$$ = op3($2, (TNode *)1, $1, $3); }
 	| ppattern IN varname		{ $$ = op2(INTEST, $1, makearr($3)); }
 	| '(' plist ')' IN varname	{ $$ = op2(INTEST, $2, makearr($5)); }
 	| ppattern term %prec CAT	{ $$ = op2(CAT, $1, $2); }
@@ -243,12 +243,12 @@ pattern:
 	| pattern LE pattern		{ $$ = op2($2, $1, $3); }
 	| pattern LT pattern		{ $$ = op2($2, $1, $3); }
 	| pattern NE pattern		{ $$ = op2($2, $1, $3); }
-	| pattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (Node*)makedfa($3, 0)); free($3); }
+	| pattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); free($3); }
 	| pattern MATCHOP pattern
 		{ if (constnode($3))
-			$$ = op3($2, NIL, $1, (Node*)makedfa(strnode($3), 0));
+			$$ = op3($2, NIL, $1, (TNode*)makedfa(strnode($3), 0));
 		  else
-			$$ = op3($2, (Node *)1, $1, $3); }
+			$$ = op3($2, (TNode *)1, $1, $3); }
 	| pattern IN varname		{ $$ = op2(INTEST, $1, makearr($3)); }
 	| '(' plist ')' IN varname	{ $$ = op2(INTEST, $2, makearr($5)); }
 	| pattern term %prec CAT	{ $$ = op2(CAT, $1, $2); }
@@ -286,7 +286,7 @@ rbrace:
 
 re:
 	   reg_expr
-		{ $$ = op3(MATCH, NIL, rectonode(), (Node*)makedfa($1, 0)); free($1); }
+		{ $$ = op3(MATCH, NIL, rectonode(), (TNode*)makedfa($1, 0)); free($1); }
 	| NOT re	{ $$ = op1(NOT, notnull($2)); }
 	;
 
@@ -378,38 +378,38 @@ term:
 		{ $$ = op2(INDEX, $3, $5); }
 	| INDEX '(' pattern comma reg_expr ')'
 		{ SYNTAX("index() doesn't permit regular expressions");
-		  $$ = op2(INDEX, $3, (Node*)$5); }
+		  $$ = op2(INDEX, $3, (TNode*)$5); }
 	| '(' pattern ')'		{ $$ = $2; }
 	| MATCHFCN '(' pattern comma reg_expr ')'
-		{ $$ = op3(MATCHFCN, NIL, $3, (Node*)makedfa($5, 1)); free($5); }
+		{ $$ = op3(MATCHFCN, NIL, $3, (TNode*)makedfa($5, 1)); free($5); }
 	| MATCHFCN '(' pattern comma pattern ')'
 		{ if (constnode($5))
-			$$ = op3(MATCHFCN, NIL, $3, (Node*)makedfa(strnode($5), 1));
+			$$ = op3(MATCHFCN, NIL, $3, (TNode*)makedfa(strnode($5), 1));
 		  else
-			$$ = op3(MATCHFCN, (Node *)1, $3, $5); }
+			$$ = op3(MATCHFCN, (TNode *)1, $3, $5); }
 	| NUMBER			{ $$ = celltonode($1, CCON); }
 	| SPLIT '(' pattern comma varname comma pattern ')'     /* string */
-		{ $$ = op4(SPLIT, $3, makearr($5), $7, (Node*)STRING); }
+		{ $$ = op4(SPLIT, $3, makearr($5), $7, (TNode*)STRING); }
 	| SPLIT '(' pattern comma varname comma reg_expr ')'    /* const /regexp/ */
-		{ $$ = op4(SPLIT, $3, makearr($5), (Node*)makedfa($7, 1), (Node *)REGEXPR); free($7); }
+		{ $$ = op4(SPLIT, $3, makearr($5), (TNode*)makedfa($7, 1), (TNode *)REGEXPR); free($7); }
 	| SPLIT '(' pattern comma varname ')'
-		{ $$ = op4(SPLIT, $3, makearr($5), NIL, (Node*)STRING); }  /* default */
+		{ $$ = op4(SPLIT, $3, makearr($5), NIL, (TNode*)STRING); }  /* default */
 	| SPRINTF '(' patlist ')'	{ $$ = op1($1, $3); }
 	| string	 		{ $$ = celltonode($1, CCON); }
 	| subop '(' reg_expr comma pattern ')'
-		{ $$ = op4($1, NIL, (Node*)makedfa($3, 1), $5, rectonode()); free($3); }
+		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, rectonode()); free($3); }
 	| subop '(' pattern comma pattern ')'
 		{ if (constnode($3))
-			$$ = op4($1, NIL, (Node*)makedfa(strnode($3), 1), $5, rectonode());
+			$$ = op4($1, NIL, (TNode*)makedfa(strnode($3), 1), $5, rectonode());
 		  else
-			$$ = op4($1, (Node *)1, $3, $5, rectonode()); }
+			$$ = op4($1, (TNode *)1, $3, $5, rectonode()); }
 	| subop '(' reg_expr comma pattern comma var ')'
-		{ $$ = op4($1, NIL, (Node*)makedfa($3, 1), $5, $7); free($3); }
+		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, $7); free($3); }
 	| subop '(' pattern comma pattern comma var ')'
 		{ if (constnode($3))
-			$$ = op4($1, NIL, (Node*)makedfa(strnode($3), 1), $5, $7);
+			$$ = op4($1, NIL, (TNode*)makedfa(strnode($3), 1), $5, $7);
 		  else
-			$$ = op4($1, (Node *)1, $3, $5, $7); }
+			$$ = op4($1, (TNode *)1, $3, $5, $7); }
 	| SUBSTR '(' pattern comma pattern comma pattern ')'
 		{ $$ = op3(SUBSTR, $3, $5, $7); }
 	| SUBSTR '(' pattern comma pattern ')'
@@ -435,7 +435,7 @@ varlist:
 varname:
 	  VAR			{ $$ = celltonode($1, CVAR); }
 	| ARG 			{ $$ = op1(ARG, itonp($1)); }
-	| VARNF			{ $$ = op1(VARNF, (Node *) $1); }
+	| VARNF			{ $$ = op1(VARNF, (TNode *) $1); }
 	;
 
 
@@ -454,17 +454,17 @@ void setfname(Cell *p)
 	curfname = p->nval;
 }
 
-int constnode(Node *p)
+int constnode(TNode *p)
 {
 	return isvalue(p) && ((Cell *) (p->narg[0]))->csub == CCON;
 }
 
-char *strnode(Node *p)
+char *strnode(TNode *p)
 {
 	return ((Cell *)(p->narg[0]))->sval;
 }
 
-Node *notnull(Node *n)
+TNode *notnull(TNode *n)
 {
 	switch (n->nobj) {
 	case LE: case LT: case EQ: case NE: case GT: case GE:
@@ -475,7 +475,7 @@ Node *notnull(Node *n)
 	}
 }
 
-void checkdup(Node *vl, Cell *cp)	/* check if name already in list */
+void checkdup(TNode *vl, Cell *cp)	/* check if name already in list */
 {
 	char *s = cp->nval;
 	for ( ; vl; vl = vl->nnext) {

@@ -32,6 +32,13 @@ THIS SOFTWARE.
 extern YYSTYPE	yylval;
 extern bool	infunc;
 
+char *cmdname;	/* gets argv[0] for error messages */
+char *lexprog;	/* points to program argument if it exists */
+static char	**pfile;	/* program filenames from -f's */
+static size_t	maxpfile;	/* max program filename */
+static size_t	curpfile;	/* current filename */
+size_t	npfile;		/* number of filenames */
+
 int	lineno	= 1;
 int	bracecnt = 0;
 int	brackcnt  = 0;
@@ -665,4 +672,47 @@ void unputstr(const char *s)	/* put a string back on input */
 
 	for (i = strlen(s)-1; i >= 0; i--)
 		unput(s[i]);
+}
+
+char *cursource(void)	/* current source file name */
+{
+	if (npfile > 0)
+		return pfile[curpfile < npfile ? curpfile : curpfile - 1];
+	else
+		return NULL;
+}
+
+int pgetc(void)		/* get 1 character from awk program */
+{
+	int c;
+
+	for (;;) {
+		if (yyin == NULL) {
+			if (curpfile >= npfile)
+				return EOF;
+			if (strcmp(pfile[curpfile], "-") == 0)
+				yyin = stdin;
+			else if ((yyin = fopen(pfile[curpfile], "r")) == NULL)
+				FATAL("can't open file %s", pfile[curpfile]);
+			lineno = 1;
+		}
+		if ((c = getc(yyin)) != EOF)
+			return c;
+		if (yyin != stdin)
+			fclose(yyin);
+		yyin = NULL;
+		curpfile++;
+	}
+}
+
+void
+addfile(char *fn)
+{
+	if (npfile >= maxpfile) {
+		maxpfile += 20;
+		pfile = (char **) realloc(pfile, maxpfile * sizeof(*pfile));
+		if (pfile == NULL)
+			FATAL("error allocating space for -f options");
+	}
+	pfile[npfile++] = fn;
 }
