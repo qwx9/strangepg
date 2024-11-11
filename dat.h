@@ -68,6 +68,7 @@ enum{
 	Debugcmd = 1<<6,
 	Debugperf = 1<<7,
 	Debugmeta = 1<<8,
+	Debugawk = 1<<9,
 	Debugtheworld = 0xffffffff,
 
 	PerfΔt = 1000000,
@@ -83,7 +84,7 @@ struct Clk{
 
 extern int debug;
 extern int gottagofast;
-extern char logbuf[], *lastmsg[3], iserrmsg[3];
+extern char logbuf[], lastmsg[3][64], iserrmsg[3];
 extern int nlog, logsz;
 
 enum{

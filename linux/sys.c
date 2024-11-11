@@ -49,7 +49,7 @@ char *
 va(char *fmt, ...)
 {
 	va_list arg;
-	static char buf[512];
+	static char buf[256];
 
 	va_start(arg, fmt);
 	vsnprintf(buf, sizeof buf, fmt, arg);

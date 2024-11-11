@@ -1,19 +1,23 @@
 #include "strpg.h"
+#include "threads.h"
 
-char logbuf[8192], *lastmsg[3], iserrmsg[3];
+	static RWLock lock;
+
+char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;
+
+static char *lp = logbuf;
 
 static inline void
 writelog(char *s, int iserr)
 {
 	int n, m;
 	char *p;
-	static char *lp = logbuf;
 
 	n = strlen(s);
 	if(n > sizeof logbuf)
 		n = sizeof logbuf - 1;
-	while(lp + n >= logbuf + sizeof logbuf){
+	while(lp + n >= logbuf + sizeof logbuf - 1){
 		if((p = strchr(logbuf, '\n')) == nil || p >= lp){
 			logbuf[0] = 0;
 			lp = logbuf;
@@ -25,33 +29,36 @@ writelog(char *s, int iserr)
 		}
 	}
 	memcpy(lp, s, n);
-	lp += n;
+	lp += n - 1;
+	*lp++ = '\n';
 	*lp = 0;
 	logsz = lp - logbuf;
-	free(lastmsg[0]);
-	lastmsg[0] = lastmsg[1];
-	lastmsg[1] = lastmsg[2];
-	lastmsg[2] = estrdup(s);
-	p = lastmsg[2] + n - 1;
+	strncpy(lastmsg[0], lastmsg[1], sizeof lastmsg[0]-1);
+	strncpy(lastmsg[1], lastmsg[2], sizeof lastmsg[1]-1);
+	strncpy(lastmsg[2], s, sizeof lastmsg[2]-1);
+	p = lastmsg[2] + MIN(n, sizeof lastmsg[2]-1) - 1;
 	if(*p == '\n')
 		*p = 0;
 	iserrmsg[0] = iserrmsg[1];
 	iserrmsg[1] = iserrmsg[2];
 	iserrmsg[2] = iserr;
 	nlog++;
-
 }
 
 void
 logmsg(char *s)
 {
+	wlock(&lock);
 	writelog(s, 0);
+	wunlock(&lock);
 }
 
 void
 logerr(char *s)
 {
+	wlock(&lock);
 	writelog(s, 1);
+	wunlock(&lock);
 }
 
 void
@@ -71,6 +78,7 @@ dprint(int flags, char *fmt, ...)
 
 	switch(debug & flags){
 	case 0: return;
+	case Debugawk: type = "awk"; break;
 	case Debugcmd: type = "cmd"; break;
 	case Debugcoarse: type = "coarse"; break;
 	case Debugdraw: type = "draw"; break;

@@ -168,7 +168,7 @@ readcmd(char *s)
 	while((s = nexttok(e, &e)) != nil){
 		g = graphs;
 		if(s[1] != 0 && s[1] != '\t'){
-			logerr(va("%s\n", s));
+			logerr(s);
 			continue;
 		}
 		switch(*s){
@@ -177,7 +177,7 @@ readcmd(char *s)
 		case '!':
 			quit();
 			break;
-		case 'E': 
+		case 'E':
 			logerr(va("> error:%s\n", s+1));
 			continue;
 		case 'I':

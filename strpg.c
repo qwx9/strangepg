@@ -106,6 +106,8 @@ parseargs(int argc, char **argv)
 		s = EARGF(usage());
 		if(strcmp(s, "all") == 0)
 			debug |= Debugtheworld;
+		else if(strcmp(s, "awk") == 0)
+			debug |= Debugawk;
 		else if(strcmp(s, "cmd") == 0)
 			debug |= Debugcmd;
 		else if(strcmp(s, "coarse") == 0)
