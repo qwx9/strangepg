@@ -309,6 +309,10 @@ drawproc(void *)
 void
 frame(void)
 {
+	vlong t;
+	static int frm;
+	static vlong t0;
+
 	if((reqs & Reqresetdraw) != 0){
 		reqs &= ~Reqresetdraw;
 		resize();
@@ -331,14 +335,20 @@ frame(void)
 		goto end;
 	if((reqs & Reqpickbuf) != 0){
 		reqs &= ~Reqpickbuf;
-		render.caching = 1;
-	}
+		t = μsec();
+		if(t - t0 >= 1000000 && frm > 2){
+			render.stalepick = 1;
+			render.caching = 1;
+			t0 = t;
+			frm = 0;
+		}else
+			frm++;
+	}else
+		frm++;
 	reqs &= ~Reqshallowdraw;	/* clear here to let us get some input events first */
 	flush();
-	if(render.caching){
-		render.stalepick = 1;
+	if(render.caching)
 		render.caching = 0;
-	}
 end:
 	reqdraw(Reqrefresh);
 }

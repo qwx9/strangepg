@@ -26,18 +26,12 @@ ioff
 mousepick(int x, int y)
 {
 	u32int i;
-	vlong t;
-	static vlong t0;
 
 	if(x < 0 || x >= view.w || y < 0 || y >= view.h)
 		return -1;
 	if(render.stalepick && !render.moving){
-		t = μsec();
-		if(t - t0 >= 10000){
-			t0 = t;
-			sg_query_image_pixels(pickfb, render.pickfb);
-			render.stalepick = 0;
-		}
+		sg_query_image_pixels(pickfb, render.pickfb);
+		render.stalepick = 0;
 	}
 	if((i = render.pickfb[(view.h - y - 1) * view.w + x]) == 0)
 		return -1;
@@ -139,6 +133,7 @@ resize(void)
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
 	free(render.pickfb);
+	sg_destroy_attachments(render.offscrfb);
 	initfb(sapp_width(), sapp_height());
 	updateview();
 }
