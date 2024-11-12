@@ -350,13 +350,14 @@ ticproc(void *)
 static void
 drawproc(void *)
 {
-	int req;
+	int req, stop;
 
 	while(recvul(drawc) != Reqredraw)
 		;
 	resetdraw();
 	newthread(rendproc, nil, nil, nil, "render", mainstacksize);
 	sendul(ticc, 0);
+	stop = 0;
 	for(;;){
 		if((req = recvul(drawc)) == 0)
 			break;
@@ -369,7 +370,7 @@ drawproc(void *)
 		}
 		if((req & Reqresetui) != 0)
 			resetui();
-		if(req != Reqshallowdraw && !redraw())
+		if(req != Reqshallowdraw && (stop = !redraw(stop)))
 			sendul(ticc, 1);
 		nbsendul(framec, Reqrefresh);
 	}

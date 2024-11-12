@@ -232,6 +232,7 @@ To set the compiler, use the `CC` make variable:
 
 ```bash
 make CC=clang -j install
+```
 
 It can also be forced to use EGL:
 
@@ -707,6 +708,8 @@ many plots look ugly by default but can be fixed by just moving the nodes around
 - 3d navigation is a kludge on top of 2d navigation
 - The selection box is a kludge and is stupidly resource-heavy
 - The renderer is fairly efficient, but it could be made orders of magnitude faster
+- (pfr*) Layouting ignores nodes with no adjacencies; would be better to
+place them on better fixed locations as well
 
 Minor:
 - Web colors with a # are not parsed, but hex values with 0x are

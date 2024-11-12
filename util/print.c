@@ -1,12 +1,11 @@
 #include "strpg.h"
 #include "threads.h"
 
-	static RWLock lock;
-
 char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;
 
 static char *lp = logbuf;
+static RWLock llock;
 
 static inline void
 writelog(char *s, int iserr)
@@ -48,17 +47,17 @@ writelog(char *s, int iserr)
 void
 logmsg(char *s)
 {
-	wlock(&lock);
+	wlock(&llock);
 	writelog(s, 0);
-	wunlock(&lock);
+	wunlock(&llock);
 }
 
 void
 logerr(char *s)
 {
-	wlock(&lock);
+	wlock(&llock);
 	writelog(s, 1);
-	wunlock(&lock);
+	wunlock(&llock);
 }
 
 void
