@@ -326,7 +326,7 @@ involving the addition of new functions,
 strawk instead adds them in the language's grammar as new operators:
 
 - Binary operators: | (or), & (and), ^ (xor), << (left shift), >> (right shift)
-- Unary operators: ` (complement: sucks but overloading ~ makes things too complicated)
+- Unary operators: ^ (complement, to avoid ~)
 - Assignment operators: &=, |=, ^=, <<=, >>=
 
 The precedence rules are the same as C, **except for `|`, `^` and `&`**,

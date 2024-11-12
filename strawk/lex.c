@@ -265,8 +265,6 @@ int yylex(void)
 				input(); yylval.i = BOREQ; RET(ASGNOP);
 			} else
 				RET(BOR);
-		case '`':
-			RET(CMPL);
 		case '!':
 			if (peek() == '=') {
 				input(); yylval.i = NE; RET(NE);
@@ -346,7 +344,7 @@ int yylex(void)
 			if (peek() == '=') {
 				input(); yylval.i = XOREQ; RET(ASGNOP);
 			} else
-				RET(XOR);
+				RET('^');
 
 		case '$':
 			/* BUG: awkward, if not wrong */
