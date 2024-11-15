@@ -20,7 +20,12 @@ PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
 MAKE?= make
 TARGET?= Unix
-OS?= $(shell uname 2>/dev/null || echo NEIN)
+ifeq ($(OS),Windows_NT)
+	OS:= $(shell uname 2>/dev/null || echo Win64)
+	OS:= $(patsubst CYGWIN%,Cygwin,$(OS))
+else
+	OS:= $(shell uname 2>/dev/null || echo NEIN)
+endif
 ifndef MAKE
 	ifeq ($(OS),OpenBSD)
 		MAKE:= gmake
@@ -30,6 +35,7 @@ ifndef MAKE
 endif
 
 CC?= clang
+#CPPFLAGS+= NDEBUG
 CPPFLAGS+= -MMD -MP
 CPPFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 CPPFLAGS+= -pthread
