@@ -372,10 +372,8 @@ loadgfa1(void *arg)
 	while(readline(f) != nil){
 		if(nerr >= 10)
 			sysfatal("loadgfa1: too many errors, last error: %s\n", error());
-		if((s = nextfield(f)) == nil){
-			warn("null pointer\n");
-			break;
-		}
+		if((s = nextfield(f)) == nil)
+			continue;
 		switch(s[0]){
 		err:
 			warn("loadgfa1: line %d: %s\n", f->nr, error());
