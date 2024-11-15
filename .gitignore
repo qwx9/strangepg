@@ -5,5 +5,4 @@ strawk/awkgram.plan9.[ch]
 strawk/maketab
 strawk/strawk
 strangepg
-strcoarse
-strindex
+strangepg.exe

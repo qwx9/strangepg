@@ -1,4 +1,3 @@
-#include <pthread.h>
 #include "lib/chan.h"
 
 extern int mainstacksize;

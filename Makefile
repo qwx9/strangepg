@@ -4,9 +4,82 @@ BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
 
-#PREFIX:= /usr/local
+ifeq ($(wildcard .git),.git)
+	VERSION:= $(shell git describe --tags)
+	GITCMD:= git describe --abbrev=8 --always
+	ifneq ($(shell git diff-index --name-only HEAD --),"")
+		GITCMD+= --dirty
+	endif
+	GIT_HEAD:= $(shell $(GITCMD))
+	ifneq ($(GIT_HEAD),)
+		VERSION+= git_$(GIT_HEAD)
+	endif
+endif
+
 PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
+MAKE?= make
+TARGET?= Unix
+OS?= $(shell uname 2>/dev/null || echo NEIN)
+ifndef MAKE
+	ifeq ($(OS),OpenBSD)
+		MAKE:= gmake
+	else
+		MAKE:= make
+	endif
+endif
+
+CC?= clang
+CPPFLAGS+= -MMD -MP
+CPPFLAGS+= -fextended-identifiers -finput-charset=UTF-8
+CPPFLAGS+= -pthread
+# _XOPEN_SOURCE: M_PI et al
+# _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
+CPPFLAGS+= -D_XOPEN_SOURCE=500
+CPPFLAGS+= -DVERSION="\"$(VERSION)\""
+CPPFLAGS+=\
+	-I.\
+	-Icmd\
+	-Idraw\
+	-Ifs\
+	-Igraph\
+	-Ilayout\
+	-Iposix\
+	-Irend\
+	-Iui\
+	-Iutil\
+
+CFLAGS?= -O3 -pipe -march=native
+# with minor plan9esque violations
+CFLAGS+= -std=c99
+CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
+ifdef DEBUG
+	export LLVM_PROFILE_FILE :=./llvm_%p.prof
+	ifeq ($(CC), clang)
+		CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
+	else
+		CFLAGS+= -g -ggdb -O0 -Wno-suggest-attribute=format
+	endif
+	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
+			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
+			 -Wredundant-decls -Wshadow -Wstack-protector \
+			 -Wswitch-default -Wvariadic-macros
+else
+	CFLAGS+= 
+	# c2x for omitting parameter names in a function definition
+	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
+	ifeq ($(CC), clang)
+		CFLAGS+= -Wno-c2x-extensions
+	else
+		CFLAGS+= -Wno-discarded-qualifiers
+	endif
+	CFLAGS+= -Wno-incompatible-pointer-types -Wno-ignored-qualifiers \
+			 -Wno-unused-result -Wno-unused-function -Wno-unused-value \
+			 -Wno-format-nonliteral
+endif
+
+LDFLAGS?=
+LDLIBS?=
 
 OBJS:=\
 	sokol/draw.o\
@@ -17,10 +90,9 @@ OBJS:=\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
 	lib/plan9/strecpy.o\
-	linux/awk.o\
-	linux/fs.o\
-	linux/sys.o\
-	linux/threads.o\
+	posix/fs.o\
+	posix/sys.o\
+	posix/threads.o\
 	cmd/awk.o\
 	cmd/awkprog.o\
 	cmd/cmd.o\
@@ -41,16 +113,6 @@ OBJS:=\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\
-	glsl/node.vert.o\
-	glsl/node.frag.o\
-	glsl/nodeidx.vert.o\
-	glsl/nodeidx.frag.o\
-	glsl/edge.vert.o\
-	glsl/edge.frag.o\
-	glsl/edgeidx.vert.o\
-	glsl/edgeidx.frag.o\
-	glsl/scr.vert.o\
-	glsl/scr.frag.o\
 	strawk/awkgram.tab.o\
 	strawk/b.o\
 	strawk/parse.o\
@@ -59,107 +121,59 @@ OBJS:=\
 	strawk/lib.o\
 	strawk/run.o\
 	strawk/lex.o\
-	strawk/mt19937-64.o
+	strawk/mt19937-64.o\
 
-COARSENOBJS:=\
-	coarsen.o\
-	fs/em.o\
-	fs/fs.o\
-	lib/chan.o\
-	lib/queue.o\
-	linux/fs.o\
-	linux/sys.o\
-	linux/threads.o\
-	util/print.o\
+ifeq ($(TARGET),Unix)
+	CPPFLAGS+= -Iunix -DSOKOL_GLCORE
+	OBJS+=\
+		unix/awk.o\
+		glsl/node.vert.o\
+		glsl/node.frag.o\
+		glsl/nodeidx.vert.o\
+		glsl/nodeidx.frag.o\
+		glsl/edge.vert.o\
+		glsl/edge.frag.o\
+		glsl/edgeidx.vert.o\
+		glsl/edgeidx.frag.o\
+		glsl/scr.vert.o\
+		glsl/scr.frag.o\
 
-DEPS:=$(patsubst %.o,%.d,$(OBJS) $(COARSENOBJS))
-
-ALLOBJS:=\
-	$(OBJS)\
-	$(COARSENOBJS)\
-
-CLEANFILES:=\
-	$(OBJS)\
-	$(COARSENOBJS)\
-	$(DEPS)\
-
-ifeq ($(wildcard .git),.git)
-	VERSION:= $(shell git describe --tags)
-	GITCMD:= git describe --abbrev=8 --always
-	ifneq ($(shell git diff-index --name-only HEAD --),"")
-		GITCMD+= --dirty
+	LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
+	ifeq ($(OS),OpenBSD)
+		CPPFLAGS+= -I/usr/X11R6/include
+		LDFLAGS+= -L/usr/X11R6/lib
+		LDLIBS+= -pthread
+	else ifeq ($(OS),Cygwin)
+		CFLAGS+= -mwin32
+		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
 	endif
-	GIT_HEAD:= $(shell $(GITCMD))
-	ifneq ($(GIT_HEAD),)
-		VERSION+= git_$(GIT_HEAD)
-	endif
+
+else ifeq ($(TARGET),Win64)
+	# FIXME
+	CC:= x86_64-w64-mingw32-gcc-posix
+	CPPFLAGS+= -Iwin64 -DSOKOL_D3D11
+	LDFLAGS+= -static
+	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -ld3d11 -Wl,-Bstatic -lpthread
+	OBJS+=\
+		win64/awk.o\
+		win64/stubs.o\
+
+else
+	$(error unknown target)
 endif
 
-CC?= clang
-OFLAGS?= -O3 -pipe -march=native
-CFLAGS?= $(OFLAGS)
-# doesn't even work, what bullshit
-CFLAGS+= -fextended-identifiers -finput-charset=UTF-8
-# _XOPEN_SOURCE: M_PI et al
-# _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
-CFLAGS+= -D_XOPEN_SOURCE=500
-CFLAGS+= -pthread
-# generate dependency files for headers
-CFLAGS+= -MMD -MP
-CFLAGS+= -DVERSION="\"$(VERSION)\""
-WFLAGS?= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
-SFLAGS?= -std=c99
-IFLAGS?=\
-	-I.\
-	-Icmd\
-	-Idraw\
-	-Ifs\
-	-Igraph\
-	-Ilayout\
-	-Ilinux\
-	-Irend\
-	-Iui\
-	-Iutil\
-
-CFLAGS+= $(SFLAGS) $(IFLAGS) $(WFLAGS)
-LDFLAGS?=
-LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
-
 ifdef EGL
-	CFLAGS+= -DSOKOL_FORCE_EGL
+	CPPFLAGS+= -DSOKOL_FORCE_EGL
 	LDLIBS+= -lEGL
 endif
 
-ifdef DEBUG
-	export LLVM_PROFILE_FILE :=./llvm_%p.prof
-	ifeq ($(CC), clang)
-		CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
-	else
-		CFLAGS+= -g -ggdb -O0
-		WFLAGS+= -Wno-suggest-attribute=format
-	endif
-	WFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
-			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
-			 -Wredundant-decls -Wshadow -Wstack-protector \
-			 -Wswitch-default -Wvariadic-macros
-else
-	# c2x for omitting parameter names in a function definition
-	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
-	ifneq ($(CC), clang)
-		WFLAGS+= -Wno-discarded-qualifiers
-	endif
-	WFLAGS+= -Wno-incompatible-pointer-types -Wno-ignored-qualifiers \
-			 -Wno-unused-result -Wno-unused-function -Wno-unused-value \
-			 -Wno-c2x-extensions -Wno-format-nonliteral
-endif
+DEPS:=$(patsubst %.o,%.d,$(OBJS))
+CLEANFILES:= $(OBJS) $(DEPS)
 
 all:	$(ALLTARGETS) dirall
 
 $(BINTARGET):	$(OBJS)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
-
-strcoarse:	$(COARSENOBJS)
-	$(CC) $^ -o $@ $(LDFLAGS)
 
 install: $(ALLTARGETS) dirinstall
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)
@@ -173,21 +187,21 @@ uninstall: $(ALLTARGETS)
 	done
 	for i in $(DIRS); do \
 		cd $$i; \
-		make uninstall; \
+		$(MAKE) uninstall; \
 		cd ..; \
 	done
 
 dirall:
 	for i in $(DIRS); do \
 		cd $$i; \
-		make $(MAKEFLAGS) all; \
+		$(MAKE) $(MAKEFLAGS) all; \
 		cd ..; \
 	done
 
 dirinstall:
 	for i in $(DIRS); do \
 		cd $$i; \
-		make $(MAKEFLAGS) PREFIX=$(PREFIX) install; \
+		$(MAKE) $(MAKEFLAGS) PREFIX=$(PREFIX) install; \
 		cd ..; \
 	done
 
@@ -195,7 +209,7 @@ clean:
 	$(RM) $(CLEANFILES)
 	for i in $(DIRS); do \
 		cd $$i; \
-		make clean; \
+		$(MAKE) clean; \
 		cd ..; \
 	done
 
