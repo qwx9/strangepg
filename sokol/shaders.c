@@ -2,11 +2,8 @@
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
-#define	SOKOL_GLCORE
-//#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
-//#include "lib/sokol_log.h"
 #include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
 #include "sokol.h"
@@ -559,4 +556,5 @@ initgl(void)
 		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
 	initfb(sapp_width(), sapp_height());
+	onscreen = 1;
 }

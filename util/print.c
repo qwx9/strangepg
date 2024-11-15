@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "threads.h"
 
+int onscreen;
 char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;
 
@@ -32,8 +33,8 @@ writelog(char *s, int iserr)
 	*lp++ = '\n';
 	*lp = 0;
 	logsz = lp - logbuf;
-	strncpy(lastmsg[0], lastmsg[1], sizeof lastmsg[0]-1);
-	strncpy(lastmsg[1], lastmsg[2], sizeof lastmsg[1]-1);
+	strcpy(lastmsg[0], lastmsg[1]);
+	strcpy(lastmsg[1], lastmsg[2]);
 	strncpy(lastmsg[2], s, sizeof lastmsg[2]-1);
 	p = lastmsg[2] + MIN(n, sizeof lastmsg[2]-1) - 1;
 	if(*p == '\n')
@@ -50,6 +51,8 @@ logmsg(char *s)
 	wlock(&llock);
 	writelog(s, 0);
 	wunlock(&llock);
+	if(!onscreen)
+		warn("%s", s);
 }
 
 void
@@ -58,6 +61,7 @@ logerr(char *s)
 	wlock(&llock);
 	writelog(s, 1);
 	wunlock(&llock);
+	warn("%s", s);
 }
 
 void
