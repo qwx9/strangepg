@@ -1,4 +1,4 @@
-# Strange pangenome scale graph visualization
+# Strange pangenome scale large graph visualization
 
 Interactive visualization of large genome graphs
 in [GFAv1 format](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md)
@@ -256,12 +256,12 @@ apt install make gcc-core libgl-devel libxcursor-devel libxi-devel
 
 The command may be `apt` or `apt-get` depending on version.
 
-Then run make against the Cygwin makefile:
+Then run make as usual:
 
 ```bash
 git clone https://github.com/qwx9/strangepg
 cd strangepg
-make -j -f Makefile.cygwin install
+make -j install
 ```
 
 This will install the binaries in `/usr/bin` by default.
@@ -292,7 +292,7 @@ pkg_add -a gmake
 Install with:
 
 ```sh
-gmake -f Makefile.openbsd -j install
+gmake -j install
 ```
 
 The default `PREFIX` is `$HOME/.local/bin`.
