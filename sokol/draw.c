@@ -14,7 +14,6 @@
 
 //#define	NDEBUG
 #define	SOKOL_IMPL
-#define	SOKOL_GLCORE
 #define	SOKOL_NO_ENTRY
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
@@ -181,7 +180,7 @@ renderedges(Params p)
 		sg_apply_pipeline(render.edgepipe);
 	}
 	sg_apply_bindings(&render.edgebind);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
+	sg_apply_uniforms(0, &SG_RANGE(p));
 	sg_draw(0, render.nedgev, n);
 	sg_end_pass();
 	DPRINT(Debugperf, "renderedges: %.2f ms", (μsec() - t) / 1000);
@@ -215,7 +214,7 @@ rendernodes(Params p)
 		sg_apply_pipeline(render.nodepipe);
 	}
 	sg_apply_bindings(&render.nodebind);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &SG_RANGE(p));
+	sg_apply_uniforms(0, &SG_RANGE(p));
 	sg_draw(0, render.nnodev, n);
 	if(!render.caching)
 		snk_render(view.w, view.h);

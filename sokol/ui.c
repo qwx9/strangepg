@@ -2,7 +2,6 @@
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
-#define	SOKOL_GLCORE
 //#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"

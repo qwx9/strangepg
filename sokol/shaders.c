@@ -119,7 +119,7 @@ initfb(int w, int h)
 		},
 		.depth_stencil.image = zfb,
 	});
-	render.offscrbind.fs.images[0] = fb;
+	render.offscrbind.images[0] = fb;
 	render.pickfb = emalloc(w * h * sizeof *render.pickfb);
 }
 
@@ -202,14 +202,15 @@ initgl(void)
 		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
 	sg_shader nodesh = sg_make_shader(&(sg_shader_desc){
-		.vs.uniform_blocks[0] = {
+		.uniform_blocks[0] = {
+			.stage = SG_SHADERSTAGE_VERTEX,
 			.size = sizeof(Params),
-			.uniforms = {
-				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+			.glsl_uniforms = {
+				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
 			},
 		},
-		.vs.source = node_vertsh,
-		.fs.source = node_fragsh,
+		.vertex_func.source = node_vertsh,
+		.fragment_func.source = node_fragsh,
 	});
 	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
@@ -276,14 +277,15 @@ initgl(void)
 		.sample_count = 1,
 	});
 	sg_shader nodeidxsh = sg_make_shader(&(sg_shader_desc){
-		.vs.uniform_blocks[0] = {
+		.uniform_blocks[0] = {
+			.stage = SG_SHADERSTAGE_VERTEX,
 			.size = sizeof(Params),
-			.uniforms = {
-				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+			.glsl_uniforms = {
+				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
 			},
 		},
-		.vs.source = nodeidx_vertsh,
-		.fs.source = nodeidx_fragsh,
+		.vertex_func.source = nodeidx_vertsh,
+		.fragment_func.source = nodeidx_fragsh,
 	});
 	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
@@ -355,14 +357,15 @@ initgl(void)
 		.sample_count = 1,
 	});
 	sg_shader edgesh = sg_make_shader(&(sg_shader_desc){
-		.vs.uniform_blocks[0] = {
+		.uniform_blocks[0] = {
+			.stage = SG_SHADERSTAGE_VERTEX,
 			.size = sizeof(Params),
-			.uniforms = {
-				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+			.glsl_uniforms = {
+				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
 			},
 		},
-		.vs.source = edge_vertsh,
-		.fs.source = edge_fragsh,
+		.vertex_func.source = edge_vertsh,
+		.fragment_func.source = edge_fragsh,
 	});
 	render.edgepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
@@ -424,14 +427,15 @@ initgl(void)
 		.sample_count = 1,
 	});
 	sg_shader edgeidxsh = sg_make_shader(&(sg_shader_desc){
-		.vs.uniform_blocks[0] = {
+		.uniform_blocks[0] = {
+			.stage = SG_SHADERSTAGE_VERTEX,
 			.size = sizeof(Params),
-			.uniforms = {
-				[0] = { .name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
+			.glsl_uniforms = {
+				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
 			},
 		},
-		.vs.source = edgeidx_vertsh,
-		.fs.source = edgeidx_fragsh,
+		.vertex_func.source = edgeidx_vertsh,
+		.fragment_func.source = edgeidx_fragsh,
 	});
 	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
@@ -515,27 +519,23 @@ initgl(void)
 	});
 	render.offscrbind = (sg_bindings){
 		.vertex_buffers[0] = quad_vbuf,
-		.fs.samplers[0] = smp,
+		.samplers[0] = smp,
 	};
 	sg_shader scrsh = sg_make_shader(&(sg_shader_desc){
-		.vs = {
+		.vertex_func = {
 			.source = scr_vertsh,
 		},
-		.fs = {
-			.images = {
-				[0].used = true,
-			},
-			.samplers[0].used = true,
-			.image_sampler_pairs = {
-				[0] = {
-					.used = true,
-					.glsl_name = "tex0",
-					.image_slot = 0,
-					.sampler_slot = 0
-				},
-			},
+		.fragment_func = {
 			.source = scr_fragsh,
-		}
+		},
+		.images[0].stage = SG_SHADERSTAGE_FRAGMENT,
+		.samplers[0].stage = SG_SHADERSTAGE_FRAGMENT,
+		.image_sampler_pairs[0] = {
+			.stage = SG_SHADERSTAGE_FRAGMENT,
+			.glsl_name = "tex0",
+			.image_slot = 0,
+			.sampler_slot = 0,
+		},
 	});
 	render.offscrpipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
