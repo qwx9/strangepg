@@ -2,7 +2,6 @@
 #define	HANDMADE_MATH_IMPLEMENTATION
 //#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
-//#define	NDEBUG
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
@@ -106,7 +105,7 @@ drawui(nk_context *ctx)
 			nk_layout_row_dynamic(ctx, 8, 1);
 			for(i=0; i<3; i++){
 				if(!iserrmsg[i])
-					nk_label(ctx, lastmsg[i] != nil ? lastmsg[i] : "", NK_TEXT_LEFT);
+					nk_label(ctx, lastmsg[i][0] != 0 ? lastmsg[i] : "", NK_TEXT_LEFT);
 				else
 					nk_label_colored(ctx, lastmsg[i], NK_TEXT_LEFT, nk_rgb(160,0,0));
 			}
