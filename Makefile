@@ -87,7 +87,7 @@ endif
 LDFLAGS?=
 LDLIBS?=
 
-OBJS:=\
+OBJ:=\
 	sokol/draw.o\
 	sokol/shaders.o\
 	sokol/ui.o\
@@ -129,20 +129,12 @@ OBJS:=\
 	strawk/lex.o\
 	strawk/mt19937-64.o\
 
+GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))
+
 ifeq ($(TARGET),Unix)
 	CPPFLAGS+= -Iunix -DSOKOL_GLCORE
-	OBJS+=\
+	OBJ+=\
 		unix/awk.o\
-		glsl/node.vert.o\
-		glsl/node.frag.o\
-		glsl/nodeidx.vert.o\
-		glsl/nodeidx.frag.o\
-		glsl/edge.vert.o\
-		glsl/edge.frag.o\
-		glsl/edgeidx.vert.o\
-		glsl/edgeidx.frag.o\
-		glsl/scr.vert.o\
-		glsl/scr.frag.o\
 
 	LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 	ifeq ($(OS),OpenBSD)
@@ -160,7 +152,7 @@ else ifeq ($(TARGET),Win64)
 	CPPFLAGS+= -Iwin64 -DSOKOL_D3D11
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -ld3d11 -Wl,-Bstatic -lpthread
-	OBJS+=\
+	OBJ+=\
 		win64/awk.o\
 		win64/stubs.o\
 
@@ -173,12 +165,17 @@ ifdef EGL
 	LDLIBS+= -lEGL
 endif
 
-DEPS:=$(patsubst %.o,%.d,$(OBJS))
-CLEANFILES:= $(OBJS) $(DEPS)
+DEPS:=$(patsubst %.o,%.d,$(OBJ))
+CLEANFILES:= $(OBJ) $(DEPS)
 
-all:	$(ALLTARGETS) dirall
+all:	$(GLSL) $(ALLTARGETS) dirall
 
-$(BINTARGET):	$(OBJS)
+%.h: %.glsl
+	sokol-shdc -f sokol_impl -i $^ -l glsl430:hlsl5 -o $@
+
+$(OBJ): $(GLSL)
+
+$(BINTARGET):	$(OBJ)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 install: $(ALLTARGETS) dirinstall

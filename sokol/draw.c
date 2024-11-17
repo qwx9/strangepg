@@ -12,7 +12,6 @@
 	_SG_XMACRO(glGetTexImage,	void, (GLenum target, GLint level, GLenum format, GLenum type, void * pixels)) \
 	_SG_XMACRO(glReadPixels,	void, (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void * pixels)) \
 
-//#define	NDEBUG
 #define	SOKOL_IMPL
 #define	SOKOL_NO_ENTRY
 #include "lib/sokol_app.h"
@@ -29,6 +28,11 @@
 #define	NK_INCLUDE_DEFAULT_FONT
 #define	NK_INCLUDE_STANDARD_VARARGS
 //#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
+#include "glsl/edge.h"
+#include "glsl/edgeidx.h"
+#include "glsl/node.h"
+#include "glsl/nodeidx.h"
+#include "glsl/scr.h"
 #include "lib/nuklear.h"
 #include "lib/sokol_nuklear.h"
 #include "sokol.h"
@@ -42,8 +46,6 @@ void	event(const sapp_event*);
 
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
-
-static HMM_Mat4 mvp;
 
 static Channel *drawc;
 static int reqs;
@@ -98,7 +100,7 @@ updateview(void)
 	center = HMM_V3(view.center.x, view.center.y, view.center.z);
 	up = HMM_V3(view.up.x, view.up.y, view.up.z);
 	vw = HMM_LookAt_RH(eye, center, up);
-	mvp = HMM_MulM4(proj, vw);
+	render.cam.mvp = HMM_MulM4(proj, vw);
 	render.moving = 1;
 }
 
@@ -153,16 +155,16 @@ rotdraw(Vertex v)
 }
 
 static inline void
-renderedges(Params p)
+renderedges(void)
 {
 	ioff n;
 	double t;
 
 	if((n = ndedges) < 1)
 		return;
-	if((debug & Debugperf) != 0)
+	if(debug & Debugperf)
 		t = μsec();
-	sg_update_buffer(render.edgebind.vertex_buffers[1], &(sg_range){
+	sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 		.ptr = redges,
 		.size = n * sizeof *redges,
 	});
@@ -180,21 +182,22 @@ renderedges(Params p)
 		sg_apply_pipeline(render.edgepipe);
 	}
 	sg_apply_bindings(&render.edgebind);
-	sg_apply_uniforms(0, &SG_RANGE(p));
-	sg_draw(0, render.nedgev, n);
+	sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+	sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
+	sg_draw(0, render.nedgev * n, 1);
 	sg_end_pass();
 	DPRINT(Debugperf, "renderedges: %.2f ms", (μsec() - t) / 1000);
 }
 
 static inline void
-rendernodes(Params p)
+rendernodes(void)
 {
 	ioff n;
 	double t;
 
 	if((n = ndnodes) < 1)
 		return;
-	if((debug & Debugperf) != 0)
+	if(debug & Debugperf)
 		t = μsec();
 	sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
@@ -214,7 +217,7 @@ rendernodes(Params p)
 		sg_apply_pipeline(render.nodepipe);
 	}
 	sg_apply_bindings(&render.nodebind);
-	sg_apply_uniforms(0, &SG_RANGE(p));
+	sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
 	sg_draw(0, render.nnodev, n);
 	if(!render.caching)
 		snk_render(view.w, view.h);
@@ -223,13 +226,13 @@ rendernodes(Params p)
 }
 
 static inline void
-renderscreen(Params p)
+renderscreen(void)
 {
 	double t;
 
 	if(!render.caching)
 		return;
-	if((debug & Debugperf) != 0)
+	if(debug & Debugperf)
 		t = μsec();
 	sg_begin_pass(&(sg_pass){
 		.action = render.nothing,
@@ -257,16 +260,11 @@ clearscreen(void)
 static void
 flush(void)
 {
-	Params p;
-
-	p = (Params){
-		.mvp = mvp,
-	};
 	drawui(snk_new_frame());	/* rendered in the last pass, whichever it is */
 	if(dylen(rnodes) > 0){
-		renderedges(p);
-		rendernodes(p);
-		renderscreen(p);
+		renderedges();
+		rendernodes();
+		renderscreen();
 	}else
 		clearscreen();
 	sg_commit();

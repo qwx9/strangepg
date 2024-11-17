@@ -462,16 +462,8 @@ resetui(void)
 void
 initui(void)
 {
-	REdge *rp, r = {
-		.pos1 = {0.0f, 0.0f, 0.0f},
-		.pos2 = {0.0f, 0.0f, 0.0f},
-		.col = {1.0f, 0.0f, 0.0f, 0.8f},
-	};
-
 	initsysui();
 	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);
-	for(rp=selbox; rp<selbox+nelem(selbox); rp++)
-		*rp = r;
 	resetui();
 }

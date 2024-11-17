@@ -33,8 +33,8 @@ newnode(Graph *g, char *s)
 	off = dylen(g->nodes);
 	n.attr.length = 1;
 	n.attr.color = somecolor(off, &col);
-	r.len = 1.0f;
 	dypush(g->nodes, n);
+	r.len = 1.0f;
 	setcolor(r.col, n.attr.color);
 	dypush(rnodes, r);
 	DPRINT(Debugfs, "addnode %d:%s\n", off, s != nil ? s : "");
@@ -53,7 +53,6 @@ newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
 
 	off = dylen(redges);
 	assert((off & 3 << 30) == 0);	/* give up for now */
-	setcolor(r.col, theme[Cedge]);
 	dypush(redges, r);
 	dypush(g->nodes[u].out, v << 2 | urev << 1 & 2 | vrev & 1);
 	dypush(g->nodes[v].in, u << 2 | vrev << 1 & 2 | urev & 1);

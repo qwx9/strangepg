@@ -7,6 +7,12 @@
 #include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
 #include "sokol.h"
+#define SOKOL_SHDC_IMPL
+#include "glsl/edge.h"
+#include "glsl/edgeidx.h"
+#include "glsl/node.h"
+#include "glsl/nodeidx.h"
+#include "glsl/scr.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
@@ -135,11 +141,9 @@ resize(void)
 	updateview();
 }
 
-void
-initgl(void)
+static void
+setupnodes(void)
 {
-	Color *c;
-
 	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
 	 * is used for instance data */
 	render.nodebind = (sg_bindings){
@@ -151,25 +155,264 @@ initgl(void)
 		},
 	};
 	setnodeshape(0);
+	sg_shader sh = sg_make_shader(n_node_shader_desc(sg_query_backend()));
+	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.buffers = {
+				[0] = {
+					.stride = 2 * sizeof(float),
+				},
+				[1] = {
+					.stride = sizeof(RNode),
+					.step_func = SG_VERTEXSTEP_PER_INSTANCE
+				},
+			},
+			.attrs = {
+				[ATTR_node_geom] = {
+					.format = SG_VERTEXFORMAT_FLOAT2,
+					.buffer_index = 0,
+				},
+				[ATTR_node_pos] = {
+					.format = SG_VERTEXFORMAT_FLOAT3,
+					.buffer_index = 1,
+				},
+				[ATTR_node_dir] = {
+					.format = SG_VERTEXFORMAT_FLOAT3,
+					.buffer_index = 1,
+				},
+				[ATTR_node_col0] = {
+					.format = SG_VERTEXFORMAT_FLOAT4,
+					.buffer_index = 1,
+				},
+				[ATTR_node_len] = {
+					.format = SG_VERTEXFORMAT_FLOAT,
+					.buffer_index = 1,
+				},
+			}
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
+		.index_type = SG_INDEXTYPE_UINT16,
+		.depth = {
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true
+		},
+		.color_count = 1,
+		.colors = {
+			[0] = {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+		},
+		.sample_count = 1,
+	});
+	sh = sg_make_shader(ni_nodeidx_shader_desc(sg_query_backend()));
+	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.buffers = {
+				[0] = {
+					.stride = 2 * sizeof(float),
+				},
+				[1] = {
+					.stride = sizeof(RNode),
+					.step_func = SG_VERTEXSTEP_PER_INSTANCE
+				},
+			},
+			.attrs = {
+				[ATTR_nodeidx_geom] = {
+					.format = SG_VERTEXFORMAT_FLOAT2,
+					.buffer_index = 0,
+				},
+				[ATTR_nodeidx_pos] = {
+					.offset = offsetof(RNode, pos),
+					.format = SG_VERTEXFORMAT_FLOAT3,
+					.buffer_index = 1,
+				},
+				[ATTR_nodeidx_dir] = {
+					.offset = offsetof(RNode, dir),
+					.format = SG_VERTEXFORMAT_FLOAT3,
+					.buffer_index = 1,
+				},
+				[ATTR_nodeidx_col0] = {
+					.offset = offsetof(RNode, col),
+					.format = SG_VERTEXFORMAT_FLOAT4,
+					.buffer_index = 1,
+				},
+				[ATTR_nodeidx_len] = {
+					.offset = offsetof(RNode, len),
+					.format = SG_VERTEXFORMAT_FLOAT,
+					.buffer_index = 1,
+				},
+			}
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
+		.index_type = SG_INDEXTYPE_UINT16,
+		.depth = {
+			.pixel_format = SG_PIXELFORMAT_DEPTH,
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true
+		},
+		.color_count = 2,
+		/* NOTE: per-attachment blend state may not be supported */
+		.colors = {
+			[0] = {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+			[1] = {
+				.pixel_format = SG_PIXELFORMAT_R32UI,
+			},
+		},
+		.sample_count = 1,
+	});
+}
 
-	float edgevert[] = { -1, 1 };
-	u16int edgeidx[] = { 0, 1 };
-	render.nedgev = nelem(edgeidx);
+static void
+setupedges(void)
+{
+	sg_shader sh;
+
 	render.edgebind = (sg_bindings){
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){
-				.data = SG_RANGE(edgevert),
-			}),
-			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = (dylen(redges) + nelem(selbox)) * sizeof *redges,
+				.size = dylen(redges) * sizeof *redges,
 				.usage = SG_USAGE_STREAM,
 			}),
 		},
-		.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-			.type = SG_BUFFERTYPE_INDEXBUFFER,
-			.data = SG_RANGE(edgeidx),
-		}),
 	};
+	sh = sg_make_shader(e_edge_shader_desc(sg_query_backend()));
+	render.edgepipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.attrs = {
+				[ATTR_edge_pos] = {
+					.format = SG_VERTEXFORMAT_FLOAT3,
+				},
+			}
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_LINES, 
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
+		//.index_type = SG_INDEXTYPE_UINT16,
+		.depth = {
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true,
+		},
+		.color_count = 1,
+		.colors = {
+			[0] = {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+		},
+		.sample_count = 1,
+	});
+	sh = sg_make_shader(ei_edgeidx_shader_desc(sg_query_backend()));
+	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.attrs = {
+				[ATTR_edgeidx_pos] = {
+					.format = SG_VERTEXFORMAT_FLOAT3,
+				},
+			}
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_LINES,
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
+		//.index_type = SG_INDEXTYPE_UINT16,
+		.depth = {
+			.pixel_format = SG_PIXELFORMAT_DEPTH,
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true,
+		},
+		.color_count = 2,
+		.colors = {
+			[0] = {
+				.blend = {
+					.enabled = true,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+			[1] = {
+				.pixel_format = SG_PIXELFORMAT_R32UI,
+			},
+		},
+		.sample_count = 1,
+	});
+	render.nedgev = 2;
+}
+
+static void
+setupscreen(void)
+{
+	sg_shader sh;
+
+	/* drawing to display */
+	float quad_vertices[] = {
+		0.0f, 0.0f, 
+		1.0f, 0.0f,
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+	};
+	sg_buffer quad_vbuf = sg_make_buffer(&(sg_buffer_desc){
+		.data = SG_RANGE(quad_vertices)
+	});
+	sg_sampler smp = sg_make_sampler(&(sg_sampler_desc){
+		.min_filter = SG_FILTER_LINEAR,
+		.mag_filter = SG_FILTER_LINEAR,
+		.wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+		.wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+	});
+	render.offscrbind = (sg_bindings){
+		.vertex_buffers[0] = quad_vbuf,
+		.samplers[SMP_smp] = smp,
+	};
+	sh = sg_make_shader(s_scr_shader_desc(sg_query_backend()));
+	render.offscrpipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.attrs[ATTR_scr_pos].format = SG_VERTEXFORMAT_FLOAT2
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
+	});
+}
+
+static void
+setuppasses(void)
+{
+	Color *c;
 
 	c = color(theme[Cbg]);
 	/* clear colors on the first pass, don't do anything on the second */
@@ -201,349 +444,6 @@ initgl(void)
 		.depth.load_action = SG_LOADACTION_DONTCARE,
 		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
-	sg_shader nodesh = sg_make_shader(&(sg_shader_desc){
-		.uniform_blocks[0] = {
-			.stage = SG_SHADERSTAGE_VERTEX,
-			.size = sizeof(Params),
-			.glsl_uniforms = {
-				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-			},
-		},
-		.vertex_func.source = node_vertsh,
-		.fragment_func.source = node_fragsh,
-	});
-	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.buffers = {
-				[0] = {
-					.stride = 2 * sizeof(float),
-				},
-				[1] = {
-					.stride = sizeof(RNode),
-					.step_func = SG_VERTEXSTEP_PER_INSTANCE
-				},
-			},
-			.attrs = {
-				[0] = {
-					.offset = 0,
-					.format = SG_VERTEXFORMAT_FLOAT2,
-					.buffer_index = 0,
-				},
-				[1] = {
-					.offset = offsetof(RNode, pos),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[2] = {
-					.offset = offsetof(RNode, dir),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[3] = {
-					.offset = offsetof(RNode, col),
-					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-				[4] = {
-					.offset = offsetof(RNode, len),
-					.format = SG_VERTEXFORMAT_FLOAT,
-					.buffer_index = 1,
-				},
-			}
-		},
-		.shader = nodesh,
-		.primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
-		.face_winding = SG_FACEWINDING_CCW,
-		.cull_mode = SG_CULLMODE_BACK,
-		.index_type = SG_INDEXTYPE_UINT16,
-		.depth = {
-			.compare = SG_COMPAREFUNC_LESS_EQUAL,
-			.write_enabled = true
-		},
-		.color_count = 1,
-		.colors = {
-			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-		},
-		.sample_count = 1,
-	});
-	sg_shader nodeidxsh = sg_make_shader(&(sg_shader_desc){
-		.uniform_blocks[0] = {
-			.stage = SG_SHADERSTAGE_VERTEX,
-			.size = sizeof(Params),
-			.glsl_uniforms = {
-				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-			},
-		},
-		.vertex_func.source = nodeidx_vertsh,
-		.fragment_func.source = nodeidx_fragsh,
-	});
-	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.buffers = {
-				[0] = {
-					.stride = 2 * sizeof(float),
-				},
-				[1] = {
-					.stride = sizeof(RNode),
-					.step_func = SG_VERTEXSTEP_PER_INSTANCE
-				},
-			},
-			.attrs = {
-				[0] = {
-					.offset = 0,
-					.format = SG_VERTEXFORMAT_FLOAT2,
-					.buffer_index = 0,
-				},
-				[1] = {
-					.offset = offsetof(RNode, pos),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[2] = {
-					.offset = offsetof(RNode, dir),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[3] = {
-					.offset = offsetof(RNode, col),
-					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-				[4] = {
-					.offset = offsetof(RNode, len),
-					.format = SG_VERTEXFORMAT_FLOAT,
-					.buffer_index = 1,
-				},
-			}
-		},
-		.shader = nodeidxsh,
-		.primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
-		.face_winding = SG_FACEWINDING_CCW,
-		.cull_mode = SG_CULLMODE_BACK,
-		.index_type = SG_INDEXTYPE_UINT16,
-		.depth = {
-			.pixel_format = SG_PIXELFORMAT_DEPTH,
-			.compare = SG_COMPAREFUNC_LESS_EQUAL,
-			.write_enabled = true
-		},
-		.color_count = 2,
-		/* NOTE: per-attachment blend state may not be supported */
-		.colors = {
-			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-			[1] = {
-				.pixel_format = SG_PIXELFORMAT_R32UI,
-			},
-		},
-		.sample_count = 1,
-	});
-	sg_shader edgesh = sg_make_shader(&(sg_shader_desc){
-		.uniform_blocks[0] = {
-			.stage = SG_SHADERSTAGE_VERTEX,
-			.size = sizeof(Params),
-			.glsl_uniforms = {
-				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-			},
-		},
-		.vertex_func.source = edge_vertsh,
-		.fragment_func.source = edge_fragsh,
-	});
-	render.edgepipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.buffers = {
-				[0] = {
-					.stride = sizeof(float),
-				},
-				[1] = {
-					.stride = sizeof(REdge),
-					.step_func = SG_VERTEXSTEP_PER_INSTANCE
-				},
-			},
-			.attrs = {
-				[0] = {
-					.offset = 0,
-					.format = SG_VERTEXFORMAT_FLOAT,
-					.buffer_index = 0,
-				},
-				[1] = {
-					.offset = offsetof(REdge, pos1),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[2] = {
-					.offset = offsetof(REdge, pos2),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[3] = {
-					.offset = offsetof(REdge, col),
-					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-			}
-		},
-		.shader = edgesh,
-		.primitive_type = SG_PRIMITIVETYPE_LINES,
-		.face_winding = SG_FACEWINDING_CCW,
-		.cull_mode = SG_CULLMODE_BACK,
-		.index_type = SG_INDEXTYPE_UINT16,
-		.depth = {
-			.compare = SG_COMPAREFUNC_LESS_EQUAL,
-			.write_enabled = true,
-		},
-		.color_count = 1,
-		.colors = {
-			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-		},
-		.sample_count = 1,
-	});
-	sg_shader edgeidxsh = sg_make_shader(&(sg_shader_desc){
-		.uniform_blocks[0] = {
-			.stage = SG_SHADERSTAGE_VERTEX,
-			.size = sizeof(Params),
-			.glsl_uniforms = {
-				[0] = { .glsl_name="mvp", .type=SG_UNIFORMTYPE_MAT4 },
-			},
-		},
-		.vertex_func.source = edgeidx_vertsh,
-		.fragment_func.source = edgeidx_fragsh,
-	});
-	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.buffers = {
-				[0] = {
-					.stride = sizeof(float),
-				},
-				[1] = {
-					.stride = sizeof(REdge),
-					.step_func = SG_VERTEXSTEP_PER_INSTANCE
-				},
-			},
-			.attrs = {
-				[0] = {
-					.offset = 0,
-					.format = SG_VERTEXFORMAT_FLOAT,
-					.buffer_index = 0,
-				},
-				[1] = {
-					.offset = offsetof(REdge, pos1),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[2] = {
-					.offset = offsetof(REdge, pos2),
-					.format = SG_VERTEXFORMAT_FLOAT3,
-					.buffer_index = 1,
-				},
-				[3] = {
-					.offset = offsetof(REdge, col),
-					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-			}
-		},
-		.shader = edgeidxsh,
-		.primitive_type = SG_PRIMITIVETYPE_LINES,
-		.face_winding = SG_FACEWINDING_CCW,
-		.cull_mode = SG_CULLMODE_BACK,
-		.index_type = SG_INDEXTYPE_UINT16,
-		.depth = {
-			.pixel_format = SG_PIXELFORMAT_DEPTH,
-			.compare = SG_COMPAREFUNC_LESS_EQUAL,
-			.write_enabled = true,
-		},
-		.color_count = 2,
-		.colors = {
-			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-			[1] = {
-				.pixel_format = SG_PIXELFORMAT_R32UI,
-			},
-		},
-		.sample_count = 1,
-	});
-
-	/* drawing to display */
-	float quad_vertices[] = {
-		0.0f, 0.0f, 
-		1.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-	};
-	sg_buffer quad_vbuf = sg_make_buffer(&(sg_buffer_desc){
-		.data = SG_RANGE(quad_vertices)
-	});
-	sg_sampler smp = sg_make_sampler(&(sg_sampler_desc){
-		.min_filter = SG_FILTER_LINEAR,
-		.mag_filter = SG_FILTER_LINEAR,
-		.wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-		.wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-	});
-	render.offscrbind = (sg_bindings){
-		.vertex_buffers[0] = quad_vbuf,
-		.samplers[0] = smp,
-	};
-	sg_shader scrsh = sg_make_shader(&(sg_shader_desc){
-		.vertex_func = {
-			.source = scr_vertsh,
-		},
-		.fragment_func = {
-			.source = scr_fragsh,
-		},
-		.images[0].stage = SG_SHADERSTAGE_FRAGMENT,
-		.samplers[0].stage = SG_SHADERSTAGE_FRAGMENT,
-		.image_sampler_pairs[0] = {
-			.stage = SG_SHADERSTAGE_FRAGMENT,
-			.glsl_name = "tex0",
-			.image_slot = 0,
-			.sampler_slot = 0,
-		},
-	});
-	render.offscrpipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.attrs[0].format = SG_VERTEXFORMAT_FLOAT2
-		},
-		.shader = scrsh,
-		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-	});
 	/* screen pipeline: no clear needed, whole screen is overwritten */
 	render.nothing = (sg_pass_action){
 		.colors = {
@@ -555,6 +455,23 @@ initgl(void)
 		.depth.load_action = SG_LOADACTION_DONTCARE,
 		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
+}
+
+static void
+setuplines(void)
+{
+	/* FIXME */
+}
+
+void
+initgl(void)
+{
+	setupnodes();
+	setupedges();
+	setupscreen();
+	setuplines();
+	setuppasses();
+	setcolor(render.edgefs.color, theme[Cedge]);
 	initfb(sapp_width(), sapp_height());
 	onscreen = 1;
 }

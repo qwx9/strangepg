@@ -26,7 +26,6 @@ struct RNode{
 struct REdge{
 	float pos1[3];
 	float pos2[3];
-	float col[4];
 };
 extern RNode *rnodes;
 extern REdge *redges, selbox[4];

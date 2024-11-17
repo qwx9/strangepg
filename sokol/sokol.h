@@ -1,5 +1,14 @@
-typedef struct Params Params;
+typedef struct Vparam Vparam;
+typedef struct Fparam Fparam;
 typedef struct Render Render;
+
+/* FIXME: use ctype in shader */
+struct Vparam{
+	HMM_Mat4 mvp;
+};
+struct Fparam{
+	float color[4];
+};
 
 struct Render{
 	int caching;	/* rendering into picking buffer */
@@ -20,6 +29,8 @@ struct Render{
 	u32int *pickfb;
 	int nnodev;
 	int nedgev;
+	Fparam edgefs;
+	Vparam cam;
 };
 extern Render render;
 
