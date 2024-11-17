@@ -633,7 +633,6 @@ FILE	*yyin = NULL;
 int input(void)	/* get next lexical input character */
 {
 	int c;
-	extern char *lexprog;
 
 	if (yysptr > yysbuf)
 		c = (uschar)*--yysptr;

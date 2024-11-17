@@ -37,7 +37,6 @@ THIS SOFTWARE.
 #include <time.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include "awk.h"
 #include AWKTAB
 
@@ -62,7 +61,6 @@ void tempfree(Cell *p) {
 
 jmp_buf env;
 jmp_buf evalenv;
-extern	int	pairstack[];
 
 TNode	*winner = NULL;	/* root of parse tree */
 TNode	*runnerup;
@@ -2140,7 +2138,6 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	int t;
 	char *buf;
 	TNode *nextarg;
-	extern char *lexprog;
 
 	t = ptoi(a[0]);
 	switch(t){

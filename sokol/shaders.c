@@ -312,7 +312,6 @@ setupedges(void)
 		.primitive_type = SG_PRIMITIVETYPE_LINES, 
 		.face_winding = SG_FACEWINDING_CCW,
 		.cull_mode = SG_CULLMODE_BACK,
-		//.index_type = SG_INDEXTYPE_UINT16,
 		.depth = {
 			.compare = SG_COMPAREFUNC_LESS_EQUAL,
 			.write_enabled = true,
@@ -346,7 +345,6 @@ setupedges(void)
 		.primitive_type = SG_PRIMITIVETYPE_LINES,
 		.face_winding = SG_FACEWINDING_CCW,
 		.cull_mode = SG_CULLMODE_BACK,
-		//.index_type = SG_INDEXTYPE_UINT16,
 		.depth = {
 			.pixel_format = SG_PIXELFORMAT_DEPTH,
 			.compare = SG_COMPAREFUNC_LESS_EQUAL,
