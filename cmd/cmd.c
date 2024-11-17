@@ -310,8 +310,11 @@ initcmd(void)
 {
 	int fd;
 
-	if((fd = initrepl()) < 0)
-		sysfatal("initcmd: %s", error());
+	if((fd = initrepl()) < 0){
+		logerr(va("initcmd: failed: %s\n", error()));
+		gottagofast = 1;
+		return -1;
+	}
 	newthread(readcproc, nil, (void*)(intptr)fd, nil, "readawk", mainstacksize);
 	return 0;
 }
