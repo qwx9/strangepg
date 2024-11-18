@@ -129,6 +129,7 @@ void	sysfatal(char*, ...);
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);
 int	dupfd(int, int);
+int	pipe(int[2]);
 
 // FIXME
 #define sleep(x)	lsleep((x) * 1000000ULL)

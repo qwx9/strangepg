@@ -133,9 +133,6 @@ GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))
 
 ifeq ($(TARGET),Unix)
 	CPPFLAGS+= -Iunix -DSOKOL_GLCORE
-	OBJ+=\
-		unix/awk.o\
-
 	LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
 	ifeq ($(OS),OpenBSD)
 		CPPFLAGS+= -I/usr/X11R6/include
@@ -153,7 +150,6 @@ else ifeq ($(TARGET),Win64)
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -ld3d11 -Wl,-Bstatic -lpthread
 	OBJ+=\
-		win64/awk.o\
 		win64/stubs.o\
 
 else

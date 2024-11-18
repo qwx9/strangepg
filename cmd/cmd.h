@@ -1,7 +1,7 @@
 extern int noreset;
 
 extern char *awkprog;
-extern int epfd[2];
+extern int infd[2], outfd[2];
 
 void	readcmd(char*);
 void	pushcmd(char*, ...);

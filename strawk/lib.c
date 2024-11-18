@@ -115,7 +115,7 @@ void initgetrec(void)
 		setclvar(p);	/* a commandline assignment before filename */
 		argno++;
 	}
-	infile = stdin;		/* no filenames, so use stdin */
+	infile = awkstdin;		/* no filenames, so use stdin */
 	innew = true;
 }
 
@@ -161,7 +161,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 		*RS, *FS, *ARGC, *FILENAME);
 	saveb0 = buf[0];
 	buf[0] = 0;
-	while (argno < *ARGC || infile == stdin) {
+	while (argno < *ARGC || infile == awkstdin) {
 		DPRINTF("argno=%d, file=|%s|\n", argno, file);
 		if (infile == NULL) {	/* have to open a new file */
 			file = getargv(argno);
@@ -177,7 +177,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 			*FILENAME = file;
 			DPRINTF("opening file %s\n", file);
 			if (*file == '-' && *(file+1) == '\0')
-				infile = stdin;
+				infile = awkstdin;
 			else if ((infile = fopen(file, "r")) == NULL)
 				FATAL("can't open file %s", file);
 			innew = true;
@@ -207,7 +207,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 			return 1;
 		}
 		/* EOF arrived on this file; set up next */
-		if (infile != stdin)
+		if (infile != awkstdin)
 			fclose(infile);
 		infile = NULL;
 		argno++;
@@ -596,16 +596,16 @@ void SYNTAX(const char *fmt, ...)
 	extern char *cmdname, *curfname;
 	va_list varg;
 
-	fprintf(stderr, "%s: ", cmdname);
+	fprintf(awkstderr, "%s: ", cmdname);
 	va_start(varg, fmt);
-	vfprintf(stderr, fmt, varg);
+	vfprintf(awkstderr, fmt, varg);
 	va_end(varg);
-	fprintf(stderr, " at source line %d", lineno);
+	fprintf(awkstderr, " at source line %d", lineno);
 	if (curfname != NULL)
-		fprintf(stderr, " in function %s", curfname);
+		fprintf(awkstderr, " in function %s", curfname);
 	if (compile_time == COMPILING && cursource() != NULL)
-		fprintf(stderr, " source file %s", cursource());
-	fprintf(stderr, "\n");
+		fprintf(awkstderr, " source file %s", cursource());
+	fprintf(awkstderr, "\n");
 	errorflag = 2;
 	eprint();
 	bracecnt = brackcnt = parencnt = 0;
@@ -629,13 +629,13 @@ void bracecheck(void)
 void bcheck2(int n, int c1, int c2)
 {
 	if (n == 1)
-		fprintf(stderr, "\tmissing %c\n", c2);
+		fprintf(awkstderr, "\tmissing %c\n", c2);
 	else if (n > 1)
-		fprintf(stderr, "\t%d missing %c's\n", n, c2);
+		fprintf(awkstderr, "\t%d missing %c's\n", n, c2);
 	else if (n == -1)
-		fprintf(stderr, "\textra %c\n", c2);
+		fprintf(awkstderr, "\textra %c\n", c2);
 	else if (n < -1)
-		fprintf(stderr, "\t%d extra %c's\n", -n, c2);
+		fprintf(awkstderr, "\t%d extra %c's\n", -n, c2);
 }
 
 void FATAL(const char *fmt, ...)
@@ -643,14 +643,14 @@ void FATAL(const char *fmt, ...)
 	extern char *cmdname;
 	va_list varg;
 
-	fflush(stdout);
-	fprintf(stderr, "%s: ", cmdname);
+	fflush(awkstdout);
+	fprintf(awkstderr, "%s: ", cmdname);
 	va_start(varg, fmt);
-	vfprintf(stderr, fmt, varg);
+	vfprintf(awkstderr, fmt, varg);
 	va_end(varg);
 	ERROR();
 	if(runnerup != NULL){
-		fflush(stderr);
+		fflush(awkstderr);
 		longjmp(evalenv, -1);
 	}
 	if (dbg > 1)		/* core dump if serious debugging on */
@@ -663,10 +663,10 @@ void WARNING(const char *fmt, ...)
 	extern char *cmdname;
 	va_list varg;
 
-	fflush(stdout);
-	fprintf(stderr, "%s: ", cmdname);
+	fflush(awkstdout);
+	fprintf(awkstderr, "%s: ", cmdname);
 	va_start(varg, fmt);
-	vfprintf(stderr, fmt, varg);
+	vfprintf(awkstderr, fmt, varg);
 	va_end(varg);
 	ERROR();
 }
@@ -675,21 +675,21 @@ void ERROR(void)
 {
 	extern TNode *curnode;
 
-	fprintf(stderr, "\n");
+	fprintf(awkstderr, "\n");
 	if (compile_time != ERROR_PRINTING) {
 		if (NR && *NR > 0) {
-			fprintf(stderr, " input record number %d", (int) (*FNR));
+			fprintf(awkstderr, " input record number %d", (int) (*FNR));
 			if (strcmp(*FILENAME, "-") != 0)
-				fprintf(stderr, ", file %s", *FILENAME);
-			fprintf(stderr, "\n");
+				fprintf(awkstderr, ", file %s", *FILENAME);
+			fprintf(awkstderr, "\n");
 		}
 		if (curnode)
-			fprintf(stderr, " source line number %d", curnode->lineno);
+			fprintf(awkstderr, " source line number %d", curnode->lineno);
 		else if (lineno)
-			fprintf(stderr, " source line number %d", lineno);
+			fprintf(awkstderr, " source line number %d", lineno);
 		if (compile_time == COMPILING && cursource() != NULL)
-			fprintf(stderr, " source file %s", cursource());
-		fprintf(stderr, "\n");
+			fprintf(awkstderr, " source file %s", cursource());
+		fprintf(awkstderr, "\n");
 		eprint();
 	}
 }
@@ -711,23 +711,23 @@ void eprint(void)	/* try to print context around error */
 		;
 	while (*p == '\n')
 		p++;
-	fprintf(stderr, " context is\n\t");
+	fprintf(awkstderr, " context is\n\t");
 	for (q=ep-1; q>=p && *q!=' ' && *q!='\t' && *q!='\n'; q--)
 		;
 	for ( ; p < q; p++)
 		if (*p)
-			putc(*p, stderr);
-	fprintf(stderr, " >>> ");
+			putc(*p, awkstderr);
+	fprintf(awkstderr, " >>> ");
 	for ( ; p < ep; p++)
 		if (*p)
-			putc(*p, stderr);
-	fprintf(stderr, " <<< ");
+			putc(*p, awkstderr);
+	fprintf(awkstderr, " <<< ");
 	if (*ep)
 		while ((c = input()) != '\n' && c != '\0' && c != EOF) {
-			putc(c, stderr);
+			putc(c, awkstderr);
 			bclass(c);
 		}
-	putc('\n', stderr);
+	putc('\n', awkstderr);
 	ep = ebuf;
 }
 

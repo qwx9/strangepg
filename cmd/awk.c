@@ -11,6 +11,9 @@
 #include "strawk/awk.h"
 #include "strawk/proto.h"
 
+/* [0] is read, [1] is write to cater to windows' _pipe */
+int infd[2], outfd[2];
+
 static noreturn void fpecatch(int n
 #ifdef SA_SIGINFO
 	, siginfo_t *si, void *uc
@@ -59,12 +62,16 @@ static noreturn void fpecatch(int n
 }
 
 noreturn void
-awk(void *script)
+awk(void *)
 {
+	if((awkstdin = fdopen(infd[0], "rb")) == NULL
+	|| (awkstdout = fdopen(outfd[1], "wb")) == NULL
+	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
+		sysfatal("awk: %s", error());
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
 	cmdname = "strawk";
-	lexprog = script;
+	lexprog = awkprog;
 	dbg = (debug & Debugawk) != 0;
 #ifdef SA_SIGINFO
 	{
@@ -92,4 +99,15 @@ awk(void *script)
 		run(winner);
 	} else
 		bracecheck();
+}
+
+/* use [1] on our side, [0] on awk side */
+
+int
+initrepl(void)
+{
+	if(pipe(infd) < 0 || pipe(outfd) < 0)
+		return -1;
+	newthread(awk, nil, nil, nil, "strawk", mainstacksize);
+	return 0;
 }

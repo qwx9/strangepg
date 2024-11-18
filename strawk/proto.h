@@ -195,7 +195,4 @@ extern	Cell	*printstat(TNode **, int);
 extern	Cell	*nullproc(TNode **, int);
 extern	Cell	*dosub(TNode **, int);
 
-extern	FILE	*popen(const char *, const char *);
-extern	int	pclose(FILE *);
-
 extern  const char	*flags2str(int flags);

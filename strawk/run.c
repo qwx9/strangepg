@@ -40,6 +40,8 @@ THIS SOFTWARE.
 #include "awk.h"
 #include AWKTAB
 
+FILE *awkstdin, *awkstdout, *awkstderr;
+
 int dbg;
 Awknum	srand_seed = 1;
 enum compile_states	compile_time = ERROR_PRINTING;
@@ -176,7 +178,7 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 		if (isjump(x))
 			FATAL("illegal break, continue, next or nextfile from BEGIN");
 		tempfree(x);
-		fflush(stdout);
+		fflush(awkstdout);
 	}
 	if (a[1] || a[2]){
 		freezenodes();
@@ -1343,11 +1345,11 @@ Cell *awkprintf(TNode **a, int n)		/* printf */
 	if ((len = format(&buf, &bufsz, getsval(x), y)) == -1)
 		FATAL("printf string %.30s... too long.  can't happen.", buf);
 	tempfree(x);
-	/* fputs(buf, stdout); */
-	fwrite(buf, len, 1, stdout);
-	if (ferror(stdout))
-		FATAL("write error on stdout");
-	//fflush(stdout);
+	/* fputs(buf, awkstdout); */
+	fwrite(buf, len, 1, awkstdout);
+	if (ferror(awkstdout))
+		FATAL("write error on awkstdout");
+	//fflush(awkstdout);
 	free(buf);
 	return(True);
 }
@@ -2187,9 +2189,9 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		free(buf);
 		return x;
 	case FBYTES:
-		fwrite(x->val.buf, sizeof x->val.buf, 1, stdout);
-		if(ferror(stdout))
-			FATAL("write error on stdout");
+		fwrite(x->val.buf, sizeof x->val.buf, 1, awkstdout);
+		if(ferror(awkstdout))
+			FATAL("write error on awkstdout");
 		break;
 	case FEVAL:
 		lexprog = getsval(x);
@@ -2204,7 +2206,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		runnerup = NULL;
 		errorflag = 0;
 		freenodes();
-		fflush(stdout);
+		fflush(awkstdout);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
@@ -2229,7 +2231,7 @@ Cell *printstat(TNode **a, int n)	/* print a[0] */
 	Cell *y;
 	FILE *fp;
 
-	fp = stdout;	/* a[1] is redirection operator, a[2] is file */
+	fp = awkstdout;	/* a[1] is redirection operator, a[2] is file */
 	for (x = a[0]; x != NULL; x = x->nnext) {
 		y = execute(x);
 		fputs(getpssval(y), fp);

@@ -688,14 +688,14 @@ int pgetc(void)		/* get 1 character from awk program */
 			if (curpfile >= npfile)
 				return EOF;
 			if (strcmp(pfile[curpfile], "-") == 0)
-				yyin = stdin;
+				yyin = awkstdin;
 			else if ((yyin = fopen(pfile[curpfile], "r")) == NULL)
 				FATAL("can't open file %s", pfile[curpfile]);
 			lineno = 1;
 		}
 		if ((c = getc(yyin)) != EOF)
 			return c;
-		if (yyin != stdin)
+		if (yyin != awkstdin)
 			fclose(yyin);
 		yyin = NULL;
 		curpfile++;

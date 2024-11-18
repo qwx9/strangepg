@@ -114,11 +114,14 @@ int main(int argc, char *argv[])
 	const char *fs = NULL;
 	char *fn, *vn;
 
+	awkstdin = stdin;
+	awkstdout = stdout;
+	awkstderr = stderr;
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
 	cmdname = argv[0];
 	if (argc == 1) {
-		fprintf(stderr,
+		fprintf(awkstderr,
 		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
 		  cmdname);
 		exit(1);

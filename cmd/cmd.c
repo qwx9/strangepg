@@ -7,21 +7,19 @@
 #include "threads.h"
 #include "cmd.h"
 
-int epfd[2] = {-1, -1};
-
 static void
 sendcmd(char *cmd)
 {
 	int n;
 
-	if(epfd[1] < 0)
+	if(infd[1] < 0)
 		return;
 	n = strlen(cmd);
-	DPRINT(Debugcmd, "sendcmd: [%d][%s]", n, cmd);
-	if(write(epfd[1], cmd, n) != n){
+	DPRINT(Debugcmd, "cmd > [%d][%s]", n, cmd);
+	if(write(infd[1], cmd, n) != n){
 		DPRINT(Debugcmd, "sendcmd: %s", error());
-		close(epfd[1]);
-		epfd[1] = -1;
+		close(infd[1]);
+		infd[1] = -1;
 	}
 }
 
@@ -32,7 +30,7 @@ pushcmd(char *fmt, ...)
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
-	if(epfd[1] < 0)
+	if(infd[1] < 0)
 		return;
 	va_start(arg, fmt);
 	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
@@ -292,10 +290,10 @@ readcproc(void *fd)
 	char *s;
 	File *f;
 
-	if((f = fdopenfs((intptr)fd, OREAD)) == nil)
+	if((f = fdopenfs(outfd[0], OREAD)) == nil)
 		sysfatal("readcproc: %s", error());
 	while((s = readline(f)) != nil){
-		DPRINT(Debugcmd, "← cproc:[%d][%s]", f->len, s);
+		DPRINT(Debugcmd, "cmd < [%d][%s]", f->len, s);
 		if(f->trunc){
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
@@ -315,6 +313,6 @@ initcmd(void)
 		gottagofast = 1;
 		return -1;
 	}
-	newthread(readcproc, nil, (void*)(intptr)fd, nil, "readawk", mainstacksize);
+	newthread(readcproc, nil, nil, nil, "readawk", mainstacksize);
 	return 0;
 }

@@ -18,7 +18,10 @@ static char errbuf[1024];
 void
 sysquit(void)
 {
-	close(epfd[1]);	/* for interrupting cproc */
+	close(outfd[1]);	/* for interrupting awk threads */
+	outfd[1] = -1;
+	close(infd[1]);
+	infd[1] = -1;
 	exit(EXIT_SUCCESS);
 }
 
@@ -81,7 +84,10 @@ sysfatal(char *fmt, ...)
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
 	fprintf(stderr, "\n");
-	close(epfd[1]);	/* for interrupting cproc */
+	close(outfd[1]);	/* for interrupting awk threads */
+	outfd[1] = -1;
+	close(infd[1]);
+	infd[1] = -1;
 	exit(EXIT_FAILURE);
 }
 
