@@ -7,20 +7,52 @@
 #include "threads.h"
 #include "cmd.h"
 
-static void
-sendcmd(char *cmd)
+static char cmdbuf[8*1024], *cmdp = cmdbuf;
+static RWLock cmdlock;
+
+void
+flushcmd(void)
 {
 	int n;
 
-	if(infd[1] < 0)
+	wlock(&cmdlock);
+	n = cmdp - cmdbuf;
+	if(n == 0)
 		return;
-	n = strlen(cmd);
-	DPRINT(Debugcmd, "cmd > [%d][%s]", n, cmd);
-	if(write(infd[1], cmd, n) != n){
+	if(write(infd[1], cmdbuf, n) != n){
 		DPRINT(Debugcmd, "sendcmd: %s", error());
 		close(infd[1]);
 		infd[1] = -1;
 	}
+	cmdp = cmdbuf;
+	wunlock(&cmdlock);
+}
+
+// FIXME: or, use fs
+static void
+sendcmd(char *cmd)
+{
+	int n;
+	char *p;
+
+	if(infd[1] < 0)
+		return;
+	wlock(&cmdlock);
+	p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
+	if(p == cmdbuf + sizeof cmdbuf - 1){
+		n = cmdp - cmdbuf;
+		if(write(infd[1], cmdbuf, n) != n){
+			DPRINT(Debugcmd, "sendcmd: %s", error());
+			close(infd[1]);
+			infd[1] = -1;
+		}
+		cmdp = cmdbuf;
+		p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
+		if(p == cmdbuf + sizeof cmdbuf - 1)
+			sysfatal("????");	/* FIXME */
+	}
+	cmdp = p;
+	wunlock(&cmdlock);
 }
 
 void

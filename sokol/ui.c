@@ -132,6 +132,7 @@ drawui(nk_context *ctx)
 				plen = nk_str_len_char(&nkprompt.string);
 				ptext[plen] = 0;
 				pushcmd("%s", ptext);
+				flushcmd();
 				nk_edit_unfocus(ctx);
 			}
 			nk_tree_pop(ctx);

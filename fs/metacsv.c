@@ -97,6 +97,7 @@ loadcsv(void *arg)
 	r = 0;
 end:
 	pushcmd("cmd(\"FHJ142\")");
+	flushcmd();
 	if(r < 0)
 		warn("loadcsv %s: %s\n", path, error());
 	else

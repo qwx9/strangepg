@@ -411,6 +411,7 @@ loadgfa1(void *arg)
 		pushcmd("cmd(\"FHJ142\")");
 	logmsg("loadgfa: done\n");
 	pushcmd("cmd(\"FGD135\")");	/* FIXME: after only one input file? */
+	flushcmd();
 	reorderedges(&a.g);	/* can do it after everything else, doesn't matter */
 	cleanup(&a);
 }
