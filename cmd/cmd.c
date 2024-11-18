@@ -27,6 +27,7 @@ void
 pushcmd(char *fmt, ...)
 {
 	ioff ai;
+	double af;
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
@@ -53,9 +54,13 @@ pushcmd(char *fmt, ...)
 			ai = va_arg(arg, ioff);
 			sp = seprint(sp, sb+sizeof sb-1, "%d", ai);
 			break;
+		case 'f':
+			af = va_arg(arg, double);
+			sp = seprint(sp, sb+sizeof sb-1, "%f", af);
+			break;
 		case 'x':
 			ai = va_arg(arg, ioff);
-			sp = seprint(sp, sb+sizeof sb-1, "%08x", ai);
+			sp = seprint(sp, sb+sizeof sb-1, "0x%x", ai);
 			break;
 		default:
 			warn("pushcmd: unknown format %c in <%s>\n", c, f);
@@ -105,7 +110,7 @@ fnsetcolor(char *sid, char *col)
 
 	if((id = str2idx(sid)) < 0)
 		return -1;
-	v = strtol(col, &p, 0);
+	v = strtoul(col, &p, 0);
 	if(p == col){
 		werrstr("invalid color %s", col);
 		return -1;
