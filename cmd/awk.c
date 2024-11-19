@@ -12,7 +12,7 @@
 #include "strawk/proto.h"
 
 /* [0] is read, [1] is write to cater to windows' _pipe */
-int infd[2], outfd[2];
+int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
 
 static noreturn void fpecatch(int n
 #ifdef SA_SIGINFO
