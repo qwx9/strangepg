@@ -7,7 +7,7 @@
 #include "threads.h"
 #include "cmd.h"
 
-static char cmdbuf[8*1024], *cmdp = cmdbuf;
+static char cmdbuf[8192], *cmdp = cmdbuf;
 static RWLock cmdlock;
 
 void
@@ -15,10 +15,9 @@ flushcmd(void)
 {
 	int n;
 
-	wlock(&cmdlock);
-	n = cmdp - cmdbuf;
-	if(n == 0)
+	if((n = cmdp - cmdbuf) == 0)
 		return;
+	wlock(&cmdlock);
 	if(write(infd[1], cmdbuf, n) != n){
 		DPRINT(Debugcmd, "sendcmd: %s", error());
 		close(infd[1]);
@@ -28,28 +27,21 @@ flushcmd(void)
 	wunlock(&cmdlock);
 }
 
-// FIXME: or, use fs
 static void
 sendcmd(char *cmd)
 {
-	int n;
 	char *p;
 
 	if(infd[1] < 0)
 		return;
+	DPRINT(Debugcmd, "cmd > [%s]", cmd);
 	wlock(&cmdlock);
 	p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
 	if(p == cmdbuf + sizeof cmdbuf - 1){
-		n = cmdp - cmdbuf;
-		if(write(infd[1], cmdbuf, n) != n){
-			DPRINT(Debugcmd, "sendcmd: %s", error());
-			close(infd[1]);
-			infd[1] = -1;
-		}
-		cmdp = cmdbuf;
+		wunlock(&cmdlock);
+		flushcmd();
+		wlock(&cmdlock);
 		p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
-		if(p == cmdbuf + sizeof cmdbuf - 1)
-			sysfatal("????");	/* FIXME */
 	}
 	cmdp = p;
 	wunlock(&cmdlock);
@@ -191,7 +183,7 @@ nexttok(char *s, char **end)
 /* FIXME: multiple graphs: per-graph state? one pipe per graph?
 * how do we dispatch user queries? would be useful to do queries
 * on multiple ones! */
-void
+static void
 readcmd(char *s)
 {
 	int m, req;
@@ -203,7 +195,7 @@ readcmd(char *s)
 	while((s = nexttok(e, &e)) != nil){
 		g = graphs;
 		if(s[1] != 0 && s[1] != '\t'){
-			logerr(s);
+			logerr(va("> error:%s\n", s));
 			continue;
 		}
 		switch(*s){
@@ -322,7 +314,7 @@ readcmd(char *s)
 }
 
 static void
-readcproc(void *fd)
+readcproc(void *)
 {
 	char *s;
 	File *f;
@@ -343,9 +335,7 @@ readcproc(void *fd)
 int
 initcmd(void)
 {
-	int fd;
-
-	if((fd = initrepl()) < 0){
+	if(initrepl() < 0){
 		logerr(va("initcmd: failed: %s\n", error()));
 		gottagofast = 1;
 		return -1;
