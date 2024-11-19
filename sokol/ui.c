@@ -254,6 +254,7 @@ initnk(void)
 	snk_setup(&(snk_desc_t){
 		.dpi_scale = sapp_dpi_scale(),
 		.logger.func = slog_func,
+		.enable_set_mouse_cursor = true,
 	});
 	ctx = snk_get_context();
 	memcpy(nktheme, nk_default_color_style, sizeof nk_default_color_style);
@@ -274,6 +275,7 @@ initnk(void)
 		nktheme[NK_COLOR_TAB_HEADER] = nktheme[NK_COLOR_WINDOW];
 		nk_style_from_table(ctx, nktheme);
 	}
+	nk_style_hide_cursor(ctx);
 	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
 }
 
