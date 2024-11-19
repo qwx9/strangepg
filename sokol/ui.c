@@ -258,7 +258,7 @@ initnk(void)
 	ctx = snk_get_context();
 	memcpy(nktheme, nk_default_color_style, sizeof nk_default_color_style);
 	/* FIXME: inconsistent with draw/color.c */
-	if((view.flags & VFhaxx0rz) == 0){
+	if((drawing.flags & DFhaxx0rz) == 0){
 		nktheme[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
 		nktheme[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
 		nktheme[NK_COLOR_HEADER] = (nk_color){0x99, 0x99, 0x99, 0xcc};

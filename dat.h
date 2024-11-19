@@ -2,13 +2,11 @@ typedef struct Vertex Vertex;
 typedef struct Graph Graph;
 typedef struct Node Node;
 typedef struct Layout Layout;
-typedef struct File File;
 typedef struct Coarse Coarse;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
 typedef struct Attr Attr;
 
-#pragma incomplete File
 #pragma incomplete Coarse
 #pragma incomplete Layout
 #pragma incomplete Thread
@@ -24,11 +22,14 @@ struct Vertex{
 enum{
 	FNfixedx = 1<<0,
 	FNfixedy = 1<<1,
-	FNfixed = FNfixedx | FNfixedy,
-	FNinitx = 1<<2,
-	FNinity = 1<<3,
-	FNinitpos = FNinitx | FNinity,
+	FNfixedz = 1<<2,
+	FNfixed = FNfixedx | FNfixedy | FNfixedz,
+	FNinitx = 1<<3,
+	FNinity = 1<<4,
+	FNinitz = 1<<5,
+	FNinitpos = FNinitx | FNinity | FNinitz,
 };
+/* FIXME: ht, or sth for some of these: idx → {pos0} */
 struct Attr{
 	u32int color;
 	int length;
@@ -36,10 +37,10 @@ struct Attr{
 	Vertex pos0;
 };
 struct Node{
-	ioff *in;		/* dynamic array (edge indices) */
-	ioff *out;		/* dynamic array (edge indices) */
-	ioff cid;
 	Attr attr;
+	short nedges;
+	short nin;
+	ioff eoff;
 };
 enum{
 	GFlayme = 1<<0,
@@ -49,11 +50,9 @@ enum{
 struct Graph{
 	int type;
 	u32int flags;
-	File *f;
-	Coarse *ctree;
+	Node *nodes;
+	ioff *edges;		/* "out" edges */
 	RWLock lock;
-	Node *nodes;	/* dynamic array */
-	ssize nedges;
 	Layout *layout;
 };
 extern Graph *graphs;	/* dynamic array */
@@ -69,6 +68,8 @@ enum{
 	Debugperf = 1<<7,
 	Debugmeta = 1<<8,
 	Debugawk = 1<<9,
+	Debugload = 1<<10,
+	Debuggraph = 1<<11,
 	Debugtheworld = 0xffffffff,
 
 	PerfΔt = 1000000,

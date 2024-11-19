@@ -1,12 +1,10 @@
 #include "strpg.h"
 #include "graph.h"
-#include "fs.h"
 #include "threads.h"
-#include "em.h"
 #include "cmd.h"
 #include "drw.h"
+#include "fs.h"
 #include "layout.h"
-#include "lib/khashl.h"
 
 Graph *graphs;
 
@@ -20,85 +18,6 @@ str2idx(char *s)
 	if((id = strtoll(s, &t, 0)) == 0 && t == s)
 		return -1;
 	return id;
-}
-
-ioff
-newnode(Graph *g, char *s)
-{
-	ioff off;
-	char *col;
-	Node n = {0};
-	RNode r = {0};
-
-	off = dylen(g->nodes);
-	n.attr.length = 1;
-	n.attr.color = somecolor(off, &col);
-	dypush(g->nodes, n);
-	r.len = 1.0f;
-	setcolor(r.col, n.attr.color);
-	dypush(rnodes, r);
-	DPRINT(Debugfs, "addnode %d:%s\n", off, s != nil ? s : "");
-	if(s != nil)
-		pushcmd("addnode(%d,\"%s\",%s)", off, s, col);
-	else
-		pushcmd("addnode(%d,\"%d\",%s)", off, off, col);
-	return off;
-}
-
-ioff
-newedge(Graph *g, ioff u, ioff v, int urev, int vrev, char *label)
-{
-	ioff off;
-	REdge r = {0};
-
-	off = dylen(redges);
-	assert((off & 3 << 30) == 0);	/* give up for now */
-	dypush(redges, r);
-	dypush(g->nodes[u].out, v << 2 | urev << 1 & 2 | vrev & 1);
-	dypush(g->nodes[v].in, u << 2 | vrev << 1 & 2 | urev & 1);
-	if(label != nil)
-		pushcmd("addedge(%d,\"%s\")", off, label);
-	else
-		pushcmd("addedge(%d,\"%d\")", off, off);
-	g->nedges++;
-	return off;
-}
-
-static void
-cleargraph(Graph *g)
-{
-	Node *n;
-
-	for(n=g->nodes; n<g->nodes+dylen(g->nodes); n++){
-		dyfree(n->in);
-		dyfree(n->out);
-	}
-	dyfree(g->nodes);
-}
-
-void
-nukegraph(Graph *g)
-{
-	if(g->type <= FFdead)
-		return;
-	reqlayout(g, Lstop);
-	cleargraph(g);
-	freefs(g->f);
-	memset(g, 0, sizeof *g);
-}
-
-void
-pushgraph(Graph *g)
-{
-	if(g->nedges + nelem(selbox) >= dylen(redges))
-		dyresize(redges, g->nedges + nelem(selbox));
-	dypush(graphs, *g);
-	g = graphs + dylen(graphs) - 1;
-	newlayout(g, -1);
-	if(gottagofast && reqlayout(g, Lstart) < 0){
-		warn("pushgraph: %s\n", error());
-		pushcmd("cmd(\"FHJ142\")");
-	}
 }
 
 void
@@ -119,11 +38,20 @@ unlockgraph(Graph *g, int w)
 		runlock(&g->lock);
 }
 
-Graph
-initgraph(int type)
+Graph *
+pushgraph(Graph *g)
 {
-	Graph g = {0};
-
-	g.type = type;
+	dypush(graphs, *g);
+	g = graphs + dylen(graphs) - 1;
+	newlayout(g, -1);
+	if(gottagofast && reqlayout(g, Lstart) < 0)
+		sysfatal("pushgraph: reqlayout failed, shouldn\'t happen");
 	return g;
+}
+
+void
+initgraph(Graph *g, int type)
+{
+	memset(g, 0, sizeof *g);
+	g->type = type;
 }

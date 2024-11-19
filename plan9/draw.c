@@ -41,7 +41,7 @@ alloccolor(u32int col)
 	else if(col == DBlack)
 		c->i = c->shad = display->black;
 	else{
-		c->i = eallocimage(Rect(0,0,1,1), (view.flags & VFhaxx0rz) != 0 ? screen->chan : ARGB32, 1, setalpha(col, col & 0xff));
+		c->i = eallocimage(Rect(0,0,1,1), (drawing.flags & DFhaxx0rz) != 0 ? screen->chan : ARGB32, 1, setalpha(col, col & 0xff));
 		c->shad = eallocimage(Rect(0,0,1,1), XRGB32, 1, col);
 	}
 	return c;
@@ -242,13 +242,13 @@ drawbezier(ioff i)
 	//w = MAX(0., view.zoom/5);
 	w = 0;
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
-		(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
+		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
-		(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, c->shad, ZP);
+		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, c->shad, ZP);
 	/* FIXME: ??? */
 	if(i >= 0)
 		bezier(selfb, p[0], p[1], p[2], p[3], Endsquare,
-			(view.flags & VFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(i), ZP);
+			(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(i), ZP);
 	return 0;
 }
 
@@ -271,7 +271,7 @@ render(void)
 static void
 drawui(void)
 {
-	if((view.flags & VFdrawlabels) != 0)
+	if((drawing.flags & DFdrawlabels) != 0)
 		drawlabels();
 	drawselected();
 }
@@ -294,7 +294,7 @@ resetdraw(void)
 	DPRINT(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
 	freeimage(selfb);
-	viewfb = eallocimage(viewr, (view.flags & VFhaxx0rz) != 0 ? screen->chan : XRGB32, 0, DNofill);
+	viewfb = eallocimage(viewr, (drawing.flags & DFhaxx0rz) != 0 ? screen->chan : XRGB32, 0, DNofill);
 	selfb = eallocimage(viewr, XRGB32, 0, DBlack);
 	statr.min = addpt(screen->r.min, Pt(0, viewr.max.y - font->height));
 	statr.max = viewr.max;

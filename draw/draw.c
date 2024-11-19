@@ -9,19 +9,7 @@ View view;
 RNode *rnodes;
 REdge *redges;
 ssize ndnodes, ndedges;
-
-/* FIXME: not great */
-void
-fixlengths(Graph *g, int min, int max)
-{
-	int Δ;
-	Node *n, *ne;
-	RNode *r;
-
-	Δ = MAX(1, max - min);
-	for(n=g->nodes, ne=n+dylen(n), r=rnodes; n<ne; n++, r++)
-		r->len = Maxsz - (Maxsz - Minsz) * exp(-n->attr.length / (float)Δ);
-}
+Drawing drawing;
 
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
@@ -65,52 +53,65 @@ drawedges(REdge *r, RNode *rn, Graph *g)
 	RNode *u, *v;
 
 	for(u=rn, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++){
-		for(e=n->out, ee=e+dylen(e); e<ee; e++, r++){
+		for(e=g->edges+n->eoff, ee=e+n->nedges-n->nin; e<ee; e++, r++){
 			x = *e;
 			v = rnodes + (x >> 2);
-			assert(v >= rn && v < rnodes + dylen(rnodes));
-			drawedge(r, u, v, x & 2, x & 1);
+			drawedge(r, u, v, x & 1, x & 2);
 		}
 	}
 	return r;
 }
 
 static inline void
-faceyourfears(RNode *ru, Node *u)
+resizenode(RNode *r, int length)
+{
+	float Δ;
+
+	if(length == 0)
+		length++;
+	Δ = MAX(1.0f, drawing.length.max - drawing.length.min);
+	r->len = Maxsz - (Maxsz - Minsz) * exp(-length / Δ);
+}
+
+static inline void
+faceyourfears(RNode *ru, Graph *g, Node *u)
 {
 	float x, y, Δ, Δx, Δy;
 	float θ, c, s;
-	ioff e, *i, *ie;
+	ioff *i, *ie;
+	u32int e;
 	RNode *rv;
 
 	x = ru->pos[0];
 	y = ru->pos[1];
 	c = s = 0.0;
-	for(i=u->in, ie=i+dylen(i); i<ie; i++){
+	for(i=g->edges+u->eoff, ie=i+u->nedges-u->nin; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)
 			continue;
-		Δx = rv->pos[0] - x;
-		Δy = rv->pos[1] - y;
-		if((e & 2) != 0){
-			Δx = -Δx;
-			Δy = -Δy;
+		if((e & 1) != 0){
+			Δx = rv->pos[0] - x;
+			Δy = rv->pos[1] - y;
+		}else{
+			Δx = x - rv->pos[0];
+			Δy = y - rv->pos[1];
 		}
 		Δ = sqrtf(Δx * Δx + Δy * Δy);
 		c += Δx / Δ;
 		s += Δy / Δ;
 	}
-	for(i=u->out, ie=i+dylen(i); i<ie; i++){
+	for(ie+=u->nin; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)
 			continue;
-		Δx = x - rv->pos[0];
-		Δy = y - rv->pos[1];
-		if((e & 2) != 0){
-			Δx = -Δx;
-			Δy = -Δy;
+		if((e & 1) != 0){
+			Δx = rv->pos[0] - x;
+			Δy = rv->pos[1] - y;
+		}else{
+			Δx = x - rv->pos[0];
+			Δy = y - rv->pos[1];
 		}
 		Δ = sqrtf(Δx * Δx + Δy * Δy);
 		c += Δx / Δ;
@@ -125,10 +126,19 @@ faceyourfears(RNode *ru, Node *u)
 static RNode *
 drawnodes(RNode *r, Graph *g)
 {
+	int stale;
 	Node *n, *e;
 
-	for(n=g->nodes, e=n+dylen(n); n<e; n++, r++)
-		faceyourfears(r, n);
+	if(stale = (drawing.flags & DFstalelen)){
+		drawing.flags &= ~DFstalelen;
+		if(drawing.length.min <= 0)
+			drawing.length.min = 1;
+	}
+	for(n=g->nodes, e=n+dylen(n); n<e; n++, r++){
+		faceyourfears(r, g, n);
+		if(stale)
+			resizenode(r, n->attr.length);
+	}
 	return r;
 }
 
@@ -150,7 +160,7 @@ drawworld(int go)
 			r++;
 		else if(!go){
 			rn += dylen(g->nodes);
-			re += g->nedges;
+			re += dylen(g->edges) / 2;
 			continue;
 		}
 		lockgraph(g, 0);
@@ -164,6 +174,7 @@ drawworld(int go)
 	return r;
 }
 
+/* FIXME: separate pipeline */
 static void
 drawui(void)
 {
@@ -179,8 +190,7 @@ redraw(int go)
 {
 	double t;
 
-	if((debug & Debugperf) != 0)
-		t = μsec();
+	t = μsec();
 	go = drawworld(go);
 	drawui();
 	DPRINT(Debugperf, "redraw: %.2f ms", (μsec() - t) / 1000);
@@ -192,6 +202,12 @@ redraw(int go)
 void
 initdrw(void)
 {
+	drawing.length = (Range){9999999.0f, 0.0f};
+	drawing.xbound = drawing.length;
+	drawing.ybound = drawing.length;
+	drawing.zbound = drawing.length;
+	drawing.nodesz = Nodesz;
+	drawing.fatness = Ptsz;
 	settheme();
 	initcol();
 	initsysdraw();

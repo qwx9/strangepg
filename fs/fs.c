@@ -218,6 +218,9 @@ nextfield(File *f)
 	int n;
 	char *s, *t, *p;
 
+	f->foff += f->toksz;
+	if(f->nf++ > 0)
+		f->foff++;	/* sep */
 	s = f->tok;
 	n = f->end - s;
 	f->toksz = 0;
@@ -268,6 +271,7 @@ readline(File *f)
 		readfrag(f);
 	f->foff = sysftell(f);
 	f->nr++;
+	f->nf = 0;
 	f->toksz = 0;
 	f->tok = readfrag(f);
 	return f->tok;

@@ -13,18 +13,17 @@ enum{
 };
 #define	C	((float)Nodesz / (Maxsz - Minsz) * 0.7f)
 
-typedef struct P P;
-struct P{
-	float w;
+typedef struct Aux Aux;
+typedef struct Δpos Δpos;
+struct Δpos{
 	float x;
 	float y;
-	float Δx;
-	float Δy;
 };
-typedef struct D D;
-struct D{
-	P *ptab;
+struct Aux{
 	Node *nodes;
+	ioff *edges;
+	Δpos *Δtab;
+	float k;
 };
 
 #define Fa(x, k)	((x) * (x) / (k))
@@ -35,110 +34,118 @@ struct D{
 static void *
 new(Graph *g)
 {
-	ioff i;
-	P *ptab, p = {0};
-	RNode *r;
-	Node *n, *ne;
-	D *aux;
+	ioff n;
+	float k;
+	double z;
+	RNode *r, *re;
+	Node *u;
+	Aux *aux;
 
-	ptab = nil;
-	for(i=0, n=g->nodes, ne=n+dylen(g->nodes); n<ne; n++, i++){
-		p.x = (float)(W / 2 - nrand(W)) / (W / 2);
-		p.y = (float)(L / 2 - nrand(L)) / (L / 2);
-		r = rnodes + i;
-		r->pos[0] = p.x;
-		r->pos[1] = p.y;
-		p.w = r->len;
-		dypush(ptab, p);
+	k = C * sqrtf((float)Area / dylen(rnodes));
+	n = dylen(g->nodes);
+	for(u=g->nodes, r=rnodes, re=r+n; r<re; r++, u++){
+		r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
+		r->pos[1] = (float)(L / 2 - nrand(L)) / (L / 2);
+		z = (double)(n - (r - rnodes)) / n;
+		r->pos[2] = (drawing.flags & DFnodepth) == 0
+			? 0.8 * (0.5 - z)
+			: 0.00001 * z;
 	}
 	aux = emalloc(sizeof *aux);
-	aux->ptab = ptab;
+	aux->Δtab = emalloc(n * sizeof *aux->Δtab);
 	aux->nodes = g->nodes;
+	aux->edges = g->edges;
+	aux->k = k;
 	return aux;
 }
 
 static void
-cleanup(void *p)
+cleanup(void *aux)
 {
-	D *aux;
-
-	aux = p;
-	dyfree(aux->ptab);
 	free(aux);
 }
 
 static int
 compute(void *arg, volatile int *stat, int idx)
 {
-	ioff *ep, *ee;
-	float k, t, f, x, y, w, uw, vw, rx, ry, Δx, Δy, Δr, δx, δy, δ;
-	P *ptab, *u, *v;
-	RNode *r, *re;
-	Node *n, *ne;
-	D *d;
+	ioff i, *edges, *e, *ee;
+	float k, t, f, x, y, w, uw, vw, Δx, Δy, Δr, δx, δy, δ;
+	RNode *u, *v, *re;
+	Node *n, *nodes;
+	Δpos *Δtab, *Δu, *Δv;
+	Aux *aux;
 
 	if(idx > 0)	/* single thread */
 		return 0;
-	d = arg;
-	ptab = d->ptab;
-	k = C * sqrtf((float)Area / dylen(ptab));
+	aux = arg;
+	re = rnodes + dylen(aux->nodes);
+	edges = aux->edges;
+	nodes = aux->nodes;
+	Δtab = aux->Δtab;
+	k = C * sqrtf((float)Area / dylen(aux->nodes));
 	t = 1.0f;
 	for(;;){
 		Δr = 0;
-		for(n=d->nodes, u=ptab; u<ptab+dylen(ptab); u++, n++){
+		for(Δu=Δtab, u=rnodes; u<re; u++, Δu++){
 			if((*stat & LFstop) != 0)
 				return 0;
+			uw = u->len;
+			x = u->pos[0];
+			y = u->pos[1];
 			Δx = Δy = 0.0f;
-			uw = u->w;
-			for(v=ptab; v<ptab+dylen(ptab); v++){
+			for(v=rnodes; v<re; v++){
 				if(u == v)
 					continue;
-				δx = u->x - v->x;
-				δy = u->y - v->y;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				vw = v->w;
+				vw = v->len;
 				w = C * MIN(uw, vw);
 				Δx += w * f * δx / δ;
 				Δy += w * f * δy / δ;
 			}
-			u->Δx = Δx;
-			u->Δy = Δy;
+			Δu->x = Δx;
+			Δu->y = Δy;
 		}
-		for(u=ptab, n=d->nodes, ne=n+dylen(n); n<ne; n++, u++){
-			uw = u->w;
-			for(ep=n->out, ee=ep+dylen(ep); ep<ee; ep++){
-				v = ptab + (*ep >> 2);
+		for(Δu=Δtab, n=nodes, u=rnodes; u<re; u++, n++, Δu++){
+			x = u->pos[0];
+			y = u->pos[1];
+			uw = u->len;
+			for(e=edges+n->eoff, ee=e+n->nedges-n->nin; e<ee; e++){
+				i = *e >> 2;
+				v = rnodes + i;
+				Δv = Δtab + i;
 				if(u == v)
 					continue;
-				δx = u->x - v->x;
-				δy = u->y - v->y;
+				δx = x - v->pos[0];
+				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fa(δ, k);
-				vw = v->w;
+				vw = v->len;
 				if(uw < vw)
 					w = uw / vw;
 				else
 					w = vw / uw;
 				w *= C;
-				rx = w * f * δx / δ;
-				ry = w * f * δy / δ;
-				u->Δx -= rx;
-				u->Δy -= ry;
-				v->Δx += rx;
-				v->Δy += ry;
+				Δx = w * f * δx / δ;
+				Δy = w * f * δy / δ;
+				Δu->x -= Δx;
+				Δu->y -= Δy;
+				Δv->x += Δx;
+				Δv->y += Δy;
 			}
 		}
 		if((*stat & LFstop) != 0)
 			break;
-		for(u=ptab, r=rnodes, re=r+dylen(r); r<re; r++, u++){
-			δx = u->Δx;
-			δy = u->Δy;
+		for(Δu=Δtab, u=rnodes; u<re; u++, Δu++){
+			δx = Δu->x;
+			δy = Δu->y;
 			δ = Δ(δx, δy);
-			x = u->x + δx / δ * t;
-			y = u->y + δy / δ * t;
-			r->pos[0] = u->x = x;
-			r->pos[1] = u->y = y;
+			x = u->pos[0] + δx / δ * t;
+			y = u->pos[1] + δy / δ * t;
+			u->pos[0] = x;
+			u->pos[1] = y;
 			δ *= t;
 			if(Δr < δ)
 				Δr = δ;

@@ -1,50 +1,50 @@
 BEGIN{
-	black = "0x000000"
-	blue = "0x1f78b4"
-	bluegreen = "0x5fc69f"
-	brightblue = "0x0000ff"
-	brightgreen = "0x00ff00"
-	brightpurple = "0x00ffff"
-	brightred = "0xff0000"
-	brightyellow = "0xffff00"
-	brown = "0xb15928"
-	cyan = "0x7acdcd"
-	darkgray = "0x3f3f3f"
-	darkgreen = "0x33a02c"
-	darkpink = "0xc96088"
-	darkpurple = "0x6a3d9a"
-	gray = "0x777777"
-	green = "0x8ec65e"
-	greyblue = "0xbebada"
-	greybrown = "0x7f5f67"
-	greygreen = "0xccebc5"
-	greyred = "0xc76758"
-	lightblue = "0x80b1d3"
-	lightbrown = "0xca9560"
-	lightgray = "0xc0c0c0"
-	lightgreen = "0xd5f65f"
-	lightgrey = "0xd9d9d9"
-	lightorange = "0xfdb462"
-	lightpink = "0xfccde5"
-	lightpurple = "0xbc80bd"
-	lightred = "0xfb8072"
-	lightteal = "0x8dd3c7"
-	orange = "0xff7f00"
-	paleblue = "0xa6cee3"
-	palegray = "0xdcdcdc"
-	palegreen = "0xb2df8a"
-	paleorange = "0xfdbf6f"
-	palepurple = "0xc893f0"
-	palered = "0xfb9a99"
-	paleviolet = "0xcab2d6"
-	paleyellow = "0xffffb3"
-	purple = "0xb160c9"
-	purpleblue = "0x8080ff"
-	red = "0xe31a1c"
-	teal = "0x009696"
+	black = 0x000000
+	blue = 0x1f78b4
+	bluegreen = 0x5fc69f
+	brightblue = 0x0000ff
+	brightgreen = 0x00ff00
+	brightpurple = 0x00ffff
+	brightred = 0xff0000
+	brightyellow = 0xffff00
+	brown = 0xb15928
+	cyan = 0x7acdcd
+	darkgray = 0x3f3f3f
+	darkgreen = 0x33a02c
+	darkpink = 0xc96088
+	darkpurple = 0x6a3d9a
+	gray = 0x777777
+	green = 0x8ec65e
+	greyblue = 0xbebada
+	greybrown = 0x7f5f67
+	greygreen = 0xccebc5
+	greyred = 0xc76758
+	lightblue = 0x80b1d3
+	lightbrown = 0xca9560
+	lightgray = 0xc0c0c0
+	lightgreen = 0xd5f65f
+	lightgrey = 0xd9d9d9
+	lightorange = 0xfdb462
+	lightpink = 0xfccde5
+	lightpurple = 0xbc80bd
+	lightred = 0xfb8072
+	lightteal = 0x8dd3c7
+	orange = 0xff7f00
+	paleblue = 0xa6cee3
+	palegray = 0xdcdcdc
+	palegreen = 0xb2df8a
+	paleorange = 0xfdbf6f
+	palepurple = 0xc893f0
+	palered = 0xfb9a99
+	paleviolet = 0xcab2d6
+	paleyellow = 0xffffb3
+	purple = 0xb160c9
+	purpleblue = 0x8080ff
+	red = 0xe31a1c
+	teal = 0x009696
 	violet = purple
-	white = "0xffffff"
-	yellow = "0xffed6f"
+	white = 0xffffff
+	yellow = 0xffed6f
 	srand()
 	OFS = "\t"
 }
@@ -67,7 +67,7 @@ function nodecolor(name, color){
 		return
 	}
 	CL[name] = color
-	print "c", node[name], color
+	printf "c\t%s\t0x%x\n", node[name], color
 }
 function delnode(name){
 	if(!checknodename(name))
@@ -75,39 +75,9 @@ function delnode(name){
 	delete label[node[name]]
 	delete node[name]
 }
-function reorderedge(u, v, id,	name, oid, d1, d2){
-	d1 = v & 2 ? "-" : "+"
-	d2 = v & 1 ? "-" : "+"
-	v >>= 2
-	if(!checknodeid(u) || !checknodeid(v))
-		return
-	name = label[u] d1 label[v] d2
-	oid = edge[name]
-	ledge[oid] = ledge[id]
-	edge[ledge[id]] = oid
-	ledge[id] = name
-	edge[name] = id
-}
-function addedge(id, name){
-	edge[name] = id
-	ledge[id] = name
-}
-function deledgebyid(id){
-	if(!(name in edge)){
-		print "E no such edge: " name
-		return
-	}
-	delete edge[ledge[id]]
-	delete ledge[id]
-}
-function deledge(u, urev, v, vrev){
-	pair = u urev "\x1c" v vrev
-	if(!(pair in edge)){
-		print "E no such edge: " u urev "," v vrev
-		return
-	}
-	delete ledge[edge[pair]]
-	delete edge[pair]
+function addedge(id, u, v){
+	edge[id,1] = u << 1 & (v & 1)
+	edge[id,2] = v >> 1
 }
 function cmd(code){
 	if(code == "FGD135"){	# wing attack plan R
@@ -119,8 +89,11 @@ function cmd(code){
 		}
 		crm114 = 1
 	}else if(!crm114){
-		if(code == "FHJ142")	# wing to proceed to targets
+		if(code == "FHJ142"){	# wing to proceed to targets
 			relayout = 1
+			# FIXME
+			print "R"
+		}
 	}
 }
 function exportlayout(f){
@@ -156,13 +129,23 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfo(id,	s){
-	name = ledge[id]
-	s = name
-	sub("\x1c", " ", s)
-	if(name in cigar)
-		s = s ", CIGAR=\"" cigar[name] "\""
-	print "I", "Edge: " s
+function edgeinfo(id,	s, u, v, a, b){
+	if(!((id "\x1c" 1) in edge)){
+		print "E no such edge id: " id
+		return
+	}
+	a = edge[id,1]
+	b = edge[id,2]
+	u = a >> 1
+	v = b >> 1
+	if(!checknodeid(a >> 1) || !checknodeid(b >> 1))
+		return
+	u = label[a >> 1] (a & 1 ? "-" : "+")
+	v = label[b >> 1] (b & 1 ? "-" : "+")
+	s = "Edge: " u v
+	if(id in cigar)
+		s = s ", CIGAR=" cigar[id]
+	print "I", s
 }
 function findnode(name,	id){
 	if(!checknodename(name))
@@ -210,11 +193,11 @@ function nodeinfo(id,	name, s){
 		return
 	print "I", "Node: " nodeinfostr(id)
 }
-function deselect(dontkill,	i){
+function deselect(dontkill,	id){
 	if(length(selected) == 0)
 		return
-	for(i in selected)
-		print "c", i, CL[label[i]]
+	for(id in selected)
+		printf "c\t%s\t0x%x\n", id, CL[label[id]]
 	delete selected
 	if(!dontkill)
 		print "s"
@@ -231,7 +214,7 @@ function deselectnodebyid(id){
 		return
 	}
 	delete selected[id]
-	print "c", id, CL[label[id]]
+	printf "c\t%s\t0x%x\n", id, CL[label[i]]
 }
 function deselectnode(name,	id){
 	if(!checknodename(name))
@@ -289,6 +272,7 @@ function fixy(name, y){
 }
 function quit(){
 	print "!"
+	exit
 }
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]

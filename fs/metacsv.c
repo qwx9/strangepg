@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 #include "threads.h"
+#include "graph.h"
 #include "cmd.h"
 
 /* restrictions:

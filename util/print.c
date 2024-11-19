@@ -87,7 +87,9 @@ dprint(int flags, char *fmt, ...)
 	case Debugdraw: type = "draw"; break;
 	case Debugextmem: type = "extmem"; break;
 	case Debugfs: type = "fs"; break;
+	case Debuggraph: type = "graph"; break;
 	case Debuglayout: type = "layout"; break;
+	case Debugload: type = "load"; break;
 	case Debugmeta: type = "meta"; break;
 	case Debugperf: type = "perf"; break;
 	case Debugrender: type = "render"; break;

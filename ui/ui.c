@@ -130,7 +130,7 @@ keyevent(Rune r, int down)
 		}
 		break;
 	case 'a': reqdraw(Reqshape); break;
-	case 'l': view.flags ^= VFdrawlabels; reqdraw(Reqshallowdraw); break;
+	case 'l': drawing.flags ^= DFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;
 	}
 	return 0;
@@ -153,6 +153,7 @@ static void
 commitselect(void)
 {
 	pushcmd("selinfo()");
+	flushcmd();
 }
 
 /* FIXME: separate pipeline, quads? */
@@ -276,6 +277,7 @@ dragselect(int x, int y)
 				highlightnode(id);
 				oid = id;
 			}
+	flushcmd();
 	selectionbox(rsel.x1, rsel.y1, rsel.x2, rsel.y2);
 	return 0;
 }
@@ -317,6 +319,7 @@ mousehover(int x, int y)
 		id |= 1<<31;	/* safety */
 	}else
 		pushcmd("nodeinfo(%d)", id);
+	flushcmd();
 	return id;
 }
 
@@ -353,6 +356,7 @@ mouseselect(ioff id, int multi)
 			else
 				pushcmd("reselectnode(%d)", id);
 			highlightnode(id);
+			flushcmd();
 		}else{	/* FIXME: edges: not implemented */
 			;
 		}
@@ -361,6 +365,7 @@ mouseselect(ioff id, int multi)
 	}
 	if(!multi){
 		pushcmd("deselect()");
+		flushcmd();
 		selstr[0] = 0;
 	}
 	resetbox();

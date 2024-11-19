@@ -238,7 +238,7 @@ somecolor(ioff i, char **name)
 void
 settheme(void)
 {
-	if((view.flags & VFhaxx0rz) != 0)
+	if((drawing.flags & DFhaxx0rz) != 0)
 		theme = theme1;
 	else
 		theme = theme2;

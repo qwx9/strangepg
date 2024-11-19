@@ -1,3 +1,4 @@
+typedef struct File File;
 typedef struct Filefmt Filefmt;
 
 /* in case a field is in between reads in a long line,
@@ -12,8 +13,9 @@ struct File{
 	char *end;	/* end of current read */
 	int len;
 	int trunc;
-	vlong foff;
-	int nr;
+	vlong foff;	/* current token file offset*/
+	int nr;		/* current line number */
+	int nf;		/* current field number */
 	char *tok;	/* if tokenizing, end of current token */
 	int toksz;
 	char sep;
@@ -45,8 +47,6 @@ void	regfs(Filefmt*);
 
 int	importlayout(Graph*, char*);
 int	exportlayout(Graph*, char*);
-void	setnamedtag(char*, char*, char*);
-void	settag(Node*, ioff, char*, char*);
 
 int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);

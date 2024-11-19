@@ -1,10 +1,13 @@
 typedef struct RNode RNode;
 typedef struct REdge REdge;
+typedef struct RLine RLine;
 typedef struct Quad Quad;
 typedef struct View View;
 typedef struct Color Color;
 typedef struct Box Box;
 typedef	struct Rekt Rekt;
+typedef struct Drawing Drawing;
+typedef struct Range Range;
 
 #pragma incomplete Color
 
@@ -16,6 +19,28 @@ enum{
 #define	Maxsz	45.0f
 #define	Minsz	0.05f
 
+struct Range{
+	float min;
+	float max;
+};
+enum{
+	DFhaxx0rz = 1<<0,
+	DFdrawarrows = 1<<1,
+	DFdrawlabels = 1<<2,
+	DFnodepth = 1<<3,
+	DFstalelen = 1<<4,
+};
+struct Drawing{
+	int flags;
+	Range length;
+	Range xbound;
+	Range ybound;
+	Range zbound;
+	float nodesz;
+	float fatness;
+};
+extern Drawing drawing;
+
 /* FIXME: later, vertices or HMM vectors? also, alignment */
 struct RNode{
 	float pos[3];
@@ -26,6 +51,13 @@ struct RNode{
 struct REdge{
 	float pos1[3];
 	float pos2[3];
+};
+/* FIXME: selection, etc. */
+struct RLines{
+	float pos1[3];
+	float col1[4];
+	float pos2[3];
+	float col2[4];
 };
 extern RNode *rnodes;
 extern REdge *redges, selbox[4];
@@ -69,16 +101,9 @@ struct Box{
 	float y2;
 };
 
-enum{
-	VFhaxx0rz = 1<<0,
-	VFdrawarrows = 1<<1,
-	VFdrawlabels = 1<<2,
-	VFnodepth = 1<<3,
-};
 struct View{
 	int w;
 	int h;
-	int flags;
 	float ar;
 	float fov;
 	float tfov;

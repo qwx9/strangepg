@@ -12,16 +12,10 @@ enum{
 #define	C	((float)Nodesz / (Maxsz - Minsz) * 0.7f)
 #define Tolerance	0.001f
 
-typedef struct P P;
-typedef struct D D;
-struct P{
-	ioff e;
-	short ne;
-	short flags;
-};
-struct D{
-	P *ptab;
-	ioff *etab;
+typedef struct Aux Aux;
+struct Aux{
+	Node *nodes;
+	ioff *edges;
 	float k;
 };
 
@@ -35,18 +29,17 @@ static void *
 new_(Graph *g, int is3d)
 {
 	int orphans;
-	ioff *e, *ee, *etab;
 	double z;
 	float k;
 	Node *u, *ue;
-	RNode *r, *re;
-	P p, *ptab;
-	D *aux;
+	RNode *r;
+	Aux *aux;
 
-	ptab = nil;
-	etab = nil;
+	orphans = 0;
 	k = C * sqrtf((float)Area / dylen(rnodes));
-	for(u=g->nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
+	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
+		if(u->nedges == 0)
+			orphans++;
 		if((u->attr.flags & FNinitx) != 0)
 			r->pos[0] = u->attr.pos0.x;
 		else
@@ -55,36 +48,21 @@ new_(Graph *g, int is3d)
 			r->pos[1] = u->attr.pos0.y;
 		else
 			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
-		if(!is3d){
+		if((u->attr.flags & FNinitz) != 0)
+			r->pos[2] = u->attr.pos0.z;
+		else if(!is3d){
 			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
-			r->pos[2] = (view.flags & VFnodepth) == 0
+			r->pos[2] = (drawing.flags & DFnodepth) == 0
 				? 0.8 * (0.5 - z)
 				: 0.00001 * z;
 		}else
 			r->pos[2] = (float)(W / 2 - nrand(W)) / (W / 2);
 	}
-	orphans = 0;
-	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
-		p.e = dylen(etab);
-		p.ne = 0;
-		p.flags = u->attr.flags & FNfixed;
-		/* FIXME: have to look at twice as many edges because it's not
-		 * global... */
-		if((u->attr.flags & FNfixed) != FNfixed){
-			for(e=u->out, ee=e+dylen(e); e<ee; e++, p.ne++)
-				dypush(etab, *e >> 2);
-			for(e=u->in, ee=e+dylen(e); e<ee; e++, p.ne++)
-				dypush(etab, *e >> 2);
-		}
-		if(p.ne == 0)
-			orphans++;
-		dypush(ptab, p);
-	}
 	if(orphans > 1)
-		logmsg(va("layout: ignoring %d nodes with no adjacencies", orphans));
+		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));
 	aux = emalloc(sizeof *aux);
-	aux->ptab = ptab;
-	aux->etab = etab;
+	aux->nodes = g->nodes;
+	aux->edges = g->edges;
 	aux->k = k;
 	return aux;
 }
@@ -102,13 +80,8 @@ new3d(Graph *g)
 }
 
 static void
-cleanup(void *p)
+cleanup(void *aux)
 {
-	D *aux;
-
-	aux = p;
-	dyfree(aux->ptab);
-	dyfree(aux->etab);
 	free(aux);
 }
 
@@ -117,29 +90,32 @@ static int
 compute3d(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *e, *ee;
+	ioff *edges, *e, *ee;
 	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
-	P *pp, *p0;
-	D *d;
+	Aux *aux;
+	Node *u, *u0;
 	Clk clk = {.lab = "layiter"};
 
-	d = arg;
-	k = d->k;
+	aux = arg;
+	edges = aux->edges;
+	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	p0 = d->ptab + i;
+	u0 = aux->nodes + i;
 	r0 = rnodes + i;
-	r1 = rnodes + dylen(rnodes);
+	r1 = rnodes + dylen(aux->nodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
-		for(pp=p0, r=r0; r<r1; r+=skip, pp+=skip){
+		for(u=u0, r=r0; r<r1; r+=skip, u+=skip){
 			if((*stat & LFstop) != 0)
 				return 0;
-			fixed = pp->flags & FNfixed;
-			if(fixed == FNfixed || pp->ne == 0)
+			if(u->nedges == 0)
+				continue;
+			fixed = u->attr.flags & FNfixed;
+			if(fixed == FNfixed)
 				continue;
 			uw = r->len;
 			x = r->pos[0];
@@ -162,8 +138,8 @@ compute3d(void *arg, volatile int *stat, int i)
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
-			for(e=d->etab+pp->e, ee=e+pp->ne; e<ee; e++){
-				v = rnodes + *e;
+			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
+				v = rnodes + (*e >> 2);
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
 				δz = v->pos[2] - z;
@@ -221,28 +197,31 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *e, *ee;
+	ioff *edges, *e, *ee;
 	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
-	P *pp, *p0;
-	D *d;
+	Aux *aux;
+	Node *u, *u0;
 	Clk clk = {.lab = "layiter"};
 
-	d = arg;
-	k = d->k;
+	aux = arg;
+	edges = aux->edges;
+	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	p0 = d->ptab + i;
+	u0 = aux->nodes + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
-		for(pp=p0, r=r0; r<r1; r+=skip, pp+=skip){
+		for(u=u0, r=r0; r<r1; r+=skip, u+=skip){
 			if((*stat & LFstop) != 0)
 				return 0;
-			fixed = pp->flags & FNfixed;
+			if(u->nedges == 0)
+				continue;
+			fixed = u->attr.flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
 			uw = r->len;
@@ -263,8 +242,8 @@ compute(void *arg, volatile int *stat, int i)
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
-			for(e=d->etab+pp->e, ee=e+pp->ne; e<ee; e++){
-				v = rnodes + *e;
+			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
+				v = rnodes + (*e >> 2);
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);

@@ -109,6 +109,7 @@ prompt(Rune r)
 	if((ptext = enterprompt(r, ptext)) == nil)
 		return;
 	pushcmd("%s", ptext);
+	flushcmd();
 }
 
 void

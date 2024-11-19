@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "em.h"
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"
@@ -42,6 +41,7 @@ load(void)
 			break;
 		}
 	}
+	flushcmd();
 	dyfree(files);
 }
 
@@ -78,8 +78,6 @@ help(void)
 		" fr            Fruchterman-Reingold algorithm\n"
 		" pfr           Parallelized variant of FR (default)\n"
 		" pfr3d         Experimental 3d version of the above\n"
-		" linear        Linear layout with fixed-position nodes (wip)\n"
-		" circ          Circular layout with fixed-position nodes (wip)\n"
 	);
 	quit();
 }
@@ -118,8 +116,12 @@ parseargs(int argc, char **argv)
 			debug |= Debugextmem;
 		else if(strcmp(s, "fs") == 0)
 			debug |= Debugfs;
+		else if(strcmp(s, "graph") == 0)
+			debug |= Debuggraph;
 		else if(strcmp(s, "layout") == 0)
 			debug |= Debuglayout;
+		else if(strcmp(s, "load") == 0)
+			debug |= Debugload | Debugperf;
 		else if(strcmp(s, "meta") == 0)
 			debug |= Debugmeta;
 		else if(strcmp(s, "perf") == 0)
@@ -131,8 +133,8 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
-	case 'Z': view.flags |= VFnodepth; break;
-	case 'b': view.flags |= VFhaxx0rz; break;
+	case 'Z': drawing.flags |= DFnodepth; break;
+	case 'b': drawing.flags |= DFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
 	case 'f': pushfile(EARGF(usage()), FFlayout); break;
 	case 'h': help(); break;
@@ -150,9 +152,6 @@ parseargs(int argc, char **argv)
 			deflayout = LLcirc;
 		else
 			sysfatal("unknown layout type");
-		break;
-	case 'm':
-		multiplier = atoi(EARGF(usage()));
 		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
@@ -177,7 +176,6 @@ static void
 init(void)
 {
 	initcmd();	/* fork repl before starting other threads */
-	initem();
 	initdrw();
 	initfs();
 }
@@ -193,6 +191,9 @@ main(int argc, char **argv)
 	initlayout();
 	load();
 	initui();
+	if(debug & Debugload)
+		for(;;)
+			sleep(60);
 	evloop();
 	quit();
 	return 0;

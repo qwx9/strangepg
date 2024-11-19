@@ -162,7 +162,7 @@ renderedges(void)
 
 	if((n = ndedges) < 1)
 		return;
-	if(debug & Debugperf)
+	if((debug & Debugperf) != 0)
 		t = μsec();
 	sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 		.ptr = redges,
@@ -197,7 +197,7 @@ rendernodes(void)
 
 	if((n = ndnodes) < 1)
 		return;
-	if(debug & Debugperf)
+	if((debug & Debugperf) != 0)
 		t = μsec();
 	sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
@@ -232,7 +232,7 @@ renderscreen(void)
 
 	if(!render.caching)
 		return;
-	if(debug & Debugperf)
+	if((debug & Debugperf) != 0)
 		t = μsec();
 	sg_begin_pass(&(sg_pass){
 		.action = render.nothing,
@@ -325,8 +325,8 @@ frame(void)
 	}
 	if((reqs & Reqshape) != 0){
 		reqs &= ~Reqshape;
-		view.flags ^= VFdrawarrows;
-		setnodeshape(view.flags & VFdrawarrows);
+		drawing.flags ^= DFdrawarrows;
+		setnodeshape(drawing.flags & DFdrawarrows);
 	}
 	if(ndedges == 0 && ndnodes == 0)
 		goto end;
