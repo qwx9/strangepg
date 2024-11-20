@@ -347,7 +347,7 @@ showselected(char *s)
 static int
 mouseselect(ioff id, int multi)
 {
-	if(selected >= 0 && selected == id || prompting)
+	if(selected >= 0 && selected == id && !multi || prompting)
 		return 0;
 	if((selected = id) != -1){
 		if((id & 1<<31) == 0){
