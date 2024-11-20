@@ -214,7 +214,7 @@ function deselectnodebyid(id){
 		return
 	}
 	delete selected[id]
-	printf "c\t%s\t0x%x\n", id, CL[label[i]]
+	printf "c\t%s\t0x%x\n", id, CL[label[id]]
 }
 function deselectnode(name,	id){
 	if(!checknodename(name))
