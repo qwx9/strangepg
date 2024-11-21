@@ -1,8 +1,4 @@
 #include "strpg.h"
-#include <signal.h>
-#define	HANDMADE_MATH_IMPLEMENTATION
-//#define	HANDMADE_MATH_NO_SIMD
-#include "lib/HandmadeMath.h"
 
 #define GL_VIEWPORT 0x0BA2
 #define GL_DEBUG_OUTPUT 0x92E0
@@ -12,22 +8,11 @@
 	_SG_XMACRO(glGetTexImage,	void, (GLenum target, GLint level, GLenum format, GLenum type, void * pixels)) \
 	_SG_XMACRO(glReadPixels,	void, (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void * pixels)) \
 
-#define	SOKOL_IMPL
-#define	SOKOL_NO_ENTRY
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
 #include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
-/* include nuklear.h before the sokol_nuklear.h implementation */
-#define	NK_INCLUDE_FIXED_TYPES
-#define	NK_INCLUDE_STANDARD_IO
-#define	NK_INCLUDE_DEFAULT_ALLOCATOR
-#define	NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define	NK_INCLUDE_FONT_BAKING
-#define	NK_INCLUDE_DEFAULT_FONT
-#define	NK_INCLUDE_STANDARD_VARARGS
-//#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
 #include "glsl/edge.h"
 #include "glsl/edgeidx.h"
 #include "glsl/node.h"
@@ -35,6 +20,7 @@
 #include "glsl/scr.h"
 #include "lib/nuklear.h"
 #include "lib/sokol_nuklear.h"
+#include "lib/HandmadeMath.h"
 #include "sokol.h"
 #include "drw.h"
 #include "ui.h"
@@ -162,8 +148,7 @@ renderedges(void)
 
 	if((n = ndedges) < 1)
 		return;
-	if((debug & Debugperf) != 0)
-		t = μsec();
+	t = debug & Debugperf ? μsec() : 0;
 	sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 		.ptr = redges,
 		.size = n * sizeof *redges,
@@ -197,8 +182,7 @@ rendernodes(void)
 
 	if((n = ndnodes) < 1)
 		return;
-	if((debug & Debugperf) != 0)
-		t = μsec();
+	t = debug & Debugperf ? μsec() : 0;
 	sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
 		.ptr = rnodes,
 		.size = n * sizeof *rnodes,
@@ -232,8 +216,7 @@ renderscreen(void)
 
 	if(!render.caching)
 		return;
-	if((debug & Debugperf) != 0)
-		t = μsec();
+	t = debug & Debugperf ? μsec() : 0;
 	sg_begin_pass(&(sg_pass){
 		.action = render.nothing,
 		.swapchain = sglue_swapchain(),

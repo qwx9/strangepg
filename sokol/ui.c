@@ -1,23 +1,10 @@
 #include "strpg.h"
-#define	HANDMADE_MATH_IMPLEMENTATION
-//#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_log.h"
 #include "lib/sokol_glue.h"
-/* include nuklear.h before the sokol_nuklear.h implementation */
-#define	NK_INCLUDE_FIXED_TYPES
-#define	NK_INCLUDE_STANDARD_IO
-#define	NK_INCLUDE_DEFAULT_ALLOCATOR
-#define	NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define	NK_INCLUDE_FONT_BAKING
-#define	NK_INCLUDE_DEFAULT_FONT
-#define	NK_INCLUDE_STANDARD_VARARGS
-//#define	NK_INCLUDE_ZERO_COMMAND_MEMORY
-#define	NK_IMPLEMENTATION
 #include "lib/nuklear.h"
-#define	SOKOL_NUKLEAR_IMPL
 #include "lib/sokol_nuklear.h"
 #include "sokol.h"
 #include "ui.h"
@@ -30,7 +17,6 @@ typedef struct nk_color nk_color;
 typedef struct nk_text_edit nk_text_edit;
 
 static nk_text_edit nkprompt;
-static nk_color nktheme[NK_COLOR_COUNT];
 static int prompting;
 static char ptext[8192];
 static int plen;
@@ -65,7 +51,6 @@ resetprompt(void)
 {
 	memset(ptext, 0, plen);
 	plen = 0;
-	nk_textedit_clear_state(&nkprompt, NK_TEXT_EDIT_MULTI_LINE, nk_filter_default);
 	nk_str_clear(&nkprompt.string);
 }
 void
@@ -251,30 +236,27 @@ initnk(void)
 {
 	nk_context *ctx;
 
+	if((drawing.flags & DFhaxx0rz) == 0){
+		nk_default_color_style[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
+		nk_default_color_style[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
+		nk_default_color_style[NK_COLOR_HEADER] = (nk_color){0x99, 0x99, 0x99, 0xcc};
+		nk_default_color_style[NK_COLOR_BORDER] = nk_default_color_style[NK_COLOR_HEADER];
+		nk_default_color_style[NK_COLOR_SELECT] = (nk_color){0xcc, 0xcc, 0xcc, 0xcc};
+		nk_default_color_style[NK_COLOR_SELECT_ACTIVE] = (nk_color){0x66, 0x66, 0x66, 0xcc};
+		nk_default_color_style[NK_COLOR_EDIT] = (nk_color){0xff, 0xff, 0xff, 0xff};
+		nk_default_color_style[NK_COLOR_EDIT_CURSOR] = (nk_color){0x00, 0x00, 0x00, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR] = (nk_color){0xcc, 0xcc, 0x8e, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
+		nk_default_color_style[NK_COLOR_TAB_HEADER] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
+	}
 	snk_setup(&(snk_desc_t){
 		.dpi_scale = sapp_dpi_scale(),
 		.logger.func = slog_func,
 		.enable_set_mouse_cursor = true,
 	});
 	ctx = snk_get_context();
-	memcpy(nktheme, nk_default_color_style, sizeof nk_default_color_style);
-	/* FIXME: inconsistent with draw/color.c */
-	if((drawing.flags & DFhaxx0rz) == 0){
-		nktheme[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
-		nktheme[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
-		nktheme[NK_COLOR_HEADER] = (nk_color){0x99, 0x99, 0x99, 0xcc};
-		nktheme[NK_COLOR_BORDER] = nktheme[NK_COLOR_HEADER];
-		nktheme[NK_COLOR_SELECT] = (nk_color){0xcc, 0xcc, 0xcc, 0xcc};
-		nktheme[NK_COLOR_SELECT_ACTIVE] = (nk_color){0x66, 0x66, 0x66, 0xcc};
-		nktheme[NK_COLOR_EDIT] = (nk_color){0xff, 0xff, 0xff, 0xff};
-		nktheme[NK_COLOR_EDIT_CURSOR] = nktheme[NK_COLOR_TEXT];
-		nktheme[NK_COLOR_SCROLLBAR] = nktheme[NK_COLOR_WINDOW];
-		nktheme[NK_COLOR_SCROLLBAR_CURSOR] = (nk_color){0xcc, 0xcc, 0x8e, 0xcc};
-		nktheme[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
-		nktheme[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
-		nktheme[NK_COLOR_TAB_HEADER] = nktheme[NK_COLOR_WINDOW];
-		nk_style_from_table(ctx, nktheme);
-	}
 	nk_style_hide_cursor(ctx);
 	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
 }

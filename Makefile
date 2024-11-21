@@ -88,11 +88,12 @@ LDFLAGS?=
 LDLIBS?=
 
 OBJ:=\
-	sokol/draw.o\
-	sokol/shaders.o\
-	sokol/ui.o\
+	sokol/impl_nuklear.o\
+	sokol/impl_sokol_gfx.o\
+	sokol/impl_sokol_nuklear.o\
 	lib/chan.o\
 	lib/queue.o\
+	lib/HandmadeMath.o\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
 	lib/plan9/strecpy.o\
@@ -116,6 +117,10 @@ OBJ:=\
 	layout/layout.o\
 	layout/linear.o\
 	layout/pfr.o\
+	sokol/draw.o\
+	sokol/impl_glsl.o\
+	sokol/shaders.o\
+	sokol/ui.o\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\

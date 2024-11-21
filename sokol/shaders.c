@@ -1,13 +1,10 @@
 #include "strpg.h"
-#define	HANDMADE_MATH_IMPLEMENTATION
-//#define	HANDMADE_MATH_NO_SIMD
 #include "lib/HandmadeMath.h"
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
 #include "sokol.h"
-#define SOKOL_SHDC_IMPL
 #include "glsl/edge.h"
 #include "glsl/edgeidx.h"
 #include "glsl/node.h"
