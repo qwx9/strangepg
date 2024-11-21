@@ -216,9 +216,6 @@ nk_end(&ctx);
 ## API
 
 */
-#ifndef NK_SINGLE_FILE
-  #define NK_SINGLE_FILE
-#endif
 
 /** \file nuklear.h
  * \brief main API and documentation file
@@ -3893,6 +3890,7 @@ enum nk_style_cursor {
     NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT,
     NK_CURSOR_COUNT
 };
+NK_API struct nk_color nk_default_color_style[NK_COLOR_COUNT];	/* nik */
 NK_API void nk_style_default(struct nk_context*);
 NK_API void nk_style_from_table(struct nk_context*, const struct nk_color*);
 NK_API void nk_style_load_cursor(struct nk_context*, enum nk_style_cursor, const struct nk_cursor*);
@@ -18506,7 +18504,7 @@ NK_API void nk_style_default(struct nk_context *ctx){nk_style_from_table(ctx, 0)
     NK_COLOR(NK_COLOR_KNOB_CURSOR_HOVER,        120,120,120,255) \
     NK_COLOR(NK_COLOR_KNOB_CURSOR_ACTIVE,       150,150,150,255)
 
-NK_GLOBAL const struct nk_color
+struct nk_color
 nk_default_color_style[NK_COLOR_COUNT] = {
 #define NK_COLOR(a,b,c,d,e) {b,c,d,e},
     NK_COLOR_MAP(NK_COLOR)
