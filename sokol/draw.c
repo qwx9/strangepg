@@ -140,83 +140,81 @@ rotdraw(Vertex v)
 	updateview();
 }
 
-static inline void
-renderedges(void)
+static void
+renderdirect(void)
 {
-	ioff n;
+	int n;
 	double t;
 
-	if((n = ndedges) < 1)
-		return;
 	t = debug & Debugperf ? μsec() : 0;
-	sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
-		.ptr = redges,
-		.size = n * sizeof *redges,
+	drawui(snk_new_frame());
+	sg_begin_pass(&(sg_pass){
+		.action = render.clearscreen,
+		.swapchain = sglue_swapchain(),
 	});
-	if(render.caching){
-		sg_begin_pass(&(sg_pass){
-			.action = render.clearscreen,
-			.attachments = render.offscrfb,
-		});
-		sg_apply_pipeline(render.offscredgepipe);
-	}else{
-		sg_begin_pass(&(sg_pass){
-			.action = render.clearscreen,
-			.swapchain = sglue_swapchain(),
+	if((n = ndedges) >= 1){
+		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
+			.ptr = redges,
+			.size = n * sizeof *redges,
 		});
 		sg_apply_pipeline(render.edgepipe);
+		sg_apply_bindings(&render.edgebind);
+		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+		sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
+		sg_draw(0, render.nedgev * n, 1);
 	}
-	sg_apply_bindings(&render.edgebind);
-	sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
-	sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
-	sg_draw(0, render.nedgev * n, 1);
-	sg_end_pass();
-	DPRINT(Debugperf, "renderedges: %.2f ms", (μsec() - t) / 1000);
-}
-
-static inline void
-rendernodes(void)
-{
-	ioff n;
-	double t;
-
-	if((n = ndnodes) < 1)
-		return;
-	t = debug & Debugperf ? μsec() : 0;
-	sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
-		.ptr = rnodes,
-		.size = n * sizeof *rnodes,
-	});
-	if(render.caching){
-		sg_begin_pass(&(sg_pass){
-			.action = render.overdraw,
-			.attachments = render.offscrfb,
-		});
-		sg_apply_pipeline(render.offscrnodepipe);
-	}else{
-		sg_begin_pass(&(sg_pass){
-			.action = render.overdraw,
-			.swapchain = sglue_swapchain(),
+	if((n = ndnodes) >= 1){
+		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
+			.ptr = rnodes,
+			.size = n * sizeof *rnodes,
 		});
 		sg_apply_pipeline(render.nodepipe);
+		sg_apply_bindings(&render.nodebind);
+		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nnodev, n);
 	}
-	sg_apply_bindings(&render.nodebind);
-	sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
-	sg_draw(0, render.nnodev, n);
-	if(!render.caching)
-		snk_render(view.w, view.h);
+	snk_render(view.w, view.h);
 	sg_end_pass();
-	DPRINT(Debugperf, "rendernodes: %.2f ms", (μsec() - t) / 1000);
+	DPRINT(Debugperf, "renderdirect: %.2f ms", (μsec() - t) / 1000);
 }
 
-static inline void
-renderscreen(void)
+static void
+renderoffscreen(void)
 {
+	int n;
+
 	double t;
 
-	if(!render.caching)
-		return;
 	t = debug & Debugperf ? μsec() : 0;
+	drawui(snk_new_frame());
+	sg_begin_pass(&(sg_pass){
+		.action = render.clearscreen,
+		.attachments = render.offscrfb,
+	});
+	if((n = ndedges) >= 1){
+		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
+			.ptr = redges,
+			.size = n * sizeof *redges,
+		});
+		sg_apply_pipeline(render.offscredgepipe);
+		sg_apply_bindings(&render.edgebind);
+		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+		sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
+		sg_draw(0, render.nedgev * n, 1);
+	}
+	if((n = ndnodes) >= 1){
+		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
+			.ptr = rnodes,
+			.size = n * sizeof *rnodes,
+		});
+		sg_apply_pipeline(render.offscrnodepipe);
+		sg_apply_bindings(&render.nodebind);
+		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nnodev, n);
+	}
+	sg_end_pass();
+	/* FIXME: only works on opengl/x86; fix it first */
+	goto skip;
 	sg_begin_pass(&(sg_pass){
 		.action = render.nothing,
 		.swapchain = sglue_swapchain(),
@@ -226,7 +224,8 @@ renderscreen(void)
 	sg_draw(0, 4, 1);
 	snk_render(view.w, view.h);
 	sg_end_pass();
-	DPRINT(Debugperf, "renderscreen: %.2f ms", (μsec() - t) / 1000);
+skip:
+	DPRINT(Debugperf, "renderoffscreen: %.2f ms", (μsec() - t) / 1000);
 }
 
 static void
@@ -243,13 +242,12 @@ clearscreen(void)
 static void
 flush(void)
 {
-	drawui(snk_new_frame());	/* rendered in the last pass, whichever it is */
-	if(dylen(rnodes) > 0){
-		renderedges();
-		rendernodes();
-		renderscreen();
-	}else
+	if(dylen(rnodes) <= 0)
 		clearscreen();
+	else if(!render.caching)
+		renderdirect();
+	else
+		renderoffscreen();
 	sg_commit();
 }
 

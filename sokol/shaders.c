@@ -122,7 +122,7 @@ initfb(int w, int h)
 		},
 		.depth_stencil.image = zfb,
 	});
-	render.offscrbind.images[0] = fb;
+	render.offscrbind.images[IMG_tex] = fb;
 	render.pickfb = emalloc(w * h * sizeof *render.pickfb);
 }
 
@@ -391,7 +391,7 @@ setupscreen(void)
 		.wrap_v = SG_WRAP_CLAMP_TO_EDGE,
 	});
 	render.offscrbind = (sg_bindings){
-		.vertex_buffers[0] = quad_vbuf,
+		.vertex_buffers[IMG_tex] = quad_vbuf,
 		.samplers[SMP_smp] = smp,
 	};
 	sh = sg_make_shader(s_scr_shader_desc(sg_query_backend()));
