@@ -19,7 +19,6 @@ endif
 PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
 MAKE?= make
-TARGET?= Unix
 ifeq ($(OS),Windows_NT)
 	OS:= $(shell uname 2>/dev/null || echo Win64)
 	OS:= $(patsubst CYGWIN%,Cygwin,$(OS))
@@ -31,6 +30,13 @@ ifndef MAKE
 		MAKE:= gmake
 	else
 		MAKE:= make
+	endif
+endif
+ifndef TARGET
+	ifeq ($(OS),Darwin)
+		TARGET:= MacOS
+	else
+		TARGET:= Unix
 	endif
 endif
 
@@ -153,9 +159,24 @@ else ifeq ($(TARGET),Win64)
 	CC:= x86_64-w64-mingw32-gcc-posix
 	CPPFLAGS+= -Iwin64 -DSOKOL_D3D11
 	LDFLAGS+= -static
-	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -ld3d11 -Wl,-Bstatic -lpthread
+	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -Wl,-Bstatic -lpthread
 	OBJ+=\
 		win64/stubs.o\
+
+else ifeq ($(TARGET),MacOS)
+	# FIXME
+	# -target arm64-apple-macos15.1
+	#CC:= x86_64-apple-darwin24-cc
+	CPPFLAGS+= -Imacos -DSOKOL_METAL -D_DARWIN_C_SOURCE
+	CFLAGS+= -ObjC
+	LDFLAGS+=\
+		-ObjC\
+		-framework Cocoa\
+		-framework QuartzCore\
+		-framework Metal\
+		-framework MetalKit\
+		-dead_strip\
+		-lpthread\
 
 else
 	$(error unknown target)
@@ -172,7 +193,7 @@ CLEANFILES:= $(OBJ) $(DEPS)
 all:	$(GLSL) $(ALLTARGETS) dirall
 
 %.h: %.glsl
-	sokol-shdc -f sokol_impl -i $^ -l glsl430:hlsl5 -o $@
+	sokol-shdc -f sokol_impl -i $^ -l glsl430:hlsl5:metal_macos:glsl300es -o $@
 
 $(OBJ): $(GLSL)
 
