@@ -198,7 +198,11 @@ readcmd(char *s)
 	while((s = nexttok(e, &e)) != nil){
 		g = graphs;
 		if(s[1] != 0 && s[1] != '\t'){
-			logerr(va("> error:%s\n", s));
+			/* heuristic based on strawk/lib.c... */
+			if(s[0] == ' ' || strncmp(s, "strawk:", 7) == 0)
+				logerr(va("> error: %s\n", s));
+			else
+				logmsg(va("> %s\n", s));
 			continue;
 		}
 		switch(*s){
@@ -208,7 +212,7 @@ readcmd(char *s)
 			quit();
 			break;
 		case 'E':
-			logerr(va("> error:%s\n", s+1));
+			logerr(va("> error: %s\n", s+2));
 			continue;
 		case 'I':
 			showobject(s + 2);
