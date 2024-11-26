@@ -376,6 +376,7 @@ evloop(void)
 		.event_cb = event,
 		.width = Vdefw,
 		.height = Vdefh,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 		.enable_clipboard = true,
 		.window_title = "strangepg",
 		.ios_keyboard_resizes_canvas = true,

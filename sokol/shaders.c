@@ -207,7 +207,7 @@ setupnodes(void)
 				},
 			},
 		},
-		.sample_count = 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 	});
 	sh = sg_make_shader(ni_nodeidx_shader_desc(sg_query_backend()));
 	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -324,7 +324,7 @@ setupedges(void)
 				},
 			},
 		},
-		.sample_count = 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 	});
 	sh = sg_make_shader(ei_edgeidx_shader_desc(sg_query_backend()));
 	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){

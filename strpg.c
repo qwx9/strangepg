@@ -63,7 +63,7 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-MZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -73,6 +73,7 @@ help(void)
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
+		"-M             Disable multisample anti-aliasing for performance\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"
 		" fr            Fruchterman-Reingold algorithm\n"
@@ -85,7 +86,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-MZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
@@ -133,6 +134,7 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
+	case 'M': drawing.flags |= DFnomsaa; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
