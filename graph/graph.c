@@ -44,8 +44,6 @@ pushgraph(Graph *g)
 	dypush(graphs, *g);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);
-	if(gottagofast && reqlayout(g, Lstart) < 0)
-		sysfatal("pushgraph: reqlayout failed, shouldn\'t happen");
 	return g;
 }
 

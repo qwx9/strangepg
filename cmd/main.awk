@@ -48,6 +48,35 @@ BEGIN{
 	srand()
 	OFS = "\t"
 }
+function cmd(code){
+	if(code == "FHJ142"){	# wing to proceed to targets
+		if(++fnr == nd + 1){
+			if(!noreset)
+				print "R"
+			else
+				noreset = 0
+		}else
+			print deferred[fnr]
+	}else if(code == "FGD135")	# wing attack plan R
+		crm114 = 1
+}
+function exportlayout(f){
+	print "o", f
+}
+function importlayout(f, force){
+	if(crm114 == 1 || force)
+		print "i", f
+	else{
+		deferred[++nd] = "i\t" f "\n"
+		noreset = 1
+	}
+}
+function readcsv(f, force){
+	if(crm114 == 1 || force)
+		print "f", f
+	else
+		deferred[++nd] = "f\t" f "\n"
+}
 function addnode(id, name, color){
 	# remove placeholder for nodes spawned from out of order links
 	if(id in label){
@@ -78,42 +107,6 @@ function delnode(name){
 function addedge(id, u, v){
 	edge[id,1] = u << 1 & (v & 1)
 	edge[id,2] = v >> 1
-}
-function cmd(code){
-	if(code == "FGD135"){	# wing attack plan R
-		if(!noreset && relayout)
-			deferred = deferred "R\n"
-		if(deferred != ""){
-			print deferred
-			deferred = ""
-		}
-		crm114 = 1
-	}else if(!crm114){
-		if(code == "FHJ142"){	# wing to proceed to targets
-			relayout = 1
-			# FIXME
-			print "R"
-		}
-	}
-}
-function exportlayout(f){
-	print "o", f
-}
-function importlayout(f){
-	if(crm114 == 1)
-		print "i", f
-	else{
-		deferred = deferred "i\t" f "\n"
-		noreset = 1
-	}
-}
-function readcsv(f){
-	if(crm114 == 1)
-		print "f", f
-	else{
-		deferred = deferred "f\t" f "\n"
-		relayout = 1
-	}
 }
 function checknodeid(id){
 	if(!(id in label)){

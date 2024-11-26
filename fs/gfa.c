@@ -6,6 +6,19 @@
 #include "cmd.h"
 #include "lib/khashl.h"
 
+/* once strawk has access to our internals, this shit will no longer be
+ * necessary */
+Special specials[Tnil] = {
+	[TLN] = {"LN", nil},
+	[TCL] = {"CL", "nodecolor"},
+	[Tfx] = {"fx", "fixx"},
+	[Tfy] = {"fy", "fixy"},
+	[Tfz] = {"fz", "fixz"},
+	[Tx0] = {"x0", "initx"},
+	[Ty0] = {"y0", "inity"},
+	[Tz0] = {"z0", "initz"},
+};
+
 /* assumptions:
  * - required field separator is \t
  * - tags are two characters long as per the spec
@@ -29,25 +42,12 @@ struct Aux{
 	ioff nedges;
 };
 
-typedef struct Special Special;
-struct Special{
-	char *tag;
-	char *function;
-};
-static Special specials[] = {
-	[TLN] = {"LN", nil},
-	[Tfx] = {"fx", "fixx"},
-	[Tfy] = {"fy", "fixy"},
-	[Tfz] = {"fz", "fixz"},
-	[Tx0] = {"x0", "initx"},
-	[Ty0] = {"y0", "inity"},
-	[Tz0] = {"z0", "initz"},
-};
-
 void
-setattr(Node *n, int type, char *val)
+setattr(Node *n, ioff id, int type, char *val)
 {
 	int i;
+	char *p;
+	u32int u;
 	float f;
 
 	switch(type){
@@ -69,6 +69,19 @@ setattr(Node *n, int type, char *val)
 			drawing.length.max = i;
 			drawing.flags |= DFstalelen;
 		}
+		break;
+	case TCL:
+		if(val[0] == '#'){
+			val++;
+			u = strtoul(val, &p, 16);
+			if(p <= val + 6)
+				u = u << 8 | 0xc0;
+		}else
+			u = strtoul(val, &p, 0);
+		if(p == val)	/* assuming string value, let strawk interpret it */
+			break;
+		setcolor(rnodes[id].col, u);
+		n->attr.color = u;
 		break;
 	case Tfx:
 		n->attr.flags |= FNfixedx;
@@ -111,7 +124,7 @@ setattr(Node *n, int type, char *val)
 }
 
 /* calling the awk function directly will execute its side effect and
- * send back an attribute change message */
+ * send back an attribute change message even when unarmed */
 void
 setnamedtag(char *name, char *tag, char *val)
 {
@@ -119,20 +132,25 @@ setnamedtag(char *name, char *tag, char *val)
 
 	for(t=specials, te=t+nelem(specials); t<te; t++)
 		if(strncmp(t->tag, tag, 12) == 0){	/* safety + special tables */
-			pushcmd("%s(%d,\"%s\")", t->function, name, val);
+			pushcmd("%s(\"%s\",%s)", t->function, name, val);
 			return;
 		}
 	pushcmd("%s[\"%s\"]=\"%s\"", tag, name, val);
 }
 /* before strawk is primed and ready, set special tags ourselves */
-void
+static int
 settag(Graph *g, ioff id, char type, char *tag, char *val)
 {
+	int r;
 	Special *t, *te;
 
+	r = 0;
 	for(t=specials, te=t+nelem(specials); t<te; t++)
-		if(strncmp(t->tag, tag, 12) == 0)
-			setattr(g->nodes + id, t - specials, val);
+		if(strncmp(t->tag, tag, 12) == 0){
+			setattr(g->nodes + id, id, t - specials, val);
+			if(t - specials >= Tlayout)
+				r = 1;
+		}
 	switch(type){
 	case 'i':
 	case 'f': pushcmd("%s[label[%d]]=%s", tag, id, val); break;
@@ -145,6 +163,7 @@ settag(Graph *g, ioff id, char type, char *tag, char *val)
 		warn("settag %s=%s: unknown type %c, defaulting to string\n",
 			tag, val, type);
 	}
+	return r;
 }
 
 static void
@@ -189,13 +208,14 @@ cleanup1(namemap *h)
 }
 
 static int
-readnodetags(Aux *a, Graph *g, File *f)
+readnodetags(Aux *a, Graph *g, File *f, int *wait)
 {
-	int nerr;
+	int w, nerr;
 	char *s;
 	ioff id, off;
 	vlong *o, *oe;
 
+	*wait = w = 0;
 	for(nerr=0, id=0, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++){
 		if((off = *o) < 0)
 			continue;
@@ -212,10 +232,13 @@ readnodetags(Aux *a, Graph *g, File *f)
 				continue;
 			}
 			s[2] = 0;
-			settag(g, id, s[3], s, s+5);
+			if(settag(g, id, s[3], s, s+5))
+				w++;
 			nerr = 0;
 		}
 	}
+	if(w)
+		*wait = 1;
 	return 0;
 }
 
@@ -344,7 +367,7 @@ initedges(Aux *a, Graph *g, ioff nedges, ioff *index)
 }
 
 static void
-mkgraph(Aux *a, Graph *g, File *f)
+mkgraph(Aux *a, Graph *g)
 {
 	initgraph(g, FFgfa);
 	initnodes(g, a->nnodes, a->length, a->index, a->degree);
@@ -579,6 +602,7 @@ opengfa(Aux *a, char *path)
 static void
 loadgfa1(void *arg)
 {
+	int wait;
 	double t, t0;
 	File *f;
 	Aux a = {0};
@@ -587,7 +611,7 @@ loadgfa1(void *arg)
 	t0 = μsec();
 	g = &gr;
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
-		sysfatal("loadgfa: %s", (char*)arg, error());
+		sysfatal("loadgfa: %s", error());
 	TIME("readgfa");
 	if(a.nnodes == 0)
 		sysfatal("loadgfa: no nodes\n");
@@ -596,30 +620,35 @@ loadgfa1(void *arg)
 	logmsg("loadgfa: initializing graph...\n");
 	mkbuckets(&a);			/* compute slots for each node's edges */
 	TIME("mkbuckets");
-	mkgraph(&a, g, f);		/* batch initialize nodes and edges from indexes */
+	mkgraph(&a, g);		/* batch initialize nodes and edges from indexes */
 	TIME("mkgraph");
 	g = pushgraph(g);		/* register new graph, maybe start layout */
 	TIME("pushgraph");
+	if(gottagofast){
+		pushcmd("cmd(\"FHJ142\")");	/* signal read next file or start layouting */
+		flushcmd();
+	}
 	cleanup1(a.names);	/* push node labels to strawk */
 	names_destroy(a.names);
 	TIME("cleanup");
 	logmsg("loadgfa: reading node tags...\n");
-	if(readnodetags(&a, g, f) < 0)	/* load node tags, push unknowns to strawk */
+	if(readnodetags(&a, g, f, &wait) < 0)	/* load node tags, push unknowns to strawk */
 		sysfatal("loadgfa: readnodetags: %s", error());
 	dyfree(a.nodeoff);
 	TIME("readnodetags");
-	pushcmd("cmd(\"FHJ142\")");	/* signal read next file or start layouting */
+	if(!wait && !gottagofast)	/* no layout tags were loaded, so don't wait */
+		pushcmd("cmd(\"FHJ142\")");
 	flushcmd();
 	logmsg("loadgfa: syncing awk...\n");
-	/* FIXME: have awk decide on this based on argv <- or not */
-	//if(!gottagofast)
 	transmittags(g);		/* push remaining node and edge info to awk */
 	TIME("transmittags");
+	if(wait && !gottagofast)
+		pushcmd("cmd(\"FHJ142\")");
 	logmsg("loadgfa: reading edge tags...\n");
 	if(readedgetags(&a, g, f) < 0)	/* process and push edge tags */
 		sysfatal("loadgfa: readedgetags: %s", error());
 	/* done transmitting the important stuff */
-	pushcmd("cmd(\"FGD135\")");	/* issue go code (one per input) */
+	pushcmd("cmd(\"FGD135\")");	/* issue go code */
 	if((debug & Debugload) != 0)
 		pushcmd("quit()");
 	flushcmd();

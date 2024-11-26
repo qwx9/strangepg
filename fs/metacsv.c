@@ -17,11 +17,13 @@
 /* FIXME: quoting? */
 
 static char **
-csvheader(File *f)
+csvheader(File *f, int *wait)
 {
-	char c;
+	char c, w;
 	char *p, *s, **tags;
+	Special *sp, *se;
 
+	*wait = w = 0;
 	if(readline(f) == nil){
 		werrstr("empty file");
 		return nil;
@@ -45,9 +47,21 @@ csvheader(File *f)
 				break;
 			}
 		}
+		/* don't wait for csv to load if there are  no layout tags */
+		if(cistrcmp(s, "color") == 0)
+			s = "CL";
+		else{
+			for(sp=specials, se=sp+nelem(specials); sp<se; sp++)
+				if(strncmp(s, sp->tag, 2) == 0)
+					break;
+			if(sp != se && sp - specials >= Tlayout)
+				w++;
+		}
 		p = estrdup(s);
 		dypush(tags, p);
 	}
+	if(w)
+		*wait = 1;
 	return tags;
 }
 
@@ -61,7 +75,7 @@ csvheader(File *f)
 static void
 loadcsv(void *arg)
 {
-	int r, nf, nr;
+	int r, nf, nr, wait;
 	char *s, *path, *tag, **tags, name[512];
 	File *f;
 
@@ -75,8 +89,12 @@ loadcsv(void *arg)
 	r = -1;
 	nr = 0;
 	splitfs(f, ',');
-	if((tags = csvheader(f)) == nil)
+	if((tags = csvheader(f, &wait)) == nil)
 		goto end;
+	if(!wait){
+		pushcmd("cmd(\"FHJ142\")");
+		flushcmd();
+	}
 	nr++;
 	name[sizeof name-1] = 0;
 	/* beyond the tag names in the header, we leave all input validation to strawk */
@@ -97,7 +115,8 @@ loadcsv(void *arg)
 	}
 	r = 0;
 end:
-	pushcmd("cmd(\"FHJ142\")");
+	if(wait)
+		pushcmd("cmd(\"FHJ142\")");
 	flushcmd();
 	if(r < 0)
 		warn("loadcsv %s: %s\n", path, error());
