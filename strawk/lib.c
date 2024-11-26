@@ -675,8 +675,11 @@ void ERROR(void)
 {
 	extern TNode *curnode;
 
-	fprintf(awkstderr, "\n");
-	if (compile_time != ERROR_PRINTING) {
+	if (runnerup != NULL) {
+		fprintf(awkstderr, " eval(\"%s\")\n", evalstr);
+		eprint();
+	} else if (compile_time != ERROR_PRINTING) {
+		fprintf(awkstderr, "\n");
 		if (NR && *NR > 0) {
 			fprintf(awkstderr, " input record number %d", (int) (*FNR));
 			if (strcmp(*FILENAME, "-") != 0)
@@ -691,7 +694,8 @@ void ERROR(void)
 			fprintf(awkstderr, " source file %s", cursource());
 		fprintf(awkstderr, "\n");
 		eprint();
-	}
+	} else
+		fprintf(awkstderr, "\n");
 }
 
 void eprint(void)	/* try to print context around error */

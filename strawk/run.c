@@ -45,6 +45,7 @@ FILE *awkstdin, *awkstdout, *awkstderr;
 int dbg;
 Awknum	srand_seed = 1;
 enum compile_states	compile_time = ERROR_PRINTING;
+char *evalstr;
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
@@ -2194,6 +2195,8 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		break;
 	case FEVAL:
 		lexprog = getsval(x);
+		if((evalstr = strdup(lexprog)) == NULL)
+			FATAL("out of memory in eval");
 		yyparse();
 		DPRINTF("eval expr \"%s\", program %p root %p\n", lexprog,
 			(void*)runnerup, (void*)winner);
@@ -2206,6 +2209,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		errorflag = 0;
 		freenodes();
 		fflush(awkstdout);
+		free(evalstr);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);

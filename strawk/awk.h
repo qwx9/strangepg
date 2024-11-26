@@ -88,7 +88,7 @@ extern int	errorflag;	/* 1 if error has occurred */
 extern bool	donefld;	/* true if record broken into fields */
 extern bool	donerec;	/* true if record is valid (no fld has changed */
 extern int	dbg;
-extern char	*lexprog, *cmdname;
+extern char	*lexprog, *cmdname, *evalstr;
 extern Awknum	srand_seed;
 
 extern const char *patbeg;	/* beginning of pattern matched */
