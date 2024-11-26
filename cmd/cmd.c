@@ -7,43 +7,47 @@
 #include "threads.h"
 #include "cmd.h"
 
-static char cmdbuf[8192], *cmdp = cmdbuf;
+static File *cmdfs;
 static RWLock cmdlock;
+
+void
+killcmd(void)
+{
+	wlock(&cmdlock);
+	freefs(cmdfs);
+	cmdfs = nil;
+	wunlock(&cmdlock);
+	close(outfd[1]);
+	outfd[1] = -1;
+	close(infd[1]);
+	infd[1] = -1;
+}
 
 void
 flushcmd(void)
 {
-	int n;
-
-	if((n = cmdp - cmdbuf) == 0)
-		return;
 	wlock(&cmdlock);
-	if(write(infd[1], cmdbuf, n) != n){
-		DPRINT(Debugcmd, "sendcmd: %s", error());
-		close(infd[1]);
-		infd[1] = -1;
+	if(cmdfs == nil){
+		wunlock(&cmdlock);
+		return;
 	}
-	cmdp = cmdbuf;
+	flushfs(cmdfs);
 	wunlock(&cmdlock);
 }
 
 static void
 sendcmd(char *cmd)
 {
-	char *p;
+	int n;
 
-	if(infd[1] < 0)
-		return;
-	DPRINT(Debugcmd, "cmd > [%s]", cmd);
+	n = strlen(cmd);
+	DPRINT(Debugcmd, "> [%d][%s]", n, cmd);
 	wlock(&cmdlock);
-	p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
-	if(p == cmdbuf + sizeof cmdbuf - 1){
+	if(cmdfs == nil){
 		wunlock(&cmdlock);
-		flushcmd();
-		wlock(&cmdlock);
-		p = strecpy(cmdp, cmdbuf+sizeof cmdbuf, cmd);
+		return;
 	}
-	cmdp = p;
+	writefs(cmdfs, cmd, n);
 	wunlock(&cmdlock);
 }
 
@@ -55,7 +59,7 @@ pushcmd(char *fmt, ...)
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
-	if(infd[1] < 0)
+	if(cmdfs == nil)
 		return;
 	va_start(arg, fmt);
 	for(f=fmt, sp=sb; sp<sb+sizeof sb-1;){
@@ -321,7 +325,7 @@ readcproc(void *)
 	if((f = fdopenfs(outfd[0], OREAD)) == nil)
 		sysfatal("readcproc: %s", error());
 	while((s = readline(f)) != nil){
-		DPRINT(Debugcmd, "cmd < [%d][%s]", f->len, s);
+		DPRINT(Debugcmd, "< [%d][%s]", f->len, s);
 		if(f->trunc){
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
@@ -340,5 +344,7 @@ initcmd(void)
 		return -1;
 	}
 	newthread(readcproc, nil, nil, nil, "readawk", mainstacksize);
+	if(infd[1] >= 0 && (cmdfs = fdopenfs(infd[1], OWRITE)) == nil)
+		sysfatal("initcmd: %s", error());
 	return 0;
 }
