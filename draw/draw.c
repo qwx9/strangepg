@@ -65,12 +65,13 @@ drawedges(REdge *r, RNode *rn, Graph *g)
 static inline void
 resizenode(RNode *r, int length)
 {
-	float Δ;
+	float Δ, max;
 
 	if(length == 0)
 		length++;
 	Δ = MAX(1.0f, drawing.length.max - drawing.length.min);
-	r->len = Maxsz - (Maxsz - Minsz) * exp(-length / Δ);
+	max = Nodesz * log(0.05f + Δ);
+	r->len = (max - (max - 0.05f) * exp(-length / Δ));
 }
 
 static inline void

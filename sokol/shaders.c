@@ -19,9 +19,6 @@ Render render;
 
 static sg_image fb, pickfb, zfb;
 
-#define	FNodesz	((float)Nodesz)
-#define	Nodethiccc	((float)Ptsz)
-
 ioff
 mousepick(int x, int y)
 {
@@ -42,18 +39,18 @@ void
 setnodeshape(int arrow)
 {
 	float quadv[] = {
-		-FNodesz/2.0f, +Nodethiccc/2.0f,
-		+FNodesz/2.0f, +Nodethiccc/2.0f,
-		+FNodesz/2.0f, -Nodethiccc/2.0f,
-		-FNodesz/2.0f, -Nodethiccc/2.0f,
+		-Nodesz/2.0f, +Ptsz/2.0f,
+		+Nodesz/2.0f, +Ptsz/2.0f,
+		+Nodesz/2.0f, -Ptsz/2.0f,
+		-Nodesz/2.0f, -Ptsz/2.0f,
 	}, arrowv[] = {
-		 0.50f * FNodesz,	-0.5f * Nodethiccc,
-		-0.00f * FNodesz,	-0.5f * Nodethiccc,
-		-0.00f * FNodesz,	 0.5f * Nodethiccc,
-		 0.50f * FNodesz,	 0.5f * Nodethiccc,
-		-0.00f * FNodesz,	-1.0f * Nodethiccc,
-		-0.50f * FNodesz,	-0.0f * Nodethiccc,
-		-0.00f * FNodesz,	 1.0f * Nodethiccc,
+		 0.50f * Nodesz,	-0.5f * Ptsz,
+		-0.00f * Nodesz,	-0.5f * Ptsz,
+		-0.00f * Nodesz,	 0.5f * Ptsz,
+		 0.50f * Nodesz,	 0.5f * Ptsz,
+		-0.00f * Nodesz,	-1.0f * Ptsz,
+		-0.50f * Nodesz,	-0.0f * Ptsz,
+		-0.00f * Nodesz,	 1.0f * Ptsz,
 	};
 	u16int quadi[] = {
 		0, 2, 1,	// first triangle
