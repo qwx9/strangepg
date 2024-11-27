@@ -374,13 +374,11 @@ evloop(void)
 		.frame_cb = frame,
 		.cleanup_cb = cleanup,
 		.event_cb = event,
-		.width = Vdefw,
-		.height = Vdefh,
 		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
 		.enable_clipboard = true,
 		.window_title = "strangepg",
-		.ios_keyboard_resizes_canvas = true,
 		.icon.sokol_default = true,
 		.logger.func = slog_func,
+		.high_dpi = drawing.flags & DFhidpi,
 	});
 }

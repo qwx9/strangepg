@@ -27,6 +27,7 @@ enum{
 	DFnodepth = 1<<3,
 	DFstalelen = 1<<4,
 	DFmsaa = 1<<5,
+	DFhidpi = 1<<6,
 };
 struct Drawing{
 	int flags;

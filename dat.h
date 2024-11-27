@@ -88,8 +88,3 @@ extern int gottagofast;
 extern char logbuf[], lastmsg[3][64], iserrmsg[3];
 extern int nlog, logsz;
 extern int onscreen;
-
-enum{
-	Vdefw = 1366,
-	Vdefh = 768,
-};
