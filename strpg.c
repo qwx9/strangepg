@@ -73,7 +73,7 @@ help(void)
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
-		"-M             Disable multisample anti-aliasing for performance\n"
+		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"
 		" fr            Fruchterman-Reingold algorithm\n"
@@ -134,7 +134,7 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
-	case 'M': drawing.flags |= DFnomsaa; break;
+	case 'M': drawing.flags |= DFmsaa; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
