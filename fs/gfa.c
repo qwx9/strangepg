@@ -552,14 +552,14 @@ readgfa(Aux *a, File *f)
 		case 'S':
 			if(readnode(a, f) < 0)
 				goto err;
-			if(a->nnodes % 10000000 == 0)
-				warn("readgfa: %.2g nodes...\n", (double)a->nnodes);
+			if(a->nnodes % 1000000 == 0)
+				warn("readgfa: %.3g nodes...\n", (double)a->nnodes);
 			break;
 		case 'L':
 			if(readedge(a, f) < 0)
 				goto err;
-			if(a->nedges % 10000000 == 0)
-				warn("readgfa: %.2g edges...\n", (double)a->nedges);
+			if(a->nedges % 1000000 == 0)
+				warn("readgfa: %.3g edges...\n", (double)a->nedges);
 			break;
 		default: DPRINT(Debugfs, "line %d: unhandled record type %c", f->nr, s[0]);
 		}
