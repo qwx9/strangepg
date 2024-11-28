@@ -213,8 +213,6 @@ renderoffscreen(void)
 		sg_draw(0, render.nnodev, n);
 	}
 	sg_end_pass();
-	/* FIXME: only works on opengl/x86; fix it first */
-	goto skip;
 	sg_begin_pass(&(sg_pass){
 		.action = render.nothing,
 		.swapchain = sglue_swapchain(),
@@ -224,7 +222,6 @@ renderoffscreen(void)
 	sg_draw(0, 4, 1);
 	snk_render(view.w, view.h);
 	sg_end_pass();
-skip:
 	DPRINT(Debugperf, "renderoffscreen: %.2f ms", (μsec() - t) / 1000);
 }
 
