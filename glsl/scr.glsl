@@ -1,7 +1,6 @@
 @module s
 
 @vs vs
-precision mediump float;
 
 in vec2 pos;
 out vec2 uv0;
@@ -13,7 +12,6 @@ void main(){
 @end
 
 @fs fs
-precision mediump float;
 
 layout(binding=0) uniform texture2D tex;
 layout(binding=0) uniform sampler smp;
