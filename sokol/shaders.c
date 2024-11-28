@@ -412,29 +412,13 @@ setuppasses(void)
 		.colors = {
 			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
-				.store_action = SG_STOREACTION_DONTCARE,
 				.clear_value = { c->col[0], c->col[1], c->col[2], c->col[3] },
 			},
 			[1] = {
 				.load_action = SG_LOADACTION_CLEAR,
-				.store_action = SG_STOREACTION_DONTCARE,
 				.clear_value = { 0.0f },
 			},
 		},
-	};
-	render.overdraw = (sg_pass_action){
-		.colors = {
-			[0] = {
-				.load_action = SG_LOADACTION_DONTCARE,
-				.store_action = SG_STOREACTION_DONTCARE,
-			},
-			[1] = {
-				.load_action = SG_LOADACTION_DONTCARE,
-				.store_action = SG_STOREACTION_DONTCARE,
-			},
-		},
-		.depth.load_action = SG_LOADACTION_DONTCARE,
-		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
 	/* screen pipeline: no clear needed, whole screen is overwritten */
 	render.nothing = (sg_pass_action){
@@ -444,8 +428,6 @@ setuppasses(void)
 				/* image set in initfb */
 			},
 		},
-		.depth.load_action = SG_LOADACTION_DONTCARE,
-		.stencil.load_action = SG_LOADACTION_DONTCARE,
 	};
 }
 

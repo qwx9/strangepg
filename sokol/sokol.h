@@ -15,7 +15,6 @@ struct Render{
 	int moving;		/* inhibit picking while moving things */
 	int stalepick;	/* picking cache stale */
 	sg_pass_action clearscreen;
-	sg_pass_action overdraw;
 	sg_pass_action nothing;
 	sg_attachments offscrfb;
 	sg_pipeline nodepipe;
