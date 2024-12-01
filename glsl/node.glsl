@@ -1,6 +1,8 @@
 @module n
 
 @vs vs
+@glsl_options fixup_clipspace
+
 precision mediump float;
 
 layout(binding=0) uniform Vparam {
