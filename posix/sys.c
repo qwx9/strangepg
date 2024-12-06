@@ -108,7 +108,7 @@ vlong
 		perror("gettimeofday");
 		return -1;
 	}
-	return tv.tv_sec * 1000000 + tv.tv_usec;
+	return (vlong)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 void
