@@ -19,6 +19,7 @@ endif
 PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
 MAKE?= make
+ARCH?= $(shell uname -m)
 ifeq ($(OS),Windows_NT)
 	OS:= $(shell uname 2>/dev/null || echo Win64)
 	OS:= $(patsubst CYGWIN%,Cygwin,$(OS))
@@ -35,6 +36,8 @@ endif
 ifndef TARGET
 	ifeq ($(OS),Darwin)
 		TARGET:= MacOS
+	else ifeq ($(OS),Cygwin)
+		TARGET:= Win64
 	else
 		TARGET:= Unix
 	endif
@@ -149,14 +152,20 @@ ifeq ($(TARGET),Unix)
 		CPPFLAGS+= -I/usr/X11R6/include
 		LDFLAGS+= -L/usr/X11R6/lib
 		LDLIBS+= -pthread
-	else ifeq ($(OS),Cygwin)
-		CFLAGS+= -mwin32
-		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
+	endif
+	ifeq ($(ARCH),aarch64)
+		CPPFLAGS+= -DSOKOL_FORCE_EGL
+		LDLIBS+= -lEGL
 	endif
 
 else ifeq ($(TARGET),Win64)
+	ifeq ($(OS),Cygwin)
+		CFLAGS+= -mwin32
+		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
 	# FIXME
-	CC:= x86_64-w64-mingw32-gcc-posix
+	else
+		CC:= x86_64-w64-mingw32-gcc-posix
+	endif
 	CPPFLAGS+= -Iwin64 -DSOKOL_D3D11
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -Wl,-Bstatic -lpthread
@@ -180,11 +189,6 @@ else ifeq ($(TARGET),MacOS)
 
 else
 	$(error unknown target)
-endif
-
-ifdef EGL
-	CPPFLAGS+= -DSOKOL_FORCE_EGL
-	LDLIBS+= -lEGL
 endif
 
 DEPS:=$(patsubst %.o,%.d,$(OBJ))
