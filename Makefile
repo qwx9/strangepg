@@ -146,16 +146,23 @@ OBJ:=\
 GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))
 
 ifeq ($(TARGET),Unix)
-	CPPFLAGS+= -Iunix -DSOKOL_GLCORE
-	LDLIBS+= -lGL -lX11 -lXcursor -lXi -lm
+	CPPFLAGS+= -Iunix
+	LDLIBS+= -lm
+	ifdef GLES
+		CPPFLAGS+= -DSOKOL_GLES3
+		LDLIBS+= -lGLES
+	else
+		CPPFLAGS+= -DSOKOL_GLCORE
+		LDLIBS+= -lGL -lX11 -lXcursor -lXi
+		ifeq ($(ARCH),aarch64)
+			CPPFLAGS+= -DSOKOL_FORCE_EGL
+			LDLIBS+= -lEGL
+		endif
+	endif
 	ifeq ($(OS),OpenBSD)
 		CPPFLAGS+= -I/usr/X11R6/include
 		LDFLAGS+= -L/usr/X11R6/lib
 		LDLIBS+= -pthread
-	endif
-	ifeq ($(ARCH),aarch64)
-		CPPFLAGS+= -DSOKOL_FORCE_EGL
-		LDLIBS+= -lEGL
 	endif
 
 else ifeq ($(TARGET),Win64)
