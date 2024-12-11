@@ -214,7 +214,7 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	Cell *p;
 
 	if (n != NULL && (p = lookup(n, tp)) != NULL) {
-		DPRINTF("setsymtab found %p: n=%s s=\"%s\" i=%ld f=%g t=%o\n",
+		DPRINTF("setsymtab found %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
 			(void*)p, NN(p->nval), NN(p->sval), p->val.i, p->val.f, p->tval);
 		return(p);
 	}
@@ -233,7 +233,7 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	h = hash(n, tp->size);
 	p->cnext = tp->tab[h];
 	tp->tab[h] = p;
-	DPRINTF("setsymtab set %p: n=%s s=\"%s\" i=%ld f=%g t=%o\n",
+	DPRINTF("setsymtab set %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
 		(void*)p, p->nval, p->sval, p->val.i, p->val.f, p->tval);
 	return(p);
 }
@@ -328,11 +328,11 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 		fldno = atoi(vp->nval);
 		if (fldno > *NF)
 			newfld(fldno);
-		DPRINTF("setting field %d to %ld\n", fldno, f);
+		DPRINTF("setting field %d to %lld\n", fldno, f);
 	} else if (&vp->val.i == NF) {
 		donerec = false;	/* mark $0 invalid */
 		setlastfld(f);
-		DPRINTF("setival: setting NF to %ld\n", f);
+		DPRINTF("setival: setting NF to %lld\n", f);
 	} else if (isrec(vp)) {
 		donefld = false;	/* mark $1... invalid */
 		donerec = true;
@@ -346,7 +346,7 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	vp->tval &= ~(STR|CONVC|CONVO|FLT); /* mark string invalid; force int */
 	vp->fmt = NULL;
 	vp->tval |= NUM;	/* mark number ok */
-	DPRINTF("setival %p: %s = %ld, t=%o\n", (void*)vp, NN(vp->nval), f, vp->tval);
+	DPRINTF("setival %p: %s = %lld, t=%o\n", (void*)vp, NN(vp->nval), f, vp->tval);
 	return vp->val.i = f;
 }
 
@@ -365,7 +365,7 @@ void funnyvar(Cell *vp, const char *rw)
 		FATAL("can't %s %s; it's an array name.", rw, vp->nval);
 	if (vp->tval & FCN)
 		FATAL("can't %s %s; it's a function.", rw, vp->nval);
-	WARNING("funny variable %p: n=%s s=\"%s\" i=%ld f=%g t=%o",
+	WARNING("funny variable %p: n=%s s=\"%s\" i=%lld f=%g t=%o",
 		(void *)vp, vp->nval, vp->sval, vp->val.i, vp->val.f, vp->tval);
 }
 
@@ -406,7 +406,7 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		donerec = false;	/* mark $0 invalid */
 		f = getival(vp);
 		setlastfld(f);
-		DPRINTF("setsval: setting NF to %ld\n", f);
+		DPRINTF("setsval: setting NF to %lld\n", f);
 	}
 
 	return(vp->sval);
@@ -445,7 +445,7 @@ Value getval(Cell *vp)
 Awknum getival(Cell *vp)	/* get int val of a Cell */
 {
 	getval(vp);
-	DPRINTF("getival %p: %s = %ld,%g, t=%o\n",
+	DPRINTF("getival %p: %s = %lld,%g, t=%o\n",
 		(void*)vp, NN(vp->nval), vp->val.i, vp->val.f, vp->tval);
 	return (vp->tval & FLT) == 0 ? vp->val.i : vp->val.f;
 }
@@ -453,7 +453,7 @@ Awknum getival(Cell *vp)	/* get int val of a Cell */
 Awkfloat getfval(Cell *vp)	/* get float val of a Cell */
 {
 	getval(vp);
-	DPRINTF("getfval %p: %s = %ld,%g, t=%o\n",
+	DPRINTF("getfval %p: %s = %lld,%g, t=%o\n",
 		(void*)vp, NN(vp->nval), vp->val.i, vp->val.f, vp->tval);
 	return (vp->tval & FLT) == 0 ? vp->val.i : vp->val.f;
 }
@@ -478,7 +478,7 @@ static inline void update_str_val(Cell *vp, char **fmt)
 	if ((p = get_inf_nan(vp->val.i)) != NULL)
 		strcpy(s, p);
 	else if((vp->tval & FLT) == 0)
-		snprintf(s, sizeof(s), "%ld", vp->val.i);
+		snprintf(s, sizeof(s), "%lld", vp->val.i);
 	else
 		snprintf(s, sizeof(s), *fmt, vp->val.f);
 	vp->sval = tostring(s);

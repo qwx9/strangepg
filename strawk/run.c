@@ -247,7 +247,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		DPRINTF("evaluate args[%d], frp=%d:\n", i, (int) (frp-awkframe));
 		y = execute(x);
 		oargs[i] = y;
-		DPRINTF("args[%d]: %s i=%ld f=%f <%s>, t=%o\n",
+		DPRINTF("args[%d]: %s i=%lld f=%f <%s>, t=%o\n",
 			i, NN(y->nval), y->val.i, y->val.f, isarr(y) ? "(array)" : NN(y->sval), y->tval);
 		if (isfcn(y))
 			FATAL("can't use function %s as argument in %s", y->nval, s);
@@ -309,7 +309,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		tempfree(y);	/* don't free twice! */
 	}
 	z = frp->retval;			/* return value */
-	DPRINTF("%s returns i=%ld f=%g |%s| %o\n", s, getival(z), getfval(z), getsval(z), z->tval);
+	DPRINTF("%s returns i=%lld f=%g |%s| %o\n", s, getival(z), getfval(z), getsval(z), z->tval);
 	frp--;
 	return(z);
 }

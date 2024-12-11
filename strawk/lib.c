@@ -157,7 +157,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 		firsttime = false;
 		initgetrec();
 	}
-	DPRINTF("RS=<%s>, FS=<%s>, ARGC=%ld, FILENAME=%s\n",
+	DPRINTF("RS=<%s>, FS=<%s>, ARGC=%lld, FILENAME=%s\n",
 		*RS, *FS, *ARGC, *FILENAME);
 	saveb0 = buf[0];
 	buf[0] = 0;

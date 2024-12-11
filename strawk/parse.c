@@ -307,10 +307,10 @@ int isarg(const char *s)		/* is s in argument list for current function? */
 
 int ptoi(void *p)	/* convert pointer to integer */
 {
-	return (int) (long) p;	/* swearing that p fits, of course */
+	return (int) (intptr_t) p;	/* swearing that p fits, of course */
 }
 
 TNode *itonp(int i)	/* and vice versa */
 {
-	return (TNode *) (long) i;
+	return (TNode *) (intptr_t) i;
 }

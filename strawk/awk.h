@@ -32,8 +32,8 @@ THIS SOFTWARE.
 #endif
 
 typedef double	Awkfloat;
-typedef int64_t	Awknum;
-typedef uint64_t Awkword;
+typedef long long int	Awknum;
+typedef unsigned long long int Awkword;
 union Value{
 	Awknum i;
 	Awkfloat f;
