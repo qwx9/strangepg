@@ -34,8 +34,6 @@ typedef uint16_t u16int;
 typedef uint32_t u32int;
 typedef uint64_t u64int;
 
-typedef pthread_rwlock_t RWLock;
-
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
 #define USED(x) (void)(x)

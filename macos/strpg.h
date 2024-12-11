@@ -9,7 +9,6 @@
 #include <time.h>
 #include <ctype.h>
 #include <strings.h>
-#include <pthread.h>	// FIXME: either this or a local rwlock
 
 /* u.h */
 //#define nil		((void*)0)
@@ -34,8 +33,6 @@ typedef uint8_t u8int;
 typedef uint16_t u16int;
 typedef uint32_t u32int;
 typedef uint64_t u64int;
-
-typedef pthread_rwlock_t RWLock;
 
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))

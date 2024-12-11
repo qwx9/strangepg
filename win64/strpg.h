@@ -9,7 +9,6 @@
 #include <time.h>
 #include <ctype.h>
 #include <strings.h>
-#include <pthread.h>
 
 /* u.h */
 //#define nil		((void*)0)
@@ -34,8 +33,6 @@ typedef uint8_t u8int;
 typedef uint16_t u16int;
 typedef uint32_t u32int;
 typedef uint64_t u64int;
-
-typedef pthread_rwlock_t RWLock;
 
 /* libc.h */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
@@ -130,6 +127,10 @@ vlong	seek(int, vlong, int);
 int	create(char*, int, int);
 int	dupfd(int, int);
 int	pipe(int[2]);
+
+/* stub */
+ssize_t	pread(int, void*, size_t, off_t);
+ssize_t	pwrite(int, const void*, size_t, off_t);
 
 // FIXME
 #define sleep(x)	lsleep((x) * 1000000ULL)

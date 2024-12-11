@@ -2,12 +2,10 @@ typedef struct Vertex Vertex;
 typedef struct Graph Graph;
 typedef struct Node Node;
 typedef struct Layout Layout;
-typedef struct Coarse Coarse;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
 typedef struct Attr Attr;
 
-#pragma incomplete Coarse
 #pragma incomplete Layout
 #pragma incomplete Thread
 
@@ -28,12 +26,13 @@ enum{
 	FNinity = 1<<4,
 	FNinitz = 1<<5,
 	FNinitpos = FNinitx | FNinity | FNinitz,
+	FNvisible = 1<<6,
 };
 /* FIXME: ht, or sth for some of these: idx → {pos0} */
 struct Attr{
 	u32int color;
 	int length;
-	u32int flags;
+	uchar flags;
 	Vertex pos0;
 };
 struct Node{
@@ -49,10 +48,9 @@ enum{
 };
 struct Graph{
 	int type;
-	u32int flags;
+	uchar flags;
 	Node *nodes;
-	ioff *edges;		/* "out" edges */
-	RWLock lock;
+	ioff *edges;
 	Layout *layout;
 };
 extern Graph *graphs;	/* dynamic array */

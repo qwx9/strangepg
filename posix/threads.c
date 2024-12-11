@@ -46,7 +46,7 @@ _thread(void *tp)
 }
 
 void
-newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *, uint stacksize)
+newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *name, uint stacksize)
 {
 	usize st;
 	pthread_attr_t a;
@@ -74,9 +74,10 @@ newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char
 		sysfatal("newthread: pthread_create: %s", error());
 	if(pthread_attr_destroy(&a) != 0)
 		sysfatal("newthread: pthread_attr_destroy: %s", error());
-	/* pthread_*_np is non-portable gnushit */
-	/*if(pthread_setname_np(p, name) != 0)
-		sysfatal("pthread_setname_np: %s", error());*/
+	/* pthread_*_np is non-portable gnushit
+	if(pthread_setname_np(*p, name) != 0)
+		warn("pthread_setname_np: %s", error());
+	*/
 }
 
 void *

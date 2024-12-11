@@ -8,6 +8,8 @@
 
 Graph *graphs;
 
+static RWLock *locks;
+
 /* usable once topology has been loaded */
 ioff
 str2idx(char *s)
@@ -23,27 +25,37 @@ str2idx(char *s)
 void
 lockgraph(Graph *g, int w)
 {
+	RWLock *l;
+
+	l = locks + (g - graphs);
 	if(w)
-		wlock(&g->lock);
+		wlock(l);
 	else
-		rlock(&g->lock);
+		rlock(l);
 }
 
 void
 unlockgraph(Graph *g, int w)
 {
+	RWLock *l;
+
+	l = locks + (g - graphs);
 	if(w)
-		wunlock(&g->lock);
+		wunlock(l);
 	else
-		runlock(&g->lock);
+		runlock(l);
 }
 
 Graph *
 pushgraph(Graph *g)
 {
+	RWLock l;
+
 	dypush(graphs, *g);
 	g = graphs + dylen(graphs) - 1;
 	newlayout(g, -1);
+	memset(&l, 0, sizeof l);
+	dypush(locks, l);
 	return g;
 }
 

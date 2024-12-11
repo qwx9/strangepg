@@ -1,8 +1,11 @@
+#include <pthread.h>
 #include "lib/chan.h"
 
 extern int mainstacksize;
 
+typedef pthread_rwlock_t RWLock;
 typedef struct chan_t Channel;
+
 Channel*	chancreate(int, int);
 void*	recvp(Channel*);
 ulong	recvul(Channel*);
