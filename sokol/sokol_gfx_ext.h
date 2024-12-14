@@ -128,7 +128,7 @@ uint32_t sg_query_image_pixel(int x, int y, sg_image img_id) {
     _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
-    return _sgx_gl_query_image_pixel(x, y, img);
+    return _sg_gl_query_image_pixel(x, y, img);
 #else
     return 0;
 #endif
