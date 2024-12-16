@@ -31,47 +31,44 @@ THIS SOFTWARE.
 enum{
 	POOLSZ = 512,
 };
-static TNode **pool0, **pool, *tail;
-static size_t npool, poolsz;
+static TNode **pool, *tail;
+static size_t npool, poolen, pool0, tail0;
 
 void initnodepool(void)
 {
-	if((pool = malloc(sizeof(*pool))) == NULL)
-		FATAL("out of space in nodealloc");
-	poolsz = 1;
+	if(pool != NULL)
+		return;
+	pool = MALLOC(sizeof(*pool));
+	poolen = 1;
 	npool = 1;
-	if((pool[0] = calloc(POOLSZ, sizeof(**pool))) == NULL)
-		FATAL("out of space in nodealloc");
+	pool[0] = CALLOC(POOLSZ, sizeof(**pool));
 	tail = pool[0];
 }
 
 void freezenodes(void)
 {
-	pool0 = pool;
-	initnodepool();
+	if(pool0 > 0)
+		return;
+	pool0 = npool;
+	tail0 = tail - pool[pool0-1];
 }
 
 void freenodes(void)
 {
-	while(npool - 1 > 0){
-		free(pool[npool-1]);
-		pool[--npool] = NULL;
-	}
-	tail = pool[0];
+	npool = pool0;
+	tail = pool[pool0-1] + tail0;
 }
 
 TNode *nodealloc(size_t n)
 {
 	TNode *x;
 
-	if(tail + n - pool[npool-1] > 512){
-		if(npool == poolsz){
-			poolsz++;
-			if((pool = realloc(pool, poolsz*sizeof(*pool))) == NULL)
-				FATAL("out of space in nodealloc");
+	if(tail + n - pool[npool-1] > POOLSZ){
+		if(npool == poolen){
+			poolen++;
+			pool = REALLOC(pool, poolen*sizeof(*pool));
+			pool[npool] = CALLOC(POOLSZ, sizeof(*x));
 		}
-		if((pool[npool] = calloc(512, sizeof(*x))) == NULL)
-			FATAL("out of space in nodealloc");
 		tail = pool[npool++];
 	}
 	x = tail;
