@@ -68,13 +68,61 @@ extern jmp_buf evalenv;
 static Cell dollar0 = { OCELL, CFLD, NULL, EMPTY, {0}, REC|STR|DONTFREE, NULL, NULL };
 static Cell dollar1 = { OCELL, CFLD, NULL, EMPTY, {0}, FLD|STR|DONTFREE, NULL, NULL };
 
+static size_t nalloc, renalloc;
+
+/* FIXME: use strangepg's emalloc functions when linked? */
+void *dmalloc(size_t size, const char *fn)
+{
+	void *p;
+
+	nalloc += size;
+	p = malloc(size);
+	DPRINTF("ALLOC malloc %s %p %zd / %zd\n", fn, p, size, nalloc);
+	return p;
+}
+char *dstrdup(const char *s, const char *fn)
+{
+	char *p;
+	size_t size;
+	
+	size = strlen(s);
+	nalloc += size;
+	p = strdup(s);
+	DPRINTF("ALLOC strdup %s %p %zd / %zd [%s]\n", fn, (void*)p, size, nalloc, s);
+	return p;
+}
+void *dcalloc(size_t nmemb, size_t size, const char *fn)
+{
+	void *p;
+
+	nalloc += nmemb * size;
+	p = calloc(nmemb, size);
+	DPRINTF("ALLOC calloc %s %p %zd / %zd\n", fn, p, nmemb*size, nalloc);
+	return p;
+}
+void *drealloc(void *ptr, size_t size, const char *fn)
+{
+	void *p;
+
+	renalloc += size;
+	p = realloc(ptr, size);
+	DPRINTF("ALLOC realloc %s %p→%p %zd / %zd\n", fn, ptr, p, size, renalloc);
+	return p;
+}
+void dfree(void *ptr, const char *fn)
+{
+	if(ptr == NULL)
+		return;
+	DPRINTF("ALLOC free %s %p\n", fn, ptr);
+	free(ptr);
+}
+
 void recinit(unsigned int n)
 {
-	if ( (record = (char *) malloc(n)) == NULL
-	  || (fields = (char *) malloc(n+1)) == NULL
-	  || (fldtab = (Cell **) calloc(nfields+2, sizeof(*fldtab))) == NULL
-	  || (fldtab[0] = (Cell *) malloc(sizeof(**fldtab))) == NULL)
-		FATAL("out of space for $0 and fields");
+	record = (char *) MALLOC(n);
+	fields = (char *) MALLOC(n+1);
+	fldtab = (Cell **) CALLOC(nfields+2, sizeof(*fldtab));
+	fldtab[0] = (Cell *) MALLOC(sizeof(**fldtab));
 	*record = '\0';
 	*fldtab[0] = dollar0;
 	fldtab[0]->sval = record;
@@ -88,9 +136,7 @@ void makefields(int n1, int n2)		/* create $n1..$n2 inclusive */
 	int i;
 
 	for (i = n1; i <= n2; i++) {
-		fldtab[i] = (Cell *) malloc(sizeof(**fldtab));
-		if (fldtab[i] == NULL)
-			FATAL("out of space in makefields %d", i);
+		fldtab[i] = (Cell *) MALLOC(sizeof(**fldtab));
 		*fldtab[i] = dollar1;
 		snprintf(temp, sizeof(temp), "%d", i);
 		fldtab[i]->nval = tostring(temp);
@@ -108,10 +154,8 @@ void initgetrec(void)
 			argno++;
 			continue;
 		}
-		if (!isclvar(p)) {
-			setsval(lookup("FILENAME", symtab), p);
+		if (!isclvar(p))
 			return;
-		}
 		setclvar(p);	/* a commandline assignment before filename */
 		argno++;
 	}
@@ -137,9 +181,7 @@ void savefs(void)
 	}
 
 	len_inputFS = len + 1;
-	inputFS = (char *) realloc(inputFS, len_inputFS);
-	if (inputFS == NULL)
-		FATAL("field separator %.10s... is too long", *FS);
+	inputFS = (char *) REALLOC(inputFS, len_inputFS);
 	memcpy(inputFS, *FS, len_inputFS);
 }
 
@@ -192,7 +234,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 					xfree(fldtab[0]->sval);
 				fldtab[0]->sval = buf;	/* buf == record */
 				fldtab[0]->tval = REC | STR | DONTFREE;
-				if(r = is_number(fldtab[0]->sval, &v)) {
+				if(r = is_number(buf, &v)) {
 					fldtab[0]->val = v;
 					fldtab[0]->tval |= r;
 				}
@@ -292,7 +334,7 @@ char *getargv(int n)	/* get ARGV[n] */
 	if (lookup(temp, ap) == NULL)
 		return NULL;
 	v.i = 0;
-	x = setsymtab(temp, "", v, STR, ap);
+	x = setsymtab(temp, NULL, v, STR, ap);
 	s = getsval(x);
 	DPRINTF("getargv(%d) returns |%s|\n", n, s);
 	return s;
@@ -314,14 +356,25 @@ void setclvar(char *s)	/* set var=value from s */
 	e = p;
 	*p++ = 0;
 	p = qstring(p, '\0');
-	q = setsymtab(s, p, v, STR, symtab);
-	setsval(q, p);
-	if(r = is_number(q->sval, &v)) {
-		q->val = v;
-		q->tval |= r;
+	if((q = lookup(s, symtab)) != NULL){
+		if(strcmp(q->sval, p) != 0){
+			if(freeable(q))
+				xfree(q->sval);
+			q->sval = p;
+			q->tval |= STR;
+			if(r = is_number(p, &v))
+				q->tval |= r;
+		}else
+			free(p);
+	}else{
+		q = setsym(s, p, symtab);
+		if(q->sval == EMPTY){
+			q->sval = p;
+			q->tval |= STR;
+		}else
+			free(p);
 	}
-	DPRINTF("command line set %s to |%s|\n", s, p);
-	free(p);
+	DPRINTF("command line set %s to |%s|\n", s, q->sval);
 	*e = '=';
 }
 
@@ -343,9 +396,7 @@ void fldbld(void)	/* create fields from current record */
 	r = fldtab[0]->sval;
 	n = strlen(r);
 	if (n > fieldssize) {
-		xfree(fields);
-		if ((fields = (char *) malloc(n+2)) == NULL) /* possibly 2 final \0s */
-			FATAL("out of space for fields in fldbld %d", n);
+		fields = (char *) REALLOC(fields,n+2); /* possibly 2 final \0s */
 		fieldssize = n;
 	}
 	fr = fields;
@@ -491,11 +542,9 @@ void growfldtab(int n)	/* make new fields up to at least $n */
 		nf = n;
 	s = (nf+1) * (sizeof (struct Cell *));  /* freebsd: how much do we need? */
 	if (s / sizeof(struct Cell *) - 1 == (size_t)nf) /* didn't overflow */
-		fldtab = (Cell **) realloc(fldtab, s);
+		fldtab = (Cell **) REALLOC(fldtab, s);
 	else					/* overflow sizeof int */
 		xfree(fldtab);	/* make it null */
-	if (fldtab == NULL)
-		FATAL("out of space creating %d fields", nf);
 	makefields(nfields+1, nf);
 	nfields = nf;
 }
@@ -510,9 +559,7 @@ int refldbld(const char *rec, const char *fs)	/* build fields from reg expr in F
 
 	n = strlen(rec);
 	if (n > fieldssize) {
-		xfree(fields);
-		if ((fields = (char *) malloc(n+1)) == NULL)
-			FATAL("out of space for fields in refldbld %d", n);
+		fields = (char *) REALLOC(fields,n+1);
 		fieldssize = n;
 	}
 	fr = fields;
@@ -795,18 +842,22 @@ int isclvar(const char *s)	/* is s of form var=something ? */
 int is_valid_number(const char *s, bool trailing_stuff_ok,
 			bool *no_trailing, char **trail, Value *result)
 {
+	int ret;
 	Awkfloat r;
 	Awkword v;
 	char c, *ep;
-	bool retval = false;
 	bool is_nan = false;
 	bool is_inf = false;
 
 	if (no_trailing)
 		*no_trailing = false;
-
-	while (isspace((int) *s))
-		s++;
+	ret = 0;
+	if(isspace((int)*s)){
+		ret |= STR;
+		do
+			s++;
+		while (isspace((int) *s));
+	}
 	if(*s == '.')
 		goto fp;
 
@@ -817,14 +868,19 @@ int is_valid_number(const char *s, bool trailing_stuff_ok,
 		return 0;
 	if(result != NULL)
 		result->u = v;
-	if((c = *ep) != 0){
-		if(c == '.' || c == 'e' || c == 'E')	/* floating point */
-			goto fp;
-		else if(!trailing_stuff_ok && !isspace(*ep))
+	if((c = *ep) != 0 && (c == '.' || c == 'e' || c == 'E'))	/* floating point */
+		goto fp;
+	if(*ep != 0){
+		ret |= STR;
+		while(isspace((int)*ep))
+			ep++;
+	}
+	if(*ep != 0){
+		if(!trailing_stuff_ok)
 			return 0;
 	}else if(no_trailing != NULL)
 		*no_trailing = true;
-	return NUM;
+	return ret | NUM;
 
 fp:
 	/* no hex floating point, sorry */
@@ -860,14 +916,15 @@ convert:
 	/*
 	 * check for trailing stuff
 	 */
-	while (isspace((int) *ep))
-		ep++;
-
-	if (no_trailing != NULL)
-		*no_trailing = (*ep == '\0');
-
-        /* return true if found the end, or trailing stuff is allowed */
-	retval = *ep == '\0' || trailing_stuff_ok;
-
-	return retval ? NUM | FLT : 0;
+	if(*ep != 0){
+		ret |= STR;
+		while(isspace((int)*ep))
+			ep++;
+	}
+	if(*ep != 0){
+		if(!trailing_stuff_ok)
+			return 0;
+	}else if(no_trailing != NULL)
+		*no_trailing = true;
+	return ret | NUM | FLT;
 }

@@ -84,6 +84,7 @@ Cell	*jexit	= &exitcell;
 static Cell	retcell		={ OJUMP, JRET, 0, 0, {0}, NUM, NULL, NULL };
 Cell	*jret	= &retcell;
 static Cell	tempcell	={ OCELL, CTEMP, 0, EMPTY, {0}, NUM|STR|DONTFREE, NULL, NULL };
+//static Cell	tempcell	={ OCELL, CTEMP, 0, EMPTY, {0}, STR|DONTFREE, NULL, NULL };
 
 TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
@@ -107,12 +108,7 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
 		/* round up to next multiple of quantum */
 		if (rminlen)
 			minlen += quantum - rminlen;
-		tbuf = (char *) realloc(*pbuf, minlen);
-		if (tbuf == NULL) {
-			if (whatrtn)
-				FATAL("out of memory in %s", whatrtn);
-			return 0;
-		}
+		tbuf = (char *) REALLOC(*pbuf, minlen);
 		*pbuf = tbuf;
 		*psiz = minlen;
 		if (pbptr)
@@ -181,7 +177,6 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 		fflush(awkstdout);
 	}
 	if (a[1] || a[2]){
-		freezenodes();
 		while (getrec(&record, &recsize, true) > 0) {
 			x = execute(a[1]);
 			if (isexit(x))
@@ -230,9 +225,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 	if (!isfcn(fcn))
 		FATAL("calling undefined function %s", s);
 	if (awkframe == NULL) {
-		frp = awkframe = (struct Frame *) calloc(nframe += 100, sizeof(*awkframe));
-		if (awkframe == NULL)
-			FATAL("out of space for stack frames calling %s", s);
+		frp = awkframe = (struct Frame *) CALLOC(nframe += 100, sizeof(*awkframe));
 	}
 	for (ncall = 0, x = a[1]; x != NULL; x = x->nnext)	/* args in call */
 		ncall++;
@@ -264,9 +257,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 	frp++;	/* now ok to up frame */
 	if (frp >= awkframe + nframe) {
 		int dfp = frp - awkframe;	/* old index */
-		awkframe = (struct Frame *) realloc(awkframe, (nframe += 100) * sizeof(*awkframe));
-		if (awkframe == NULL)
-			FATAL("out of space for stack frames in %s", s);
+		awkframe = (struct Frame *) REALLOC(awkframe, (nframe += 100) * sizeof(*awkframe));
 		frp = awkframe + dfp;
 	}
 	frp->fcncell = fcn;
@@ -400,9 +391,7 @@ makearraystring(TNode *p, const char *func)
 	int bufsz = recsize;
 	size_t blen;
 
-	if ((buf = (char *) malloc(bufsz)) == NULL) {
-		FATAL("%s: out of memory", func);
-	}
+	buf = (char *) MALLOC(bufsz);
 
 	blen = 0;
 	buf[blen] = '\0';
@@ -447,7 +436,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		x->sval = (char *) makesymtab(NSYMTAB);
 	}
 	v.i = 0;
-	z = setsymtab(buf, "", v, STR|NUM, (Array *) x->sval);
+	z = setsymtab(buf, NULL, v, STR|NUM, (Array *) x->sval);
 	z->ctype = OCELL;
 	z->csub = CVAR;
 	tempfree(x);
@@ -864,9 +853,7 @@ Cell *gettemp(void)	/* get a tempcell */
 	Cell *x;
 
 	if (!tmps) {
-		tmps = (Cell *) calloc(100, sizeof(*tmps));
-		if (!tmps)
-			FATAL("out of space for temporaries");
+		tmps = (Cell *) CALLOC(100, sizeof(*tmps));
 		for (i = 1; i < 100; i++)
 			tmps[i-1].cnext = &tmps[i];
 		tmps[i-1].cnext = NULL;
@@ -920,7 +907,7 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 			tempfree(z);
 		}
 		x = gettemp();
-		setsval(x, "");
+		setsval(x, NULL);
 		return(x);
 	}
 	m = getival(y);
@@ -1017,8 +1004,7 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 
 	os = s;
 	p = buf;
-	if ((fmt = (char *) malloc(fmtsz)) == NULL)
-		FATAL("out of memory in format()");
+	fmt = (char *) MALLOC(fmtsz);
 	while (*s) {
 		adjbuf(&buf, &bufsize, MAXNUMSIZE+1+p-buf, recsize, &p, "format1");
 		if (*s != '%') {
@@ -1317,8 +1303,7 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 	char *buf;
 	int bufsz=3*recsize;
 
-	if ((buf = (char *) malloc(bufsz)) == NULL)
-		FATAL("out of memory in awksprintf");
+	buf = (char *) MALLOC(bufsz);
 	y = a[0]->nnext;
 	x = execute(a[0]);
 	if (format(&buf, &bufsz, getsval(x), y) == -1)
@@ -1338,8 +1323,7 @@ Cell *awkprintf(TNode **a, int n)		/* printf */
 	int len;
 	int bufsz=3*recsize;
 
-	if ((buf = (char *) malloc(bufsz)) == NULL)
-		FATAL("out of memory in awkprintf");
+	buf = (char *) MALLOC(bufsz);
 	y = a[0]->nnext;
 	x = execute(a[0]);
 	if ((len = format(&buf, &bufsz, getsval(x), y)) == -1)
@@ -1746,14 +1730,14 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	Value v;
 
 	y = execute(a[0]);	/* source string */
-	origs = s = strdup(getsval(y));
+	origs = s = STRDUP(getsval(y));
 	tempfree(y);
 	arg3type = ptoi(a[3]);
 	if (a[2] == NULL) {
 		fs = getsval(fsloc);
 	} else if (arg3type == STRING) {	/* split(str,arr,"string") */
 		x = execute(a[2]);
-		fs = origfs = strdup(getsval(x));
+		fs = origfs = STRDUP(getsval(x));
 		tempfree(x);
 	} else if (arg3type == REGEXPR) {
 		fs = "(regexpr)";	/* split(str,arr,/regexpr/) */
@@ -1770,7 +1754,7 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	ap->sval = (char *) makesymtab(NSYMTAB);
 
 	n = 0;
-        if (arg3type == REGEXPR && strlen((char*)((fa*)a[2])->restr) == 0) {
+	if (arg3type == REGEXPR && strlen((char*)((fa*)a[2])->restr) == 0) {
 		/* split(s, a, //); have to arrange that it looks like empty sep */
 		arg3type = 0;
 		fs = "";
@@ -1798,7 +1782,7 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 					n++;
 					snprintf(num, sizeof(num), "%d", n);
 					v.i = 0;
-					setsymtab(num, "", v, STR, (Array *) ap->sval);
+					setsymtab(num, NULL, v, STR, (Array *) ap->sval);
 					pfa->initstat = tempstat;
 					goto spdone;
 				}
@@ -2194,22 +2178,19 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			FATAL("write error on awkstdout");
 		break;
 	case FEVAL:
+		freezenodes();
 		lexprog = getsval(x);
-		if((evalstr = strdup(lexprog)) == NULL)
-			FATAL("out of memory in eval");
+		DPRINTF("eval: \"%s\"\n", lexprog);
+		evalstr = lexprog;
 		yyparse();
-		DPRINTF("eval expr \"%s\", program %p root %p\n", lexprog,
-			(void*)runnerup, (void*)winner);
 		if(setjmp(evalenv) >= 0){
 			y = execute(runnerup);
-			//freesymtab(y);
 			tempfree(y);
 		}
-		runnerup = NULL;
 		errorflag = 0;
 		freenodes();
+		runnerup = NULL;
 		fflush(awkstdout);
-		free(evalstr);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
@@ -2303,8 +2284,7 @@ Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 	start = getsval(x);
 	while (pmatch(pfa, start)) {
 		if (buf == NULL) {
-			if ((pb = buf = (char *) malloc(bufsz)) == NULL)
-				FATAL("out of memory in dosub");
+			pb = buf = (char *) MALLOC(bufsz);
 			tempstat = pfa->initstat;
 			pfa->initstat = 2;
 		}

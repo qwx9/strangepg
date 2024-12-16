@@ -76,10 +76,11 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	v.i = 0;
 	literal0 = setsymtab("0", "0", v, NUM|STR|CON|DONTFREE, symtab);
 	/* this is used for if(x)... tests: */
-	nullloc = setsymtab("$zero&null", "", v, NUM|STR|CON|DONTFREE, symtab);
+	nullloc = setsymtab("$zero&null", NULL, v, NUM|STR|CON|DONTFREE, symtab);
 	nullnode = celltonode(nullloc, CCON);
 
-	fsloc = setsymtab("FS", "\t", v, STR|DONTFREE, symtab);
+	/* default FS and OFS assumed 0x20 in tests */
+	fsloc = setsymtab("FS", " ", v, STR|DONTFREE, symtab);
 	FS = &fsloc->sval;
 	rsloc = setsymtab("RS", "\n", v, STR|DONTFREE, symtab);
 	RS = &rsloc->sval;
@@ -89,21 +90,20 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	ORS = &orsloc->sval;
 	OFMT = &setsymtab("OFMT", "%.6g", v, STR|DONTFREE, symtab)->sval;
 	CONVFMT = &setsymtab("CONVFMT", "%.6g", v, STR|DONTFREE, symtab)->sval;
-	FILENAME = &setsymtab("FILENAME", "", v, STR|DONTFREE, symtab)->sval;
-	nfloc = setsymtab("NF", "", v, NUM, symtab);
+	FILENAME = &setsymtab("FILENAME", NULL, v, STR|DONTFREE, symtab)->sval;
+	nfloc = setsymtab("NF", NULL, v, NUM, symtab);
 	NF = &nfloc->val.i;
-	nrloc = setsymtab("NR", "", v, NUM, symtab);
+	nrloc = setsymtab("NR", NULL, v, NUM, symtab);
 	NR = &nrloc->val.i;
-	fnrloc = setsymtab("FNR", "", v, NUM, symtab);
+	fnrloc = setsymtab("FNR", NULL, v, NUM, symtab);
 	FNR = &fnrloc->val.i;
 	subseploc = setsymtab("SUBSEP", "\034", v, STR|DONTFREE, symtab);
 	SUBSEP = &subseploc->sval;
-	rstartloc = setsymtab("RSTART", "", v, NUM, symtab);
+	rstartloc = setsymtab("RSTART", NULL, v, NUM, symtab);
 	RSTART = &rstartloc->val.i;
-	rlengthloc = setsymtab("RLENGTH", "", v, NUM, symtab);
+	rlengthloc = setsymtab("RLENGTH", NULL, v, NUM, symtab);
 	RLENGTH = &rlengthloc->val.i;
-	symtabloc = setsymtab("SYMTAB", "", v, ARR, symtab);
-	free(symtabloc->sval);
+	symtabloc = setsymtab("SYMTAB", NULL, v, ARR, symtab);
 	symtabloc->sval = (char *) symtab;
 }
 
@@ -116,11 +116,10 @@ void arginit(int ac, char **av)	/* set up ARGV and ARGC */
 	Value v;
 
 	v.i = (Awknum)ac;
-	ARGC = &setsymtab("ARGC", "", v, NUM, symtab)->val.i;
+	ARGC = &setsymtab("ARGC", NULL, v, NUM, symtab)->val.i;
 	v.i = 0;
-	cp = setsymtab("ARGV", "", v, ARR, symtab);
+	cp = setsymtab("ARGV", NULL, v, ARR, symtab);
 	ap = makesymtab(NSYMTAB);	/* could be (int) ARGC as well */
-	free(cp->sval);
 	cp->sval = (char *) ap;
 	for (i = 0; i < ac; i++) {
 		sprintf(temp, "%d", i);
@@ -135,10 +134,8 @@ Array *makesymtab(int n)	/* make a new symbol table */
 	Array *ap;
 	Cell **tp;
 
-	ap = (Array *) malloc(sizeof(*ap));
-	tp = (Cell **) calloc(n, sizeof(*tp));
-	if (ap == NULL || tp == NULL)
-		FATAL("out of space in makesymtab");
+	ap = (Array *) MALLOC(sizeof(*ap));
+	tp = (Cell **) CALLOC(n, sizeof(*tp));
 	ap->nelem = 0;
 	ap->size = n;
 	ap->tab = tp;
@@ -202,9 +199,9 @@ Cell *setsym(const char *n, const char *s, Array *tp)
 	Value v;
 
 	v.i = 0;
-	if(r = is_number(s, &v)){
-		return setsymtab(n, s, v, STR|r, tp);
-	}else
+	if(r = is_number(s, &v))
+		return setsymtab(n, r & STR ? s : NULL, v, r, tp);
+	else
 		return setsymtab(n, s, v, STR, tp);
 }
 
@@ -218,11 +215,9 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 			(void*)p, NN(p->nval), NN(p->sval), p->val.i, p->val.f, p->tval);
 		return(p);
 	}
-	p = (Cell *) malloc(sizeof(*p));
-	if (p == NULL)
-		FATAL("out of space for symbol table at %s", n);
+	p = (Cell *) MALLOC(sizeof(*p));
 	p->nval = tostring(n);
-	p->sval = s ? tostring(s) : tostring("");
+	p->sval = s ? tostring(s) : EMPTY;
 	p->val = v;
 	p->tval = t;
 	p->csub = CUNK;
@@ -253,9 +248,7 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 	Cell *cp, *op, **np;
 
 	nsz = GROWTAB * tp->size;
-	np = (Cell **) calloc(nsz, sizeof(*np));
-	if (np == NULL)		/* can't do it, but can keep running. */
-		return;		/* someone else will run out later. */
+	np = (Cell **) CALLOC(nsz, sizeof(*np));
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp; cp = op) {
 			op = cp->cnext;
@@ -393,9 +386,12 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		if (!donerec)
 			recbld();
 	}
-	t = s ? tostring(s) : tostring("");	/* in case it's self-assign */
-	if (freeable(vp))
-		xfree(vp->sval);
+	t = vp->sval;
+	if(s != t || s == NULL){
+		t = s ? tostring(s) : EMPTY;	/* in case it's self-assign */
+		if (freeable(vp))
+			xfree(vp->sval);
+	}
 	vp->tval &= ~(NUM|DONTFREE|CONVC|CONVO);
 	vp->tval |= STR;
 	vp->fmt = NULL;
@@ -570,19 +566,16 @@ char *getpssval(Cell *vp)     /* get string val of a Cell for print */
 
 char *tostring(const char *s)	/* make a copy of string s */
 {
-	char *p = strdup(s);
-	if (p == NULL)
-		FATAL("out of space in tostring on %s", s);
+	char *p = STRDUP(s);
 	return(p);
 }
 
+/* FIXME: what the fuck */
 char *tostringN(const char *s, size_t n)	/* make a copy of string s */
 {
 	char *p;
 
-	p = (char *) malloc(n);
-	if (p == NULL)
-		FATAL("out of space in tostring on %s", s);
+	p = (char *) MALLOC(n);
 	strcpy(p, s);
 	return(p);
 }
@@ -595,21 +588,17 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 	char *sa = getsval(a);
 	char *sb = getsval(b);
 	size_t l = strlen(sa) + strlen(sb) + 1;
-	p = (char *) malloc(l);
-	if (p == NULL)
-		FATAL("out of space concatenating %s and %s", sa, sb);
+	p = (char *) MALLOC(l);
 	snprintf(p, l, "%s%s", sa, sb);
 
 	l++;	// add room for ' '
-	char *newbuf = (char *) malloc(l);
-	if (newbuf == NULL)
-		FATAL("out of space concatenating %s and %s", sa, sb);
+	char *newbuf = (char *) MALLOC(l);
 	// See string() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
 	snprintf(newbuf, l, "%s ", p);
 	v.i = 0;
-	c = setsymtab(newbuf, p, v, CON|STR|DONTFREE, symtab);
-	free(p);
+	c = setsymtab(newbuf, NULL, v, CON|STR|DONTFREE, symtab);
+	c->sval = p;
 	free(newbuf);
 	return c;
 }
@@ -620,8 +609,7 @@ char *qstring(const char *is, int delim)	/* collect string up to next delim */
 	const uschar *s = (const uschar *) is;
 	uschar *buf, *bp;
 
-	if ((buf = (uschar *) malloc(strlen(is)+3)) == NULL)
-		FATAL( "out of space in qstring(%s)", s);
+	buf = (uschar *) MALLOC(strlen(is)+3);
 	for (bp = buf; (c = *s) != delim; s++) {
 		if (c == '\n')
 			SYNTAX( "newline in string %.20s...", is );

@@ -46,7 +46,6 @@ typedef union Value Value;
 
 typedef	unsigned char uschar;
 
-#define	xfree(a)	{ free((void *)(intptr_t)(a)); (a) = NULL; }
 /*
  * We sometimes cheat writing read-only pointers to NUL-terminate them
  * and then put back the original value
@@ -63,7 +62,8 @@ extern enum compile_states {
 	ERROR_PRINTING
 } compile_time;
 
-#define	RECSIZE	(8 * 1024)	/* sets limit on records, fields, etc., etc. */
+//#define	RECSIZE	(8 * 1024)	/* sets limit on records, fields, etc., etc. */
+#define	RECSIZE	128	/* sets limit on records, fields, etc., etc. */
 extern int	recsize;	/* size of current record, orig RECSIZE */
 
 extern char	EMPTY[];	/* this avoid -Wwritable-strings issues */
@@ -113,7 +113,9 @@ typedef struct Array {		/* symbol table array */
 	Cell	**tab;		/* hash table pointers */
 } Array;
 
+/* note: affects test results */
 #define	NSYMTAB	128	/* initial size of a symbol table */
+//#define	NSYMTAB	50	/* initial size of a symbol table */
 extern Array	*symtab;
 
 extern Cell	*nrloc;		/* NR */
@@ -236,7 +238,8 @@ extern	int	pairstack[], paircnt;
 
 /* structures used by regular expression matching machinery, mostly b.c: */
 
-#define NCHARS	(1256+3)		/* 256 handles 8-bit chars; 128 does 7-bit */
+//#define NCHARS	(1256+3)		/* 256 handles 8-bit chars; 128 does 7-bit */
+#define NCHARS	(128+3)		/* 256 handles 8-bit chars; 128 does 7-bit */
 				/* BUG: some overflows (caught) if we use 256 */
 				/* watch out in match(), etc. */
 #define	HAT	(NCHARS+2)	/* matches ^ in regular expr */
@@ -286,3 +289,11 @@ typedef struct fa {
 #include "plan9.h"
 #endif
 #include "proto.h"
+
+#define	MALLOC(a)	dmalloc((a), __func__)
+#define	CALLOC(a, b)	dcalloc((a), (b), __func__)
+#define	REALLOC(a, b)	drealloc((a), (b), __func__)
+#define	STRDUP(a)	dstrdup((a), __func__)
+#define	FREE(a)	dfree((a), __func__)
+
+#define	xfree(a)	{ if((char*)(a) != EMPTY){ FREE((void *)(intptr_t)(a)); (a) = NULL; } }

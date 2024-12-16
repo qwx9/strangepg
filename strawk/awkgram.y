@@ -216,7 +216,7 @@ ppattern:
 		{ $$ = op2(LOR, notnull($1), notnull($3)); }
 	| ppattern land ppattern %prec LAND
 		{ $$ = op2(LAND, notnull($1), notnull($3)); }
-	| ppattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); free($3); }
+	| ppattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); FREE($3); }
 	| ppattern MATCHOP ppattern
 		{ if (constnode($3))
 			$$ = op3($2, NIL, $1, (TNode*)makedfa(strnode($3), 0));
@@ -243,7 +243,7 @@ pattern:
 	| pattern LE pattern		{ $$ = op2($2, $1, $3); }
 	| pattern LT pattern		{ $$ = op2($2, $1, $3); }
 	| pattern NE pattern		{ $$ = op2($2, $1, $3); }
-	| pattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); free($3); }
+	| pattern MATCHOP reg_expr	{ $$ = op3($2, NIL, $1, (TNode*)makedfa($3, 0)); FREE($3); }
 	| pattern MATCHOP pattern
 		{ if (constnode($3))
 			$$ = op3($2, NIL, $1, (TNode*)makedfa(strnode($3), 0));
@@ -286,7 +286,7 @@ rbrace:
 
 re:
 	   reg_expr
-		{ $$ = op3(MATCH, NIL, rectonode(), (TNode*)makedfa($1, 0)); free($1); }
+		{ $$ = op3(MATCH, NIL, rectonode(), (TNode*)makedfa($1, 0)); FREE($1); }
 	| NOT re	{ $$ = op1(NOT, notnull($2)); }
 	;
 
@@ -381,7 +381,7 @@ term:
 		  $$ = op2(INDEX, $3, (TNode*)$5); }
 	| '(' pattern ')'		{ $$ = $2; }
 	| MATCHFCN '(' pattern comma reg_expr ')'
-		{ $$ = op3(MATCHFCN, NIL, $3, (TNode*)makedfa($5, 1)); free($5); }
+		{ $$ = op3(MATCHFCN, NIL, $3, (TNode*)makedfa($5, 1)); FREE($5); }
 	| MATCHFCN '(' pattern comma pattern ')'
 		{ if (constnode($5))
 			$$ = op3(MATCHFCN, NIL, $3, (TNode*)makedfa(strnode($5), 1));
@@ -391,20 +391,20 @@ term:
 	| SPLIT '(' pattern comma varname comma pattern ')'     /* string */
 		{ $$ = op4(SPLIT, $3, makearr($5), $7, (TNode*)STRING); }
 	| SPLIT '(' pattern comma varname comma reg_expr ')'    /* const /regexp/ */
-		{ $$ = op4(SPLIT, $3, makearr($5), (TNode*)makedfa($7, 1), (TNode *)REGEXPR); free($7); }
+		{ $$ = op4(SPLIT, $3, makearr($5), (TNode*)makedfa($7, 1), (TNode *)REGEXPR); FREE($7); }
 	| SPLIT '(' pattern comma varname ')'
 		{ $$ = op4(SPLIT, $3, makearr($5), NIL, (TNode*)STRING); }  /* default */
 	| SPRINTF '(' patlist ')'	{ $$ = op1($1, $3); }
 	| string	 		{ $$ = celltonode($1, CCON); }
 	| subop '(' reg_expr comma pattern ')'
-		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, rectonode()); free($3); }
+		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, rectonode()); FREE($3); }
 	| subop '(' pattern comma pattern ')'
 		{ if (constnode($3))
 			$$ = op4($1, NIL, (TNode*)makedfa(strnode($3), 1), $5, rectonode());
 		  else
 			$$ = op4($1, (TNode *)1, $3, $5, rectonode()); }
 	| subop '(' reg_expr comma pattern comma var ')'
-		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, $7); free($3); }
+		{ $$ = op4($1, NIL, (TNode*)makedfa($3, 1), $5, $7); FREE($3); }
 	| subop '(' pattern comma pattern comma var ')'
 		{ if (constnode($3))
 			$$ = op4($1, NIL, (TNode*)makedfa(strnode($3), 1), $5, $7);

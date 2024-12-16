@@ -196,3 +196,9 @@ extern	Cell	*nullproc(TNode **, int);
 extern	Cell	*dosub(TNode **, int);
 
 extern  const char	*flags2str(int flags);
+
+extern	void	*dmalloc(size_t, const char *);
+extern	void	*dcalloc(size_t, size_t, const char *);
+extern	void	*drealloc(void *, size_t, const char *);
+extern	char	*dstrdup(const char *, const char *);
+extern	void	dfree(void *, const char *);

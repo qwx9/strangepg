@@ -1875,10 +1875,10 @@ do {                                            \
 do {                                                                      \
   if (yydebug)                                                            \
     {                                                                     \
-      YYFPRINTF (awkstderr, "%s ", Title);                                   \
-      yy_symbol_print (awkstderr,                                            \
+      YYFPRINTF (stderr, "%s ", Title);                                   \
+      yy_symbol_print (stderr,                                            \
                   Kind, Value); \
-      YYFPRINTF (awkstderr, "\n");                                           \
+      YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
 
@@ -1924,13 +1924,13 @@ yy_symbol_print (FILE *yyo,
 static void
 yy_stack_print (yy_state_t *yybottom, yy_state_t *yytop)
 {
-  YYFPRINTF (awkstderr, "Stack now");
+  YYFPRINTF (stderr, "Stack now");
   for (; yybottom <= yytop; yybottom++)
     {
       int yybot = *yybottom;
-      YYFPRINTF (awkstderr, " %d", yybot);
+      YYFPRINTF (stderr, " %d", yybot);
     }
-  YYFPRINTF (awkstderr, "\n");
+  YYFPRINTF (stderr, "\n");
 }
 
 # define YY_STACK_PRINT(Bottom, Top)                            \
@@ -1951,16 +1951,16 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp,
   int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
   int yyi;
-  YYFPRINTF (awkstderr, "Reducing stack by rule %d (line %d):\n",
+  YYFPRINTF (stderr, "Reducing stack by rule %d (line %d):\n",
              yyrule - 1, yylno);
   /* The symbols being reduced.  */
   for (yyi = 0; yyi < yynrhs; yyi++)
     {
-      YYFPRINTF (awkstderr, "   $%d = ", yyi + 1);
-      yy_symbol_print (awkstderr,
+      YYFPRINTF (stderr, "   $%d = ", yyi + 1);
+      yy_symbol_print (stderr,
                        YY_ACCESSING_SYMBOL (+yyssp[yyi + 1 - yynrhs]),
                        &yyvsp[(yyi + 1) - (yynrhs)]);
-      YYFPRINTF (awkstderr, "\n");
+      YYFPRINTF (stderr, "\n");
     }
 }
 
@@ -2076,7 +2076,7 @@ yyparse (void)
      Keep to zero when no symbol should be popped.  */
   int yylen = 0;
 
-  YYDPRINTF ((awkstderr, "Starting parse\n"));
+  YYDPRINTF ((stderr, "Starting parse\n"));
 
   yychar = YYEMPTY; /* Cause a token to be read.  */
 
@@ -2096,7 +2096,7 @@ yynewstate:
 | yysetstate -- set current state (the top of the stack) to yystate.  |
 `--------------------------------------------------------------------*/
 yysetstate:
-  YYDPRINTF ((awkstderr, "Entering state %d\n", yystate));
+  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
   YY_ASSERT (0 <= yystate && yystate < YYNSTATES);
   YY_IGNORE_USELESS_CAST_BEGIN
   *yyssp = YY_CAST (yy_state_t, yystate);
@@ -2157,7 +2157,7 @@ yysetstate:
       yyvsp = yyvs + yysize - 1;
 
       YY_IGNORE_USELESS_CAST_BEGIN
-      YYDPRINTF ((awkstderr, "Stack size increased to %ld\n",
+      YYDPRINTF ((stderr, "Stack size increased to %ld\n",
                   YY_CAST (long, yystacksize)));
       YY_IGNORE_USELESS_CAST_END
 
@@ -2190,7 +2190,7 @@ yybackup:
   /* YYCHAR is either empty, or end-of-input, or a valid lookahead.  */
   if (yychar == YYEMPTY)
     {
-      YYDPRINTF ((awkstderr, "Reading a token\n"));
+      YYDPRINTF ((stderr, "Reading a token\n"));
       yychar = yylex ();
     }
 
@@ -2198,7 +2198,7 @@ yybackup:
     {
       yychar = YYEOF;
       yytoken = YYSYMBOL_YYEOF;
-      YYDPRINTF ((awkstderr, "Now at end of input.\n"));
+      YYDPRINTF ((stderr, "Now at end of input.\n"));
     }
   else if (yychar == YYerror)
     {
@@ -2478,7 +2478,7 @@ yyreduce:
 
   case 53: /* ppattern: ppattern MATCHOP reg_expr  */
 #line 219 "awkgram.y"
-                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); FREE((yyvsp[0].s)); }
 #line 2483 "awkgram.tab.c"
     break;
 
@@ -2571,7 +2571,7 @@ yyreduce:
 
   case 70: /* pattern: pattern MATCHOP reg_expr  */
 #line 246 "awkgram.y"
-                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                                        { (yyval.p) = op3((yyvsp[-1].i), NIL, (yyvsp[-2].p), (TNode*)makedfa((yyvsp[0].s), 0)); FREE((yyvsp[0].s)); }
 #line 2576 "awkgram.tab.c"
     break;
 
@@ -2634,7 +2634,7 @@ yyreduce:
 
   case 92: /* re: reg_expr  */
 #line 289 "awkgram.y"
-                { (yyval.p) = op3(MATCH, NIL, rectonode(), (TNode*)makedfa((yyvsp[0].s), 0)); free((yyvsp[0].s)); }
+                { (yyval.p) = op3(MATCH, NIL, rectonode(), (TNode*)makedfa((yyvsp[0].s), 0)); FREE((yyvsp[0].s)); }
 #line 2639 "awkgram.tab.c"
     break;
 
@@ -2969,7 +2969,7 @@ yyreduce:
 
   case 157: /* term: MATCHFCN '(' pattern comma reg_expr ')'  */
 #line 384 "awkgram.y"
-                { (yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (TNode*)makedfa((yyvsp[-1].s), 1)); free((yyvsp[-1].s)); }
+                { (yyval.p) = op3(MATCHFCN, NIL, (yyvsp[-3].p), (TNode*)makedfa((yyvsp[-1].s), 1)); FREE((yyvsp[-1].s)); }
 #line 2974 "awkgram.tab.c"
     break;
 
@@ -2996,7 +2996,7 @@ yyreduce:
 
   case 161: /* term: SPLIT '(' pattern comma varname comma reg_expr ')'  */
 #line 394 "awkgram.y"
-                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (TNode*)makedfa((yyvsp[-1].s), 1), (TNode *)REGEXPR); free((yyvsp[-1].s)); }
+                { (yyval.p) = op4(SPLIT, (yyvsp[-5].p), makearr((yyvsp[-3].p)), (TNode*)makedfa((yyvsp[-1].s), 1), (TNode *)REGEXPR); FREE((yyvsp[-1].s)); }
 #line 3001 "awkgram.tab.c"
     break;
 
@@ -3020,7 +3020,7 @@ yyreduce:
 
   case 165: /* term: subop '(' reg_expr comma pattern ')'  */
 #line 400 "awkgram.y"
-                { (yyval.p) = op4((yyvsp[-5].i), NIL, (TNode*)makedfa((yyvsp[-3].s), 1), (yyvsp[-1].p), rectonode()); free((yyvsp[-3].s)); }
+                { (yyval.p) = op4((yyvsp[-5].i), NIL, (TNode*)makedfa((yyvsp[-3].s), 1), (yyvsp[-1].p), rectonode()); FREE((yyvsp[-3].s)); }
 #line 3025 "awkgram.tab.c"
     break;
 
@@ -3035,7 +3035,7 @@ yyreduce:
 
   case 167: /* term: subop '(' reg_expr comma pattern comma var ')'  */
 #line 407 "awkgram.y"
-                { (yyval.p) = op4((yyvsp[-7].i), NIL, (TNode*)makedfa((yyvsp[-5].s), 1), (yyvsp[-3].p), (yyvsp[-1].p)); free((yyvsp[-5].s)); }
+                { (yyval.p) = op4((yyvsp[-7].i), NIL, (TNode*)makedfa((yyvsp[-5].s), 1), (yyvsp[-3].p), (yyvsp[-1].p)); FREE((yyvsp[-5].s)); }
 #line 3040 "awkgram.tab.c"
     break;
 

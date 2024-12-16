@@ -64,7 +64,7 @@ static const uschar	*prestr;	/* current position in current re */
 static const uschar	*lastre;	/* origin of last re */
 static const uschar	*lastatom;	/* origin of last Atom */
 static const uschar	*starttok;
-static const uschar 	*basestr;	/* starts with original, replaced during
+static const uschar	*basestr;	/* starts with original, replaced during
 				   repetition processing */
 static const uschar 	*firstbasestr;
 
@@ -119,9 +119,7 @@ extern int u8_rune(int *, const char *);
 static int *
 intalloc(size_t n, const char *f)
 {
-	int *p = (int *) calloc(n, sizeof(int));
-	if (p == NULL)
-		overflo(f);
+	int *p = (int *) CALLOC(n, sizeof(int));
 	return p;
 }
 
@@ -132,10 +130,8 @@ resizesetvec(const char *f)
 		maxsetvec = MAXLIN;
 	else
 		maxsetvec *= 4;
-	setvec = (int *) realloc(setvec, maxsetvec * sizeof(*setvec));
-	tmpset = (int *) realloc(tmpset, maxsetvec * sizeof(*tmpset));
-	if (setvec == NULL || tmpset == NULL)
-		overflo(f);
+	setvec = (int *) REALLOC(setvec, maxsetvec * sizeof(*setvec));
+	tmpset = (int *) REALLOC(tmpset, maxsetvec * sizeof(*tmpset));
 }
 
 static void
@@ -151,34 +147,23 @@ resize_state(fa *f, int state)
 
 	new_count = state + 10; /* needs to be tuned */
 
-	p = (gtt *) realloc(f->gototab, new_count * sizeof(gtt));
-	if (p == NULL)
-		goto out;
+	p = (gtt *) REALLOC(f->gototab, new_count * sizeof(gtt));
 	f->gototab = p;
 
-	p2 = (uschar *) realloc(f->out, new_count * sizeof(f->out[0]));
-	if (p2 == NULL)
-		goto out;
+	p2 = (uschar *) REALLOC(f->out, new_count * sizeof(f->out[0]));
 	f->out = p2;
 
-	p3 = (int **) realloc(f->posns, new_count * sizeof(f->posns[0]));
-	if (p3 == NULL)
-		goto out;
+	p3 = (int **) REALLOC(f->posns, new_count * sizeof(f->posns[0]));
 	f->posns = p3;
 
 	for (i = f->state_count; i < new_count; ++i) {
-		f->gototab[i].entries = (gtte *) calloc(NCHARS, sizeof(gtte));
-		if (f->gototab[i].entries == NULL)
-			goto out;
+		f->gototab[i].entries = (gtte *) CALLOC(NCHARS, sizeof(gtte));
 		f->gototab[i].allocated = NCHARS;
 		f->gototab[i].inuse = 0;
 		f->out[i] = 0;
 		f->posns[i] = NULL;
 	}
 	f->state_count = new_count;
-	return;
-out:
-	overflo(__func__);
 }
 
 fa *makedfa(const char *s, bool anchor)	/* returns dfa for reg expr s */
@@ -235,8 +220,7 @@ fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 
 	poscnt = 0;
 	penter(p1);	/* enter parent pointers and leaf indices */
-	if ((f = (fa *) calloc(1, sizeof(fa) + poscnt * sizeof(rrow))) == NULL)
-		overflo(__func__);
+	f = (fa *) CALLOC(1, sizeof(fa) + poscnt * sizeof(rrow));
 	f->accept = poscnt-1;	/* penter has computed number of positions in re */
 	cfoll(f, p1);	/* set up follow sets */
 	resize_state(f, 1);
@@ -422,8 +406,8 @@ int *cclenter(const char *argp)	/* add a character class */
 	static int *buf = NULL;
 	static int bufsz = 100;
 
-	if (buf == NULL && (buf = (int *) calloc(bufsz, sizeof(int))) == NULL)
-		FATAL("out of space for character class [%.10s...] 1", p);
+	if (buf == NULL)
+		buf = (int *) CALLOC(bufsz, sizeof(int));
 	bp = buf;
 	for (i = 0; *p != 0; ) {
 		n = u8_rune(&c, (const char *) p);
@@ -446,9 +430,7 @@ int *cclenter(const char *argp)	/* add a character class */
 				while (c < c2) {
 					if (i >= bufsz) {
 						bufsz *= 2;
-						buf = (int *) realloc(buf, bufsz * sizeof(int));
-						if (buf == NULL)
-							FATAL("out of space for character class [%.10s...] 2", p);
+						buf = (int *) REALLOC(buf, bufsz * sizeof(int));
 						bp = buf + i;
 					}
 					*bp++ = ++c;
@@ -459,9 +441,7 @@ int *cclenter(const char *argp)	/* add a character class */
 		}
 		if (i >= bufsz) {
 			bufsz *= 2;
-			buf = (int *) realloc(buf, bufsz * sizeof(int));
-			if (buf == NULL)
-				FATAL("out of space for character class [%.10s...] 2", p);
+			buf = (int *) REALLOC(buf, bufsz * sizeof(int));
 			bp = buf + i;
 		}
 		*bp++ = c;
@@ -470,15 +450,10 @@ int *cclenter(const char *argp)	/* add a character class */
 	*bp = 0;
 	/* DPRINTF("cclenter: in = |%s|, out = |%s|\n", op, buf); BUG: can't print array of int */
 	/* xfree(op);  BUG: what are we freeing here? */
-	retp = (int *) calloc(bp-buf+1, sizeof(int));
+	retp = (int *) CALLOC(bp-buf+1, sizeof(int));
 	for (i = 0; i < bp-buf+1; i++)
 		retp[i] = buf[i];
 	return retp;
-}
-
-void overflo(const char *s)
-{
-	FATAL("regular expression too big: out of space in %.30s...", s);
 }
 
 void cfoll(fa *f, TNode *v)	/* enter follow set of each leaf of vertex v into lfollow[leaf] */
@@ -609,9 +584,7 @@ int member(int c, int *sarg)	/* is c in s? */
 static void resize_gototab(fa *f, int state)
 {
 	size_t new_size = f->gototab[state].allocated * 2;
-	gtte *p = (gtte *) realloc(f->gototab[state].entries, new_size * sizeof(gtte));
-	if (p == NULL)
-		overflo(__func__);
+	gtte *p = (gtte *) REALLOC(f->gototab[state].entries, new_size * sizeof(gtte));
 
 	// need to initialize the new memory to zero
 	size_t orig_size = f->gototab[state].allocated;		// 2nd half of new mem is this size
@@ -1165,8 +1138,7 @@ replace_repeat(const uschar *reptok, int reptoklen, const uschar *atom,
 	} else if (special_case == REPEAT_ZERO) {
 		size += 2;	/* just a null ERE: () */
 	}
-	if ((buf = (uschar *) malloc(size + 1)) == NULL)
-		FATAL("out of space in reg expr %.10s..", lastre);
+	buf = (uschar *) MALLOC(size + 1);
 	memcpy(buf, basestr, prefix_length);	/* copy prefix	*/
 	j = prefix_length;
 	if (special_case == REPEAT_ZERO) {
@@ -1296,8 +1268,8 @@ rescan:
 		rlxval = c;
 		return CHAR;
 	case '[':
-		if (buf == NULL && (buf = (uschar *) malloc(bufsz)) == NULL)
-			FATAL("out of space in reg expr %.10s..", lastre);
+		if (buf == NULL)
+			buf = MALLOC(bufsz);
 		bp = buf;
 		if (*prestr == '^') {
 			cflag = 1;
@@ -1306,8 +1278,7 @@ rescan:
 		else
 			cflag = 0;
 		n = 5 * strlen((const char *) prestr)+1; /* BUG: was 2.  what value? */
-		if (!adjbuf((char **) &buf, &bufsz, n, n, (char **) &bp, "relex1"))
-			FATAL("out of space for reg expr %.10s...", lastre);
+		adjbuf((char **) &buf, &bufsz, n, n, (char **) &bp, "relex1");
 		for (; ; ) {
 			if ((n = u8_rune(&rlxval, (const char *) prestr)) > 1) {
 				for (i = 0; i < n; i++)
@@ -1338,8 +1309,7 @@ rescan:
 					 * program to track each string's length.
 					 */
 					for (i = 1; i <= UCHAR_MAX; i++) {
-						if (!adjbuf((char **) &buf, &bufsz, bp-buf+2, 100, (char **) &bp, "relex2"))
-						    FATAL("out of space for reg expr %.10s...", lastre);
+						adjbuf((char **) &buf, &bufsz, bp-buf+2, 100, (char **) &bp, "relex2");
 						if (cc->cc_func(i)) {
 							/* escape backslash */
 							if (i == '\\') {

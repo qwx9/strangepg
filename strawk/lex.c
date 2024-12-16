@@ -184,14 +184,13 @@ bool	reg	= false;	/* true => return a REGEXPR now */
 
 int yylex(void)
 {
-	int c, r;
-	char *cp;
+	int c;
 	Value v;
 	static char *buf = NULL;
 	static int bufsize = 5; /* BUG: setting this small causes core dump! */
 
-	if (buf == NULL && (buf = (char *) malloc(bufsize)) == NULL)
-		FATAL( "out of space in yylex" );
+	if (buf == NULL)
+		buf = (char *) MALLOC(bufsize);
 	if (sc) {
 		sc = false;
 		RET('}');
@@ -207,14 +206,7 @@ int yylex(void)
 		if (isalpha(c) || c == '_')
 			return word(buf);
 		if (isdigit(c)) {
-			cp = tostring(buf);
-			if(r = is_number(cp, &v))
-				r = CON | r;
-			else
-				r = STR;
-			yylval.cp = setsymtab(buf, cp, v, r, symtab);
-			free(cp);
-			/* should this also have STR set? */
+			yylval.cp = setsym(buf, buf, symtab);
 			RET(NUMBER);
 		}
 
@@ -360,7 +352,7 @@ int yylex(void)
 					RET(INDIRECT);
 				}
 				v.i = 0;
-				yylval.cp = setsymtab(buf, "", v, STR|NUM, symtab);
+				yylval.cp = setsymtab(buf, NULL, v, STR|NUM, symtab);
 				RET(IVAR);
 			} else if (c == 0) {	/*  */
 				SYNTAX( "unexpected end of input after $" );
@@ -407,15 +399,15 @@ extern int runetochar(char *str, int c);
 int string(void)
 {
 	int c, n;
-	char *s, *bp;
+	char *bp;
 	Value v;
 	static char *buf = NULL;
 	static int bufsz = 500;
 
-	if (buf == NULL && (buf = (char *) malloc(bufsz)) == NULL)
-		FATAL("out of space for strings");
+	if (buf == NULL)
+		buf = (char *) MALLOC(bufsz);
 	for (bp = buf; (c = input()) != '"'; ) {
-		if (!adjbuf(&buf, &bufsz, bp-buf+2, 500, &bp, "string"))
+		if (!adjbuf(&buf, &bufsz, bp-buf+3, 500, &bp, "string"))
 			FATAL("out of space for string %.10s...", buf);
 		switch (c) {
 		case '\n':
@@ -513,12 +505,12 @@ int string(void)
 			break;
 		}
 	}
-	*bp = 0;
-	s = tostring(buf);
 	*bp++ = ' '; *bp++ = '\0';
 	v.i = 0;
-	yylval.cp = setsymtab(buf, s, v, CON|STR|DONTFREE, symtab);
-	free(s);
+	yylval.cp = setsymtab(buf, NULL, v, CON|STR|DONTFREE, symtab);
+	bp[-2] = 0;
+	yylval.cp->sval = tostring(buf);
+
 	RET(STRING);
 }
 
@@ -564,7 +556,7 @@ int word(char *w)
 				SYNTAX( "return not in function" );
 			RET(kp->type);
 		case VARNF:
-			yylval.cp = setsymtab("NF", "", v, NUM, symtab);
+			yylval.cp = setsymtab("NF", NULL, v, NUM, symtab);
 			RET(VARNF);
 		default:
 			RET(kp->type);
@@ -575,7 +567,7 @@ int word(char *w)
 		yylval.i = n;
 		RET(ARG);
 	} else {
-		yylval.cp = setsymtab(w, "", v, STR|NUM|DONTFREE, symtab);
+		yylval.cp = setsymtab(w, NULL, v, STR|NUM|DONTFREE, symtab);
 		if (c == '(') {
 			RET(CALL);
 		} else {
@@ -596,8 +588,8 @@ int regexpr(void)
 	static int bufsz = 500;
 	char *bp;
 
-	if (buf == NULL && (buf = (char *) malloc(bufsz)) == NULL)
-		FATAL("out of space for reg expr");
+	if (buf == NULL)
+		buf = (char *) MALLOC(bufsz);
 	bp = buf;
 	for ( ; (c = input()) != '/' && c != 0; ) {
 		if (!adjbuf(&buf, &bufsz, bp-buf+3, 500, &bp, "regexpr"))
@@ -707,9 +699,7 @@ addfile(char *fn)
 {
 	if (npfile >= maxpfile) {
 		maxpfile += 20;
-		pfile = (char **) realloc(pfile, maxpfile * sizeof(*pfile));
-		if (pfile == NULL)
-			FATAL("error allocating space for -f options");
+		pfile = (char **) REALLOC(pfile, maxpfile * sizeof(*pfile));
 	}
 	pfile[npfile++] = fn;
 }

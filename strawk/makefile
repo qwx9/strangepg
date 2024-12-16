@@ -30,7 +30,11 @@ ALLTARGETS:= $(BINTARGET)
 YACC:= bison
 YFLAGS:= -d
 CC?= clang
-CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wcast-qual -Wno-parentheses
+ifdef DEBUG
+	CFLAGS?= -O0 -glldb -pipe -march=native -Wall -pedantic -Wcast-qual -Wno-parentheses
+else
+	CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wno-parentheses
+endif
 LDFLAGS:= -lm
 
 OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o
