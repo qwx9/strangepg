@@ -219,7 +219,8 @@ readcmd(char *s)
 			req |= Reqshallowdraw;
 			continue;
 		case 'R':
-			reqlayout(g, Lreset);
+			if((debug & Debugload) == 0)
+				reqlayout(g, Lreset);
 			continue;
 		case 's':
 			if(s[1] == 0){
