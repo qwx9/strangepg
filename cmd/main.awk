@@ -46,7 +46,6 @@ BEGIN{
 	white = 0xffffffc0
 	yellow = 0xffed6fc0
 	srand()
-	OFS = "\t"
 }
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
@@ -92,7 +91,7 @@ function nodecolor(name, color){
 	if(!checknodename(name))
 		return
 	if(length(color) == 0){
-		print "E no such color for node: " name
+		print "E\tno such color for node: " name
 		return
 	}
 	CL[name] = color
@@ -110,21 +109,21 @@ function addedge(id, u, v){
 }
 function checknodeid(id){
 	if(!(id in label)){
-		print "E no such nodeid: " id
+		print "E\tno such nodeid: " id
 		return 0
 	}
 	return 1
 }
 function checknodename(name){
 	if(!(name in node)){
-		print "E no such node: " name
+		print "E\tno such node: " name
 		return 0
 	}
 	return 1
 }
 function edgeinfo(id,	s, u, v, a, b){
 	if(!((id "\x1c" 1) in edge)){
-		print "E no such edge id: " id
+		print "E\tno such edge id: " id
 		return
 	}
 	a = edge[id,1]
@@ -144,6 +143,7 @@ function findnode(name,	id){
 	if(!checknodename(name))
 		return
 	id = node[name]
+	selectnodebyid(id)
 	print "N", id
 }
 function selinfostr(	id, name, l, n, m, s){
@@ -179,7 +179,7 @@ function selinfo(){
 	if(length(selected) != 0)
 		print "s", selinfostr()
 	#else
-	#	print "E bug: nothing selected"
+	#	print "E\tbug: nothing selected"
 }
 function nodeinfo(id,	name, s){
 	if(!checknodeid(id))
@@ -199,7 +199,7 @@ function deselectnodebyid(id){
 	if(!checknodeid(id))
 		return
 	if(!(id in selected)){
-		print "E deselect: not selected: " id
+		print "E\tdeselect: not selected: " id
 		return
 	}
 	if(length(selected) == 1){
@@ -214,7 +214,7 @@ function deselectnode(name,	id){
 		return
 	deselectnodebyid(node[name])
 }
-function selectnodebyid(id,	name, s, l){
+function selectnodebyid(id){
 	if(!checknodeid(id) || id in selected)
 		return
 	selected[id] = 1
