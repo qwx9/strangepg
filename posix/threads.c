@@ -104,7 +104,19 @@ killthread(Thread *th)
 Channel *
 chancreate(int elsize, int nel)
 {
-	return chan_init(elsize * nel);
+	USED(elsize);
+	return chan_init(nel);
+}
+
+int
+sendul(Channel *c, ulong n)
+{
+	uintptr v;
+
+	v = (uintptr)n;
+	if(chan_send(c, (void*)v) < 0)
+		return -1;
+	return 0;
 }
 
 void *
@@ -120,11 +132,11 @@ recvp(Channel *c)
 ulong
 recvul(Channel *c)
 {
-	s32int v;
+	uintptr v;
 
-	if(chan_recv_int32(c, &v) < 0)
+	if(chan_recv(c, &v) < 0)
 		return 0;
-	return v;
+	return (ulong)v;
 }
 
 int
@@ -135,17 +147,13 @@ nbsendp(Channel *c, void *p)
 	return 1;
 }
 
-/* ONLY the _send_type functions alloc memory, so if one of the
- * _recv_type functions gets something sent via this select shit,
- * it will get an invalid pointer and will also try to free it */
 int
 nbsendul(Channel *c, ulong n)
 {
-	ulong *ass;
+	uintptr v;
 
-	ass = emalloc(sizeof *ass);
-	*ass = n;
-	if(chan_select(nil, 0, nil, &c, 1, (void**)&ass) < 0)
+	v = (uintptr)n;
+	if(chan_select(nil, 0, nil, &c, 1, (void**)&v) < 0)
 		return 0;
 	return 1;
 }
@@ -153,11 +161,11 @@ nbsendul(Channel *c, ulong n)
 ulong
 nbrecvul(Channel *c)
 {
-	u32int n;
+	uintptr v;
 
-	if(chan_select(&c, 1, (void **)&n, nil, 0, nil) < 0)
+	if(chan_select(&c, 1, (void **)&v, nil, 0, nil) < 0)
 		return 0;
-	return n;
+	return (ulong)v;
 }
 
 void*
