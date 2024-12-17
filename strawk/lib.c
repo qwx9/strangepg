@@ -640,7 +640,7 @@ void yyerror(const char *s)
 
 void SYNTAX(const char *fmt, ...)
 {
-	extern char *cmdname, *curfname;
+	extern char *curfname;
 	va_list varg;
 
 	fprintf(awkstderr, "%s: ", cmdname);
@@ -687,7 +687,6 @@ void bcheck2(int n, int c1, int c2)
 
 void FATAL(const char *fmt, ...)
 {
-	extern char *cmdname;
 	va_list varg;
 
 	fflush(awkstdout);
@@ -707,7 +706,6 @@ void FATAL(const char *fmt, ...)
 
 void WARNING(const char *fmt, ...)
 {
-	extern char *cmdname;
 	va_list varg;
 
 	fflush(awkstdout);

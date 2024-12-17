@@ -1,67 +1,61 @@
-# /****************************************************************
-# Copyright (C) Lucent Technologies 1997
-# All Rights Reserved
-#
-# Permission to use, copy, modify, and distribute this software and
-# its documentation for any purpose and without fee is hereby
-# granted, provided that the above copyright notice appear in all
-# copies and that both that the copyright notice and this
-# permission notice and warranty disclaimer appear in supporting
-# documentation, and that the name Lucent Technologies or any of
-# its entities not be used in advertising or publicity pertaining
-# to distribution of the software without specific, written prior
-# permission.
-#
-# LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-# IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-# SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-# ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-# THIS SOFTWARE.
-# ****************************************************************/
-
 PREFIX?= $(HOME)/.local
 BINDIR:= $(PREFIX)/bin
 PROGRAM:= strawk
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:= $(BINTARGET)
-YACC:= bison
-YFLAGS:= -d
-CC?= clang
-ifdef DEBUG
-	CFLAGS?= -O0 -glldb -pipe -march=native -Wall -pedantic -Wcast-qual -Wno-parentheses
-else
-	CFLAGS?= -O2 -pipe -march=native -Wall -pedantic -Wno-parentheses
-endif
-LDFLAGS:= -lm
-
 OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o
-
+DEPS:=$(patsubst %.o,%.d,$(OFILES))
 CLEANFILES:=\
 	$(BINTARGET)\
 	$(OFILES)\
 	$(DEPS)\
-	maketab\
+
+YACC:= bison
+YFLAGS:= -d
+CC?= clang
+CPPFLAGS+= -MMD -MP
+CFLAGS?= -O2 -march=native -pipe
+LDFLAGS?=
+LDLIBS:= -lm
+
+ifdef DEBUG
+	CFLAGS+= -O1 -g -Wall -pedantic -Wcast-qual -Wno-parentheses
+	ifdef ASAN
+		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	endif
+	CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
+	CFLAGS+= -fasynchronous-unwind-tables
+	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
+	ifeq ($(CC), clang)
+		CFLAGS+= -glldb
+		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
+		CFLAGS+= -fprofile-instr-generate -fcoverage-mapping
+	endif
+else
+	CFLAGS+= -flto
+	CFLAGS+= -Wall -pedantic -Wno-parentheses
+	CPPFLAGS+= -DNDEBUG
+	LDFLAGS+= -flto
+endif
 
 all: $(BINTARGET)
 
-$(OFILES): awk.h proto.h awkgram.y
+$(OFILES): awkgram.tab.h
 
 $(BINTARGET): $(OFILES)
-	$(CC) -o $(BINTARGET) $(CFLAGS) $(OFILES) $(LDFLAGS)
+	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
 
 awkgram.tab.c awkgram.tab.h: awk.h proto.h awkgram.y
 	if command -v $(YACC) >/dev/null; then \
 		$(YACC) $(YFLAGS) awkgram.y; \
 	fi
 
-proctab.c: maketab awkgram.tab.h
+proctab.c: maketab
 	./maketab awkgram.tab.h >proctab.c
 
-maketab: maketab.c
-	$(CC) $(CFLAGS) maketab.c -o maketab
+maketab: maketab.c awkgram.tab.h
+	$(CC) maketab.c -o $@ $(CFLAGS)
 
 install: $(ALLTARGETS)
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)

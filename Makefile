@@ -68,14 +68,14 @@ ifdef DEBUG
 		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
 		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
 	endif
-	CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
+	CPPFLAGS+= -O1 -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
 	CFLAGS+= -fasynchronous-unwind-tables
 	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
 	ifeq ($(CC), clang)
 		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
-		CFLAGS+= -glldb -O1 -fprofile-instr-generate -fcoverage-mapping
+		CFLAGS+= -glldb -fprofile-instr-generate -fcoverage-mapping
 	else
-		CFLAGS+= -ggdb -O1 -Wno-suggest-attribute=format
+		CFLAGS+= -ggdb -Wno-suggest-attribute=format
 	endif
 	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
 			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
