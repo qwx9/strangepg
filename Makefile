@@ -44,7 +44,6 @@ ifndef TARGET
 endif
 
 CC?= clang
-#CPPFLAGS+= NDEBUG
 CPPFLAGS+= -MMD -MP
 CPPFLAGS+= -fextended-identifiers -finput-charset=UTF-8
 CPPFLAGS+= -DVERSION="\"$(VERSION)\""
@@ -65,13 +64,15 @@ CFLAGS?= -O3 -pipe -march=native
 CFLAGS+= -std=c99
 CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
 ifdef DEBUG
-	CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
-	LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	ifdef ASAN
+		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	endif
 	CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
 	CFLAGS+= -fasynchronous-unwind-tables
 	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
-	export LLVM_PROFILE_FILE:= ./llvm_%p.prof
 	ifeq ($(CC), clang)
+		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
 		CFLAGS+= -glldb -O1 -fprofile-instr-generate -fcoverage-mapping
 	else
 		CFLAGS+= -ggdb -O1 -Wno-suggest-attribute=format
@@ -81,6 +82,7 @@ ifdef DEBUG
 			 -Wredundant-decls -Wshadow -Wstack-protector \
 			 -Wswitch-default -Wvariadic-macros
 else
+	#CPPFLAGS+= -DNDEBUG
 	CFLAGS+= -g -flto
 	LDFLAGS+= -flto
 	# c2x for omitting parameter names in a function definition
