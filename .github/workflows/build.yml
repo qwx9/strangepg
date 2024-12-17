@@ -60,7 +60,7 @@ jobs:
     - name: build
       run: make TARGET=Win64 CC=gcc -j 4
     - name: test
-      run: strangepg.exe -D load test\frag10.gfa
+      run: ./strangepg -D load test/frag10.gfa
     - name: upload
       uses: actions/upload-artifact@v4
       with:
