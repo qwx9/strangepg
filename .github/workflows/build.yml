@@ -1,0 +1,34 @@
+name: Makefile CI
+on:
+  push:
+    branches: [main]
+    paths: ['**.c','**.h']
+jobs:
+  linux:
+    name: linux
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: deps
+      run: sudo apt-get install -y libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev
+    - name: build
+      run: make -j 4
+    - name: test
+      run: ./strangepg -D load test/frag10.gfa
+  mac:
+    name: mac
+    strategy:
+      matrix:
+        #os: [macos-latest, macos-13, macos-14]
+        os: [macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: build
+      run: make -j 3
+    - mame: test
+      run: ./strangepg -D load test/frag10.gfa
