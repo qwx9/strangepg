@@ -47,10 +47,6 @@ CC?= clang
 #CPPFLAGS+= NDEBUG
 CPPFLAGS+= -MMD -MP
 CPPFLAGS+= -fextended-identifiers -finput-charset=UTF-8
-CPPFLAGS+= -pthread
-# _XOPEN_SOURCE: M_PI et al
-# _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
-CPPFLAGS+= -D_XOPEN_SOURCE=500
 CPPFLAGS+= -DVERSION="\"$(VERSION)\""
 CPPFLAGS+=\
 	-I.\
@@ -71,9 +67,9 @@ CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
 ifdef DEBUG
 	export LLVM_PROFILE_FILE :=./llvm_%p.prof
 	ifeq ($(CC), clang)
-		CFLAGS+= -g -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
+		CFLAGS+= -savefs -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
 	else
-		CFLAGS+= -g -ggdb -O0 -Wno-suggest-attribute=format
+		CFLAGS+= -savefs -ggdb -O0 -Wno-suggest-attribute=format
 	endif
 	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
 			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
@@ -146,6 +142,9 @@ OBJ:=\
 GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))
 
 ifeq ($(TARGET),Unix)
+	# _XOPEN_SOURCE: M_PI et al
+	# _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
+	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
 	CPPFLAGS+= -Iunix
 	LDLIBS+= -lm
 	ifdef GLES
@@ -166,24 +165,26 @@ ifeq ($(TARGET),Unix)
 	endif
 
 else ifeq ($(TARGET),Win64)
+	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
+	CPPFLAGS+= -Iwin64
 	ifeq ($(OS),Cygwin)
+		CPPFLAGS+= -DSOKOL_GLCORE
 		CFLAGS+= -mwin32
 		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
-	# FIXME
 	else
+		# FIXME
 		CC:= x86_64-w64-mingw32-gcc-posix
+		CPPFLAGS+= -DSOKOL_D3D11
 	endif
-	CPPFLAGS+= -Iwin64 -DSOKOL_D3D11
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -Wl,-Bstatic -lpthread
 	OBJ+=\
 		win64/stubs.o\
 
 else ifeq ($(TARGET),MacOS)
-	# FIXME
-	# -target arm64-apple-macos15.1
-	#CC:= x86_64-apple-darwin24-cc
-	CPPFLAGS+= -Imacos -DSOKOL_METAL -D_DARWIN_C_SOURCE
+	# FIXME: -target arm64-apple-macos15.1
+	CPPFLAGS+= -pthread -D_DARWIN_C_SOURCE
+	CPPFLAGS+= -Imacos -DSOKOL_METAL
 	CFLAGS+= -ObjC
 	LDFLAGS+=\
 		-ObjC\
