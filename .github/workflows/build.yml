@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths: ['**.c','**.h']
+  workflow_dispatch:
 jobs:
   linux:
     name: linux
@@ -30,5 +31,5 @@ jobs:
     - uses: actions/checkout@v4
     - name: build
       run: make -j 3
-    - mame: test
+    - name: test
       run: ./strangepg -D load test/frag10.gfa
