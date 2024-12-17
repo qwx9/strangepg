@@ -44,11 +44,11 @@ jobs:
         name: strangepg-${{ matrix.os }}
         path: strangepg
         overwrite: true
-  mingw64:
-    name: mingw64
+  win64:
+    name: win64
     strategy:
       matrix:
-        #os: [windows-latest, windows-2019]
+        #os: [windows-2022, windows-2019]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
@@ -63,6 +63,6 @@ jobs:
     - name: upload
       uses: actions/upload-artifact@v4
       with:
-        name: strangepg-mingw64
+        name: strangepg-${{ matrix.os }}
         path: strangepg.exe
         overwrite: true
