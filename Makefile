@@ -175,13 +175,14 @@ ifeq ($(TARGET),Unix)
 else ifeq ($(TARGET),Win64)
 	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
 	CPPFLAGS+= -Iwin64
+	CFLAGS+= -mwin32 -mwindows
 	ifeq ($(OS),Cygwin)
 		CPPFLAGS+= -DSOKOL_GLCORE
-		CFLAGS+= -mwin32
 		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
 	else
 		# FIXME
 		CC?= x86_64-w64-mingw32-gcc-posix
+		CFLAGS+= -mthreads
 		CPPFLAGS+= -DSOKOL_D3D11
 	endif
 	LDFLAGS+= -static
