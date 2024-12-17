@@ -60,6 +60,7 @@ jobs:
     - name: build
       env:
         CFLAGS: -mtune=native -O3 -pipe
+        CC: gcc
       run: make TARGET=Win64 -j 4
     - name: test
       run: ./strangepg -D load test/frag10.gfa
