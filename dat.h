@@ -77,8 +77,8 @@ struct Clk{
 	char lab[32];
 	vlong t;
 	vlong t0;
-	vlong Δt;
-	int nsamp;
+	double s;
+	vlong n;
 };
 
 extern int debug;
