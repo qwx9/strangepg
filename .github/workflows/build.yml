@@ -23,15 +23,14 @@ jobs:
     - name: upload
       uses: actions/upload-artifact@v4
       with:
-        name: strangepg-ubuntu-24.04
+        name: strangepg-${{ matrix.os }}
         path: strangepg
         overwrite: true
   mac:
     name: mac
     strategy:
       matrix:
-        #os: [macos-latest, macos-13, macos-14]
-        os: [macos-15]
+        os: [macos-15, macos-15-large, macos-14, macos-14-large]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -42,7 +41,7 @@ jobs:
     - name: upload
       uses: actions/upload-artifact@v4
       with:
-        name: strangepg-macos-15
+        name: strangepg-${{ matrix.os }}
         path: strangepg
         overwrite: true
   mingw64:
