@@ -65,18 +65,24 @@ CFLAGS?= -O3 -pipe -march=native
 CFLAGS+= -std=c99
 CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
 ifdef DEBUG
-	export LLVM_PROFILE_FILE :=./llvm_%p.prof
+	CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
+	CFLAGS+= -fasynchronous-unwind-tables
+	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
+	export LLVM_PROFILE_FILE:= ./llvm_%p.prof
 	ifeq ($(CC), clang)
-		CFLAGS+= -savefs -glldb -O0 -fprofile-instr-generate -fcoverage-mapping
+		CFLAGS+= -glldb -O1 -fprofile-instr-generate -fcoverage-mapping
 	else
-		CFLAGS+= -savefs -ggdb -O0 -Wno-suggest-attribute=format
+		CFLAGS+= -ggdb -O1 -Wno-suggest-attribute=format
 	endif
 	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
 			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
 			 -Wswitch-default -Wvariadic-macros
 else
-	CFLAGS+= 
+	CFLAGS+= -g -flto
+	LDFLAGS+= -flto
 	# c2x for omitting parameter names in a function definition
 	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
 	ifeq ($(CC), clang)
@@ -173,7 +179,7 @@ else ifeq ($(TARGET),Win64)
 		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
 	else
 		# FIXME
-		CC:= x86_64-w64-mingw32-gcc-posix
+		CC?= x86_64-w64-mingw32-gcc-posix
 		CPPFLAGS+= -DSOKOL_D3D11
 	endif
 	LDFLAGS+= -static
