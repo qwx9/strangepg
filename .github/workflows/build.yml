@@ -49,20 +49,21 @@ jobs:
     name: mingw64
     strategy:
       matrix:
-        #os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
-        os: [ubuntu-24.04]
+        #os: [windows-latest, windows-2019]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
     - uses: actions/checkout@v4
-    - name: deps
-      uses: egor-tensin/setup-mingw@v2.2.0
-      with:
-        version: 12.2.0
     - name: build
-      run: make TARGET=Win64 -j 4
+      run: make TARGET=Win64 CC=gcc -j 4
+    - name: test
+      run: strangepg.exe -D load test\frag10.gfa
     - name: upload
       uses: actions/upload-artifact@v4
       with:
         name: strangepg-mingw64
-        path: strangepg
+        path: strangepg.exe
         overwrite: true
