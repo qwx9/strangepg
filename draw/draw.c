@@ -189,12 +189,12 @@ drawui(void)
 int
 redraw(int go)
 {
-	double t;
+	static Clk clk = {.lab = "redraw"};
 
-	t = μsec();
+	CLK0(clk);
 	go = drawworld(go);
 	drawui();
-	DPRINT(Debugperf, "redraw: %.2f ms", (μsec() - t) / 1000);
+	CLK1(clk);
 	return go;
 }
 

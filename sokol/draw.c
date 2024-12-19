@@ -151,9 +151,9 @@ static void
 renderdirect(void)
 {
 	int n;
-	double t;
+	static Clk clk = {.lab = "renderdirect"};
 
-	t = debug & Debugperf ? μsec() : 0;
+	CLK0(clk);
 	drawui(snk_new_frame());
 	sg_begin_pass(&(sg_pass){
 		.action = render.clearscreen,
@@ -182,17 +182,16 @@ renderdirect(void)
 	}
 	snk_render(view.w, view.h);
 	sg_end_pass();
-	DPRINT(Debugperf, "renderdirect: %.2f ms", (μsec() - t) / 1000);
+	CLK1(clk);
 }
 
 static void
 renderoffscreen(void)
 {
 	int n;
+	static Clk clk = {.lab = "renderoffscreen"};
 
-	double t;
-
-	t = debug & Debugperf ? μsec() : 0;
+	CLK0(clk);
 	drawui(snk_new_frame());
 	sg_begin_pass(&(sg_pass){
 		.action = render.clearscreen,
@@ -229,7 +228,7 @@ renderoffscreen(void)
 	sg_draw(0, 4, 1);
 	snk_render(view.w, view.h);
 	sg_end_pass();
-	DPRINT(Debugperf, "renderoffscreen: %.2f ms", (μsec() - t) / 1000);
+	CLK1(clk);
 }
 
 static void
