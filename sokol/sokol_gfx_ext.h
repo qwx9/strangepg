@@ -285,7 +285,7 @@ static void _sgx_mtl_query_image_pixels(_sg_image_t* img, void* pixels) {
 }
 
 static void _sgx_mtl_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
-    id<CAMetalDrawable> mtl_drawable = (__bridge id<CAMetalDrawable>)_sg.mtl.drawable_cb();
+    id<CAMetalDrawable> mtl_drawable = (__bridge id<CAMetalDrawable>)sapp_metal_get_current_drawable();
     _sgx_mtl_encode_texture_pixels(x, y, w, h, origin_top_left, mtl_drawable.texture, pixels);
 }
 
