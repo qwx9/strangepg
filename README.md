@@ -40,6 +40,8 @@ Thanks!_
   + [Software requirements](#software-requirements)
   + [Bioconda](#bioconda)
   + [Linux](#linux)
+  + [MacOS](#macos)
+  + [Windows (MinGW64)](#windows-mingw64)
   + [Windows (Cygwin)](#windows-cygwin)
   + [Windows (WSL2)](#windows-wsl2)
   + [OpenBSD](#openbsd)
@@ -100,7 +102,6 @@ Near finished:
 Near future:
 - Path handling: highlighting, coloring
 - Better UI; macros as user-defined buttons
-- macOS support
 - GBZ support
 - Newick format and phylogenetic tree layouts
 - External memory implementation: either improve or replace with S3-fifo
@@ -156,39 +157,41 @@ strangepg -f some.lay some.gfa
 
 ## Installation
 
-Currently only Linux, OpenBSD, Windows (through Cygwin) and Plan9front
-are supported (x86, amd64).
-MinGW is not suppored due to missing compiler features (extended identifiers).
+Currently Linux, macOS, Windows, OpenBSD and Plan9front
+are supported (x86, amd64, arm64).
 Other BSDs might work as well, but it's untested.
-A macOS (Metal) port will arrive as soon as someone kindly sacrifices their laptop
-for a while.
-A native Windows port (MSVC + D3D11) is also planned.
 
 Installation can be done from source or (for Linux only) via [bioconda](https://bioconda.github.io/).
 
+Binaries built on github will also be provided in releases.
+
 #### Hardware requirements
 
-A graphics card with OpenGL 4.3 support is required.
-The standard was introduced around 2011.
-Intel integrated HD Graphics cards from 2013 (Ivy Bridge),
-and nVIDIA and AMD/ATI cards from 2010 on should work.
+strangepg requires a graphics card with certain capabilities depending
+on the backend which the system it will run on uses:
 
-This won't "just work" on arm64 (aarch64), although a port wouldn't be hard.
-I don't have the hardware at hand, 
-but boards such as the Raspberry Pi 4 and up are in theory compatible.
+- Linux: OpenGL 4.3+ (x86/amd64) or OpenGL ES 3.0+ (arm64)
+- Windows: DirectX 11+ support
+- macOS: Metal support
+
+Graphics cards from around 2013 on should all be compatible.
+Intel machines with Ivy Bridge or later HD Graphics work.
+
+For arm64/aarch64, the Raspberry Pi 4 and later should work,
+but are untested.
+It's confirmed to work on the Nintendo Switch (on Linux).
 
 #### Software requirements
 
-strangepg requires an OpenGL 4.3+ implementation
-and X11 libraries.
-Those are usually already present on typical Unix-like systems.
-Wayland is currently not supported natively.
+- Linux/OpenBSD: OpenGL and X11 libraries, optionally EGL;
+there's no native Wayland support yet
+- Windows: Windows 7 or later, but might work on XP
+- macOS: macOS 11 or later, but might work on OSX 10.11
+- OpenBSD: gmake, everything else is included
+- 9front: npe
 
-Compilation has been tested with clang and gcc on Unix-like environments,
-and kencc on 9front.
-It is known to work with gcc 11.4.0+ and clang 14.0.0+,
-but the theoretical minimum versions are resp. 10.1 and 3.3
-because of extensive use of utf8 and extended identifiers.
+Windows binaries are cross-compiled on Linux.
+There is currently no plan for adding MSVC support.
 
 #### Bioconda
 
@@ -202,11 +205,15 @@ conda install strangepg
 
 #### Linux
 
+Depends on: mesa (GL), X11 (XCB, Xi, Xcursor and dependencies).
+
 Installing dependencies (command line for Ubuntu systems, adapt for your own):
 
 ```bash
 apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev
 ```
+
+For arm64, you might also need `libegl-dev` and/or `libgles-dev`.
 
 Building and installing strangepg:
 
@@ -234,18 +241,59 @@ To set the compiler, use the `CC` make variable:
 make CC=clang -j install
 ```
 
-It can also be forced to use EGL:
+Currently arm64 builds use EGL on top.
+It can forced to use OpenGL ES instead:
 
 ```bash
-make EGL=1 -j install
+make GLES=1 -j install
 ```
 
 Multiple make variables may be specified at the same time.
 
 Known to work on Ubuntu 22.04/24.04, Arch Linux and Void Linux.
 
+#### MacOS
+
+Native binaries using Metal can be built on both amd64 and arm64 machines.
+Install the Xcode Command Line Tools from the App Store,
+then start a Terminal and run:
+
+```bash
+git clone https://github.com/qwx9/strangepg
+cd strangepg
+make -j
+sudo make install
+```
+
+This will install strangepg in `/usr/local/bin` by default.
+Use the `PREFIX` make variable to override it:
+
+```bash
+make PREFIX=$HOME/bin install
+```
+
+#### Windows (MinGW64)
+
+Native Windows binaries using DirectX11 may be produced in a Linux environment
+by cross-compiling them with MinGW64.
+
+Install `gcc-mingw-w64` (or equivalent),
+make sure that `gcc-mingw-w64-x86-64-posix` is found,
+then build with:
+
+```bash
+make TARGET=Win64 CC=gcc-mingw-w64-x86-64-posix -j
+```
+
+Install the `strangepg.exe` binary somewhere on your Windows system.
+Since there is no Windows-specific GUI yet, you will have to run it
+via a terminal (Windows includes `cmd.exe` and Powershell)
+in the same way as for other systems.
+
+
 #### Windows (Cygwin)
 
+Windows binaries using OpenGL can be built directly on Windows via Cygwin.
 Tested only via MobaXterm (v24.2+, or any version with gcc 10.1+).
 To build and run the Cygwin port, install the following packages
 and their dependencies:
@@ -272,9 +320,13 @@ In other words, the .exe files built cannot be used outside of a Cygwin (or Moba
 
 #### Windows (WSL2)
 
+Use the same installation procedure as with MinGW to get a native binary
+using DirectX 11.
+Untested, but should work.
+
+If building the Linux version (X11+OpenGL), it may or may not work
+(in tests, the success rate on identical setups is so far circa 50%).
 The installation procedure is identical as with Linux above.
-Whether it works or crashes on OpenGL initialization seems hit-or-miss,
-for unknown reasons, possibly related to Wayland replacing X11 on WSL.
 Where it worked, WSL2 with Ubuntu 24.04 suffered very poor performance due to upstream bugs;
 for the time being, if it does in fact work, prefer Ubuntu 22.04.
 
@@ -324,7 +376,7 @@ Some test examples exist in the `test/` directory.
 For example:
 
 ```bash
-strangepg test/02.chrX:153000002-153400000.gfa
+strangepg test/02.gfa
 ```
 
 <p align="center"><img src=".pics/02.png"/></p>
@@ -696,11 +748,8 @@ y0[CL[i] != orange] = 2 - 4 * rand()
 ## Known bugs
 
 Major bugs:
-- currently broken on WSL, it bails during of GL initialization (Wayland? OpenGL ES? Windows OpenGL limitation? Don't know),
-see [issue #1](https://github.com/qwx9/strangepg/issues/1).
-Should work via X11 forwarding if remote and local GPUs meet the requirements.
-- strawk leaks some small amount of memory;
-awk wasn't meant to be used this way and plugging the leaks is not trivial
+- strawk leaks some small amount of memory and is much slower than it should be;
+awk wasn't meant to be used this way and a proper implementation will take a bit more effort
 
 Less major bugs:
 - Layouting currently doesn't place some of the nodes nicely;
