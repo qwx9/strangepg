@@ -1,8 +1,6 @@
 PROGRAM:= strangepg
 VERSION:= 0.8.15
-BINTARGET:= $(PROGRAM)
-ALLTARGETS:=\
-	$(BINTARGET)\
+DIRS:=
 
 ifeq ($(wildcard .git),.git)
 	VERSION:= $(shell git describe --tags)
@@ -16,9 +14,6 @@ ifeq ($(wildcard .git),.git)
 	endif
 endif
 
-PREFIX?= $(HOME)/.local
-BINDIR:= $(PREFIX)/bin
-MAKE?= make
 ARCH?= $(shell uname -m)
 ifeq ($(OS),Windows_NT)
 	OS:= $(shell uname 2>/dev/null || echo Win64)
@@ -100,6 +95,12 @@ endif
 LDFLAGS?=
 LDLIBS?=
 
+GLOBJ:=\
+	sokol/draw.o\
+	sokol/impl_glsl.o\
+	sokol/shaders.o\
+	sokol/ui.o\
+
 OBJ:=\
 	sokol/impl_nuklear.o\
 	sokol/impl_sokol_gfx.o\
@@ -130,10 +131,6 @@ OBJ:=\
 	layout/layout.o\
 	layout/linear.o\
 	layout/pfr.o\
-	sokol/draw.o\
-	sokol/impl_glsl.o\
-	sokol/shaders.o\
-	sokol/ui.o\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\
@@ -146,10 +143,12 @@ OBJ:=\
 	strawk/run.o\
 	strawk/lex.o\
 	strawk/mt19937-64.o\
+	$(GLOBJ) \
 
 GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))
 
 ifeq ($(TARGET),Unix)
+	PREFIX?= $(HOME)/.local
 	# _XOPEN_SOURCE: M_PI et al
 	# _POSIX_C_SOURCE >= 200809L: getline (in _DEFAULT_SOURCE)
 	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
@@ -173,6 +172,8 @@ ifeq ($(TARGET),Unix)
 	endif
 
 else ifeq ($(TARGET),Win64)
+	PROGRAM:= $(PROGRAM).exe
+	PREFIX?= /usr/local
 	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
 	CPPFLAGS+= -Iwin64
 	CFLAGS+= -mwin32 -mwindows
@@ -191,6 +192,7 @@ else ifeq ($(TARGET),Win64)
 		win64/stubs.o\
 
 else ifeq ($(TARGET),MacOS)
+	PREFIX?= /usr/local
 	# FIXME: -target arm64-apple-macos15.1
 	CPPFLAGS+= -pthread -D_DARWIN_C_SOURCE
 	CPPFLAGS+= -Imacos -DSOKOL_METAL
@@ -208,15 +210,24 @@ else
 	$(error unknown target)
 endif
 
+BINDIR:= $(PREFIX)/bin
+BINTARGET:= $(PROGRAM)
+ALLTARGETS:=\
+	$(BINTARGET)\
+
 DEPS:=$(patsubst %.o,%.d,$(OBJ))
-CLEANFILES:= $(OBJ) $(DEPS)
+CLEANFILES:= $(OBJ) $(DEPS) $(BINTARGET)
 
-all:	$(GLSL) $(ALLTARGETS) dirall
+all:	$(ALLTARGETS) dirall
 
-%.h: %.glsl
+# sucks, but we want to force creating or updating these headers before
+# the source using them is built and avoid any compilation failure or
+# accidental usage of old headers, without having to rebuild anything
+# else on update
+$(GLOBJ): $(GLSL)
+
+glsl/%.h: glsl/%.glsl
 	sokol-shdc -f sokol_impl -i $^ -l glsl430:hlsl5:metal_macos:glsl300es -o $@
-
-$(OBJ): $(GLSL)
 
 $(BINTARGET):	$(OBJ)
 	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
