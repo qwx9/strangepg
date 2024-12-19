@@ -17,6 +17,8 @@ jobs:
     - name: deps
       run: sudo apt-get install -y libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev
     - name: build
+      env:
+        CFLAGS: -mtune=native -O3 -pipe
       run: make -j 4
     - name: test
       run: ./strangepg -D load test/frag10.gfa
@@ -70,3 +72,21 @@ jobs:
         name: strangepg-${{ matrix.os }}
         path: strangepg.exe
         overwrite: true
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: retrieve
+      uses: actions/download-artifact@v4
+      with:
+        path: release
+        pattern: strangepg-*
+        merge-multiple: true
+    - name: release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release/*
