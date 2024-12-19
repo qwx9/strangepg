@@ -189,7 +189,7 @@ else ifeq ($(TARGET),Win64)
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -Wl,-Bstatic -lpthread
 	OBJ+=\
-		win64/stubs.o\
+		win64/sys.o\
 
 else ifeq ($(TARGET),MacOS)
 	PREFIX?= /usr/local
