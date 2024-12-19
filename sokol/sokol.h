@@ -14,6 +14,7 @@ struct Render{
 	int caching;	/* rendering into picking buffer */
 	int moving;		/* inhibit picking while moving things */
 	int stalepick;	/* picking cache stale */
+	int pickflip;	/* non-gl: flip y for mouse picking (kludge) */
 	sg_pass_action clearscreen;
 	sg_pass_action nothing;
 	sg_attachments offscrfb;

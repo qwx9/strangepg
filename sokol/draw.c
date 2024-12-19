@@ -343,7 +343,7 @@ init(void)
 	});
 	assert(sg_isvalid());
 	if(debug & Debugdraw)
-		sg_enable_debug_log();
+		sgx_enable_debug_log();
 	initgl();
 	initnk();
 	resetui();

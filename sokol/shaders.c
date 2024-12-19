@@ -27,9 +27,11 @@ mousepick(int x, int y)
 	if(x < 0 || x >= view.w || y < 0 || y >= view.h)
 		return -1;
 	if(render.stalepick && !render.moving){
-		sg_query_image_pixels(pickfb, render.pickfb);
+		sgx_query_image_pixels(pickfb, render.pickfb);
 		render.stalepick = 0;
 	}
+	if(render.pickflip)
+		y = view.h - y;
 	if((i = render.pickfb[(view.h - y - 1) * view.w + x]) == 0)
 		return -1;
 	return i;
@@ -440,6 +442,8 @@ setuplines(void)
 void
 initgl(void)
 {
+	sg_backend b;
+
 	setupnodes();
 	setupedges();
 	setupscreen();
@@ -447,5 +451,7 @@ initgl(void)
 	setuppasses();
 	setcolor(render.edgefs.color, theme[Cedge]);
 	initfb(sapp_width(), sapp_height());
+	b = sg_query_backend();
+	render.pickflip = b != SG_BACKEND_GLCORE && b != SG_BACKEND_GLCORE;
 	onscreen = 1;
 }

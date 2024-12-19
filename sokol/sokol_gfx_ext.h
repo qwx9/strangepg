@@ -14,10 +14,10 @@
 #error "Please include sokol_gfx.h before sokol_gfx_ext.h"
 #endif
 
-SOKOL_GFX_API_DECL uint32_t sg_query_image_pixel(int x, int y, sg_image img_id);
-SOKOL_GFX_API_DECL void sg_query_image_pixels(sg_image img_id, void* pixels);
-SOKOL_GFX_API_DECL void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size);
-SOKOL_GFX_API_DECL void sg_enable_debug_log(void);
+SOKOL_GFX_API_DECL uint32_t sgx_query_image_pixel(int x, int y, sg_image img_id);
+SOKOL_GFX_API_DECL void sgx_query_image_pixels(sg_image img_id, void* pixels);
+SOKOL_GFX_API_DECL void sgx_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size);
+SOKOL_GFX_API_DECL void sgx_enable_debug_log(void);
 
 #endif // SOKOL_GFX_EXT_INCLUDED
 
@@ -31,7 +31,7 @@ SOKOL_GFX_API_DECL void sg_enable_debug_log(void);
 
 #if defined(_SOKOL_ANY_GL)
 
-static void _sg_gl_query_image_pixels(_sg_image_t* img, void* pixels) {
+static void _sgx_gl_query_image_pixels(_sg_image_t* img, void* pixels) {
     SOKOL_ASSERT(img->gl.target == GL_TEXTURE_2D);
     SOKOL_ASSERT(0 != img->gl.tex[img->cmn.active_slot]);
 #if defined(SOKOL_GLCORE)
@@ -58,7 +58,7 @@ static void _sg_gl_query_image_pixels(_sg_image_t* img, void* pixels) {
 #endif
 }
 
-static void _sg_gl_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
+static void _sgx_gl_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
     SOKOL_ASSERT(pixels);
     GLuint gl_fb;
     GLint dims[4];
@@ -78,7 +78,7 @@ static void _sg_gl_query_pixels(int x, int y, int w, int h, bool origin_top_left
     _SG_GL_CHECK_ERROR();
 }
 
-static uint32_t _sg_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
+static uint32_t _sgx_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
 	union { uint8_t b[4]; uint32_t i; } u;
     GLuint oldFbo = 0;
     static GLuint newFbo = 0;
@@ -98,46 +98,240 @@ static uint32_t _sg_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
 	return u.i;
 }
 
-static void _sg_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
+static void _sgx_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
 	fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s\n",
 		severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
 }
 
-#endif	// _SOKOL_ANY_GL
+#elif defined(SOKOL_D3D11)
 
-void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size) {
+static inline void _sgx_d3d11_Texture2D_GetDesc(ID3D11Texture2D* self, D3D11_TEXTURE2D_DESC* pDesc) {
+    self->lpVtbl->GetDesc(self, pDesc);
+}
+
+static inline void _sgx_d3d11_SamplerState_GetDesc(ID3D11SamplerState* self, D3D11_SAMPLER_DESC* pDesc) {
+    self->lpVtbl->GetDesc(self, pDesc);
+}
+
+static inline void _sgx_d3d11_CopySubresourceRegion(ID3D11DeviceContext* self, ID3D11Resource *pDstResource, UINT DstSubresource, UINT DstX, UINT DstY, UINT DstZ, ID3D11Resource *pSrcResource, UINT SrcSubresource, const D3D11_BOX *pSrcBox) {
+    self->lpVtbl->CopySubresourceRegion(self, pDstResource, DstSubresource, DstX, DstY, DstZ, pSrcResource, SrcSubresource, pSrcBox);
+}
+
+static inline void _sgx_d3d11_OMGetRenderTargets(ID3D11DeviceContext* self, UINT NumViews, ID3D11RenderTargetView **ppRenderTargetViews, ID3D11DepthStencilView **ppDepthStencilView) {
+    self->lpVtbl->OMGetRenderTargets(self, NumViews, ppRenderTargetViews, ppDepthStencilView);
+}
+
+static inline void _sgx_d3d11_RenderTargetView_GetResource(ID3D11RenderTargetView* self, ID3D11Resource** ppResource) {
+    self->lpVtbl->GetResource(self, ppResource);
+}
+
+static void _sgx_d3d11_query_image_pixels(_sg_image_t* img, void* pixels) {
+    SOKOL_ASSERT(_sg.d3d11.ctx);
+    SOKOL_ASSERT(img->d3d11.tex2d);
+    HRESULT hr;
+    _SOKOL_UNUSED(hr);
+
+    // create staging texture
+    ID3D11Texture2D* staging_tex = NULL;
+    D3D11_TEXTURE2D_DESC staging_desc = {
+        .Width = (UINT)img->cmn.width,
+        .Height = (UINT)img->cmn.height,
+        .MipLevels = 1,
+        .ArraySize = 1,
+        .Format = img->d3d11.format,
+        .SampleDesc = {
+            .Count = 1,
+            .Quality = 0,
+        },
+        .Usage = D3D11_USAGE_STAGING,
+        .BindFlags = 0,
+        .CPUAccessFlags = D3D11_CPU_ACCESS_READ,
+        .MiscFlags = 0
+    };
+    hr = _sg_d3d11_CreateTexture2D(_sg.d3d11.dev, &staging_desc, NULL, &staging_tex);
+    SOKOL_ASSERT(SUCCEEDED(hr));
+
+    // copy pixels to staging texture
+    _sgx_d3d11_CopySubresourceRegion(_sg.d3d11.ctx,
+        (ID3D11Resource*)staging_tex,
+        0, 0, 0, 0,
+        (ID3D11Resource*)img->d3d11.tex2d,
+        0, NULL);
+
+    // map the staging texture's data to CPU-accessible memory
+    D3D11_MAPPED_SUBRESOURCE msr = {.pData = NULL};
+    hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0, D3D11_MAP_READ, 0, &msr);
+    SOKOL_ASSERT(SUCCEEDED(hr));
+
+    // copy the data into the desired buffer, converting pixels to the desired format at the same time
+    memcpy(pixels, msr.pData, img->cmn.width * img->cmn.height * 4);
+
+    // unmap the texture
+    _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0);
+
+    if(staging_tex) _sg_d3d11_Release(staging_tex);
+}
+
+#ifdef nope
+static void _sgx_d3d11_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
+    // get current render target
+    ID3D11RenderTargetView* render_target_view = NULL;
+    _sgx_d3d11_OMGetRenderTargets(_sg.d3d11.ctx, 1, &render_target_view, NULL);
+
+    // fallback to window render target
+    if(!render_target_view)
+        render_target_view = (ID3D11RenderTargetView*)_sg.d3d11.rtv_cb();
+    SOKOL_ASSERT(render_target_view);
+
+    // get the back buffer texture
+    ID3D11Texture2D *back_buffer = NULL;
+    _sgx_d3d11_RenderTargetView_GetResource(render_target_view, (ID3D11Resource**)&back_buffer);
+    SOKOL_ASSERT(back_buffer);
+
+    // create a staging texture to copy the screen's data to
+    D3D11_TEXTURE2D_DESC staging_desc;
+    _sgx_d3d11_Texture2D_GetDesc(back_buffer, &staging_desc);
+    staging_desc.Width = w;
+    staging_desc.Height = h;
+    staging_desc.BindFlags = 0;
+    staging_desc.MiscFlags = 0;
+    staging_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    staging_desc.Usage = D3D11_USAGE_STAGING;
+    ID3D11Texture2D *staging_tex = NULL;
+    HRESULT hr = _sg_d3d11_CreateTexture2D(_sg.d3d11.dev, &staging_desc, NULL, &staging_tex);
+    SOKOL_ASSERT(SUCCEEDED(hr));
+    _SOKOL_UNUSED(hr);
+
+    // copy the desired portion of the back buffer to the staging texture
+    y = (origin_top_left ? y : (_sg.d3d11.cur_height - (y + h)));
+    D3D11_BOX src_box = {
+        .left = (UINT)x,
+        .top = (UINT)y,
+        .front = 0,
+        .right = (UINT)(x + w),
+        .bottom = (UINT)(y + w),
+        .back = 1,
+    };
+    _sgx_d3d11_CopySubresourceRegion(_sg.d3d11.ctx,
+        (ID3D11Resource*)staging_tex,
+        0, 0, 0, 0,
+        (ID3D11Resource*)back_buffer,
+        0, &src_box);
+
+    // map the staging texture's data to CPU-accessible memory
+    D3D11_MAPPED_SUBRESOURCE msr = {.pData = NULL};
+    hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0, D3D11_MAP_READ, 0, &msr);
+    SOKOL_ASSERT(SUCCEEDED(hr));
+
+    // copy the data into the desired buffer, converting pixels to the desired format at the same time
+    memcpy(pixels, msr.pData, w * h * 4);
+
+    // unmap the texture
+    _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0);
+
+    if(back_buffer) _sg_d3d11_Release(back_buffer);
+    if(staging_tex) _sg_d3d11_Release(staging_tex);
+}
+#endif
+
+#elif defined(SOKOL_METAL)
+
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+static void _sgx_mtl_commit_command_buffer() {
+    SOKOL_ASSERT(!_sg.cur_pass.in_pass);
+    if(_sg.mtl.cmd_buffer) {
+        #if defined(_SG_TARGET_MACOS)
+        [_sg.mtl.uniform_buffers[_sg.mtl.cur_frame_rotate_index] didModifyRange:NSMakeRange(0, _sg.mtl.cur_ub_offset)];
+        #endif
+        [_sg.mtl.cmd_buffer commit];
+        [_sg.mtl.cmd_buffer waitUntilCompleted];
+        _sg.mtl.cmd_buffer = [_sg.mtl.cmd_queue commandBufferWithUnretainedReferences];
+    }
+}
+
+static void _sgx_mtl_encode_texture_pixels(int x, int y, int w, int h, bool origin_top_left, id<MTLTexture> mtl_src_texture, void* pixels) {
+    SOKOL_ASSERT(!_sg.cur_pass.in_pass);
+    _sgx_mtl_commit_command_buffer();
+    MTLTextureDescriptor* mtl_dst_texture_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:mtl_src_texture.pixelFormat width:w height:h mipmapped:NO];
+    mtl_dst_texture_desc.storageMode = MTLStorageModeManaged;
+    mtl_dst_texture_desc.resourceOptions = MTLResourceStorageModeManaged;
+    mtl_dst_texture_desc.usage = MTLTextureUsageShaderRead + MTLTextureUsageShaderWrite;
+    id<MTLTexture> mtl_dst_texture = [mtl_src_texture.device newTextureWithDescriptor:mtl_dst_texture_desc];
+    id<MTLCommandBuffer> cmd_buffer = [_sg.mtl.cmd_queue commandBuffer];
+    id<MTLBlitCommandEncoder> blit_encoder = [cmd_buffer blitCommandEncoder];
+    [blit_encoder copyFromTexture:mtl_src_texture
+        sourceSlice:0
+        sourceLevel:0
+        sourceOrigin:MTLOriginMake(x,(origin_top_left ? y : (mtl_src_texture.height - (y + h))),0)
+        sourceSize:MTLSizeMake(w,h,1)
+        toTexture:mtl_dst_texture
+        destinationSlice:0
+        destinationLevel:0
+        destinationOrigin:MTLOriginMake(0,0,0)
+    ];
+    [blit_encoder synchronizeTexture:mtl_dst_texture slice:0 level:0];
+    [blit_encoder endEncoding];
+    [cmd_buffer commit];
+    [cmd_buffer waitUntilCompleted];
+    MTLRegion mtl_region = MTLRegionMake2D(0, 0, w, h);
+    [mtl_dst_texture getBytes:pixels bytesPerRow:w * 4 fromRegion:mtl_region mipmapLevel:0];
+}
+
+static void _sgx_mtl_query_image_pixels(_sg_image_t* img, void* pixels) {
+    id<MTLTexture> mtl_src_texture = _sg.mtl.idpool.pool[img->mtl.tex[0]];
+    _sgx_mtl_encode_texture_pixels(0, 0, mtl_src_texture.width, mtl_src_texture.height, true, mtl_src_texture, pixels);
+}
+
+static void _sgx_mtl_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
+    id<CAMetalDrawable> mtl_drawable = (__bridge id<CAMetalDrawable>)_sg.mtl.drawable_cb();
+    _sgx_mtl_encode_texture_pixels(x, y, w, h, origin_top_left, mtl_drawable.texture, pixels);
+}
+
+#endif
+
+void sgx_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size) {
     SOKOL_ASSERT(pixels);
     SOKOL_ASSERT(size >= w*h);
     _SOKOL_UNUSED(size);
 #if defined(_SOKOL_ANY_GL)
-    _sg_gl_query_pixels(x, y, w, h, origin_top_left, pixels);
+    _sgx_gl_query_pixels(x, y, w, h, origin_top_left, pixels);
+#elif defined(SOKOL_D3D11)
+//    _sgx_d3d11_query_pixels(x, y, w, h, origin_top_left, pixels);
+#elif defined(SOKOL_METAL)
+    _sgx_mtl_query_pixels(x, y, w, h, origin_top_left, pixels);
 #endif
 }
 
-void sg_query_image_pixels(sg_image img_id, void* pixels) {
+void sgx_query_image_pixels(sg_image img_id, void* pixels) {
     SOKOL_ASSERT(img_id.id != SG_INVALID_ID);
     _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
-    _sg_gl_query_image_pixels(img, pixels);
+    _sgx_gl_query_image_pixels(img, pixels);
+#elif defined(SOKOL_D3D11)
+    _sgx_d3d11_query_image_pixels(img, pixels);
+#elif defined(SOKOL_METAL)
+    _sgx_mtl_query_image_pixels(img, pixels);
 #endif
 }
 
-uint32_t sg_query_image_pixel(int x, int y, sg_image img_id) {
+uint32_t sgx_query_image_pixel(int x, int y, sg_image img_id) {
     SOKOL_ASSERT(img_id.id != SG_INVALID_ID);
     _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
-    return _sg_gl_query_image_pixel(x, y, img);
+    return _sgx_gl_query_image_pixel(x, y, img);
 #else
-    return 0;
+	return 0;
 #endif
 }
 
-void sg_enable_debug_log(void) {
+void sgx_enable_debug_log(void) {
 #if defined(_SOKOL_ANY_GL)
 	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(_sg_gl_debug_callback, 0);
+	glDebugMessageCallback(_sgx_gl_debug_callback, 0);
 #endif
 }
 
