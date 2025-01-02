@@ -994,13 +994,13 @@ int has_utf8(char *s)	/* return 1 if s contains any utf-8 (2 bytes or more) char
 
 int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like conversions */
 {
-	char *fmt;
+	static char *fmt;
 	char *p, *t;
 	const char *os;
 	Cell *x;
 	int flag = 0, n;
 	int fmtwd; /* format width */
-	int fmtsz = recsize;
+	static int fmtsz;
 	char *buf = *pbuf;
 	Value v;
 	int bufsize = *pbufsize;
@@ -1009,7 +1009,10 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 
 	os = s;
 	p = buf;
-	fmt = (char *) MALLOC(fmtsz);
+	if(fmt == NULL){
+		fmtsz = recsize;
+		fmt = (char *) MALLOC(fmtsz);
+	}
 	while (*s) {
 		adjbuf(&buf, &bufsize, MAXNUMSIZE+1+p-buf, recsize, &p, "format1");
 		if (*s != '%') {
@@ -1291,7 +1294,6 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 		s++;
 	}
 	*p = '\0';
-	free(fmt);
 	for ( ; a; a = a->nnext) {		/* evaluate any remaining args */
 		x = execute(a);
 		tempfree(x);
@@ -1305,10 +1307,13 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 {
 	Cell *x;
 	TNode *y;
-	char *buf;
-	int bufsz=3*recsize;
+	static char *buf;
+	static int bufsz;
 
-	buf = (char *) MALLOC(bufsz);
+	if(buf == NULL){
+		bufsz = 3 * recsize;
+		buf = (char *) MALLOC(bufsz);
+	}
 	y = a[0]->nnext;
 	x = execute(a[0]);
 	if (format(&buf, &bufsz, getsval(x), y) == -1)
@@ -1324,11 +1329,14 @@ Cell *awkprintf(TNode **a, int n)		/* printf */
 {	/* a[0] is list of args, starting with format string */
 	Cell *x;
 	TNode *y;
-	char *buf;
+	static char *buf;
 	int len;
-	int bufsz=3*recsize;
+	static int bufsz;
 
-	buf = (char *) MALLOC(bufsz);
+	if(buf == NULL){
+		bufsz = 3 * recsize;
+		buf = (char *) MALLOC(bufsz);
+	}
 	y = a[0]->nnext;
 	x = execute(a[0]);
 	if ((len = format(&buf, &bufsz, getsval(x), y)) == -1)
@@ -1339,7 +1347,6 @@ Cell *awkprintf(TNode **a, int n)		/* printf */
 	if (ferror(awkstdout))
 		FATAL("write error on awkstdout");
 	//fflush(awkstdout);
-	free(buf);
 	return(True);
 }
 
@@ -1658,8 +1665,8 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 {
 	Cell *x, *y, *z;
 	int n1, n2;
-	char *s = NULL;
-	int ssz = 0;
+	static char *s;
+	static int ssz;
 
 	x = execute(a[0]);
 	n1 = strlen(getsval(x));
@@ -1677,8 +1684,8 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 	tempfree(y);
 
 	z = gettemp();
-	z->sval = s;
-	z->tval = STR;
+	z->sval = tempstrdup(s);
+	z->tval = STR|DONTFREE;
 
 	return(z);
 }
@@ -1993,7 +2000,7 @@ static char *nawk_convert(const char *s, int (*fun_c)(int),
 	const size_t sz = MB_CUR_MAX;
 
 	if (sz == 1) {
-		buf = tostring(s);
+		buf = tempstrdup(s);
 
 		for (pbuf = buf; *pbuf; pbuf++)
 			*pbuf = fun_c((uschar)*pbuf);
@@ -2001,7 +2008,9 @@ static char *nawk_convert(const char *s, int (*fun_c)(int),
 		return buf;
 	} else {
 		/* upper/lower character may be shorter/longer */
-		buf = tostringN(s, strlen(s) * sz + 1);
+		n = strlen(s) * sz + 1;
+		buf = tempalloc(n);
+		memcpy(buf, s, n-1);
 
 		(void) mbtowc(NULL, NULL, 0);	/* reset internal state */
 		/*
@@ -2175,7 +2184,6 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		tempfree(x);
 		x = gettemp();
 		setsval(x, buf);
-		free(buf);
 		return x;
 	case FBYTES:
 		fwrite(x->val.buf, sizeof x->val.buf, 1, awkstdout);
@@ -2192,7 +2200,6 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			tempfree(y);
 		}
 		errorflag = 0;
-		//freenodes();
 		runnerup = NULL;
 		fflush(awkstdout);
 		break;
@@ -2249,9 +2256,9 @@ Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 	char *repl;
 	Cell *x;
 
-	char *buf = NULL;
-	char *pb = NULL;
-	int bufsz = recsize;
+	static char *buf;
+	char *pb;
+	static int bufsz;
 
 	const char *r, *s;
 	const char *start;
@@ -2269,7 +2276,7 @@ Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 	}
 
 	x = execute(a[2]);	/* replacement string */
-	repl = tostring(getsval(x));
+	repl = tempstrdup(getsval(x));
 	tempfree(x);
 
 	switch (subop) {
@@ -2286,13 +2293,14 @@ Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 	}
 
 	start = getsval(x);
+	if (buf == NULL) {
+		bufsz = recsize;
+		buf = (char *) MALLOC(bufsz);
+	}
+	pb = buf;
+	tempstat = pfa->initstat;
+	pfa->initstat = 2;
 	while (pmatch(pfa, start)) {
-		if (buf == NULL) {
-			pb = buf = (char *) MALLOC(bufsz);
-			tempstat = pfa->initstat;
-			pfa->initstat = 2;
-		}
-
 		/* match types */
 		#define	MT_IGNORE  0  /* unselected or invalid */
 		#define MT_INSERT  1  /* selected, empty */
@@ -2359,8 +2367,6 @@ next_search:
 		#undef MT_REPLACE
 	}
 
-	xfree(repl);
-
 	if (buf != NULL) {
 		pfa->initstat = tempstat;
 
@@ -2370,7 +2376,6 @@ next_search:
 			;
 
 		setsval(x, buf);
-		free(buf);
 	}
 
 	tempfree(x);

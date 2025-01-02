@@ -583,23 +583,31 @@ char *tostringN(const char *s, size_t n)	/* make a copy of string s */
 Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 {
 	Cell *c;
-	char *p;
 	Value v;
 	char *sa = getsval(a);
 	char *sb = getsval(b);
 	size_t l = strlen(sa) + strlen(sb) + 1;
-	p = (char *) MALLOC(l);
-	snprintf(p, l, "%s%s", sa, sb);
+	static char *buf;
+	static size_t bufsz;
 
 	l++;	// add room for ' '
-	char *newbuf = (char *) MALLOC(l);
+	if(buf == NULL){
+		bufsz = 2 * recsize;
+		if(l > bufsz)
+			bufsz = l;
+		buf = MALLOC(bufsz);
+	}
+	if(!adjbuf(&buf, &bufsz, l, recsize, NULL, "catstr"))
+		FATAL("catstr: out of memory");
+	snprintf(buf, l, "%s%s ", sa, sb);
+
 	// See string() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
-	snprintf(newbuf, l, "%s ", p);
+	//snprintf(buf, l, "%s ", p);
 	v.i = 0;
-	c = setsymtab(newbuf, NULL, v, CON|STR|DONTFREE, symtab);
-	c->sval = p;
-	free(newbuf);
+	c = setsymtab(buf, NULL, v, CON|STR|DONTFREE, symtab);
+	buf[l-2] = '\0';
+	c->sval = STRDUP(buf);
 	return c;
 }
 
@@ -609,7 +617,7 @@ char *qstring(const char *is, int delim)	/* collect string up to next delim */
 	const uschar *s = (const uschar *) is;
 	uschar *buf, *bp;
 
-	buf = (uschar *) MALLOC(strlen(is)+3);
+	buf = (uschar *) defalloc(strlen(is)+3);
 	for (bp = buf; (c = *s) != delim; s++) {
 		if (c == '\n')
 			SYNTAX( "newline in string %.20s...", is );

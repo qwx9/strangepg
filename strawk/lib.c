@@ -312,7 +312,7 @@ void setclvar(char *s)	/* set var=value from s */
 		if(strcmp(q->sval, p) != 0){
 			if(freeable(q))
 				xfree(q->sval);
-			q->sval = p;
+			q->sval = STRDUP(p);
 			q->tval |= STR;
 			if(r = is_number(p, &v))
 				q->tval |= r;
@@ -321,10 +321,9 @@ void setclvar(char *s)	/* set var=value from s */
 	}else{
 		q = setsym(s, p, symtab);
 		if(q->sval == EMPTY){
-			q->sval = p;
+			q->sval = STRDUP(p);
 			q->tval |= STR;
-		}else
-			free(p);
+		}
 	}
 	DPRINTF("command line set %s to |%s|\n", s, q->sval);
 	*e = '=';
