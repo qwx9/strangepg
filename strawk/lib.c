@@ -68,55 +68,6 @@ extern jmp_buf evalenv;
 static Cell dollar0 = { OCELL, CFLD, NULL, EMPTY, {0}, REC|STR|DONTFREE, NULL, NULL };
 static Cell dollar1 = { OCELL, CFLD, NULL, EMPTY, {0}, FLD|STR|DONTFREE, NULL, NULL };
 
-static size_t nalloc, renalloc;
-
-/* FIXME: use strangepg's emalloc functions when linked? */
-void *dmalloc(size_t size, const char *fn)
-{
-	void *p;
-
-	nalloc += size;
-	p = malloc(size);
-	DPRINTF("ALLOC malloc %s %p %zd / %zd\n", fn, p, size, nalloc);
-	return p;
-}
-char *dstrdup(const char *s, const char *fn)
-{
-	char *p;
-	size_t size;
-	
-	size = strlen(s);
-	nalloc += size;
-	p = strdup(s);
-	DPRINTF("ALLOC strdup %s %p %zd / %zd [%s]\n", fn, (void*)p, size, nalloc, s);
-	return p;
-}
-void *dcalloc(size_t nmemb, size_t size, const char *fn)
-{
-	void *p;
-
-	nalloc += nmemb * size;
-	p = calloc(nmemb, size);
-	DPRINTF("ALLOC calloc %s %p %zd / %zd\n", fn, p, nmemb*size, nalloc);
-	return p;
-}
-void *drealloc(void *ptr, size_t size, const char *fn)
-{
-	void *p;
-
-	renalloc += size;
-	p = realloc(ptr, size);
-	DPRINTF("ALLOC realloc %s %p→%p %zd / %zd\n", fn, ptr, p, size, renalloc);
-	return p;
-}
-void dfree(void *ptr, const char *fn)
-{
-	if(ptr == NULL)
-		return;
-	DPRINTF("ALLOC free %s %p\n", fn, ptr);
-	free(ptr);
-}
-
 void recinit(unsigned int n)
 {
 	record = (char *) MALLOC(n);

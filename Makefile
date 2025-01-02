@@ -134,6 +134,7 @@ OBJ:=\
 	ui/ui.o\
 	util/print.o\
 	strpg.o\
+	strawk/alloc.o\
 	strawk/awkgram.tab.o\
 	strawk/b.o\
 	strawk/parse.o\

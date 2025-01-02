@@ -76,18 +76,18 @@ extern	void	*palloc(size_t);
 extern	char	*defstrdup(const char *);
 extern	void	*defrealloc(void *, size_t, size_t);
 extern	void	*defalloc(size_t);
-extern	void	*erealloc(void *, size_t, size_t, char *);
-extern	void	egrow(void **, int *, void **, int , int, char *);
-extern	char	*estrdup(char *, char *);
-extern	void	*emalloc(size_t, char *);
-extern	void	efree(void *, char *);
+extern	void	*drealloc(void *, size_t, size_t, const char *);
+extern	void	dgrow(void **, int *, void **, int , int, const char *);
+extern	char	*dstrdup(char *, const char *);
+extern	void	*dmalloc(size_t, const char *);
+extern	void	dfree(void *, const char *);
 
 /* FIXME */
-#define	MALLOC(a)	emalloc((a), __func__)
-#define	CALLOC(a, b)	emalloc((a)*(b), __func__)
-#define	REALLOC(a, b, c)	erealloc((a), (b), (c), __func__)
-#define	STRDUP(a)	estrdup((a), __func__)
-#define	FREE(a)	efree((a), __func__)
+#define	MALLOC(a)	dmalloc((a), __func__)
+#define	CALLOC(a, b)	dmalloc((a)*(b), __func__)
+#define	REALLOC(a, b, c)	drealloc((a), (b), (c), __func__)
+#define	STRDUP(a)	dstrdup((a), __func__)
+#define	FREE(a)	dfree((a), __func__)
 #define	xfree(a)	{ \
 	if((char*)(a) != EMPTY){ \
 		FREE((void *)(intptr_t)(a)); \
@@ -222,9 +222,3 @@ extern	Cell	*nullproc(TNode **, int);
 extern	Cell	*dosub(TNode **, int);
 
 extern  const char	*flags2str(int flags);
-
-extern	void	*dmalloc(size_t, const char *);
-extern	void	*dcalloc(size_t, size_t, const char *);
-extern	void	*drealloc(void *, size_t, const char *);
-extern	char	*dstrdup(const char *, const char *);
-extern	void	dfree(void *, const char *);

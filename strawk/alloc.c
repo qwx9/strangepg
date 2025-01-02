@@ -139,12 +139,12 @@ char *defstrdup(const char *s)
 	size_t n;
 
 	n = strlen(s);
-	return resize(s, n+1, n+1, compile_time == RUNNING);
+	return resize(s, n+1, n+1, compile_time == RUNNING || evalstr != NULL);
 }
 
 void *defrealloc(void *p, size_t old, size_t n)
 {
-	return resize(p, old, n, compile_time == RUNNING);
+	return resize(p, old, n, compile_time == RUNNING || evalstr != NULL);
 }
 
 void *defalloc(size_t n)
@@ -152,9 +152,9 @@ void *defalloc(size_t n)
 	return alloc(n, compile_time == RUNNING);
 }
 
-void egrow(void **buf, int *size, void **pos, int want, int blocksz, char *fn)
+void dgrow(void **buf, int *size, void **pos, int want, int blocksz, const char *fn)
 {
-	int sz, n;
+	size_t sz, n;
 	intptr_t off;
 	uschar *p;
 
@@ -167,50 +167,50 @@ void egrow(void **buf, int *size, void **pos, int want, int blocksz, char *fn)
 		want += blocksz - n;
 	p = *buf;
 	off = pos != NULL ? *(uschar**)pos - p : 0;
-	p = erealloc(p, off > 0 ? off : sz, want, fn);
-	DPRINTF("%p %d -> %d\n", p, sz, n);
+	p = drealloc(p, off > 0 ? off : sz, want, fn);
+	DPRINTF("%p %zu -> %zu\n", p, sz, n);
 	*buf = p;
 	if (pos)
 		*pos = p + off;
 }
 
-void *erealloc(void *s, size_t old, size_t new, char *fn)
+void *drealloc(void *s, size_t old, size_t new, const char *fn)
 {
 	void *p;
 
-	DPRINTF(awkstderr, "erealloc %p %d to %d in %s ", s, old, new, fn);
+	DPRINTF("drealloc %p %zu to %zu in %s ", s, old, new, fn);
 	if((p = realloc(s, new)) == NULL)
 		FATAL("realloc: out of memory");
 	if(new > old)
 		memset((uschar *)p + old, 0, new - old);
-	DPRINTF(awkstderr, "-> %p", p);
+	DPRINTF("-> %p", p);
 	return p;
 }
 
-void *emalloc(size_t n, char *fn)
+void *dmalloc(size_t n, const char *fn)
 {
 	void *p;
 
-	DPRINTF(awkstderr, "emalloc %d in %s ", n, fn);
+	DPRINTF("dmalloc %zu in %s ", n, fn);
 	if((p = calloc(1, n)) == NULL)
 		FATAL("calloc: out of memory");
-	DPRINTF(awkstderr, "-> %p", p);
+	DPRINTF("-> %p", p);
 	return p;
 }
 
-char *estrdup(char *s, char *fn)
+char *dstrdup(char *s, const char *fn)
 {
 	void *p;
 
-	DPRINTF(awkstderr, "estrdup %s in %s ", s, fn);
+	DPRINTF("dstrdup %s in %s ", s, fn);
 	if((p = strdup(s)) == NULL)
 		FATAL("strdup: out of memory");
-	DPRINTF(awkstderr, "-> %p", p);
+	DPRINTF("-> %p", p);
 	return p;
 }
 
-void efree(void *p, char *fn)
+void dfree(void *p, const char *fn)
 {
-	DPRINTF(awkstderr, "efree %p in %s\n", p, fn);
+	DPRINTF("dfree %p in %s\n", p, fn);
 	free(p);
 }

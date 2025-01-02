@@ -587,14 +587,14 @@ int regexpr(void)
 {
 	int c;
 	static char *buf = NULL;
-	static int bufsz = 500;
+	static int bufsz = 64;
 	char *bp;
 
 	if (buf == NULL)
 		buf = (char *) MALLOC(bufsz);
 	bp = buf;
 	for ( ; (c = input()) != '/' && c != 0; ) {
-		if (!adjbuf(&buf, &bufsz, bp-buf+3, 500, &bp, "regexpr"))
+		if (!adjbuf(&buf, &bufsz, bp-buf+3, 64, &bp, "regexpr"))
 			FATAL("out of space for reg expr %.10s...", buf);
 		if (c == '\n') {
 			*bp = '\0';

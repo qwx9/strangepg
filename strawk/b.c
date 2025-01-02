@@ -179,8 +179,8 @@ fa *makedfa(const char *s, bool anchor)	/* returns dfa for reg expr s */
 		resizesetvec(__func__);
 	}
 
-	if (compile_time != RUNNING)	/* a constant for sure */
-		return mkdfa(s, anchor);
+	//if (compile_time != RUNNING)	/* a constant for sure */
+	//	return mkdfa(s, anchor);
 	for (i = 0; i < nfatab; i++)	/* is it there already? */
 		if (fatab[i]->anchor == anchor
 		  && strcmp((const char *) fatab[i]->restr, s) == 0) {
@@ -188,6 +188,8 @@ fa *makedfa(const char *s, bool anchor)	/* returns dfa for reg expr s */
 			return fatab[i];
 		}
 	pfa = mkdfa(s, anchor);
+	if(compile_time != RUNNING)
+		pfa->cst = 1;
 	if (nfatab < NFA) {	/* room for another */
 		fatab[nfatab] = pfa;
 		fatab[nfatab]->use = now++;
@@ -196,8 +198,10 @@ fa *makedfa(const char *s, bool anchor)	/* returns dfa for reg expr s */
 	}
 	use = fatab[0]->use;	/* replace least-recently used */
 	nuse = 0;
+
+	/* FIXME: possible overflow? */
 	for (i = 1; i < nfatab; i++)
-		if (fatab[i]->use < use) {
+		if (!fatab[i]->cst && fatab[i]->use < use) {
 			use = fatab[i]->use;
 			nuse = i;
 		}
@@ -223,7 +227,7 @@ fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 
 	poscnt = 0;
 	penter(p1);	/* enter parent pointers and leaf indices */
-	f = (fa *) CALLOC(1, sizeof(fa) + poscnt * sizeof(rrow));
+	f = (fa *) MALLOC(sizeof(fa) + poscnt * sizeof(rrow));
 	f->accept = poscnt-1;	/* penter has computed number of positions in re */
 	cfoll(f, p1);	/* set up follow sets */
 	resize_state(f, 1);
@@ -233,10 +237,8 @@ fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 	f->initstat = makeinit(f, anchor);
 	f->anchor = anchor;
 	f->restr = (uschar *) tostring(s);
-	if (firstbasestr != basestr) {
-		if (basestr)
-			xfree(basestr);
-	}
+	if (firstbasestr != basestr)
+		basestr = NULL;
 	return f;
 }
 
@@ -1168,10 +1170,8 @@ replace_repeat(const uschar *reptok, int reptoklen, const uschar *atom,
 	j += suffix_length;
 	buf[j] = '\0';
 	/* free old basestr */
-	if (firstbasestr != basestr) {
-		if (basestr)
-			xfree(basestr);
-	}
+	if (firstbasestr != basestr)
+		basestr = NULL;
 	basestr = buf;
 	prestr  = buf + prefix_length;
 	if (special_case == REPEAT_ZERO) {

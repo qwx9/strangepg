@@ -278,6 +278,7 @@ typedef struct fa {
 	int	initstat;
 	int	curstat;
 	int	accept;
+	int cst;
 	struct	rrow re[1];	/* variable: actual size set by calling malloc */
 } fa;
 
