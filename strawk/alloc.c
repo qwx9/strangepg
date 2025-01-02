@@ -38,8 +38,9 @@ static inline void init(Pool *p)
 	clear(p);
 }
 
-static inline uschar *grow(Pool *p)
+static inline uschar *grow(Pool *p, size_t n)
 {
+	size_t m;
 	uschar *s;
 
 	if(p->slot < p->nslot){
@@ -47,12 +48,16 @@ static inline uschar *grow(Pool *p)
 		if(p->slot <= p->last)
 			memset(s, 0, p->sz);
 	}else{
-		p->nslot++;
-		if((p->pool = realloc(p->pool, p->nslot * sizeof *p->pool)) == NULL)
-			FATAL("realloc: out of memory");
-		if((s = calloc(1, p->sz)) == NULL)
-			FATAL("calloc: out of memory");
-		p->pool[p->slot++] = s;
+		for(;; p->sz*=2){
+			p->nslot++;
+			if((p->pool = realloc(p->pool, p->nslot * sizeof *p->pool)) == NULL)
+				FATAL("realloc: out of memory");
+			if((s = calloc(1, p->sz)) == NULL)
+				FATAL("calloc: out of memory");
+			p->pool[p->slot++] = s;
+			if(p->sz >= n)
+				break;
+		}
 	}
 	p->tail = s;
 	p->end = s + p->sz;
@@ -68,7 +73,7 @@ static inline uschar *alloc(size_t n, int istemp)
 	p = istemp ? &temp : &frozen;
 	s = p->tail;
 	if(s + n >= p->end)
-		s = grow(p);
+		s = grow(p, n);
 	assert(p->end - p->tail >= n);
 	p->tail += n;
 	return s;
