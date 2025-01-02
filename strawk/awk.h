@@ -289,11 +289,3 @@ typedef struct fa {
 #include "plan9.h"
 #endif
 #include "proto.h"
-
-#define	MALLOC(a)	dmalloc((a), __func__)
-#define	CALLOC(a, b)	dcalloc((a), (b), __func__)
-#define	REALLOC(a, b)	drealloc((a), (b), __func__)
-#define	STRDUP(a)	dstrdup((a), __func__)
-#define	FREE(a)	dfree((a), __func__)
-
-#define	xfree(a)	{ if((char*)(a) != EMPTY){ FREE((void *)(intptr_t)(a)); (a) = NULL; } }

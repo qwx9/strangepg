@@ -28,54 +28,14 @@ THIS SOFTWARE.
 #include "awk.h"
 #include AWKTAB
 
-enum{
-	POOLSZ = 512,
-};
-static TNode **pool, *tail;
-static size_t npool, poolen, pool0, tail0;
-
-void initnodepool(void)
-{
-	if(pool != NULL)
-		return;
-	pool = MALLOC(sizeof(*pool));
-	poolen = 1;
-	npool = 1;
-	pool[0] = CALLOC(POOLSZ, sizeof(**pool));
-	tail = pool[0];
-}
-
-void freezenodes(void)
-{
-	if(pool0 > 0)
-		return;
-	pool0 = npool;
-	tail0 = tail - pool[pool0-1];
-}
-
-void freenodes(void)
-{
-	npool = pool0;
-	tail = pool[pool0-1] + tail0;
-}
-
 TNode *nodealloc(size_t n)
 {
-	TNode *x;
+	TNode *u;
 
-	if(tail + n - pool[npool-1] > POOLSZ){
-		if(npool == poolen){
-			poolen++;
-			pool = REALLOC(pool, poolen*sizeof(*pool));
-			pool[npool] = CALLOC(POOLSZ, sizeof(*x));
-		}
-		tail = pool[npool++];
-	}
-	x = tail;
-	tail += n;
-	x->nnext = NULL;
-	x->lineno = lineno;
-	return(x);
+	u = defalloc(n * sizeof *u);
+	u->lineno = lineno;
+	u->nnext = NULL;
+	return u;
 }
 
 TNode *exptostat(TNode *a)

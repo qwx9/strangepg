@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "awk.h"
+
+enum{
+	POOLSZ = 8192,
+};
+typedef struct Pool Pool;
+struct Pool{
+	uschar **pool;
+	uschar *end;
+	uschar *tail;
+	size_t sz;
+	size_t slot;
+	size_t nslot;
+	size_t last;	/* before release */
+};
+static Pool frozen, temp;
+
+static inline void clear(Pool *p)
+{
+	p->sz = POOLSZ;
+	if(p->slot == 1)
+		memset(p->pool[0], 0, p->tail - p->pool[0]);
+	p->last = p->slot;
+	p->slot = 0;
+	p->tail = p->pool[p->slot++];
+	p->end = p->tail + p->sz;
+}
+
+static inline void init(Pool *p)
+{
+	if((p->pool = calloc(1, sizeof *p)) == NULL
+	|| (p->pool[0] = calloc(1, POOLSZ)) == NULL)
+		FATAL("calloc: out of memory");
+	p->nslot = 1;
+	clear(p);
+}
+
+static inline uschar *grow(Pool *p)
+{
+	uschar *s;
+
+	if(p->slot < p->nslot){
+		s = p->pool[p->slot++];
+		if(p->slot <= p->last)
+			memset(s, 0, p->sz);
+	}else{
+		p->nslot++;
+		if((p->pool = realloc(p->pool, p->nslot * sizeof *p->pool)) == NULL)
+			FATAL("realloc: out of memory");
+		if((s = calloc(1, p->sz)) == NULL)
+			FATAL("calloc: out of memory");
+		p->pool[p->slot++] = s;
+	}
+	p->tail = s;
+	p->end = s + p->sz;
+	p->sz *= 2;
+	return s;
+}
+
+static inline uschar *alloc(size_t n, int istemp)
+{
+	uschar *s;
+	Pool *p;
+
+	p = istemp ? &temp : &frozen;
+	s = p->tail;
+	if(s + n >= p->end)
+		s = grow(p);
+	p->tail += n;
+	return s;
+}
+
+/* FIXME: no checks, no cleanup! avoid calling this with non-temp */
+static inline void *resize(void *s, size_t old, size_t n, int istemp)
+{
+	void *p;
+
+	p = alloc(n, istemp);
+	if(n > 0 && s != NULL){
+		if(old > n)
+			old = n;
+		memmove(p, s, old);
+	}
+	return p;
+}
+
+void initpool(void)
+{
+	init(&frozen);
+	init(&temp);
+}
+
+void cleanpool(void)
+{
+	clear(&temp);
+}
+
+char *tempstrdup(const char *s)
+{
+	size_t n;
+
+	n = strlen(s);
+	return resize(s, n+1, n+1, 1);
+}
+
+void *temprealloc(void *p, size_t old, size_t n)
+{
+	return resize(p, old, n, 1);
+}
+
+void *tempalloc(size_t n)
+{
+	return alloc(n, 1);
+}
+
+char *pstrdup(const char *s)
+{
+	size_t n;
+
+	n = strlen(s);
+	return resize(s, n+1, n+1, 0);
+}
+
+void *prealloc(void *p, size_t old, size_t n)
+{
+	return resize(p, old, n, 0);
+}
+
+void *palloc(size_t n)
+{
+	return alloc(n, 0);
+}
+
+char *defstrdup(const char *s)
+{
+	size_t n;
+
+	n = strlen(s);
+	return resize(s, n+1, n+1, compile_time == RUNNING);
+}
+
+void *defrealloc(void *p, size_t old, size_t n)
+{
+	return resize(p, old, n, compile_time == RUNNING);
+}
+
+void *defalloc(size_t n)
+{
+	return alloc(n, compile_time == RUNNING);
+}
+
+void egrow(void **buf, int *size, void **pos, int want, int blocksz, char *fn)
+{
+	int sz, n;
+	intptr_t off;
+	uschar *p;
+
+	sz = *size;
+	if(sz >= want)
+		return;
+	n = blocksz > 0 ? want % blocksz : 0;
+	/* round up to next multiple of blocksz */
+	if(n > 0)
+		want += blocksz - n;
+	p = *buf;
+	off = pos != NULL ? *(uschar**)pos - p : 0;
+	p = erealloc(p, off > 0 ? off : sz, want, fn);
+	DPRINTF("%p %d -> %d\n", p, sz, n);
+	*buf = p;
+	if (pos)
+		*pos = p + off;
+}
+
+void *erealloc(void *s, size_t old, size_t new, char *fn)
+{
+	void *p;
+
+	DPRINTF(awkstderr, "erealloc %p %d to %d in %s ", s, old, new, fn);
+	if((p = realloc(s, new)) == NULL)
+		FATAL("realloc: out of memory");
+	if(new > old)
+		memset((uschar *)p + old, 0, new - old);
+	DPRINTF(awkstderr, "-> %p", p);
+	return p;
+}
+
+void *emalloc(size_t n, char *fn)
+{
+	void *p;
+
+	DPRINTF(awkstderr, "emalloc %d in %s ", n, fn);
+	if((p = calloc(1, n)) == NULL)
+		FATAL("calloc: out of memory");
+	DPRINTF(awkstderr, "-> %p", p);
+	return p;
+}
+
+char *estrdup(char *s, char *fn)
+{
+	void *p;
+
+	DPRINTF(awkstderr, "estrdup %s in %s ", s, fn);
+	if((p = strdup(s)) == NULL)
+		FATAL("strdup: out of memory");
+	DPRINTF(awkstderr, "-> %p", p);
+	return p;
+}
+
+void efree(void *p, char *fn)
+{
+	DPRINTF(awkstderr, "efree %p in %s\n", p, fn);
+	free(p);
+}

@@ -4,6 +4,7 @@ BIN=/$objtype/bin
 
 YFILES=awkgram.y
 OFILES=\
+	alloc.$O\
 	awkgram.plan9.$O\
 	b.$O\
 	lex.$O\

@@ -126,12 +126,15 @@ intalloc(size_t n, const char *f)
 static void
 resizesetvec(const char *f)
 {
+	size_t n;
+
+	n = maxsetvec;
 	if (maxsetvec == 0)
 		maxsetvec = MAXLIN;
 	else
 		maxsetvec *= 4;
-	setvec = (int *) REALLOC(setvec, maxsetvec * sizeof(*setvec));
-	tmpset = (int *) REALLOC(tmpset, maxsetvec * sizeof(*tmpset));
+	setvec = (int *) REALLOC(setvec, n * sizeof(*setvec), maxsetvec * sizeof(*setvec));
+	tmpset = (int *) REALLOC(tmpset, n * sizeof(*tmpset), maxsetvec * sizeof(*tmpset));
 }
 
 static void
@@ -147,13 +150,13 @@ resize_state(fa *f, int state)
 
 	new_count = state + 10; /* needs to be tuned */
 
-	p = (gtt *) REALLOC(f->gototab, new_count * sizeof(gtt));
+	p = (gtt *) REALLOC(f->gototab, state * sizeof(gtt), new_count * sizeof(gtt));
 	f->gototab = p;
 
-	p2 = (uschar *) REALLOC(f->out, new_count * sizeof(f->out[0]));
+	p2 = (uschar *) REALLOC(f->out, state * sizeof(f->out[0]), new_count * sizeof(f->out[0]));
 	f->out = p2;
 
-	p3 = (int **) REALLOC(f->posns, new_count * sizeof(f->posns[0]));
+	p3 = (int **) REALLOC(f->posns, state * sizeof(f->posns[0]), new_count * sizeof(f->posns[0]));
 	f->posns = p3;
 
 	for (i = f->state_count; i < new_count; ++i) {
@@ -429,8 +432,8 @@ int *cclenter(const char *argp)	/* add a character class */
 				}
 				while (c < c2) {
 					if (i >= bufsz) {
+						buf = (int *) REALLOC(buf, bufsz * sizeof(int), 2 * bufsz * sizeof(int));
 						bufsz *= 2;
-						buf = (int *) REALLOC(buf, bufsz * sizeof(int));
 						bp = buf + i;
 					}
 					*bp++ = ++c;
@@ -440,8 +443,8 @@ int *cclenter(const char *argp)	/* add a character class */
 			}
 		}
 		if (i >= bufsz) {
+			buf = (int *) REALLOC(buf, bufsz * sizeof(int), 2 * bufsz * sizeof(int));
 			bufsz *= 2;
-			buf = (int *) REALLOC(buf, bufsz * sizeof(int));
 			bp = buf + i;
 		}
 		*bp++ = c;
@@ -584,7 +587,7 @@ int member(int c, int *sarg)	/* is c in s? */
 static void resize_gototab(fa *f, int state)
 {
 	size_t new_size = f->gototab[state].allocated * 2;
-	gtte *p = (gtte *) REALLOC(f->gototab[state].entries, new_size * sizeof(gtte));
+	gtte *p = (gtte *) REALLOC(f->gototab[state].entries, f->gototab[state].allocated * sizeof(gtte), new_size * sizeof(gtte));
 
 	// need to initialize the new memory to zero
 	size_t orig_size = f->gototab[state].allocated;		// 2nd half of new mem is this size

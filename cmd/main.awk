@@ -157,8 +157,8 @@ function selinfostr(	id, name, l, n, m, s){
 		if(name in LN)
 			l += LN[name]
 		if(m < 28){
-			s = s (length(s) == 0 ? "" : ",") name
 			m = length(s)
+			s = s (m == 0 ? "" : ",") name
 		}else if(n == 0){
 			n++
 			s = s ",..."

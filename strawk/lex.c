@@ -399,10 +399,10 @@ extern int runetochar(char *str, int c);
 int string(void)
 {
 	int c, n;
-	char *bp;
+	char *s, *p, *bp;
 	Value v;
 	static char *buf = NULL;
-	static int bufsz = 500;
+	static int bufsz = 64;
 
 	if (buf == NULL)
 		buf = (char *) MALLOC(bufsz);
@@ -505,12 +505,14 @@ int string(void)
 			break;
 		}
 	}
-	*bp++ = ' '; *bp++ = '\0';
+	*bp++ = ' ';
+	*bp++ = '\0';
 	v.i = 0;
-	yylval.cp = setsymtab(buf, NULL, v, CON|STR|DONTFREE, symtab);
-	bp[-2] = 0;
-	yylval.cp->sval = tostring(buf);
-
+	s = defalloc(bp - buf);
+	p = defalloc(bp - buf - 1);
+	memcpy(s, buf, bp-buf - 1);
+	memcpy(p, buf, bp-buf - 2);
+	yylval.cp = setsymtab(s, p, v, CON|STR|DONTFREE, symtab);
 	RET(STRING);
 }
 
@@ -698,8 +700,8 @@ void
 addfile(char *fn)
 {
 	if (npfile >= maxpfile) {
+		pfile = (char **) REALLOC(pfile, maxpfile * sizeof(*pfile), (maxpfile+20) * sizeof(*pfile));
 		maxpfile += 20;
-		pfile = (char **) REALLOC(pfile, maxpfile * sizeof(*pfile));
 	}
 	pfile[npfile++] = fn;
 }

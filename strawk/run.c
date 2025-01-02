@@ -101,14 +101,16 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
  * return   0 for realloc failure, !=0 for success
  */
 {
-	if (minlen > *psiz) {
+	size_t old = *psiz;
+
+	if (minlen > old) {
 		char *tbuf;
 		int rminlen = quantum ? minlen % quantum : 0;
 		int boff = pbptr ? *pbptr - *pbuf : 0;
 		/* round up to next multiple of quantum */
 		if (rminlen)
 			minlen += quantum - rminlen;
-		tbuf = (char *) REALLOC(*pbuf, minlen);
+		tbuf = (char *) REALLOC(*pbuf, old, minlen);
 		*pbuf = tbuf;
 		*psiz = minlen;
 		if (pbptr)
@@ -175,6 +177,7 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			FATAL("illegal break, continue, next or nextfile from BEGIN");
 		tempfree(x);
 		fflush(awkstdout);
+		cleanpool();
 	}
 	if (a[1] || a[2]){
 		while (getrec(&record, &recsize, true) > 0) {
@@ -182,6 +185,7 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			if (isexit(x))
 				break;
 			tempfree(x);
+			cleanpool();
 		}
 	}
   ex:
@@ -257,7 +261,8 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 	frp++;	/* now ok to up frame */
 	if (frp >= awkframe + nframe) {
 		int dfp = frp - awkframe;	/* old index */
-		awkframe = (struct Frame *) REALLOC(awkframe, (nframe += 100) * sizeof(*awkframe));
+		awkframe = (struct Frame *) REALLOC(awkframe, nframe * sizeof(*awkframe), (nframe + 100) * sizeof(*awkframe));
+		nframe += 100;
 		frp = awkframe + dfp;
 	}
 	frp->fcncell = fcn;
@@ -2178,7 +2183,6 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			FATAL("write error on awkstdout");
 		break;
 	case FEVAL:
-		freezenodes();
 		lexprog = getsval(x);
 		DPRINTF("eval: \"%s\"\n", lexprog);
 		evalstr = lexprog;
@@ -2188,7 +2192,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			tempfree(y);
 		}
 		errorflag = 0;
-		freenodes();
+		//freenodes();
 		runnerup = NULL;
 		fflush(awkstdout);
 		break;

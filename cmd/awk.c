@@ -86,7 +86,7 @@ awk(void *)
 #endif
 	init_genrand64(srand_seed);
 	symtab = makesymtab(1);
-	initnodepool();
+	initpool();
 	recinit(recsize);
 	syminit();
 	compile_time = COMPILING;

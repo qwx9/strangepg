@@ -65,10 +65,36 @@ extern	void	addfile(char *);
 extern	int	pgetc(void);
 extern	char	*cursource(void);
 
-extern	void	freenodes(void);
-extern	void	freezenodes(void);
-extern	void	initnodepool(void);
-extern	TNode	*nodealloc(size_t);
+extern	void	cleanpool(void);
+extern	void	initpool(void);
+extern	char	*tempstrdup(const char *);
+extern	void	*temprealloc(void *, size_t, size_t);
+extern	void	*tempalloc(size_t);
+extern	char	*pstrdup(const char *);
+extern	void	*prealloc(void *, size_t, size_t);
+extern	void	*palloc(size_t);
+extern	char	*defstrdup(const char *);
+extern	void	*defrealloc(void *, size_t, size_t);
+extern	void	*defalloc(size_t);
+extern	void	*erealloc(void *, size_t, size_t, char *);
+extern	void	egrow(void **, int *, void **, int , int, char *);
+extern	char	*estrdup(char *, char *);
+extern	void	*emalloc(size_t, char *);
+extern	void	efree(void *, char *);
+
+/* FIXME */
+#define	MALLOC(a)	emalloc((a), __func__)
+#define	CALLOC(a, b)	emalloc((a)*(b), __func__)
+#define	REALLOC(a, b, c)	erealloc((a), (b), (c), __func__)
+#define	STRDUP(a)	estrdup((a), __func__)
+#define	FREE(a)	efree((a), __func__)
+#define	xfree(a)	{ \
+	if((char*)(a) != EMPTY){ \
+		FREE((void *)(intptr_t)(a)); \
+		(a) = NULL; \
+	} \
+}
+
 extern	TNode	*exptostat(TNode *);
 extern	TNode	*node1(int, TNode *);
 extern	TNode	*node2(int, TNode *, TNode *);

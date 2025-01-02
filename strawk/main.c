@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 		argc--;
 		argv++;
 	}
-	initnodepool();
+	initpool();
 	recinit(recsize);
 	syminit();
 	compile_time = COMPILING;

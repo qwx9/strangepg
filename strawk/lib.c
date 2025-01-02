@@ -175,13 +175,14 @@ void initgetrec(void)
 void savefs(void)
 {
 	size_t len;
+
 	if ((len = strlen(getsval(fsloc))) < len_inputFS) {
 		strcpy(inputFS, *FS);	/* for subsequent field splitting */
 		return;
 	}
 
+	inputFS = (char *) REALLOC(inputFS, len_inputFS, len + 1);
 	len_inputFS = len + 1;
-	inputFS = (char *) REALLOC(inputFS, len_inputFS);
 	memcpy(inputFS, *FS, len_inputFS);
 }
 
@@ -396,7 +397,7 @@ void fldbld(void)	/* create fields from current record */
 	r = fldtab[0]->sval;
 	n = strlen(r);
 	if (n > fieldssize) {
-		fields = (char *) REALLOC(fields,n+2); /* possibly 2 final \0s */
+		fields = (char *) REALLOC(fields,fieldssize+2,n+2); /* possibly 2 final \0s */
 		fieldssize = n;
 	}
 	fr = fields;
@@ -536,13 +537,14 @@ Cell *fieldadr(int n)	/* get nth field */
 void growfldtab(int n)	/* make new fields up to at least $n */
 {
 	int nf = 2 * nfields;
-	size_t s;
+	size_t s, old;
 
 	if (n > nf)
 		nf = n;
+	old = (nfields+1) * (sizeof (struct Cell *));
 	s = (nf+1) * (sizeof (struct Cell *));  /* freebsd: how much do we need? */
 	if (s / sizeof(struct Cell *) - 1 == (size_t)nf) /* didn't overflow */
-		fldtab = (Cell **) REALLOC(fldtab, s);
+		fldtab = (Cell **) REALLOC(fldtab, old, s);
 	else					/* overflow sizeof int */
 		xfree(fldtab);	/* make it null */
 	makefields(nfields+1, nf);
@@ -559,7 +561,7 @@ int refldbld(const char *rec, const char *fs)	/* build fields from reg expr in F
 
 	n = strlen(rec);
 	if (n > fieldssize) {
-		fields = (char *) REALLOC(fields,n+1);
+		fields = (char *) REALLOC(fields,fieldssize+1,n+1);
 		fieldssize = n;
 	}
 	fr = fields;

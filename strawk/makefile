@@ -3,7 +3,7 @@ BINDIR:= $(PREFIX)/bin
 PROGRAM:= strawk
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:= $(BINTARGET)
-OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o
+OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o alloc.o
 DEPS:=$(patsubst %.o,%.d,$(OFILES))
 CLEANFILES:=\
 	$(BINTARGET)\
@@ -19,14 +19,22 @@ LDFLAGS?=
 LDLIBS:= -lm
 
 ifdef DEBUG
-	CFLAGS+= -O1 -g -Wall -pedantic -Wcast-qual -Wno-parentheses
+	ifdef FORTIFY
+		CFLAGS+= -O1 -g -Wall -pedantic -Wcast-qual -Wno-parentheses
+		CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
+		CFLAGS+= -fasynchronous-unwind-tables
+		CFLAGS+= -fstack-clash-protection -fstack-protector-strong
+	else
+		CFLAGS+= -O0 -pg -g -Wall -pedantic -Wcast-qual -Wno-parentheses
+	endif
+	ifdef PROFILE
+		CFLAGS+= -pg
+		LDFLAGS+= -pg
+	endif
 	ifdef ASAN
 		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
 		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
 	endif
-	CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
-	CFLAGS+= -fasynchronous-unwind-tables
-	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
 	ifeq ($(CC), clang)
 		CFLAGS+= -glldb
 		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
@@ -34,7 +42,8 @@ ifdef DEBUG
 	endif
 else
 	CFLAGS+= -flto
-	CFLAGS+= -Wall -pedantic -Wno-parentheses
+	CFLAGS+= -Wall -pedantic -Wno-parentheses \
+		-Wno-incompatible-pointer-types-discards-qualifiers
 	CPPFLAGS+= -DNDEBUG
 	LDFLAGS+= -flto
 endif
