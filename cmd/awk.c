@@ -70,6 +70,7 @@ awk(void *)
 		sysfatal("awk: %s", error());
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	initpool();
 	cmdname = "strawk";
 	lexprog = awkprog;
 	dbg = (debug & Debugawk) != 0;
@@ -86,7 +87,6 @@ awk(void *)
 #endif
 	init_genrand64(srand_seed);
 	symtab = makesymtab(1);
-	initpool();
 	recinit(recsize);
 	syminit();
 	compile_time = COMPILING;

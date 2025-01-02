@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
 	awkstderr = stderr;
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	initpool();
 	cmdname = argv[0];
 	if (argc == 1) {
 		fprintf(awkstderr,
@@ -196,7 +197,6 @@ int main(int argc, char *argv[])
 		argc--;
 		argv++;
 	}
-	initpool();
 	recinit(recsize);
 	syminit();
 	compile_time = COMPILING;
