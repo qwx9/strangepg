@@ -69,6 +69,7 @@ static inline uschar *alloc(size_t n, int istemp)
 	s = p->tail;
 	if(s + n >= p->end)
 		s = grow(p);
+	assert(p->end - p->tail >= n);
 	p->tail += n;
 	return s;
 }
@@ -183,7 +184,7 @@ void *drealloc(void *s, size_t old, size_t new, const char *fn)
 		FATAL("realloc: out of memory");
 	if(new > old)
 		memset((uschar *)p + old, 0, new - old);
-	DPRINTF("-> %p", p);
+	DPRINTF("-> %p\n", p);
 	return p;
 }
 
@@ -194,7 +195,7 @@ void *dmalloc(size_t n, const char *fn)
 	DPRINTF("dmalloc %zu in %s ", n, fn);
 	if((p = calloc(1, n)) == NULL)
 		FATAL("calloc: out of memory");
-	DPRINTF("-> %p", p);
+	DPRINTF("-> %p\n", p);
 	return p;
 }
 
@@ -205,7 +206,7 @@ char *dstrdup(char *s, const char *fn)
 	DPRINTF("dstrdup %s in %s ", s, fn);
 	if((p = strdup(s)) == NULL)
 		FATAL("strdup: out of memory");
-	DPRINTF("-> %p", p);
+	DPRINTF("-> %p\n", p);
 	return p;
 }
 

@@ -392,11 +392,14 @@ Cell *getnf(TNode **a, int n)	/* get NF */
 static char *
 makearraystring(TNode *p, const char *func)
 {
-	char *buf;
-	int bufsz = recsize;
+	static char *buf;
+	static int bufsz;
 	size_t blen;
 
-	buf = (char *) MALLOC(bufsz);
+	if(buf == NULL){
+		bufsz = recsize;
+		buf = MALLOC(bufsz);
+	}
 
 	blen = 0;
 	buf[blen] = '\0';
@@ -445,7 +448,6 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	z->ctype = OCELL;
 	z->csub = CVAR;
 	tempfree(x);
-	free(buf);
 	return(z);
 }
 
@@ -467,7 +469,6 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 	} else {
 		char *buf = makearraystring(a[1], __func__);
 		freeelem(x, buf);
-		free(buf);
 	}
 	tempfree(x);
 	return True;
@@ -490,7 +491,6 @@ Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 	buf = makearraystring(a[0], __func__);
 	k = lookup(buf, (Array *) ap->sval);
 	tempfree(ap);
-	free(buf);
 	if (k == NULL)
 		return(False);
 	else
