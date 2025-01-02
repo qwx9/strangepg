@@ -588,7 +588,7 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 	char *sb = getsval(b);
 	size_t l = strlen(sa) + strlen(sb) + 1;
 	static char *buf;
-	static size_t bufsz;
+	static int bufsz;
 
 	l++;	// add room for ' '
 	if(buf == NULL){

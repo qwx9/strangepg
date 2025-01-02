@@ -194,7 +194,6 @@ extern	Cell	*intest(TNode **, int);
 extern	Cell	*matchop(TNode **, int);
 extern	Cell	*boolop(TNode **, int);
 extern	Cell	*relop(TNode **, int);
-extern	void	tfree(Cell *);
 extern	Cell	*gettemp(void);
 extern	Cell	*indirect(TNode **, int);
 extern	Cell	*substr(TNode **, int);

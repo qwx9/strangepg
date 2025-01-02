@@ -49,18 +49,7 @@ char *evalstr;
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
-#if 1
-#define tempfree(x)	do { if (istemp(x)) tfree(x); } while (/*CONSTCOND*/0)
-#else
-void tempfree(Cell *p) {
-	if (p->ctype == OCELL && (p->csub < CUNK || p->csub > CFREE)) {
-		WARNING("bad csub %d in Cell %d %s",
-			p->csub, p->ctype, p->sval);
-	}
-	if (istemp(p))
-		tfree(p);
-}
-#endif
+#define tempfree(x)
 
 jmp_buf env;
 jmp_buf evalenv;
@@ -111,6 +100,7 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
 		if (rminlen)
 			minlen += quantum - rminlen;
 		tbuf = (char *) REALLOC(*pbuf, old, minlen);
+		DPRINTF("adjbuf %p %zu -> %d -> %p\n", *pbuf, old, minlen, tbuf);
 		*pbuf = tbuf;
 		*psiz = minlen;
 		if (pbptr)
@@ -841,32 +831,12 @@ Cell *relop(TNode **a, int n)	/* a[0 < a[1], etc. */
 	return 0;	/*NOTREACHED*/
 }
 
-void tfree(Cell *a)	/* free a tempcell */
-{
-	if (freeable(a)) {
-		DPRINTF("freeing %s %s %o\n", NN(a->nval), NN(a->sval), a->tval);
-		xfree(a->sval);
-	}
-	if (a == tmps)
-		FATAL("tempcell list is curdled");
-	a->cnext = tmps;
-	tmps = a;
-}
-
-Cell *gettemp(void)	/* get a tempcell */
-{	int i;
+Cell *gettemp(void)	{/* get a tempcell */
 	Cell *x;
 
-	if (!tmps) {
-		tmps = (Cell *) CALLOC(100, sizeof(*tmps));
-		for (i = 1; i < 100; i++)
-			tmps[i-1].cnext = &tmps[i];
-		tmps[i-1].cnext = NULL;
-	}
-	x = tmps;
-	tmps = x->cnext;
+	x = tempalloc(sizeof *x);
 	*x = tempcell;
-	return(x);
+	return x;
 }
 
 Cell *indirect(TNode **a, int n)	/* $( a[0] ) */
@@ -1061,6 +1031,9 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 			fmtwd = -fmtwd;
 		adjbuf(&buf, &bufsize, fmtwd+1+p-buf, recsize, &p, "format4");
 		switch (*s) {
+#ifndef _PLAN9_SOURCE
+		case 'a': case 'A':
+#endif
 		case 'f': case 'e': case 'g': case 'E': case 'G':
 			flag = 'f';
 			break;
@@ -1321,7 +1294,7 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 	tempfree(x);
 	x = gettemp();
 	x->sval = buf;
-	x->tval = STR;
+	x->tval = STR|DONTFREE;
 	return(x);
 }
 
@@ -1667,26 +1640,31 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 	int n1, n2;
 	static char *s;
 	static int ssz;
-
-	x = execute(a[0]);
-	n1 = strlen(getsval(x));
-	adjbuf(&s, &ssz, n1 + 1, recsize, 0, "cat1");
-	memcpy(s, x->sval, n1);
-
-	tempfree(x);
+	char *p, *s1, *s2;
 
 	y = execute(a[1]);
-	n2 = strlen(getsval(y));
-	adjbuf(&s, &ssz, n1 + n2 + 1, recsize, 0, "cat2");
-	memcpy(s + n1, y->sval, n2);
-	s[n1 + n2] = '\0';
-
+	s2 = getsval(y);
+	n2 = strlen(s2);
+	x = execute(a[0]);
+	s1 = getsval(x);
+	n1 = strlen(s1);
+	p = s;
+	if(s == NULL){
+		ssz = recsize;
+		if(n1 + n2 + 1 > recsize)
+			ssz += n1 + n2 + 1;
+		p = s = MALLOC(ssz);
+	}else
+		adjbuf(&s, &ssz, n1 + n2 + 1, recsize, &p, "cat");
+	memcpy(p, s1, n1);
+	p += n1;
+	memcpy(p, s2, n2);
+	p[n2] = '\0';
+	tempfree(x);
 	tempfree(y);
-
 	z = gettemp();
 	z->sval = tempstrdup(s);
 	z->tval = STR|DONTFREE;
-
 	return(z);
 }
 
@@ -2252,7 +2230,7 @@ void backsub(char **pb_ptr, const char **sptr_ptr);
 Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 {
 	fa *pfa;
-	int tempstat = 0;
+	int tempstat = 0, cnt;
 	char *repl;
 	Cell *x;
 
@@ -2297,10 +2275,13 @@ Cell *dosub(TNode **a, int subop)        /* sub and gsub */
 		bufsz = recsize;
 		buf = (char *) MALLOC(bufsz);
 	}
+	cnt = 0;
 	pb = buf;
-	tempstat = pfa->initstat;
-	pfa->initstat = 2;
 	while (pmatch(pfa, start)) {
+		if(cnt++ == 0){
+			tempstat = pfa->initstat;
+			pfa->initstat = 2;
+		}
 		/* match types */
 		#define	MT_IGNORE  0  /* unselected or invalid */
 		#define MT_INSERT  1  /* selected, empty */
@@ -2367,7 +2348,7 @@ next_search:
 		#undef MT_REPLACE
 	}
 
-	if (buf != NULL) {
+	if (cnt != 0) {
 		pfa->initstat = tempstat;
 
 		/* trailing text */
