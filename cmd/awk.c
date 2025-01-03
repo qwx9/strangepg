@@ -14,6 +14,133 @@
 /* [0] is read, [1] is write to cater to windows' _pipe */
 int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
 
+static inline char *
+getnodelabel(ioff i, char **il)
+{
+	static char lab[16];
+	Cell *c;
+	Array *a;
+
+	snprint(lab, sizeof lab, "%d", i);
+	if(il != nil)
+		*il = lab;
+	if((c = lookup("label", symtab)) == nil){
+		werrstr("no extant labels");
+		return nil;
+	}else if(!isarr(c)){
+		werrstr("bug: scalar label");
+		return nil;
+	}
+	a = (Array *)c->sval;
+	if((c = lookup(lab, a)) == nil){
+		werrstr("doesn\'t exist");
+		return nil;
+	}
+	return c->sval;
+}
+
+static inline Cell *
+getcell(char *tab, char *lab, Array **ap)
+{
+	Cell *c;
+	Array *a;
+	Value v = {.i = 0};
+
+	if((c = lookup(tab, symtab)) == nil){
+		c = setsymtab(tab, NULL, v, ARR, symtab);
+		a = makesymtab(NSYMTAB);
+		c->sval = (char *)a;
+		c->tval |= ARR;
+		c = nil;	/* array is empty */
+	}else if(!isarr(c)){
+		if (freeable(c))
+			xfree(c->sval);
+		a = makesymtab(NSYMTAB);
+		c->tval &= ~(STR|NUM|DONTFREE);
+		c->tval |= ARR;
+		c->sval = (char *)a;
+		c = nil;	/* array is empty */
+	}else
+		a = (Array *)c->sval;
+	if(ap != nil)
+		*ap = a;
+	return c == nil ? nil : lookup(lab, a);
+}
+
+int
+awknamedstr(char *tab, char *lab, char *val)
+{
+	Cell *c;
+	Array *a;
+	Value v = {.i = 0};
+
+	if((c = getcell(tab, lab, &a)) == nil)
+		setsymtab(lab, val, v, STR, a);
+	else
+		setsval(c, val);
+	return 0;
+}
+
+int
+awknamedfloat(char *tab, char *lab, double val)
+{
+	Cell *c;
+	Array *a;
+	Value v;
+
+	if((c = getcell(tab, lab, &a)) == nil){
+		v.f = val;
+		setsymtab(lab, NULL, v, NUM|FLT, a);
+	}else
+		setfval(c, val);
+	return 0;
+}
+
+int
+awknamedint(char *tab, char *lab, s64int val)
+{
+	Cell *c;
+	Array *a;
+	Value v;
+
+	if((c = getcell(tab, lab, &a)) == nil){
+		v.i = val;
+		setsymtab(lab, NULL, v, NUM, a);
+	}else
+		setival(c, val);
+	return 0;
+}
+
+int
+awkstr(char *tab, ioff i, char *val)
+{
+	char *name;
+
+	if((name = getnodelabel(i, nil)) == nil)
+		return -1;
+	return awknamedstr(tab, name, val);
+}
+
+int
+awkfloat(char *tab, ioff i, double val)
+{
+	char *name;
+
+	if((name = getnodelabel(i, nil)) == nil)
+		return -1;
+	return awknamedfloat(tab, name, val);
+}
+
+int
+awkint(char *tab, ioff i, s64int val)
+{
+	char *name;
+
+	if((name = getnodelabel(i, nil)) == nil)
+		return -1;
+	return awknamedint(tab, name, val);
+}
+
 static noreturn void fpecatch(int n
 #ifdef SA_SIGINFO
 	, siginfo_t *si, void *uc

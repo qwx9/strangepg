@@ -128,20 +128,15 @@ setattr(Node *n, ioff id, int type, char *val)
 void
 setnamedtag(char *name, char *tag, char *val)
 {
-	Special *t, *te;
-
-	for(t=specials, te=t+nelem(specials); t<te; t++)
-		if(strncmp(t->tag, tag, 12) == 0){	/* safety + special tables */
-			pushcmd("%s(\"%s\",%s)", t->function, name, val);
-			return;
-		}
-	pushcmd("%s[\"%s\"]=\"%s\"", tag, name, val);
+	awknamedstr(tag, name, val);
 }
 /* before strawk is primed and ready, set special tags ourselves */
 static int
 settag(Graph *g, ioff id, char type, char *tag, char *val)
 {
 	int r;
+	s64int v;
+	double f;
 	Special *t, *te;
 
 	r = 0;
@@ -152,13 +147,13 @@ settag(Graph *g, ioff id, char type, char *tag, char *val)
 				r = 1;
 		}
 	switch(type){
-	case 'i':
-	case 'f': pushcmd("%s[label[%d]]=%s", tag, id, val); break;
+	case 'i': v = strtoll(val, nil, 0); awkint(tag, id, v); break;
+	case 'f': f = strtod(val, nil); awkfloat(tag, id, f); break;
 	case 'A':
 	case 'Z':
 	case 'J':
 	case 'H':
-	case 'B': pushcmd("%s[label[%d]]=\"%s\"", tag, id, val); break;
+	case 'B': awkstr(tag, id, val); break;
 	default:
 		warn("settag %s=%s: unknown type %c, defaulting to string\n",
 			tag, val, type);
@@ -173,22 +168,23 @@ transmittags(Graph *g)
 	Node *n, *ne;
 
 	for(id=eid=0, n=g->nodes, ne=n+dylen(n); n<ne; n++, id++){
-		pushcmd("CL[label[%d]] = %x", id, n->attr.color);
-		pushcmd("LN[label[%d]] = %d", id, n->attr.length);
+		awkint("CL", id, n->attr.color);
+		awkint("LN", id, n->attr.length);
 		if((n->attr.flags & FNinitx) != 0){
-			pushcmd("x0[label[%d]] = %f", (double)n->attr.pos0.x);
+			awkfloat("x0", id, n->attr.pos0.x);
 			if((n->attr.flags & FNfixedx) != 0)
-				pushcmd("fx[label[%d]] = %f", (double)n->attr.pos0.x);
+				awkfloat("fx", id, n->attr.pos0.x);
 		}
 		if((n->attr.flags & FNinity) != 0){
+			awkfloat("y0", id, n->attr.pos0.y);
 			pushcmd("y0[label[%d]] = %f", (double)n->attr.pos0.y);
 			if((n->attr.flags & FNfixedy) != 0)
-				pushcmd("fy[label[%d]] = %f", (double)n->attr.pos0.y);
+				awkfloat("fy", id, n->attr.pos0.y);
 		}
 		if((n->attr.flags & FNinitz) != 0){
-			pushcmd("z0[label[%d]] = %f", (double)n->attr.pos0.z);
+			awkfloat("z0", id, n->attr.pos0.z);
 			if((n->attr.flags & FNfixedz) != 0)
-				pushcmd("fz[label[%d]] = %f", (double)n->attr.pos0.z);
+				awkfloat("fz", id, n->attr.pos0.z);
 		}
 		for(e=g->edges+n->eoff,ee=e+n->nedges; e<ee; e++, eid++)
 			pushcmd("addedge(%d,%d,%x)", eid, id, *e);
