@@ -99,8 +99,10 @@ static uint32_t _sgx_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
 }
 
 static void _sgx_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
+#ifdef SOKOL_GLCORE
 	fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s\n",
 		severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
+#endif
 }
 
 #elif defined(SOKOL_D3D11)
@@ -329,7 +331,7 @@ uint32_t sgx_query_image_pixel(int x, int y, sg_image img_id) {
 }
 
 void sgx_enable_debug_log(void) {
-#if defined(_SOKOL_ANY_GL)
+#ifdef SOKOL_GLCORE
 	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(_sgx_gl_debug_callback, 0);
 #endif

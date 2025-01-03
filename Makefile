@@ -155,16 +155,16 @@ ifeq ($(TARGET),Unix)
 	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
 	CPPFLAGS+= -Iunix
 	LDLIBS+= -lm
-	ifdef GLES
+	ifdef EGL
+		CPPFLAGS+= -DSOKOL_FORCE_EGL
+		LDLIBS+= -lEGL
+	endif
+	ifeq ($(ARCH)$(GLCORE),aarch64)
 		CPPFLAGS+= -DSOKOL_GLES3
 		LDLIBS+= -lGLES
 	else
 		CPPFLAGS+= -DSOKOL_GLCORE
 		LDLIBS+= -lGL -lX11 -lXcursor -lXi
-		ifeq ($(ARCH),aarch64)
-			CPPFLAGS+= -DSOKOL_FORCE_EGL
-			LDLIBS+= -lEGL
-		endif
 	endif
 	ifeq ($(OS),OpenBSD)
 		CPPFLAGS+= -I/usr/X11R6/include
