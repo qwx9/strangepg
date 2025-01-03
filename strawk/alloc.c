@@ -40,7 +40,6 @@ static inline void init(Pool *p)
 
 static inline uschar *grow(Pool *p, size_t n)
 {
-	size_t m;
 	uschar *s;
 
 	if(p->slot < p->nslot){
@@ -145,17 +144,17 @@ char *defstrdup(const char *s)
 	size_t n;
 
 	n = strlen(s);
-	return resize(s, n+1, n+1, compile_time == RUNNING || evalstr != NULL);
+	return resize(s, n+1, n+1, compile_time == RUNNING || runnerup != NULL);
 }
 
 void *defrealloc(void *p, size_t old, size_t n)
 {
-	return resize(p, old, n, compile_time == RUNNING || evalstr != NULL);
+	return resize(p, old, n, compile_time == RUNNING || runnerup != NULL);
 }
 
 void *defalloc(size_t n)
 {
-	return alloc(n, compile_time == RUNNING);
+	return alloc(n, compile_time == RUNNING || runnerup != NULL);
 }
 
 void dgrow(void **buf, int *size, void **pos, int want, int blocksz, const char *fn)

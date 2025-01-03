@@ -49,7 +49,7 @@ char *evalstr;
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
-#define tempfree(x)
+#define tempfree(x)	do { if (istemp(x)) tfree(x); } while (/*CONSTCOND*/0)
 
 jmp_buf env;
 jmp_buf evalenv;
@@ -831,12 +831,32 @@ Cell *relop(TNode **a, int n)	/* a[0 < a[1], etc. */
 	return 0;	/*NOTREACHED*/
 }
 
-Cell *gettemp(void)	{/* get a tempcell */
+void tfree(Cell *a)	/* free a tempcell */
+{
+	if (freeable(a)) {
+		DPRINTF("freeing %s %s %o\n", NN(a->nval), NN(a->sval), a->tval);
+		xfree(a->sval);
+	}
+	if (a == tmps)
+		FATAL("tempcell list is curdled");
+	a->cnext = tmps;
+	tmps = a;
+}
+
+Cell *gettemp(void)	/* get a tempcell */
+{	int i;
 	Cell *x;
 
-	x = tempalloc(sizeof *x);
+	if (!tmps) {
+		tmps = (Cell *) CALLOC(100, sizeof(*tmps));
+		for (i = 1; i < 100; i++)
+			tmps[i-1].cnext = &tmps[i];
+		tmps[i-1].cnext = NULL;
+	}
+	x = tmps;
+	tmps = x->cnext;
 	*x = tempcell;
-	return x;
+	return(x);
 }
 
 Cell *indirect(TNode **a, int n)	/* $( a[0] ) */
@@ -2179,6 +2199,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		}
 		errorflag = 0;
 		runnerup = NULL;
+		evalstr = NULL;
 		fflush(awkstdout);
 		break;
 	default:	/* can't happen */
