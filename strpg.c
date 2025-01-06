@@ -73,7 +73,7 @@ help(void)
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
-		"-H				Enable Hi-DPI mode\n"
+		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"

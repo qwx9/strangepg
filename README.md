@@ -161,9 +161,8 @@ Currently Linux, macOS, Windows, OpenBSD and Plan9front
 are supported (x86, amd64, arm64).
 Other BSDs might work as well, but it's untested.
 
-Installation can be done from source or (for Linux only) via [bioconda](https://bioconda.github.io/).
-
-Binaries built on github will also be provided in releases.
+Installation can be done from source or via [bioconda](https://bioconda.github.io/).
+Test binaries, probably out of date, can be downloaded from the Releases github page as well.
 
 #### Hardware requirements
 
@@ -195,13 +194,16 @@ There is currently no plan for adding MSVC support.
 
 #### Bioconda
 
-Currently only for Linux.
-
 Install conda, add the bioconda channel, then:
 
 ```bash
 conda install strangepg
 ```
+
+Currently Linux aarch64 builds use mainline OpenGL instead of OpenGL ES.
+It works on the hardware I have on hand, but might not for everyone; this will change soon.
+macOS is supported for both intel and apple silicon; both should work in the same way,
+but the former has received much less testing.
 
 #### Linux
 
@@ -381,6 +383,10 @@ strangepg test/02.gfa
 
 <p align="center"><img src=".pics/02.png"/></p>
 
+Loading large graphs completely may take a few seconds to a few minutes,
+and much of it is done in the background.
+For this reason, the prompt will not work until the message `awk: ready` appears.
+
 #### Command-line options
 
 ```bash
@@ -439,12 +445,20 @@ but it might look aesthetically unpleasing depending on the camera angle.
 This option squishes nodes as close to each other as possible
 so as to appear as if there is no depth.
 
+Graphical options
+
+- `-H`: enable high-DPI mode (macOS only).
+- `-M`: enable 4x multi-sample antialiasing (MSAA), which smooths lines
+and provides much more aesthetically pleasant visuals,
+at the cost of performance.
+
 
 ## Layouting
 
 Layouting is performed and visualized in real time and in parallel.
 Currently all available layout algorithms are based on a spring model force-directed approach,
 and are variations of the classic Fruchterman-Reingold algorithm __[1]__.
+They are slow (improvements underway).
 Parameters and heuristics are hand-tuned and may require further adjustment
 for better results, or may warrant better approaches.
 Because the initial state is random, results are different every time,
@@ -748,10 +762,13 @@ y0[CL[i] != orange] = 2 - 4 * rand()
 ## Known bugs
 
 Major bugs:
-- strawk leaks some small amount of memory and is much slower than it should be;
-awk wasn't meant to be used this way and a proper implementation will take a bit more effort
+- Layouting is slow and larger graphs show up as a ball at the center of the screen:
+this is the initial state for any of the layouting algorithms,
+but because it is shown in real time and the algorithms currently used being slow
+(improvements underway), the initial plot looks... underwhelming.
 
 Less major bugs:
+- strawk still uses too much memory and its language is very limited
 - Layouting currently doesn't place some of the nodes nicely;
 many plots look ugly by default but can be fixed by just moving the nodes around.
 - 3d navigation is a kludge on top of 2d navigation
@@ -759,9 +776,6 @@ many plots look ugly by default but can be fixed by just moving the nodes around
 - The renderer is fairly efficient, but it could be made orders of magnitude faster
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well
-
-Minor:
-- Web colors with a # are not parsed, but hex values with 0x are
 
 
 ## Used and bundled alien software
