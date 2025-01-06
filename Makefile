@@ -163,7 +163,7 @@ ifeq ($(TARGET),Unix)
 	endif
 	ifeq ($(ARCH)$(GLCORE),aarch64)
 		CPPFLAGS+= -DSOKOL_GLES3
-		LDLIBS+= -lGLES
+		LDLIBS+= -lGLESv2
 	else
 		CPPFLAGS+= -DSOKOL_GLCORE
 		LDLIBS+= -lGL -lX11 -lXcursor -lXi
