@@ -4,11 +4,13 @@ VERSION=0.8.15
 TARG=\
 	strangepg\
 
-DIRS=\
-	strawk\
+#DIRS=\
+#	strawk\
 
 OFILES=\
 	strpg.$O\
+	cmd/awk.$O\
+	cmd/awkext.$O\
 	cmd/awkprog.$O\
 	cmd/cmd.$O\
 	draw/color.$O\
@@ -31,6 +33,16 @@ OFILES=\
 	plan9/sys.$O\
 	plan9/threads.$O\
 	plan9/ui.$O\
+	strawk/alloc.$O\
+	strawk/awkgram.tab.$O\
+	strawk/b.$O\
+	strawk/parse.$O\
+	strawk/proctab.$O\
+	strawk/tran.$O\
+	strawk/lib.$O\
+	strawk/run.$O\
+	strawk/lex.$O\
+	strawk/mt19937-64.$O\
 	ui/ui.$O\
 	util/print.$O\
 

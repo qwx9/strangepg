@@ -115,6 +115,7 @@ OBJ:=\
 	posix/sys.o\
 	posix/threads.o\
 	cmd/awk.o\
+	cmd/awkext.o\
 	cmd/awkprog.o\
 	cmd/cmd.o\
 	draw/color.o\
@@ -144,6 +145,7 @@ OBJ:=\
 	strawk/run.o\
 	strawk/lex.o\
 	strawk/mt19937-64.o\
+	strawk/unix.o\
 	$(GLOBJ) \
 
 GLSL:= $(patsubst %.glsl,%.h,$(wildcard glsl/*.glsl))

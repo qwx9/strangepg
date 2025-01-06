@@ -11,6 +11,8 @@ typedef intptr	ssize;
 #include "fns.h"
 #include "dynar.h"
 
+#define	setlocale(x,y)
+
 u64int	nanosec(void);
 
 #pragma	varargck	argpos	warn	1

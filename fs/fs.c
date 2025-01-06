@@ -23,7 +23,6 @@ vlong
 seekfs(File *f, vlong off)
 {
 	assert(f->aux != nil);
-	// FIXME: test this
 	f->trunc = 0;
 	f->foff = off;
 	return sysseek(f, off);

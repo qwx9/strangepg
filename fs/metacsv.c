@@ -2,6 +2,7 @@
 #include "fs.h"
 #include "threads.h"
 #include "graph.h"
+#include "drw.h"
 #include "cmd.h"
 
 /* restrictions:
@@ -19,9 +20,8 @@
 static char **
 csvheader(File *f, int *wait)
 {
-	char c, w;
+	char z, c, w;
 	char *p, *s, **tags;
-	Special *sp, *se;
 
 	*wait = w = 0;
 	if(readline(f) == nil){
@@ -50,13 +50,8 @@ csvheader(File *f, int *wait)
 		/* don't wait for csv to load if there are  no layout tags */
 		if(cistrcmp(s, "color") == 0)
 			s = "CL";
-		else{
-			for(sp=specials, se=sp+nelem(specials); sp<se; sp++)
-				if(strncmp(s, sp->tag, 2) == 0)
-					break;
-			if(sp != se && sp - specials >= Tlayout)
+		else if((z = gettab(s)) >= 0 && z < Tlayout)
 				w++;
-		}
 		p = estrdup(s);
 		dypush(tags, p);
 	}
@@ -109,7 +104,7 @@ loadcsv(void *arg)
 				break;
 			}
 			tag = tags[nf-1];
-			setnamedtag(name, tag, s);
+			setnamedtag(tag, name, s);
 		}
 		nr++;
 	}

@@ -1,14 +1,34 @@
+enum{
+	ALOAD,
+	ALOADBATCH,
+};
+
+enum{
+	TLN,	/* reevaluated during layouting */
+	Tfx,
+	Tfy,
+	Tfz,
+	Tx0,
+	Ty0,
+	Tz0,
+	Tlayout,	/* marker for last tag affecting layout */
+	Tnode = Tlayout,
+	Tedge,
+	Tlabel,
+	TCL,
+	Tnil,
+};
+
 extern int noreset;
 
 extern char *awkprog;
 extern int infd[2], outfd[2];
 
-int	awknamedstr(char*, char*, char*);
-int	awknamedfloat(char*, char*, double);
-int	awknamedint(char*, char*, s64int);
-int	awkstr(char*, ioff, char*);
-int	awkfloat(char*, ioff, double);
-int	awkint(char*, ioff, s64int);
+int	gettab(char*);
+void	settag(char*, ioff, char, char*, int);
+void	setspectag(int, ioff, char*);
+void	setnamedtag(char*, char*, char*);
+void	initext(void);
 
 void	killcmd(void);
 void	flushcmd(void);

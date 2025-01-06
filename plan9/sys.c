@@ -6,6 +6,11 @@
 int debug;
 
 void
+fpecatchall(void)
+{
+}
+
+void
 sysquit(void)
 {
 	threadexitsall(nil);

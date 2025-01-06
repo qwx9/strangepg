@@ -42,22 +42,28 @@ BEGIN{
 	purpleblue = 0x8080ffc0
 	red = 0xe31a1cc0
 	teal = 0x009696c0
-	violet = purplec0
+	violet = purple
 	white = 0xffffffc0
 	yellow = 0xffed6fc0
 	srand()
+	OFS = "\t"
 }
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
 		if(++fnr == nd + 1){
 			if(!noreset)
 				print "R"
-			else
+			else{
 				noreset = 0
+				print "r"
+			}
 		}else
 			print deferred[fnr]
-	}else if(code == "FGD135")	# wing attack plan R
+	}else if(code == "FGD135"){	# wing attack plan R
 		crm114 = 1
+		loadall()
+		print "awk: ready."
+	}
 }
 function exportlayout(f){
 	print "o", f

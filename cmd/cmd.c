@@ -8,7 +8,7 @@
 #include "cmd.h"
 
 static File *cmdfs;
-static RWLock cmdlock;
+RWLock cmdlock;
 
 void
 killcmd(void)
@@ -200,9 +200,9 @@ readcmd(char *s)
 		if(s[1] != 0 && s[1] != '\t'){
 			/* heuristic based on strawk/lib.c... */
 			if(s[0] == ' ' || strncmp(s, "strawk:", 7) == 0)
-				logerr(va("> error: %s\n", s));
+				logerr(va("error: %s\n", s));
 			else
-				logmsg(va("> %s\n", s));
+				logmsg(va("%s\n", s));
 			continue;
 		}
 		switch(*s){
@@ -212,7 +212,7 @@ readcmd(char *s)
 			quit();
 			break;
 		case 'E':
-			logerr(va("> error: %s\n", s+2));
+			logerr(va("error: %s\n", s+2));
 			continue;
 		case 'I':
 			showobject(s + 2);
@@ -221,6 +221,9 @@ readcmd(char *s)
 		case 'R':
 			if((debug & Debugload) == 0)
 				reqlayout(g, Lreset);
+			continue;
+		case 'r':
+			req |= Reqredraw;
 			continue;
 		case 's':
 			if(s[1] == 0){
@@ -240,7 +243,7 @@ readcmd(char *s)
 		case 'y':
 			break;
 		default:
-			logmsg(va("> %s\n", s));
+			logmsg(va("%s\n", s));
 			continue;
 		}
 		if((m = getfields(s+1, fld, nelem(fld), 1, "\t")) < 1)
@@ -250,7 +253,7 @@ readcmd(char *s)
 			werrstr("invalid %c message length %d\n", s[0], m);
 			/* wet floor */
 		error:
-			warn("readcmd: %s\n", error());
+			warn("readcmd: %c: %s\n", s[0], error());
 			break;
 		case 'N':
 			if(m != 1)
