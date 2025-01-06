@@ -79,8 +79,11 @@ sac(void *)
 			nidle++;
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
-			else if(nidle == nlaythreads)
+			else if(nidle == nlaythreads){
+				if((g->flags & GFdrawme) != 0 && l->flags == 0)
+					logmsg("layout: done.");
 				g->flags &= ~GFdrawme;
+			}
 			break;
 		}
 		if(nidle != nlaythreads)
@@ -107,6 +110,7 @@ sac(void *)
 		g->flags &= ~GFlayme;
 		g->flags |= GFdrawme;
 		reqdraw(Reqredraw);
+		logmsg("computing layout...");
 	}
 }
 
