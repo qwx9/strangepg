@@ -161,12 +161,13 @@ ifeq ($(TARGET),Unix)
 		CPPFLAGS+= -DSOKOL_FORCE_EGL
 		LDLIBS+= -lEGL
 	endif
+	LDLIBS+= -lX11 -lXcursor -lXi
 	ifeq ($(ARCH)$(GLCORE),aarch64)
 		CPPFLAGS+= -DSOKOL_GLES3
 		LDLIBS+= -lGLESv2
 	else
 		CPPFLAGS+= -DSOKOL_GLCORE
-		LDLIBS+= -lGL -lX11 -lXcursor -lXi
+		LDLIBS+= -lGL
 	endif
 	ifeq ($(OS),OpenBSD)
 		CPPFLAGS+= -I/usr/X11R6/include
