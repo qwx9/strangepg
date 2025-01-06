@@ -19,3 +19,8 @@ towlower(wint_t r)
 	//return tolowerrune(r);
 	return tolower(r);
 }
+
+void
+catchfpe(void)
+{
+}

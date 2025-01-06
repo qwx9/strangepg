@@ -53,7 +53,7 @@ TNode	*arglist = 0;	/* list of args for current function */
 %token	<i>	MATCH NOTMATCH MATCHOP
 %token	<i>	FINAL DOT ALL CCL NCCL CHAR OR STAR QUEST PLUS EMPTYRE ZERO
 %token	<i>	LAND LOR EQ GE GT LE LT NE IN
-%token	<i>	ARG BLTIN BREAK CONTINUE DELETE DO EXIT FOR FUNC
+%token	<i>	ADDON ARG BLTIN BREAK CONTINUE DELETE DO EXIT FOR FUNC
 %token	<i>	SUB GSUB IF INDEX LSUBSTR MATCHFCN NEXT
 %token	<i>	ADD MINUS MULT DIVIDE MOD
 %token	<i>	LSHIFT RSHIFT XOR BAND BOR CMPL
@@ -82,7 +82,7 @@ TNode	*arglist = 0;	/* list of args for current function */
 %left	LOR
 %left	LAND
 %nonassoc EQ GE GT LE LT NE MATCHOP IN
-%left	ARG BLTIN BREAK CALL CONTINUE DELETE DO EXIT FOR FUNC
+%left	ADDON ARG BLTIN BREAK CALL CONTINUE DELETE DO EXIT FOR FUNC
 %left	GSUB IF INDEX LSUBSTR MATCHFCN NEXT NUMBER
 %left	PRINT PRINTF RETURN SPLIT SPRINTF STRING SUB SUBSTR
 %left	REGEXPR VAR VARNF IVAR WHILE '('
@@ -365,6 +365,9 @@ term:
 	| '-' term %prec UMINUS		{ $$ = op1(UMINUS, $2); }
 	| '+' term %prec UMINUS		{ $$ = op1(UPLUS, $2); }
 	| NOT term %prec UMINUS		{ $$ = op1(NOT, notnull($2)); }
+	| ADDON '(' ')'			{ $$ = op2(ADDON, itonp($1), rectonode()); }
+	| ADDON '(' patlist ')'		{ $$ = op2(ADDON, itonp($1), $3); }
+	| ADDON				{ $$ = op2(ADDON, itonp($1), rectonode()); }
 	| BLTIN '(' ')'			{ $$ = op2(BLTIN, itonp($1), rectonode()); }
 	| BLTIN '(' patlist ')'		{ $$ = op2(BLTIN, itonp($1), $3); }
 	| BLTIN				{ $$ = op2(BLTIN, itonp($1), rectonode()); }

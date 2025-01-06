@@ -79,7 +79,7 @@ static inline uschar *alloc(size_t n, int istemp)
 }
 
 /* FIXME: no checks, no cleanup! avoid calling this with non-temp */
-static inline void *resize(void *s, size_t old, size_t n, int istemp)
+static inline void *resize(const void *s, size_t old, size_t n, int istemp)
 {
 	void *p;
 
@@ -111,7 +111,7 @@ char *tempstrdup(const char *s)
 	return resize(s, n+1, n+1, 1);
 }
 
-void *temprealloc(void *p, size_t old, size_t n)
+void *temprealloc(const void *p, size_t old, size_t n)
 {
 	return resize(p, old, n, 1);
 }
@@ -129,7 +129,7 @@ char *pstrdup(const char *s)
 	return resize(s, n+1, n+1, 0);
 }
 
-void *prealloc(void *p, size_t old, size_t n)
+void *prealloc(const void *p, size_t old, size_t n)
 {
 	return resize(p, old, n, 0);
 }
@@ -147,7 +147,7 @@ char *defstrdup(const char *s)
 	return resize(s, n+1, n+1, compile_time == RUNNING || runnerup != NULL);
 }
 
-void *defrealloc(void *p, size_t old, size_t n)
+void *defrealloc(const void *p, size_t old, size_t n)
 {
 	return resize(p, old, n, compile_time == RUNNING || runnerup != NULL);
 }
@@ -179,12 +179,12 @@ void dgrow(void **buf, int *size, void **pos, int want, int blocksz, const char 
 		*pos = p + off;
 }
 
-void *drealloc(void *s, size_t old, size_t new, const char *fn)
+void *drealloc(const void *s, size_t old, size_t new, const char *fn)
 {
 	void *p;
 
 	DPRINTF("drealloc %p %zu to %zu in %s ", s, old, new, fn);
-	if((p = realloc(s, new)) == NULL)
+	if((p = realloc((void *)s, new)) == NULL)
 		FATAL("realloc: out of memory");
 	if(new > old)
 		memset((uschar *)p + old, 0, new - old);
@@ -203,7 +203,7 @@ void *dmalloc(size_t n, const char *fn)
 	return p;
 }
 
-char *dstrdup(char *s, const char *fn)
+char *dstrdup(const char *s, const char *fn)
 {
 	void *p;
 

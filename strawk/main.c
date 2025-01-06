@@ -29,62 +29,67 @@ const char	*version = "version 20240731";
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include "awk.h"
+#include AWKTAB
 
 extern	char	**environ;
 extern	int	nfields;
+
+const Keyword keywords[] = {	/* keep sorted: binary searched */
+	{ "BEGIN",	XBEGIN,		XBEGIN },
+	{ "END",	XEND,		XEND },
+	{ "NF",		VARNF,		VARNF },
+	{ "atan2",	FATAN,		BLTIN },
+	{ "break",	BREAK,		BREAK },
+	{ "bytes",	FBYTES,		BLTIN },
+	{ "continue",	CONTINUE,	CONTINUE },
+	{ "cos",	FCOS,		BLTIN },
+	{ "delete",	DELETE,		DELETE },
+	{ "do",		DO,		DO },
+	{ "else",	ELSE,		ELSE },
+	{ "eval",	FEVAL,		BLTIN },
+	{ "exit",	EXIT,		EXIT },
+	{ "exp",	FEXP,		BLTIN },
+	{ "float",	FFLOAT,		BLTIN },
+	{ "for",	FOR,		FOR },
+	{ "func",	FUNC,		FUNC },
+	{ "function",	FUNC,		FUNC },
+	{ "gsub",	GSUB,		GSUB },
+	{ "if",		IF,		IF },
+	{ "in",		IN,		IN },
+	{ "index",	INDEX,		INDEX },
+	{ "int",	FINT,		BLTIN },
+	{ "length",	FLENGTH,	BLTIN },
+	{ "log",	FLOG,		BLTIN },
+	{ "match",	MATCHFCN,	MATCHFCN },
+	{ "next",	NEXT,		NEXT },
+	{ "nrand",	FNRAND,		BLTIN },
+	{ "print",	PRINT,		PRINT },
+	{ "printf",	PRINTF,		PRINTF },
+	{ "rand",	FFRAND,		BLTIN },
+	{ "return",	RETURN,		RETURN },
+	{ "sin",	FSIN,		BLTIN },
+	{ "split",	SPLIT,		SPLIT },
+	{ "sprintf",	SPRINTF,	SPRINTF },
+	{ "sqrt",	FSQRT,		BLTIN },
+	{ "srand",	FSRAND,		BLTIN },
+	{ "sub",	SUB,		SUB },
+	{ "substr",	SUBSTR,		SUBSTR },
+	{ "tolower",	FTOLOWER,	BLTIN },
+	{ "toupper",	FTOUPPER,	BLTIN },
+	{ "while",	WHILE,		WHILE },
+};
+const size_t nkeywords = sizeof(keywords) / sizeof(keywords[0]);
 
 extern	FILE	*yyin;	/* lex input file */
 extern	int errorflag;	/* non-zero if any syntax errors; set by yyerror */
 
 extern	size_t	npfile;
 
-static noreturn void fpecatch(int n
-#ifdef SA_SIGINFO
-	, siginfo_t *si, void *uc
-#endif
-)
+Cell *addon(TNode **a, int n)	/* external addons */
 {
-#ifdef SA_SIGINFO
-	const char *mesg = NULL;
-
-	switch (si->si_code) {
-	case FPE_INTDIV:
-		mesg = "Integer divide by zero";
-		break;
-	case FPE_INTOVF:
-		mesg = "Integer overflow";
-		break;
-	case FPE_FLTDIV:
-		mesg = "Floating point divide by zero";
-		break;
-	case FPE_FLTOVF:
-		mesg = "Floating point overflow";
-		break;
-	case FPE_FLTUND:
-		mesg = "Floating point underflow";
-		break;
-	case FPE_FLTRES:
-		mesg = "Floating point inexact result";
-		break;
-	case FPE_FLTINV:
-		mesg = "Invalid Floating point operation";
-		break;
-	case FPE_FLTSUB:
-		mesg = "Subscript out of range";
-		break;
-	case 0:
-	default:
-		mesg = "Unknown error";
-		break;
-	}
-#endif
-	FATAL("floating point exception"
-#ifdef SA_SIGINFO
-		": %s", mesg
-#endif
-	    );
+	FATAL("what are you doing here?");
+	return NULL;
 }
 
 static const char *
@@ -127,18 +132,7 @@ int main(int argc, char *argv[])
 		  cmdname);
 		exit(1);
 	}
-#ifdef SA_SIGINFO
-	{
-		struct sigaction sa;
-		sa.sa_sigaction = fpecatch;
-		sa.sa_flags = SA_SIGINFO;
-		sigemptyset(&sa.sa_mask);
-		(void)sigaction(SIGFPE, &sa, NULL);
-	}
-#else
-	(void)signal(SIGFPE, fpecatch);
-#endif
-	/*signal(SIGSEGV, segvcatch); experiment */
+	catchfpe();
 
 	/* Set and keep track of the random seed */
 	srand_seed = 1;

@@ -84,7 +84,7 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	FS = &fsloc->sval;
 	rsloc = setsymtab("RS", "\n", v, STR|DONTFREE, symtab);
 	RS = &rsloc->sval;
-	ofsloc = setsymtab("OFS", "\t", v, STR|DONTFREE, symtab);
+	ofsloc = setsymtab("OFS", " ", v, STR|DONTFREE, symtab);
 	OFS = &ofsloc->sval;
 	orsloc = setsymtab("ORS", "\n", v, STR|DONTFREE, symtab);
 	ORS = &orsloc->sval;

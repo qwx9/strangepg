@@ -3,7 +3,7 @@ BINDIR:= $(PREFIX)/bin
 PROGRAM:= strawk
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:= $(BINTARGET)
-OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o alloc.o
+OFILES = awkgram.tab.o b.o main.o parse.o proctab.o tran.o lib.o run.o lex.o mt19937-64.o alloc.o unix.o
 DEPS:=$(patsubst %.o,%.d,$(OFILES))
 CLEANFILES:=\
 	$(BINTARGET)\
@@ -42,8 +42,7 @@ ifdef DEBUG
 	endif
 else
 	CFLAGS+= -flto
-	CFLAGS+= -Wall -pedantic -Wno-parentheses \
-		-Wno-incompatible-pointer-types-discards-qualifiers
+	CFLAGS+= -Wall -pedantic -Wno-parentheses -Wno-format-pedantic
 	CPPFLAGS+= -DNDEBUG
 	LDFLAGS+= -flto
 endif

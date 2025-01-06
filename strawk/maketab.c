@@ -108,6 +108,7 @@ struct xx
 	{ BREAK, "jump", "break" },
 	{ CONTINUE, "jump", "continue" },
 	{ RETURN, "jump", "ret" },
+	{ ADDON, "addon", "addon" },
 	{ BLTIN, "bltin", "bltin" },
 	{ CALL, "call", "call" },
 	{ ARG, "arg", "arg" },

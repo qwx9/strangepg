@@ -49,8 +49,6 @@ char *evalstr;
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
-#define tempfree(x)	do { if (istemp(x)) tfree(x); } while (/*CONSTCOND*/0)
-
 jmp_buf env;
 jmp_buf evalenv;
 
@@ -2183,6 +2181,8 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		x = gettemp();
 		setsval(x, buf);
 		return x;
+	/* FIXME: this can accept an argument, use it; not very useful
+	 * this way */
 	case FBYTES:
 		fwrite(x->val.buf, sizeof x->val.buf, 1, awkstdout);
 		if(ferror(awkstdout))

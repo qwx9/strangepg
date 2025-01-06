@@ -79,7 +79,7 @@ fa	*fatab[NFA];
 int	nfatab	= 0;	/* entries in fatab */
 
 extern int u8_nextlen(const char *s);
-
+extern	TNode	*alt(TNode *);
 
 /* utf-8 mechanism:
 

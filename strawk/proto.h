@@ -34,6 +34,7 @@ extern	void	startreg(void);
 extern	int	input(void);
 extern	void	unput(int);
 extern	void	unputstr(const char *);
+extern	void	setkeywords(Keyword *, size_t);
 
 extern	fa	*makedfa(const char *, bool);
 extern	fa	*mkdfa(const char *, bool);
@@ -55,7 +56,6 @@ extern	TNode	*reparse(const char *);
 extern	TNode	*regexp(void);
 extern	TNode	*primary(void);
 extern	TNode	*concat(TNode *);
-extern	TNode	*alt(TNode *);
 extern	TNode	*unary(TNode *);
 extern	int	relex(void);
 extern	int	cgoto(fa *, int, int);
@@ -68,17 +68,17 @@ extern	char	*cursource(void);
 extern	void	cleanpool(void);
 extern	void	initpool(void);
 extern	char	*tempstrdup(const char *);
-extern	void	*temprealloc(void *, size_t, size_t);
+extern	void	*temprealloc(const void *, size_t, size_t);
 extern	void	*tempalloc(size_t);
 extern	char	*pstrdup(const char *);
-extern	void	*prealloc(void *, size_t, size_t);
+extern	void	*prealloc(const void *, size_t, size_t);
 extern	void	*palloc(size_t);
 extern	char	*defstrdup(const char *);
-extern	void	*defrealloc(void *, size_t, size_t);
+extern	void	*defrealloc(const void *, size_t, size_t);
 extern	void	*defalloc(size_t);
-extern	void	*drealloc(void *, size_t, size_t, const char *);
+extern	void	*drealloc(const void *, size_t, size_t, const char *);
 extern	void	dgrow(void **, int *, void **, int , int, const char *);
-extern	char	*dstrdup(char *, const char *);
+extern	char	*dstrdup(const char *, const char *);
 extern	void	*dmalloc(size_t, const char *);
 extern	void	dfree(void *, const char *);
 
@@ -94,6 +94,7 @@ extern	void	dfree(void *, const char *);
 		(a) = NULL; \
 	} \
 }
+#define tempfree(x)	do { if (istemp(x)) tfree(x); } while (0)
 
 extern	TNode	*exptostat(TNode *);
 extern	TNode	*node1(int, TNode *);
@@ -152,6 +153,8 @@ extern	void	growfldtab(int n);
 extern	void	savefs(void);
 extern	int	getrec(char **, int *, bool);
 extern	int	readrec(char **buf, int *bufsize, FILE *inf, bool isnew);
+
+extern	void	catchfpe(void);
 extern	char	*getargv(int);
 extern	void	setclvar(char *);
 extern	void	fldbld(void);
@@ -217,6 +220,7 @@ extern	Cell	*dostat(TNode **, int);
 extern	Cell	*forstat(TNode **, int);
 extern	Cell	*instat(TNode **, int);
 extern	Cell	*bltin(TNode **, int);
+extern	Cell	*addon(TNode **, int);
 extern	Cell	*printstat(TNode **, int);
 extern	Cell	*nullproc(TNode **, int);
 extern	Cell	*dosub(TNode **, int);

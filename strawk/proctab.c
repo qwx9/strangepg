@@ -2,7 +2,7 @@
 #include "awk.h"
 #include "awkgram.tab.h"
 
-static const char * const printname[102] = {
+static const char * const printname[103] = {
 	"FIRSTTOKEN",	/* 258 */
 	"PROGRAM",	/* 259 */
 	"PASTAT",	/* 260 */
@@ -35,80 +35,81 @@ static const char * const printname[102] = {
 	"LT",	/* 287 */
 	"NE",	/* 288 */
 	"IN",	/* 289 */
-	"ARG",	/* 290 */
-	"BLTIN",	/* 291 */
-	"BREAK",	/* 292 */
-	"CONTINUE",	/* 293 */
-	"DELETE",	/* 294 */
-	"DO",	/* 295 */
-	"EXIT",	/* 296 */
-	"FOR",	/* 297 */
-	"FUNC",	/* 298 */
-	"SUB",	/* 299 */
-	"GSUB",	/* 300 */
-	"IF",	/* 301 */
-	"INDEX",	/* 302 */
-	"LSUBSTR",	/* 303 */
-	"MATCHFCN",	/* 304 */
-	"NEXT",	/* 305 */
-	"ADD",	/* 306 */
-	"MINUS",	/* 307 */
-	"MULT",	/* 308 */
-	"DIVIDE",	/* 309 */
-	"MOD",	/* 310 */
-	"LSHIFT",	/* 311 */
-	"RSHIFT",	/* 312 */
-	"XOR",	/* 313 */
-	"BAND",	/* 314 */
-	"BOR",	/* 315 */
-	"CMPL",	/* 316 */
-	"ASSIGN",	/* 317 */
-	"ASGNOP",	/* 318 */
-	"ADDEQ",	/* 319 */
-	"SUBEQ",	/* 320 */
-	"MULTEQ",	/* 321 */
-	"DIVEQ",	/* 322 */
-	"MODEQ",	/* 323 */
-	"POWEQ",	/* 324 */
-	"BANDEQ",	/* 325 */
-	"BOREQ",	/* 326 */
-	"XOREQ",	/* 327 */
-	"SHLEQ",	/* 328 */
-	"SHREQ",	/* 329 */
-	"PRINT",	/* 330 */
-	"PRINTF",	/* 331 */
-	"SPRINTF",	/* 332 */
-	"ELSE",	/* 333 */
-	"INTEST",	/* 334 */
-	"CONDEXPR",	/* 335 */
-	"POSTINCR",	/* 336 */
-	"PREINCR",	/* 337 */
-	"POSTDECR",	/* 338 */
-	"PREDECR",	/* 339 */
-	"VAR",	/* 340 */
-	"IVAR",	/* 341 */
-	"VARNF",	/* 342 */
-	"CALL",	/* 343 */
-	"NUMBER",	/* 344 */
-	"STRING",	/* 345 */
-	"REGEXPR",	/* 346 */
-	"RETURN",	/* 347 */
-	"SPLIT",	/* 348 */
-	"SUBSTR",	/* 349 */
-	"WHILE",	/* 350 */
-	"CAT",	/* 351 */
-	"NOT",	/* 352 */
-	"UMINUS",	/* 353 */
-	"UPLUS",	/* 354 */
-	"POWER",	/* 355 */
-	"DECR",	/* 356 */
-	"INCR",	/* 357 */
-	"INDIRECT",	/* 358 */
-	"LASTTOKEN",	/* 359 */
+	"ADDON",	/* 290 */
+	"ARG",	/* 291 */
+	"BLTIN",	/* 292 */
+	"BREAK",	/* 293 */
+	"CONTINUE",	/* 294 */
+	"DELETE",	/* 295 */
+	"DO",	/* 296 */
+	"EXIT",	/* 297 */
+	"FOR",	/* 298 */
+	"FUNC",	/* 299 */
+	"SUB",	/* 300 */
+	"GSUB",	/* 301 */
+	"IF",	/* 302 */
+	"INDEX",	/* 303 */
+	"LSUBSTR",	/* 304 */
+	"MATCHFCN",	/* 305 */
+	"NEXT",	/* 306 */
+	"ADD",	/* 307 */
+	"MINUS",	/* 308 */
+	"MULT",	/* 309 */
+	"DIVIDE",	/* 310 */
+	"MOD",	/* 311 */
+	"LSHIFT",	/* 312 */
+	"RSHIFT",	/* 313 */
+	"XOR",	/* 314 */
+	"BAND",	/* 315 */
+	"BOR",	/* 316 */
+	"CMPL",	/* 317 */
+	"ASSIGN",	/* 318 */
+	"ASGNOP",	/* 319 */
+	"ADDEQ",	/* 320 */
+	"SUBEQ",	/* 321 */
+	"MULTEQ",	/* 322 */
+	"DIVEQ",	/* 323 */
+	"MODEQ",	/* 324 */
+	"POWEQ",	/* 325 */
+	"BANDEQ",	/* 326 */
+	"BOREQ",	/* 327 */
+	"XOREQ",	/* 328 */
+	"SHLEQ",	/* 329 */
+	"SHREQ",	/* 330 */
+	"PRINT",	/* 331 */
+	"PRINTF",	/* 332 */
+	"SPRINTF",	/* 333 */
+	"ELSE",	/* 334 */
+	"INTEST",	/* 335 */
+	"CONDEXPR",	/* 336 */
+	"POSTINCR",	/* 337 */
+	"PREINCR",	/* 338 */
+	"POSTDECR",	/* 339 */
+	"PREDECR",	/* 340 */
+	"VAR",	/* 341 */
+	"IVAR",	/* 342 */
+	"VARNF",	/* 343 */
+	"CALL",	/* 344 */
+	"NUMBER",	/* 345 */
+	"STRING",	/* 346 */
+	"REGEXPR",	/* 347 */
+	"RETURN",	/* 348 */
+	"SPLIT",	/* 349 */
+	"SUBSTR",	/* 350 */
+	"WHILE",	/* 351 */
+	"CAT",	/* 352 */
+	"NOT",	/* 353 */
+	"UMINUS",	/* 354 */
+	"UPLUS",	/* 355 */
+	"POWER",	/* 356 */
+	"DECR",	/* 357 */
+	"INCR",	/* 358 */
+	"INDIRECT",	/* 359 */
+	"LASTTOKEN",	/* 360 */
 };
 
 
-Cell *(*proctab[102])(TNode **, int) = {
+Cell *(*proctab[103])(TNode **, int) = {
 	nullproc,	/* FIRSTTOKEN */
 	program,	/* PROGRAM */
 	pastat,	/* PASTAT */
@@ -141,6 +142,7 @@ Cell *(*proctab[102])(TNode **, int) = {
 	relop,	/* LT */
 	relop,	/* NE */
 	instat,	/* IN */
+	addon,	/* ADDON */
 	arg,	/* ARG */
 	bltin,	/* BLTIN */
 	jump,	/* BREAK */

@@ -34,10 +34,12 @@ THIS SOFTWARE.
 typedef double	Awkfloat;
 typedef long long int	Awknum;
 typedef unsigned long long int Awkword;
+typedef char *Awkstr;
 union Value{
 	Awknum i;
 	Awkfloat f;
 	Awkword u;
+	Awkstr s;
 	unsigned char buf[8];
 };
 typedef union Value Value;
@@ -164,6 +166,13 @@ enum{
 	FNRAND = 16,
 	FBYTES = 17,
 };
+typedef struct Keyword {
+	const char *word;
+	int	sub;
+	int	type;
+} Keyword;
+extern	const Keyword keywords[];
+extern	const size_t nkeywords;
 
 /* TNode:  parse tree is made of nodes, with Cell's at bottom */
 

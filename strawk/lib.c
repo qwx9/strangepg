@@ -312,14 +312,20 @@ void setclvar(char *s)	/* set var=value from s */
 		if(strcmp(q->sval, p) != 0){
 			if(freeable(q))
 				xfree(q->sval);
-			q->sval = STRDUP(p);
-			q->tval |= STR;
-			if(r = is_number(p, &v))
+			if(r = is_number(p, &v)){
+				q->val = v;
 				q->tval |= r;
+				q->tval &= ~STR;
+				q->sval = NULL;
+			}else{
+				q->sval = STRDUP(p);
+				q->tval |= STR;
+			}
 		}else
 			free(p);
 	}else{
 		q = setsym(s, p, symtab);
+		/* FIXME: ? */
 		if(q->sval == EMPTY){
 			q->sval = STRDUP(p);
 			q->tval |= STR;
@@ -602,7 +608,9 @@ void SYNTAX(const char *fmt, ...)
 	fprintf(awkstderr, " at source line %d", lineno);
 	if (curfname != NULL)
 		fprintf(awkstderr, " in function %s", curfname);
-	if (compile_time == COMPILING && cursource() != NULL)
+	if (evalstr != NULL)
+		fprintf(awkstderr, " eval(\"%s\")", evalstr);
+	else if (compile_time == COMPILING && cursource() != NULL)
 		fprintf(awkstderr, " source file %s", cursource());
 	fprintf(awkstderr, "\n");
 	errorflag = 2;
