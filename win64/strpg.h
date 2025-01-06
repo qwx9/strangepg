@@ -72,7 +72,7 @@ int nrand(int);
 int	lrand(void);
 int	getfields(char*, char**, int, int, char*);
 char*	seprint(char*, char*, char*, ...);
-char*	strecpy(char*, char*, char*);
+char*	strecpy(char*, char*, const char*);
 
 //#define const
 #define nil NULL	// better for them to be interchangeable here

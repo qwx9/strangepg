@@ -15,7 +15,7 @@
 typedef	unsigned short	ushort;
 typedef	unsigned char	uchar;
 typedef unsigned int	uint;
-typedef unsigned long	ulong;
+typedef unsigned long	ulong;	/* FIXME */
 typedef signed char	schar;
 typedef	long long	vlong;
 typedef	unsigned long long uvlong;
@@ -72,7 +72,7 @@ int nrand(int);
 int	lrand(void);
 int	getfields(char*, char**, int, int, char*);
 char*	seprint(char*, char*, char*, ...);
-char*	strecpy(char*, char*, char*);
+char*	strecpy(char*, char*, const char*);
 
 //#define const
 #define nil NULL	// better for them to be interchangeable here

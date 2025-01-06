@@ -66,7 +66,7 @@ prompt(Rune)
 }
 
 static void
-pasteprompt(char *s)
+pasteprompt(const char *s)
 {
 	if(s == nil)
 		return;

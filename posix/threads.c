@@ -134,7 +134,7 @@ recvul(Channel *c)
 {
 	uintptr v;
 
-	if(chan_recv(c, &v) < 0)
+	if(chan_recv(c, (void **)&v) < 0)
 		return 0;
 	return (ulong)v;
 }

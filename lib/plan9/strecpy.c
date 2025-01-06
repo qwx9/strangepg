@@ -4,7 +4,7 @@
 /* /sys/src/libc/port/strecpy.c */
 
 char*
-strecpy(char *to, char *e, char *from)
+strecpy(char *to, char *e, const char *from)
 {
 	if(to >= e)
 		return to;

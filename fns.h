@@ -43,7 +43,7 @@ void*	threadstore(void*);
 	if(_t - (c).t0 >= PerfΔt){ \
 		(c).t0 = _t; \
 		_t = (vlong)(((c).s / (c).n) * 1000000.0); \
-		warn("[perf] %s: avg %lld μs over %d samples\n", \
+		warn("[perf] %s: avg %lld μs over %lld samples\n", \
 			(c).lab, _t, (c).n); \
 	} \
 }

@@ -3,7 +3,7 @@ typedef struct Dyhdr Dyhdr;
 struct Dyhdr{
 	usize sz;
 	usize len;
-} __attribute__((packed));	/* alignment */
+};
 
 /* private, do not use directly */
 #define dyhdr(a)	((Dyhdr*)(a) - 1)
