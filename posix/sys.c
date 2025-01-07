@@ -8,9 +8,6 @@
 
 #undef dup
 
-/* leave here to not have to redefine in tests and elsewhere */
-int debug;
-
 char *argv0;
 
 static char errbuf[1024];

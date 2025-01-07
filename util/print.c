@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "threads.h"
 
+int debug = Debuginfo;
 int onscreen;
 char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;
@@ -81,6 +82,7 @@ dprint(int flags, char *fmt, ...)
 
 	switch(debug & flags){
 	case 0: return;
+	case Debuginfo: type = "info"; break;
 	case Debugawk: type = "awk"; break;
 	case Debugcmd: type = "cmd"; break;
 	case Debugcoarse: type = "coarse"; break;

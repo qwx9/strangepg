@@ -2,9 +2,6 @@
 #include "threads.h"
 #include <pool.h>
 
-/* leave here to not have to redefine in tests and elsewhere */
-int debug;
-
 void
 fpecatchall(void)
 {

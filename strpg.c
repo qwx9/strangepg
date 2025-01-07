@@ -63,7 +63,7 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-HMZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-HMZbhqvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -71,6 +71,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
+		"-q             Suppress warning messages\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
 		"-H             Enable Hi-DPI mode\n"
@@ -87,7 +88,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-HMZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-HMZbhqvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
@@ -156,6 +157,9 @@ parseargs(int argc, char **argv)
 			deflayout = LLcirc;
 		else
 			sysfatal("unknown layout type");
+		break;
+	case 'q':
+		debug = 0;
 		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
