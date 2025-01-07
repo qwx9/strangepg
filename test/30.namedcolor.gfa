@@ -1,0 +1,60 @@
+H	VN:Z:1.0
+S	1	*	LN:i:5	CL:Z:blue
+S	2	*	LN:i:3	CL:Z:blue
+S	3	*	LN:i:4	CL:Z:blue
+S	4	*	LN:i:5	CL:Z:red
+S	5	*	LN:i:5	CL:Z:red
+S	6	*	LN:i:3	CL:Z:red
+S	7	*	LN:i:4	CL:Z:black
+S	8	*	LN:i:5	CL:Z:black
+S	9	*	LN:i:5	CL:Z:black
+S	10	*	LN:i:4	CL:Z:orange
+S	11	*	LN:i:4	CL:Z:orange
+S	12	*	LN:i:4	CL:Z:orange
+S	13	*	LN:i:4	CL:Z:lightgreen
+S	14	*	LN:i:2	CL:Z:lightgreen
+S	15	*	LN:i:4	CL:Z:lightgreen
+S	16	*	LN:i:5	CL:Z:lightteal
+S	17	*	LN:i:4	CL:Z:lightteal
+S	18	*	LN:i:5	CL:Z:lightteal
+S	19	*	LN:i:5	CL:Z:purple
+S	20	*	LN:i:5	CL:Z:purple
+L	1	+	2	+	0M
+L	2	+	6	+	0M
+L	6	+	3	+	0M
+L	3	+	11	+	0M
+L	11	+	4	+	0M
+L	4	+	3	+	0M
+L	3	+	8	+	0M
+L	8	+	13	+	0M
+L	13	+	7	+	0M
+L	7	+	5	+	0M
+L	5	+	9	-	0M
+L	9	-	18	+	0M
+L	18	+	6	+	0M
+L	6	+	6	+	0M
+L	6	+	7	+	0M
+L	7	+	6	+	0M
+L	6	+	11	+	0M
+L	11	+	8	+	0M
+L	8	+	9	+	0M
+L	9	+	10	+	0M
+L	10	+	6	+	0M
+L	6	+	10	+	0M
+L	10	+	5	+	0M
+L	5	+	1	+	0M
+L	1	+	11	+	0M
+L	11	+	12	-	0M
+L	12	-	13	+	0M
+L	13	+	18	+	0M
+L	18	+	16	+	0M
+L	16	+	14	+	0M
+L	14	+	15	+	0M
+L	3	+	15	+	0M
+L	15	+	16	+	0M
+L	16	+	17	+	0M
+L	17	+	6	+	0M
+L	13	+	18	+	0M
+L	18	+	19	+	0M
+L	19	+	15	+	0M
+L	15	+	20	+	0M
