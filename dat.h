@@ -68,6 +68,7 @@ enum{
 	Debugawk = 1<<9,
 	Debugload = 1<<10,
 	Debuggraph = 1<<11,
+	Debuginfo = 1<<12,
 	Debugtheworld = 0xffffffff,
 
 	PerfΔt = 1000000,
