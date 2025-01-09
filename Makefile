@@ -57,7 +57,7 @@ CPPFLAGS+=\
 CFLAGS?= -O3 -pipe -march=native
 # with minor plan9esque violations
 CFLAGS+= -std=c99
-CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas
+CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas -Winline
 ifdef DEBUG
 	ifdef ASAN
 		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
@@ -72,10 +72,10 @@ ifdef DEBUG
 	else
 		CFLAGS+= -ggdb -Wno-suggest-attribute=format
 	endif
-	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self -Winline \
+	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self \
 			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
-			 -Wswitch-default -Wvariadic-macros
+			 -Wvariadic-macros
 else
 	#CPPFLAGS+= -DNDEBUG
 	CFLAGS+= -g -flto
