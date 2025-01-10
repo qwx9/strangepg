@@ -177,12 +177,12 @@ Graphics cards from around 2013 on should all be compatible.
 Intel machines with Ivy Bridge or later HD Graphics work.
 
 For arm64/aarch64, the Raspberry Pi 4 and later should work,
-but are untested.
-It's confirmed to work on the Nintendo Switch (on Linux).
+but so far it's unconfirmed.
+It's confirmed to work on the Nintendo Switch (on Linux) however.
 
 #### Software requirements
 
-- Linux/OpenBSD: OpenGL and X11 libraries, optionally EGL;
+- Linux: OpenGL and X11 libraries, optionally EGL;
 there's no native Wayland support yet
 - Windows: Windows 7 or later, but might work on XP
 - macOS: macOS 11 or later, but might work on OSX 10.11
@@ -200,9 +200,8 @@ Install conda, add the bioconda channel, then:
 conda install strangepg
 ```
 
-Currently Linux aarch64 builds use mainline OpenGL instead of OpenGL ES.
-It works on the hardware I have on hand, but might not for everyone; this will change soon.
-macOS is supported for both intel and apple silicon; both should work in the same way,
+Currently Linux aarch64 builds use OpenGL ES and EGL instead of mainline OpenGL.
+macOS is supported for both Intel and Apple silicon; both should work in the same way,
 but the former has received much less testing.
 
 #### Linux
@@ -243,11 +242,10 @@ To set the compiler, use the `CC` make variable:
 make CC=clang -j install
 ```
 
-Currently arm64 builds use EGL on top.
-It can forced to use OpenGL ES instead:
+Currently arm64 builds use OpenGL ES. They can be forced to use EGL as well:
 
 ```bash
-make GLES=1 -j install
+make EGL=1 -j install
 ```
 
 Multiple make variables may be specified at the same time.
@@ -383,10 +381,6 @@ strangepg test/02.gfa
 
 <p align="center"><img src=".pics/02.png"/></p>
 
-Loading large graphs completely may take a few seconds to a few minutes,
-and much of it is done in the background.
-For this reason, the prompt will not work until the message `awk: ready` appears.
-
 #### Command-line options
 
 ```bash
@@ -398,6 +392,8 @@ usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
 -l ALG         Set layouting algorithm (default: pfr)
 -t N           Set number of layouting threads (1-128, default: 4)
 -w             Do not wait for all files to load to start layouting
+-H             Enable Hi-DPI mode
+-M             Enable 4x multisample anti-aliasing (MSAA)
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
 ```
 
@@ -418,20 +414,15 @@ It can be specified multiple times to load tags from more than one CSV file.
 Additional settings:
 
 - `-b` sets the obligatory dark theme.
-- `-w` enables layouting to start as soon as the first pass over the GFA file is over.
-GFA loading is done in two passes.
-The first loads just the topology of the graph (segments and links between them)
-and skips over everything else.
-The second pass loads all tags for each segment, and overlap string for links.
-If there are no tags affecting layout
-(see [Applications](#applications) below)
-are present in the GFA, or any CSV file,
-and no layout file is specified at the command line,
-then there is no reason to wait after the first pass completes,
-and layouting can begin immediately, much faster.
-This is disabled by default because layouting may contend for CPU time with file loading threads and slow them down,
-then potentially have to restart anyway.
-Use `-w` if you aren't loading a layout file and if the GFA or CSV inputs only contain tags like color, etc.
+- `-w` enables gottagofast mode:
+begin layouting before all files are fully loaded.
+Normally, because it's unknown ahead of time if there are tags
+in the input GFA files or additional files (CSVs, etc.)
+that may influence layouting,
+layouting only begins when it is safe to assume that everything is ready.
+This option completely ignores all of this
+and instead signals layouting to begin immediately after all nodes and
+edges have been created.
 
 <p align="center"><img src=".pics/darkmode.png"/></p>
 
@@ -445,9 +436,9 @@ but it might look aesthetically unpleasing depending on the camera angle.
 This option squishes nodes as close to each other as possible
 so as to appear as if there is no depth.
 
-Graphical options
+Additional graphics options
 
-- `-H`: enable high-DPI mode (macOS only).
+- `-H`: enable hi-DPI mode (macOS only).
 - `-M`: enable 4x multi-sample antialiasing (MSAA), which smooths lines
 and provides much more aesthetically pleasant visuals,
 at the cost of performance.
@@ -768,7 +759,7 @@ but because it is shown in real time and the algorithms currently used being slo
 (improvements underway), the initial plot looks... underwhelming.
 
 Less major bugs:
-- strawk still uses too much memory and its language is very limited
+- strawk could still use less memory and be faster; its language is very limited
 - Layouting currently doesn't place some of the nodes nicely;
 many plots look ugly by default but can be fixed by just moving the nodes around.
 - 3d navigation is a kludge on top of 2d navigation
@@ -776,6 +767,7 @@ many plots look ugly by default but can be fixed by just moving the nodes around
 - The renderer is fairly efficient, but it could be made orders of magnitude faster
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well
+- transient pthreads error on exit: libgcc_s.so.1 must be installed for pthread_exit to work
 
 
 ## Used and bundled alien software
