@@ -1,6 +1,9 @@
-enum{
-	ALOAD,
-	ALOADBATCH,
+typedef union V V;
+union V{
+	s64int i;
+	u64int u;
+	double f;
+	char *s;
 };
 
 enum{
@@ -11,12 +14,23 @@ enum{
 	Tx0,
 	Ty0,
 	Tz0,
-	Tlayout,	/* marker for last tag affecting layout */
-	Tnode = Tlayout,
+
+	Tnode,
 	Tedge,
 	Tlabel,
 	TCL,
+	Tselect,
 	Tnil,
+
+	Tlayout = Tnode,	/* end of tags affecting layout */
+};
+
+enum{
+	ALOAD,
+	ALOADBATCH,
+	ANODECOLOR,
+	ASELECT,
+	ADESELECT,
 };
 
 extern int noreset;
@@ -25,8 +39,8 @@ extern char *awkprog;
 extern int infd[2], outfd[2];
 
 int	gettab(char*);
-void	settag(char*, ioff, char, char*, int);
-void	setspectag(int, ioff, char*);
+void	settag(char*, ioff, char*, int);
+void	setspectag(int, ioff, V);
 void	setnamedtag(char*, char*, char*);
 void	initext(void);
 
@@ -35,5 +49,6 @@ void	flushcmd(void);
 void	pushcmd(char*, ...);
 int	sysinitcmd(void);
 int	initrepl(void);
-void	awk(void*);
 int	initcmd(void);
+
+void	setattr(int, ioff id, V val);

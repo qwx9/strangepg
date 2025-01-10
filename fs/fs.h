@@ -45,8 +45,8 @@ char*	readline(File*);
 void	splitfs(File*, char);
 void	regfs(Filefmt*);
 
-int	importlayout(Graph*, char*);
-int	exportlayout(Graph*, char*);
+int	importlayout(char*);
+int	exportlayout(char*);
 
 int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);

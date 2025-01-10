@@ -46,14 +46,14 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 }
 
 static REdge *
-drawedges(REdge *r, RNode *rn, Graph *g)
+drawedges(REdge *r, RNode *rn)
 {
 	ioff x, *e, *ee;
 	Node *n, *ne;
 	RNode *u, *v;
 
-	for(u=rn, n=g->nodes, ne=n+dylen(n); n<ne; n++, u++){
-		for(e=g->edges+n->eoff, ee=e+n->nedges-n->nin; e<ee; e++, r++){
+	for(u=rn, n=nodes, ne=n+dylen(n); n<ne; n++, u++){
+		for(e=edges+n->eoff, ee=e+n->nedges-n->nin; e<ee; e++, r++){
 			x = *e;
 			v = rnodes + (x >> 2);
 			drawedge(r, u, v, x & 1, x & 2);
@@ -62,20 +62,29 @@ drawedges(REdge *r, RNode *rn, Graph *g)
 	return r;
 }
 
-static inline void
-resizenode(RNode *r, int length)
+static void
+resizenodes(void)
 {
-	float Δ, max;
+	double l, Δ, max;
+	RNode *r, *re;
 
-	if(length == 0)
-		length++;
-	Δ = MAX(1.0f, drawing.length.max - drawing.length.min);
-	max = Nodesz * log(0.05f + Δ);
-	r->len = (max - (max - 0.05f) * exp(-length / Δ));
+	if(drawing.flags & DFstalelen){
+		drawing.flags &= ~DFstalelen;
+		if(drawing.length.min <= 0)
+			drawing.length.min = 1;
+	}
+	Δ = MAX(1.0, drawing.length.max - drawing.length.min);
+	max = Nodesz * log(0.05 + Δ);
+	for(r=rnodes, re=r+dylen(r); r<re; r++){
+		l = r->len;
+		if(l == 0.0)
+			l = 1.0;
+		r->len = (max - (max - 0.05) * exp(-l / Δ));
+	}
 }
 
 static inline void
-faceyourfears(RNode *ru, Graph *g, Node *u)
+faceyourfears(RNode *ru, Node *u)
 {
 	float x, y, Δ, Δx, Δy;
 	float θ, c, s;
@@ -86,7 +95,7 @@ faceyourfears(RNode *ru, Graph *g, Node *u)
 	x = ru->pos[0];
 	y = ru->pos[1];
 	c = s = 0.0;
-	for(i=g->edges+u->eoff, ie=i+u->nedges-u->nin; i<ie; i++){
+	for(i=edges+u->eoff, ie=i+u->nedges-u->nin; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)
@@ -125,21 +134,12 @@ faceyourfears(RNode *ru, Graph *g, Node *u)
 }
 
 static RNode *
-drawnodes(RNode *r, Graph *g)
+drawnodes(RNode *r)
 {
-	int stale;
 	Node *n, *e;
 
-	if(stale = (drawing.flags & DFstalelen)){
-		drawing.flags &= ~DFstalelen;
-		if(drawing.length.min <= 0)
-			drawing.length.min = 1;
-	}
-	for(n=g->nodes, e=n+dylen(n); n<e; n++, r++){
-		faceyourfears(r, g, n);
-		if(stale)
-			resizenode(r, n->attr.length);
-	}
+	for(n=nodes, e=n+dylen(n); n<e; n++, r++)
+		faceyourfears(r, n);
 	return r;
 }
 
@@ -147,10 +147,13 @@ static int
 drawworld(int go)
 {
 	int r;
-	Graph *g;
 	RNode *rn, *rne;
 	REdge *re;
+	Graph *g;
+	static vlong nf;
 
+	if(nf++ == 0)
+		resizenodes();
 	r = 0;
 	rn = rnodes;
 	re = redges;
@@ -160,14 +163,12 @@ drawworld(int go)
 		if((g->flags & GFdrawme) != 0)
 			r++;
 		else if(!go){
-			rn += dylen(g->nodes);
-			re += dylen(g->edges) / 2;
+			rn += g->nnodes;
+			re += g->nedges;
 			continue;
 		}
-		lockgraph(g, 0);
-		rne = drawnodes(rn, g);
-		re = drawedges(re, rn, g);
-		unlockgraph(g, 0);
+		rne = drawnodes(rn);
+		re = drawedges(re, rn);
 		rn = rne;
 	}
 	ndnodes = rn - rnodes;

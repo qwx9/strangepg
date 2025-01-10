@@ -208,7 +208,6 @@ mixcolors(float *cols, u32int v)
 	cols[2] = c1[2];
 }
 
-/* FIXME: make float colors the base and get rid of this stuff */
 Color *
 color(u32int v)
 {

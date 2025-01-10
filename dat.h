@@ -4,8 +4,9 @@ typedef struct Node Node;
 typedef struct Layout Layout;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
-typedef struct Attr Attr;
+typedef struct Super Super;
 
+#pragma incomplete Super
 #pragma incomplete Layout
 #pragma incomplete Thread
 
@@ -28,19 +29,17 @@ enum{
 	FNinitpos = FNinitx | FNinity | FNinitz,
 	FNvisible = 1<<6,
 };
-/* FIXME: ht, or sth for some of these: idx → {pos0} */
-struct Attr{
-	u32int color;
-	int length;
+struct Node{
 	uchar flags;
 	Vertex pos0;
-};
-struct Node{
-	Attr attr;
 	short nedges;
 	short nin;
 	ioff eoff;
 };
+extern Node *nodes;
+extern ioff *edges;
+extern Super *supers;
+
 enum{
 	GFlayme = 1<<0,
 	GFdrawme = 1<<1,
@@ -49,9 +48,10 @@ enum{
 struct Graph{
 	int type;
 	uchar flags;
-	Node *nodes;
-	ioff *edges;
 	Layout *layout;
+	ioff nfirst;
+	vlong nnodes;
+	vlong nedges;
 };
 extern Graph *graphs;	/* dynamic array */
 

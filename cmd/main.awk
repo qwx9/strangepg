@@ -50,19 +50,31 @@ BEGIN{
 }
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
-		if(++fnr == nd + 1){
-			if(!noreset)
-				print "R"
-			else{
-				noreset = 0
-				print "r"
-			}
-		}else
+		if(++fnr == nd + 1)
+			cmd("FGD135")
+		else{
 			print deferred[fnr]
+			loadbatch()
+		}
 	}else if(code == "FGD135"){	# wing attack plan R
+		if(fnr < nd + 1)
+			return
 		crm114 = 1
 		loadall()
-		print "awk: ready."
+		if(die)
+			quit()
+		if(noreset)
+			print "r"
+		else
+			print "R"
+		noreset = 0
+	}else if(code == "FJJ142"){	# mission completed, returning
+		die = 1
+		if(crm114)
+			quit()
+	}else if(code == "OPL753"){	# wing to contact base immediately
+		loadall()
+		print "R"
 	}
 }
 function exportlayout(f){
@@ -92,16 +104,6 @@ function addnode(id, name, color){
 	label[id] = name
 	if(color != "")
 		CL[name] = color
-}
-function nodecolor(name, color){
-	if(!checknodename(name))
-		return
-	if(length(color) == 0){
-		print "E\tno such color for node: " name
-		return
-	}
-	CL[name] = color
-	printf "c\t%s\t0x%x\n", node[name], color
 }
 function delnode(name){
 	if(!checknodename(name))

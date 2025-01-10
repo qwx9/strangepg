@@ -23,6 +23,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "continue",	CONTINUE,	CONTINUE },
 	{ "cos",	FCOS,		BLTIN },
 	{ "delete",	DELETE,		DELETE },
+//	{ "deselect",	ADESELECT,	ADDON },
 	{ "do",		DO,		DO },
 	{ "else",	ELSE,		ELSE },
 	{ "eval",	FEVAL,		BLTIN },
@@ -43,11 +44,13 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "log",	FLOG,		BLTIN },
 	{ "match",	MATCHFCN,	MATCHFCN },
 	{ "next",	NEXT,		NEXT },
+	{ "nodecolor",	ANODECOLOR,		ADDON },
 	{ "nrand",	FNRAND,		BLTIN },
 	{ "print",	PRINT,		PRINT },
 	{ "printf",	PRINTF,		PRINTF },
 	{ "rand",	FFRAND,		BLTIN },
 	{ "return",	RETURN,		RETURN },
+//	{ "select",	ASELECT,	ADDON },
 	{ "sin",	FSIN,		BLTIN },
 	{ "split",	SPLIT,		SPLIT },
 	{ "sprintf",	SPRINTF,	SPRINTF },
@@ -61,7 +64,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 };
 const size_t nkeywords = nelem(keywords);
 
-noreturn void
+static noreturn void
 awk(void *)
 {
 	if((awkstdin = fdopen(infd[0], "rb")) == NULL
@@ -73,7 +76,7 @@ awk(void *)
 	initpool();
 	cmdname = "strawk";
 	lexprog = awkprog;
-	dbg = (debug & Debugawk) != 0;
+	dbg = (debug & Debugstrawk) != 0;
 	catchfpe();
 	init_genrand64(srand_seed);
 	symtab = makesymtab(1);
@@ -92,7 +95,6 @@ awk(void *)
 }
 
 /* use [1] on our side, [0] on awk side */
-
 int
 initrepl(void)
 {

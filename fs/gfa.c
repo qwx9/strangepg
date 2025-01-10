@@ -4,6 +4,7 @@
 #include "threads.h"
 #include "drw.h"
 #include "cmd.h"
+#include "layout.h"
 #include "lib/khashl.h"
 
 /* assumptions:
@@ -30,9 +31,9 @@ struct Aux{
 };
 
 static int
-readnodetags(Aux *a, File *f, Node *nodes)
+readnodetags(Aux *a, File *f)
 {
-	int t, nerr;
+	int nerr;
 	char *s;
 	ioff id;
 	vlong off, *o, *oe;
@@ -54,8 +55,7 @@ readnodetags(Aux *a, File *f, Node *nodes)
 				continue;
 			}
 			s[2] = 0;
-			if((t = gettab(s)) < 0 || !setattr(nodes + id, id, t, s+5))
-				settag(s, id, s[3], s+5, 0);
+			settag(s, id, s+5, 0);
 			nerr = 0;
 		}
 	}
@@ -80,7 +80,7 @@ readedgetags(Aux *a, File *f)
 		if((s = nextfield(f)) == nil)
 			sysfatal("readedgetags: bug: short read, line %d", f->nr);
 		if(strcmp(s, "*") != 0)
-			settag("cigar", id, 'Z', s, 1);
+			settag("cigar", id, s, 1);
 		while((s = nextfield(f)) != nil){
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
 				warn("invalid edge tag \"%s\"\n", s);
@@ -94,7 +94,7 @@ readedgetags(Aux *a, File *f)
 			 * overwrite them; we need a better mechanism for this */
 			tag[1] = s[0];
 			tag[2] = s[1];
-			settag(tag, id, s[3], s+5, 1);
+			settag(tag, id, s+5, 1);
 			nerr = 0;
 		}
 	}
@@ -102,51 +102,43 @@ readedgetags(Aux *a, File *f)
 }
 
 static void
-initnodes(Graph *g, ioff nnodes, int *len, ioff *off, ushort *deg)
+initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
 {
 	int i;
-	u32int c;
+	vlong nn;
 	Node *n, *ne;
 	RNode *r;
+	V v;
 
-	dyresize(g->nodes, nnodes);
-	dyresize(rnodes, nnodes);
-	for(i=0, r=rnodes, n=g->nodes, ne=n+nnodes; n<ne; n++, r++){
-		n->attr.length = *len++;
+	nn = dylen(nodes);
+	dyresize(nodes, (nn + nnodes));
+	dyresize(rnodes, (nn + nnodes));
+	for(i=nn, r=rnodes+nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, r++, i++){
 		n->nedges = *deg++;
 		n->nin = 0;
 		n->eoff = *off++;
-		c = somecolor(i++, nil);
-		n->attr.color = c;
-		r->len = 1.0f;
-		setcolor(r->col, c);
-		if(n->attr.length <= 0)
-			continue;
-		if(drawing.length.min > n->attr.length){
-			drawing.length.min = n->attr.length;
-			drawing.flags |= DFstalelen;
-		}
-		if(drawing.length.max < n->attr.length){
-			drawing.length.max = n->attr.length;
-			drawing.flags |= DFstalelen;
-		}
+		v.i = *len++;
+		setspectag(TLN, i, v);
 	}
 }
 
 /* UGH */
 static void
-initedges(Aux *a, Graph *g, ioff nedges, ioff *index)
+initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 {
-	ushort d, *degree;
+	ushort d, *deg;
 	ioff off, i, j;
+	vlong nn, nm;
 	u64int e, u, v;
 	edgeset *h;
 	khint_t k;
 
-	dyresize(g->edges, 2 * nedges);
-	dyresize(redges, nedges + nelem(selbox));
-	h = a->edges;
-	degree = a->degree;
+ 	nn = dylen(edges);
+	nm = nn + 2 * nedges;
+	dyresize(edges, nm);
+	dyresize(redges, nm + nelem(selbox));
+	h = eset;
+	deg = degree;
 	kh_foreach(h, k){
 		e = kh_key(h, k);
 		u = e >> 32ULL & 0xffffffff;
@@ -155,54 +147,59 @@ initedges(Aux *a, Graph *g, ioff nedges, ioff *index)
 		j = v >> 1;
 		if(debug & Debuggraph)
 			warn("map %d%c %d%c → ", i, u&1?'-':'+', j, v&1?'-':'+');
-		assert(i < dylen(g->nodes));
-		assert(j < dylen(g->nodes));
+		assert(i < dylen(nodes));
+		assert(j < dylen(nodes));
 		if(i == j){					/* self edge */
-			degree[i]--;
+			deg[i]--;
 			off = index[i]++;
 			if(debug & Debuggraph)
-				warn("self off=%d base=%d\n", off, g->nodes[j].eoff);
-			g->edges[off] = v << 1 | u & 1;
+				warn("self off=%d base=%d\n", off, nodes[j].eoff);
+			edges[off] = v << 1 | u & 1;
 		}else if(u & 1){			/* in edge */
-			d = --degree[i];
+			d = --deg[i];
 			off = index[i] + d;
 			if(debug & Debuggraph)
-				warn("in off=%d base=%d, ", off, g->nodes[i].eoff);
-			g->edges[off] = v << 1 | 1;
-			g->nodes[i].nin++;
-			degree[j]--;
+				warn("in off=%d base=%d, ", off, nodes[i].eoff);
+			edges[off] = v << 1 | 1;
+			nodes[i].nin++;
+			deg[j]--;
 			off = index[j]++;
 			if(debug & Debuggraph)
-				warn("out off=%d base=%d\n", off, g->nodes[j].eoff);
-			g->edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
+				warn("out off=%d base=%d\n", off, nodes[j].eoff);
+			edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
 		}else{						/* out edge */
-			degree[i]--;
+			deg[i]--;
 			off = index[i]++;
 			if(debug & Debuggraph)
-				warn("out off=%d base=%d, ", off, g->nodes[i].eoff);
-			g->edges[off] = v << 1 | 0;
-			d = --degree[j];
+				warn("out off=%d base=%d, ", off, nodes[i].eoff);
+			edges[off] = v << 1 | 0;
+			d = --deg[j];
 			off = index[j] + d;
 			if(debug & Debuggraph)
-				warn("in off=%d base=%d\n", off, g->nodes[j].eoff);
-			g->edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
-			g->nodes[j].nin++;
+				warn("in off=%d base=%d\n", off, nodes[j].eoff);
+			edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
+			nodes[j].nin++;
 		}
 	}
 }
 
-static void
-mkgraph(Aux *a, Graph *g)
+static Graph *
+mkgraph(Aux *a)
 {
-	initgraph(g, FFgfa);
-	initnodes(g, a->nnodes, a->length, a->index, a->degree);
+	Graph *g;
+
+	g = initgraph(FFgfa);
+	initnodes(a->nnodes, a->length, a->index, a->degree);
 	dyfree(a->length);
-	initedges(a, g, a->nedges, a->index);
+	initedges(a->nedges, a->edges, a->index, a->degree);
 	edges_destroy(a->edges);
 	dyfree(a->degree);
 	free(a->index);
-	assert(dylen(g->edges) == 2*(dylen(redges)-4));
-	assert(dylen(g->nodes) == a->nnodes);
+	g->nnodes = a->nnodes;
+	g->nedges = a->nedges;
+	if(newlayout(g, -1) < 0)
+		warn("initgraph: %s\n", error());
+	return g;
 }
 
 static void
@@ -248,6 +245,7 @@ pushnode(Aux *a, char *s, int *abs)
 	ioff id;
 	khint_t k;
 	namemap *h;
+	V v;
 
 	h = a->names;
 	k = names_put(h, s, abs);
@@ -256,7 +254,8 @@ pushnode(Aux *a, char *s, int *abs)
 		s = estrdup(s);
 		kh_key(h, k) = s;
 		kh_val(h, k) = id;
-		setspectag(Tnode, id, s);
+		v.s = s;
+		setspectag(Tnode, id, v);
 	}else
 		id = kh_val(h, k);
 	DPRINT(Debugfs, "node[%d] %s", id, s);
@@ -345,7 +344,7 @@ readedge(Aux *a, File *f)
 	id = ((u64int)u << 1 | i) << 32ULL | v << 1 | j;
 	edges_put(a->edges, id, &abs);
 	if(!abs){
-		warn("readgfa: line %d: duplicate edge, ignored\n", f->nr);
+		DPRINT(Debuginfo, "readgfa: line %d: duplicate edge, ignored", f->nr);
 		return 0;
 	}
 	dypush(a->edgeoff, off);
@@ -369,7 +368,7 @@ readgfa(Aux *a, File *f)
 			continue;
 		switch(s[0]){
 		err:
-			warn("readgfa: line %d: %s\n", f->nr, error());
+			DPRINT(Debuginfo, "readgfa: line %d: %s", f->nr, error());
 			nerr++;
 			break;
 		case 'W':	/* v1.1 */
@@ -390,7 +389,7 @@ readgfa(Aux *a, File *f)
 			if(a->nedges % 1000000 == 0)
 				warn("readgfa: %.3g edges...\n", (double)a->nedges);
 			break;
-		default: DPRINT(Debugfs, "line %d: unhandled record type %c", f->nr, s[0]);
+		default: DPRINT(Debuginfo, "line %d: unhandled record type %c", f->nr, s[0]);
 		}
 		if(nerr >= 10){
 			werrstr("too many errors");
@@ -434,11 +433,12 @@ loadgfa1(void *arg)
 	double t, t0;
 	File *f;
 	Aux a = {0};
-	Graph g;
 
 	t0 = μsec();
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
+	pushcmd("loadbatch()");
+	flushcmd();
 	TIME("readgfa");
 	if(a.nnodes == 0)
 		sysfatal("loadgfa: no nodes\n");
@@ -447,23 +447,19 @@ loadgfa1(void *arg)
 	logmsg("loadgfa: initializing graph...\n");
 	mkbuckets(&a);			/* compute slots for each node's edges */
 	TIME("mkbuckets");
-	mkgraph(&a, &g);		/* batch initialize nodes and edges from indexes */
+	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
 	TIME("mkgraph");
-	pushgraph(&g);
-	TIME("pushgraph");
-	if(gottagofast){
-		pushcmd("cmd(\"FHJ142\")");	/* signal read next file or start layouting */
-		flushcmd();
+	if(gottagofast){	/* FIXME: very much unsafe, won't work with csv, etc. */
+		pushcmd("cmd(\"OPL753\")");	/* load what we have and start layouting */
+		flushcmd();					/* awk must be in on it or it won't work */
 	}
 	names_destroy(a.names);
 	logmsg("loadgfa: reading node tags...\n");
 	if(debug & Debugperf)
 		t0 = μsec();
-	if(readnodetags(&a, f, g.nodes) < 0)
+	if(readnodetags(&a, f) < 0)
 		sysfatal("loadgfa: readnodetags: %s", error());
 	TIME("readnodetags");
-	pushcmd("loadbatch()");
-	flushcmd();
 	dyfree(a.nodeoff);
 	if(!gottagofast){
 		pushcmd("cmd(\"FHJ142\")");
@@ -475,7 +471,7 @@ loadgfa1(void *arg)
 	if(readedgetags(&a, f) < 0)
 		sysfatal("loadgfa: readedgetags: %s", error());
 	TIME("readedgetags");
-	pushcmd("cmd(\"FGD135\")");	/* issue go code */
+	pushcmd("loadbatch()");
 	if((debug & Debugload) != 0)
 		pushcmd("quit()");
 	flushcmd();

@@ -85,7 +85,7 @@ rotate(float Δx, float Δy)
 int
 keyevent(Rune r, int down)
 {
-	int m;
+	int p, m;
 	Graph *g;
 
 	DPRINT(Debugdraw, "keyevent %d", r);
@@ -117,17 +117,11 @@ keyevent(Rune r, int down)
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
-	case 'r':
-		for(g=graphs; g<graphs+dylen(graphs); g++)
-			reqlayout(g, Lreset);
-		break;
+	case 'r': reqlayout(Lreset); break;
 	case 'p':
-		for(g=graphs; g<graphs+dylen(graphs); g++){
-			if((g->flags & GFdrawme) != 0)
-				reqlayout(g, Lstop);
-			else
-				reqlayout(g, Lstart);
-		}
+		for(g=graphs, p=0; g<graphs+dylen(graphs); g++)
+			p += g->flags & GFdrawme;
+		reqlayout(p ? Lstop : Lstart);
 		break;
 	case 'a': reqdraw(Reqshape); break;
 	case 'l': drawing.flags ^= DFdrawlabels; reqdraw(Reqshallowdraw); break;

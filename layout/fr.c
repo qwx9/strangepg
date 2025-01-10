@@ -20,8 +20,6 @@ struct Δpos{
 	float y;
 };
 struct Aux{
-	Node *nodes;
-	ioff *edges;
 	Δpos *Δtab;
 	float k;
 };
@@ -32,18 +30,26 @@ struct Aux{
 #define	cool(t)	((t) * ((Nrep - 1.0f) / Nrep))
 
 static void *
-new(Graph *g)
+init(void)
+{
+	Aux *aux;
+
+	aux = emalloc(sizeof *aux);
+	aux->k = C * sqrtf((float)Area / dylen(rnodes));
+	aux->Δtab = emalloc(dylen(rnodes) * sizeof *aux->Δtab);
+	return aux;
+}
+
+static void *
+new(void)
 {
 	ioff n;
-	float k;
 	double z;
 	RNode *r, *re;
 	Node *u;
-	Aux *aux;
 
-	k = C * sqrtf((float)Area / dylen(rnodes));
-	n = dylen(g->nodes);
-	for(u=g->nodes, r=rnodes, re=r+n; r<re; r++, u++){
+	n = dylen(rnodes);
+	for(u=nodes, r=rnodes, re=r+n; r<re; r++, u++){
 		r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
 		r->pos[1] = (float)(L / 2 - nrand(L)) / (L / 2);
 		z = (double)(n - (r - rnodes)) / n;
@@ -51,12 +57,7 @@ new(Graph *g)
 			? 0.8 * (0.5 - z)
 			: 0.00001 * z;
 	}
-	aux = emalloc(sizeof *aux);
-	aux->Δtab = emalloc(n * sizeof *aux->Δtab);
-	aux->nodes = g->nodes;
-	aux->edges = g->edges;
-	aux->k = k;
-	return aux;
+	return init();
 }
 
 static void
@@ -68,21 +69,19 @@ cleanup(void *aux)
 static int
 compute(void *arg, volatile int *stat, int idx)
 {
-	ioff i, *edges, *e, *ee;
+	ioff i, *e, *ee;
 	float k, t, f, x, y, w, uw, vw, Δx, Δy, Δr, δx, δy, δ;
 	RNode *u, *v, *re;
-	Node *n, *nodes;
+	Node *n;
 	Δpos *Δtab, *Δu, *Δv;
 	Aux *aux;
 
 	if(idx > 0)	/* single thread */
 		return 0;
 	aux = arg;
-	re = rnodes + dylen(aux->nodes);
-	edges = aux->edges;
-	nodes = aux->nodes;
+	re = rnodes + dylen(nodes);
 	Δtab = aux->Δtab;
-	k = C * sqrtf((float)Area / dylen(aux->nodes));
+	k = aux->k;
 	t = 1.0f;
 	for(;;){
 		Δr = 0;
@@ -159,6 +158,7 @@ compute(void *arg, volatile int *stat, int idx)
 
 static Target ll = {
 	.name = "fr",
+	.init = init,
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,

@@ -14,8 +14,6 @@ enum{
 
 typedef struct Aux Aux;
 struct Aux{
-	Node *nodes;
-	ioff *edges;
 	float k;
 };
 
@@ -26,30 +24,37 @@ struct Aux{
 #define	Δ3(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.0001f)
 
 static void *
-new_(Graph *g, int is3d)
+init(void)
+{
+	Aux *aux;
+
+	aux = emalloc(sizeof *aux);
+	aux->k = C * sqrtf((float)Area / dylen(rnodes));
+	return aux;
+}
+
+static void *
+new_(int is3d)
 {
 	int orphans;
 	double z;
-	float k;
 	Node *u, *ue;
 	RNode *r;
-	Aux *aux;
 
 	orphans = 0;
-	k = C * sqrtf((float)Area / dylen(rnodes));
-	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->nedges == 0)
 			orphans++;
-		if((u->attr.flags & FNinitx) != 0)
-			r->pos[0] = u->attr.pos0.x;
+		if((u->flags & FNinitx) != 0)
+			r->pos[0] = u->pos0.x;
 		else
 			r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
-		if((u->attr.flags & FNinity) != 0)
-			r->pos[1] = u->attr.pos0.y;
+		if((u->flags & FNinity) != 0)
+			r->pos[1] = u->pos0.y;
 		else
 			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
-		if((u->attr.flags & FNinitz) != 0)
-			r->pos[2] = u->attr.pos0.z;
+		if((u->flags & FNinitz) != 0)
+			r->pos[2] = u->pos0.z;
 		else if(!is3d){
 			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 			r->pos[2] = (drawing.flags & DFnodepth) == 0
@@ -60,23 +65,19 @@ new_(Graph *g, int is3d)
 	}
 	if(orphans > 1)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));
-	aux = emalloc(sizeof *aux);
-	aux->nodes = g->nodes;
-	aux->edges = g->edges;
-	aux->k = k;
-	return aux;
+	return init();
 }
 
 static void *
-new(Graph *g)
+new(void)
 {
-	return new_(g, 0);
+	return new_(0);
 }
 
 static void *
-new3d(Graph *g)
+new3d(void)
 {
-	return new_(g, 1);
+	return new_(1);
 }
 
 static void
@@ -90,7 +91,7 @@ static int
 compute3d(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *edges, *e, *ee;
+	ioff *e, *ee;
 	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
@@ -98,13 +99,12 @@ compute3d(void *arg, volatile int *stat, int i)
 	Clk clk = {.lab = "layiter"};
 
 	aux = arg;
-	edges = aux->edges;
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = aux->nodes + i;
+	u0 = nodes + i;
 	r0 = rnodes + i;
-	r1 = rnodes + dylen(aux->nodes);
+	r1 = rnodes + dylen(nodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
@@ -114,7 +114,7 @@ compute3d(void *arg, volatile int *stat, int i)
 				return 0;
 			if(u->nedges == 0)
 				continue;
-			fixed = u->attr.flags & FNfixed;
+			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
 			uw = r->len;
@@ -197,7 +197,7 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *edges, *e, *ee;
+	ioff *e, *ee;
 	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
@@ -205,11 +205,10 @@ compute(void *arg, volatile int *stat, int i)
 	Clk clk = {.lab = "layiter"};
 
 	aux = arg;
-	edges = aux->edges;
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = aux->nodes + i;
+	u0 = nodes + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
@@ -221,7 +220,7 @@ compute(void *arg, volatile int *stat, int i)
 				return 0;
 			if(u->nedges == 0)
 				continue;
-			fixed = u->attr.flags & FNfixed;
+			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
 			uw = r->len;
@@ -285,6 +284,7 @@ compute(void *arg, volatile int *stat, int i)
 
 static Target ll = {
 	.name = "pfr",
+	.init = init,
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,
@@ -292,6 +292,7 @@ static Target ll = {
 
 static Target ll3d = {
 	.name = "pfr3d",
+	.init = init,
 	.new = new3d,
 	.cleanup = cleanup,
 	.compute = compute3d,

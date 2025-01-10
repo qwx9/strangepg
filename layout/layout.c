@@ -54,34 +54,39 @@ sac(void *)
 	Channel **cp, **ce;
 
 	nidle = 0;
-	g = graphs;
+	l = nil;
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
 		x--;
+		/* FIXME: no per-graph layouts, just work on global state */
 		//g = graphs + (x >> 2);
-		l = g->layout;
+		if((g = graphs) != nil)
+			l = g->layout;
 		switch(x & 3){
 		case Lreset:
-			g->flags |= GFlayme;
-			if(l != nil)
+			if(l != nil){
 				l->flags |= LFstop | LFnuke;
+				g->flags |= GFlayme;
+			}
 			break;
 		case Lstop:
-			g->flags &= ~GFlayme;
-			if(l != nil)
+			if(l != nil){
 				l->flags |= LFstop;
+				g->flags &= ~GFlayme;
+			}
 			break;
 		case Lstart:
+			if(l != nil)
 			g->flags |= GFlayme;
 			break;
 		case Lidle:
 			nidle++;
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
-			else if(nidle == nlaythreads){
+			else if(nidle == nlaythreads && l != nil){
 				if((g->flags & GFdrawme) != 0 && l->flags == 0)
-					logmsg("layout: done.");
+					logmsg("layout: done.\n");
 				g->flags &= ~GFdrawme;
 			}
 			break;
@@ -89,8 +94,8 @@ sac(void *)
 		if(nidle != nlaythreads)
 			continue;
 		if(l == nil){
-			if((g->flags & (GFlayme|GFdrawme)) != 0)
-				sysfatal("graph requesting layout before newlayout called");
+			//if((g->flags & (GFlayme|GFdrawme)) != 0)
+			//	sysfatal("graph requesting layout before newlayout called");
 			continue;
 		}
 		if((l->flags & LFnuke) != 0 && l->target->cleanup != nil && l->scratch != nil){
@@ -102,8 +107,12 @@ sac(void *)
 			reqdraw(Reqrefresh);
 			continue;
 		}
+		if(dylen(rnodes) < 1 || dylen(redges) < 1){
+			warn("newlayout: nothing to layout\n");
+			continue;
+		}
 		if(l->scratch == nil && l->target->new != nil)
-			l->scratch = l->target->new(g);
+			l->scratch = l->target->new();
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
 			sendp(*cp, l);
 		nidle = 0;
@@ -112,32 +121,6 @@ sac(void *)
 		reqdraw(Reqredraw);
 		logmsg("computing layout...");
 	}
-}
-
-int
-reqlayout(Graph *g, int type)
-{
-	Layout *l;
-
-	if((l = g->layout) == nil || l->target == nil){
-		werrstr("layout not initialized");
-		return -1;
-	}
-	switch(type){
-	case Lstop:
-		break;
-	case Lreset:
-	case Lstart:
-		if((g->flags & GFdrawme) != 0)
-			sendul(rxc, Lstop+1);
-		break;
-	case Lidle:
-	default:
-		warn("reqlayout: unknown req %d\n", type);
-		return -1;
-	}
-	sendul(rxc, type+1);
-	return 0;
 }
 
 static void
@@ -157,6 +140,40 @@ opencomms(void)
 		newthread(wing, nil, (void*)(intptr)i, nil, "wing", mainstacksize);
 }
 
+/* FIXME: silly */
+int
+reqlayout(int type)
+{
+	Layout *l;
+	Graph *g;
+
+	/* FIXME: unclear why, but the very first layout, the automatic
+	 * one is always shitty and off-center */
+	if(rxc == nil)
+		opencomms();
+	for(g=graphs; g<graphs+dylen(graphs); g++){
+		if((l = g->layout) == nil || l->target == nil){
+			werrstr("layout not initialized");
+			return -1;
+		}
+		switch(type){
+		case Lstop:
+			break;
+		case Lreset:
+		case Lstart:
+			if((g->flags & GFdrawme) != 0)
+				sendul(rxc, Lstop+1);
+			break;
+		case Lidle:
+		default:
+			warn("reqlayout: unknown req %d\n", type);
+			return -1;
+		}
+		sendul(rxc, type+1);
+	}
+	return 0;
+}
+
 int
 newlayout(Graph *g, int type)
 {
@@ -166,12 +183,6 @@ newlayout(Graph *g, int type)
 		werrstr("newlayout: invalid layout %d\n", type);
 		return -1;
 	}
-	if(dylen(rnodes) < 1 || dylen(redges) < 1){
-		werrstr("newlayout: nothing to layout\n");
-		return -1;
-	}
-	if(rxc == nil)
-		opencomms();
 	if((l = g->layout) != nil)
 		l->ref--;
 	l = emalloc(sizeof *l);
@@ -181,8 +192,8 @@ newlayout(Graph *g, int type)
 	l->target = ttab[type];
 	/* guarantees initialized state for deferred loading */
 	if(!gottagofast){
-		if(l->scratch == nil && l->target->new != nil)
-			l->scratch = l->target->new(g);
+		if(l->scratch == nil && l->target->init != nil)
+			l->scratch = l->target->init();
 	}
 	g->layout = l;
 	return 0;

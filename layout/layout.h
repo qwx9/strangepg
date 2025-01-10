@@ -14,8 +14,9 @@ enum{
 };
 struct Target{
 	char *name;
-	void* (*new)(Graph*);
-	void (*update)(Graph*, void*);
+	void* (*init)(void);
+	void* (*new)(void);
+	void (*update)(void*);
 	void (*cleanup)(void*);
 	/* FIXME: ??????????????? clang needs volatile or it optimizes
 	 * the access away or something */
@@ -38,7 +39,7 @@ enum{
 };
 void	initlayout(void);
 int	newlayout(Graph*, int);
-int reqlayout(Graph*, int);
+int reqlayout(int);
 
 #define SETDIR(dir, dx, dy)	do{\
 	if((dx) != 0.0f) \

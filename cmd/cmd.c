@@ -104,7 +104,7 @@ pushcmd(char *fmt, ...)
 }
 
 static inline int
-fnsetpos(Graph *g, char *sid, char *pos, int fix, int axis)
+fnsetpos(char *sid, char *pos, int fixed, int axis)
 {
 	ioff id;
 	float c;
@@ -113,44 +113,19 @@ fnsetpos(Graph *g, char *sid, char *pos, int fix, int axis)
 
 	if((id = str2idx(sid)) < 0)
 		return -1;
-	n = g->nodes + id;
+	n = nodes + id;
 	c = strtod(pos, &p);
 	if(p == pos){
 		werrstr("invalid coordinate %s", pos);
 		return -1;
 	}
 	if(axis == 0){
-		n->attr.flags |= fix ? FNfixedx | FNinitx : FNinitx;
-		n->attr.pos0.x = c;
+		n->flags |= fixed ? FNfixedx | FNinitx : FNinitx;
+		n->pos0.x = c;
 	}else{
-		n->attr.flags |= fix ? FNfixedy | FNinity : FNinity;
-		n->attr.pos0.y = c;
+		n->flags |= fixed ? FNfixedy | FNinity : FNinity;
+		n->pos0.y = c;
 	}
-	return 0;
-}
-
-static inline int
-fnsetcolor(char *sid, char *col)
-{
-	ioff id;
-	char *p;
-	u32int v;
-
-	if((id = str2idx(sid)) < 0)
-		return -1;
-	v = strtoul(col, &p, 0);
-	if(p == col){
-		werrstr("invalid color %s", col);
-		return -1;
-	}
-	setcolor(rnodes[id].col, v);
-	return 0;
-}
-
-static inline int
-fnsetsel(Graph *, char *s)
-{
-	showselected(s);
 	return 0;
 }
 
@@ -161,6 +136,13 @@ fnfindnode(char *sid){
 	if((id = str2idx(sid)) < 0)
 		return -1;
 	focusnode(id);
+	return 0;
+}
+
+static inline int
+fnsetsel(char *s)
+{
+	showselected(s);
 	return 0;
 }
 
@@ -183,20 +165,15 @@ nexttok(char *s, char **end)
 	return s;
 }
 
-/* FIXME: multiple graphs: per-graph state? one pipe per graph?
-* how do we dispatch user queries? would be useful to do queries
-* on multiple ones! */
 static void
 readcmd(char *s)
 {
 	int m, req;
 	char *fld[8], *e;
-	Graph *g;
 
 	req = 0;
 	e = s;
 	while((s = nexttok(e, &e)) != nil){
-		g = graphs;
 		if(s[1] != 0 && s[1] != '\t'){
 			/* heuristic based on strawk/lib.c... */
 			if(s[0] == ' ' || strncmp(s, "strawk:", 7) == 0)
@@ -219,8 +196,8 @@ readcmd(char *s)
 			req |= Reqshallowdraw;
 			continue;
 		case 'R':
-			if((debug & Debugload) == 0)
-				reqlayout(g, Lreset);
+			if(reqlayout(Lreset))
+				warn("readcmd: reqlayout: %s\n", error());
 			continue;
 		case 'r':
 			req |= Reqredraw;
@@ -265,21 +242,14 @@ readcmd(char *s)
 		case 'X':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(g, fld[0], fld[1], 1, 0) < 0)
+			if(fnsetpos(fld[0], fld[1], 1, 0) < 0)
 				goto error;
 			break;
 		case 'Y':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(g, fld[0], fld[1], 1, 1) < 0)
+			if(fnsetpos(fld[0], fld[1], 1, 1) < 0)
 				goto error;
-			break;
-		case 'c':
-			if(m != 2)
-				goto invalid;
-			if(fnsetcolor(fld[0], fld[1]) < 0)
-				goto error;
-			req |= Reqshallowdraw;
 			break;
 		case 'f':
 			if(m != 1)
@@ -290,32 +260,32 @@ readcmd(char *s)
 		case 'i':
 			if(m != 1)
 				goto invalid;
-			if(importlayout(g, fld[0]) < 0)
+			if(importlayout(fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
 			break;
 		case 'o':
 			if(m != 1)
 				goto invalid;
-			if(exportlayout(g, fld[0]) < 0)
+			if(exportlayout(fld[0]) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
 			break;
 		case 's':
 			if(m != 1)
 				goto invalid;
-			if(fnsetsel(g, fld[0]) < 0)
+			if(fnsetsel(fld[0]) < 0)
 				goto error;
 			req |= Reqshallowdraw;
 			break;
 		case 'x':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(g, fld[0], fld[1], 0, 0) < 0)
+			if(fnsetpos(fld[0], fld[1], 0, 0) < 0)
 				goto error;
 			break;
 		case 'y':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(g, fld[0], fld[1], 0, 1) < 0)
+			if(fnsetpos(fld[0], fld[1], 0, 1) < 0)
 				goto error;
 			break;
 		}

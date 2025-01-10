@@ -1,17 +1,17 @@
 #include "strpg.h"
 #include "fs.h"
+#include "cmd.h"
 #include "graph.h"
 #include "drw.h"
 #include "layout.h"
 #include "threads.h"
-#include "cmd.h"
 
 enum{
 	Recsz = 3 * sizeof(float),
 };
 
 int
-importlayout(Graph *g, char *path)
+importlayout(char *path)
 {
 	union { u32int u; float f; } u;
 	int x;
@@ -19,8 +19,7 @@ importlayout(Graph *g, char *path)
 	File *fs;
 	RNode *r;
 
-	if((g->flags & GFdrawme) != 0)
-		reqlayout(g, Lstop);
+	reqlayout(Lstop);
 	if((fs = openfs(path, OREAD)) == nil)
 		return -1;
 	for(r=rnodes;; r++){
@@ -54,7 +53,7 @@ importlayout(Graph *g, char *path)
 
 /* technically rnodes are shared with all graphs */
 int
-exportlayout(Graph *, char *path)
+exportlayout(char *path)
 {
 	union { u32int u; float f; } u;
 	int x;

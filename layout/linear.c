@@ -14,8 +14,6 @@ enum{
 
 typedef struct Aux Aux;
 struct Aux{
-	Node *nodes;
-	ioff *edges;
 	float k;
 };
 
@@ -25,32 +23,39 @@ struct Aux{
 #define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
 
 static void *
-new(Graph *g)
+init(void)
+{
+	Aux *aux;
+
+	aux = emalloc(sizeof *aux);
+	aux->k = C * sqrtf((float)Area / dylen(rnodes));
+	return aux;
+}
+
+static void *
+new(void)
 {
 	int orphans;
 	ioff i, *e, *ee;
-	float k;
 	double z, Δ;
 	Node *u, *ue;
 	RNode *r, *t;
-	Aux *aux;
 
 	orphans = 0;
-	k = C * sqrtf((float)Area / dylen(rnodes));
 	Δ = (drawing.xbound.max - drawing.xbound.min) / 2.0f;
-	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->nedges == 0)
 			orphans++;
-		if((u->attr.flags & FNinitx) != 0)
-			r->pos[0] = u->attr.pos0.x - Δ;
+		if((u->flags & FNinitx) != 0)
+			r->pos[0] = u->pos0.x - Δ;
 		else
 			r->pos[0] = -Δ;
-		if((u->attr.flags & FNinity) != 0)
-			r->pos[1] = u->attr.pos0.y;
+		if((u->flags & FNinity) != 0)
+			r->pos[1] = u->pos0.y;
 		else
 			r->pos[1] = (float)(H / 8 - nrand(H/4)) / (H / 8);
-		if((u->attr.flags & FNinitz) != 0)
-			r->pos[2] = u->attr.pos0.z;
+		if((u->flags & FNinitz) != 0)
+			r->pos[2] = u->pos0.z;
 		else{
 			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 			r->pos[2] = (drawing.flags & DFnodepth) == 0
@@ -59,12 +64,12 @@ new(Graph *g)
 		}
 	}
 	/* attempt to place free nodes next to a fixed adjacency */
-	for(r=rnodes, u=g->nodes, ue=u+dylen(u); u<ue; u++, r++){
-		if((u->attr.flags & FNfixedx) != 0 || u->nedges == 0)
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
+		if((u->flags & FNfixedx) != 0 || u->nedges == 0)
 			continue;
-		for(i=u-g->nodes,e=g->edges+u->eoff, ee=e+u->nedges-1; e<ee; e++){
+		for(i=u-nodes,e=edges+u->eoff, ee=e+u->nedges-1; e<ee; e++){
 			i = *e >> 2;
-			if((g->nodes[i].attr.flags & FNfixedx) != 0)
+			if((nodes[i].flags & FNfixedx) != 0)
 				break;
 		}
 		t = rnodes + i;
@@ -72,12 +77,7 @@ new(Graph *g)
 	}
 	if(orphans > 1)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));
-
-	aux = emalloc(sizeof *aux);
-	aux->nodes = g->nodes;
-	aux->edges = g->edges;
-	aux->k = k;
-	return aux;
+	return init();
 }
 
 static void
@@ -92,7 +92,7 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *edges, *e, *ee;
+	ioff *e, *ee;
 	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
@@ -100,13 +100,12 @@ compute(void *arg, volatile int *stat, int i)
 	Clk clk = {.lab = "layiter"};
 
 	aux = arg;
-	edges = aux->edges;
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = aux->nodes + i;
+	u0 = nodes + i;
 	r0 = rnodes + i;
-	r1 = rnodes + dylen(aux->nodes);
+	r1 = rnodes + dylen(nodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
@@ -116,7 +115,7 @@ compute(void *arg, volatile int *stat, int i)
 				return 0;
 			if(u->nedges == 0)
 				continue;
-			fixed = u->attr.flags & FNfixed;
+			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
 			uw = r->len;
@@ -179,6 +178,7 @@ compute(void *arg, volatile int *stat, int i)
 
 static Target ll = {
 	.name = "linear",
+	.init = init,
 	.new = new,
 	.cleanup = cleanup,
 	.compute = compute,

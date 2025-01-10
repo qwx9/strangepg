@@ -86,6 +86,8 @@ loadcsv(void *arg)
 	splitfs(f, ',');
 	if((tags = csvheader(f, &wait)) == nil)
 		goto end;
+	if(gottagofast)
+		wait = 0;
 	if(!wait){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
@@ -112,9 +114,11 @@ loadcsv(void *arg)
 end:
 	if(wait)
 		pushcmd("cmd(\"FHJ142\")");
+	else
+		pushcmd("loadbatch()");
 	flushcmd();
 	if(r < 0)
-		warn("loadcsv %s: %s\n", path, error());
+		logerr(va("loadcsv %s: %s\n", path, error()));
 	else
 		logmsg(va("loadcsv: done, read %d records\n", nr));
 	for(nf=0; nf<dylen(tags); nf++)

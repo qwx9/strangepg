@@ -7,95 +7,78 @@
 #include "layout.h"
 
 Graph *graphs;
+Node *nodes;
+ioff *edges;
+Super *supers;
 
 static RWLock *locks;
 
-int
-setattr(Node *n, ioff id, int type, char *val)
+void
+setattr(int type, ioff id, V val)
 {
-	int i;
-	char *p;
-	u32int u;
-	float f;
+	Node *n;
+	RNode *r;
 
+	n = nodes + id;
+	r = rnodes + id;
 	switch(type){
 	case TLN:
-		i = atoi(val);
-		if(i < 0)
-			logerr(va("warning: nonsense segment length %d\n", i));
-		if(n->attr.length > 0){
-			if(n->attr.length != i)
-				logerr(va("warning: segment length already set to %d != %d\n",
-					n->attr.length, i));
+		if(r->len > 0.0f || val.i == 0)
+			break;
+		if(val.i < 0){
+			logerr(va("setattr: nonsense segment length %d\n", val.i));
 			break;
 		}
-		n->attr.length = i;
-		if(i <= 0)
-			break;
-		if(drawing.length.min > i){
-			drawing.length.min = i;
+		r->len = val.i;
+		if(drawing.length.min > val.i){
+			drawing.length.min = val.i;
 			drawing.flags |= DFstalelen;
 		}
-		if(drawing.length.max < i){
-			drawing.length.max = i;
+		if(drawing.length.max < val.i){
+			drawing.length.max = val.i;
 			drawing.flags |= DFstalelen;
 		}
 		break;
 	case TCL:
-		if(val[0] == '#'){
-			val++;
-			u = strtoul(val, &p, 16);
-			if(p <= val + 6)
-				u = u << 8 | 0xc0;
-		}else
-			u = strtoul(val, &p, 0);
-		if(p == val)	/* assuming string value, let strawk interpret it */
-			return 0;
-		setcolor(rnodes[id].col, u);
-		n->attr.color = u;
+		setcolor(r->col, val.u);
 		break;
 	case Tfx:
-		n->attr.flags |= FNfixedx;
+		n->flags |= FNfixedx;
 		/* wet floor */
 	case Tx0:
-		f = atof(val);
-		n->attr.pos0.x = f;
-		n->attr.flags |= FNinitx;
-		if(f < drawing.xbound.min)
-			drawing.xbound.min = f;
-		if(f > drawing.xbound.max)
-			drawing.xbound.max = f;
+		n->pos0.x = val.f;
+		n->flags |= FNinitx;
+		if(val.f < drawing.xbound.min)
+			drawing.xbound.min = val.f;
+		if(val.f > drawing.xbound.max)
+			drawing.xbound.max = val.f;
 		break;
 	case Tfy:
-		n->attr.flags |= FNfixedy;
+		n->flags |= FNfixedy;
 		/* wet floor */
 	case Ty0:
-		f = atof(val);
-		n->attr.pos0.y = f;
-		n->attr.flags |= FNinity;
-		if(f < drawing.ybound.min)
-			drawing.ybound.min = f;
-		if(f > drawing.ybound.max)
-			drawing.ybound.max = f;
+		n->pos0.y = val.f;
+		n->flags |= FNinity;
+		if(val.f < drawing.ybound.min)
+			drawing.ybound.min = val.f;
+		if(val.f > drawing.ybound.max)
+			drawing.ybound.max = val.f;
 		break;
 	case Tfz:
-		n->attr.flags |= FNfixedz;
+		n->flags |= FNfixedz;
 		/* wet floor */
 	case Tz0:
-		f = atof(val);
-		n->attr.pos0.z = atof(val);
-		n->attr.flags |= FNinitz;
-		if(f < drawing.zbound.min)
-			drawing.zbound.min = f;
-		if(f > drawing.zbound.max)
-			drawing.zbound.max = f;
+		n->pos0.z = val.f;
+		n->flags |= FNinitz;
+		if(val.f < drawing.zbound.min)
+			drawing.zbound.min = val.f;
+		if(val.f > drawing.zbound.max)
+			drawing.zbound.max = val.f;
 		break;
-	default:
-		return 0;
 	}
-	return 1;
 }
 
+/* FIXME */
 /* usable once topology has been loaded */
 ioff
 str2idx(char *s)
@@ -133,21 +116,17 @@ unlockgraph(Graph *g, int w)
 }
 
 Graph *
-pushgraph(Graph *g)
+initgraph(int type)
 {
-	RWLock l;
+	int n;
+	Graph g = {0}, *gp;
+	RWLock l = {0};
 
-	dypush(graphs, *g);
-	g = graphs + dylen(graphs) - 1;
-	newlayout(g, -1);
-	memset(&l, 0, sizeof l);
+	n = dylen(graphs);
+	g.type = type;
+	g.nfirst = dylen(nodes);
+	dypush(graphs, g);
 	dypush(locks, l);
-	return g;
-}
-
-void
-initgraph(Graph *g, int type)
-{
-	memset(g, 0, sizeof *g);
-	g->type = type;
+	gp = graphs + n;
+	return gp;
 }

@@ -124,7 +124,6 @@ void	pandraw(float, float);
 void	rotdraw(Vertex);
 void	worldview(Vertex);
 ioff	mousepick(int, int);
-void	fixlengths(Graph *g, int, int);
 int	redraw(int);
 
 enum{
@@ -154,10 +153,12 @@ enum{
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
+	Requpdatedraw = 1<<8,	/* nodes have been added or removed */
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
 void	setnodeshape(int);
+void	updatedraw(void);
 void	reqdraw(int);
 void	initcol(void);
 void	initsysdraw(void);
