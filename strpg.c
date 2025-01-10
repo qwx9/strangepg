@@ -131,6 +131,8 @@ parseargs(int argc, char **argv)
 			debug |= Debugperf;
 		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
+		else if(strcmp(s, "strawk") == 0)
+			debug |= Debugstrawk;
 		else{
 			warn("unknown debug component %s\n", s);
 			usage();

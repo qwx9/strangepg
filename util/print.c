@@ -82,7 +82,7 @@ dprint(int flags, char *fmt, ...)
 
 	switch(debug & flags){
 	case 0: return;
-	case Debuginfo: type = "info"; break;
+	case Debuginfo: type = "warning"; break;
 	case Debugawk: type = "awk"; break;
 	case Debugcmd: type = "cmd"; break;
 	case Debugcoarse: type = "coarse"; break;
@@ -95,6 +95,7 @@ dprint(int flags, char *fmt, ...)
 	case Debugmeta: type = "meta"; break;
 	case Debugperf: type = "perf"; break;
 	case Debugrender: type = "render"; break;
+	case Debugstrawk: type = "strawk"; break;
 	default: type = "dafuq"; break;
 	}
 	va_start(arg, fmt);
