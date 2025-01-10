@@ -34,7 +34,6 @@ extern	void	startreg(void);
 extern	int	input(void);
 extern	void	unput(int);
 extern	void	unputstr(const char *);
-extern	void	setkeywords(Keyword *, size_t);
 
 extern	fa	*makedfa(const char *, bool);
 extern	fa	*mkdfa(const char *, bool);

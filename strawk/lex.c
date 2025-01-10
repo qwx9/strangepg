@@ -495,8 +495,6 @@ int word(char *w)
 		kp = keywords + n;
 		yylval.i = kp->sub;
 		switch (kp->type) {	/* special handling */
-		case BLTIN:
-			RET(kp->type);
 		case FUNC:
 			if (infunc)
 				SYNTAX( "illegal nested function" );
@@ -508,6 +506,8 @@ int word(char *w)
 		case VARNF:
 			yylval.cp = setsymtab("NF", NULL, v, NUM, symtab);
 			RET(VARNF);
+		case BLTIN:
+		case ADDON:
 		default:
 			RET(kp->type);
 		}
