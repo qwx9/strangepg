@@ -116,8 +116,7 @@ typedef struct Array {		/* symbol table array */
 } Array;
 
 /* note: affects test results */
-#define	NSYMTAB	128	/* initial size of a symbol table */
-//#define	NSYMTAB	50	/* initial size of a symbol table */
+#define	NSYMTAB	50	/* initial size of a symbol table */
 extern Array	*symtab;
 
 extern Cell	*nrloc;		/* NR */
