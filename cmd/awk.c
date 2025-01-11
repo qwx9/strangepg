@@ -67,31 +67,14 @@ const size_t nkeywords = nelem(keywords);
 static noreturn void
 awk(void *)
 {
+	char *args[] = {"strawk", awkprog};
+
 	if((awkstdin = fdopen(infd[0], "rb")) == NULL
 	|| (awkstdout = fdopen(outfd[1], "wb")) == NULL
 	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
 		sysfatal("awk: %s", error());
-	setlocale(LC_CTYPE, "");
-	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
-	initpool();
-	cmdname = "strawk";
-	lexprog = awkprog;
 	dbg = (debug & Debugstrawk) != 0;
-	catchfpe();
-	init_genrand64(srand_seed);
-	symtab = makesymtab(1);
-	recinit(recsize);
-	syminit();
-	compile_time = COMPILING;
-	arginit(0, NULL);
-	yyparse();
-	*FS = qstring("\t", '\0');
-	*OFS = qstring("\t", '\0');
-	if (errorflag == 0) {
-		compile_time = RUNNING;
-		run(winner);
-	} else
-		bracecheck();
+	awkmain(nelem(args), args);
 }
 
 /* use [1] on our side, [0] on awk side */

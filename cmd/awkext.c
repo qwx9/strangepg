@@ -316,7 +316,7 @@ set(int i, int type, ioff id, V val)
 }
 
 static void
-loadbatch(void)
+fnloadbatch(void)
 {
 	Val *v, *vs, *ve;
 
@@ -427,7 +427,7 @@ setnamedtag(char *tag, char *name, char *val)
 }
 
 static void
-load(void)
+fnloadall(void)
 {
 	static char already;
 	ioff id, eid, aid, *e, *ee, v;
@@ -438,7 +438,7 @@ load(void)
 
 	if(already++)
 		return;
-	loadbatch();
+	fnloadbatch();
 	for(id=eid=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
 		if(r->col[3] == 0.0f){
 			vv.i = somecolor(id, nil);
@@ -458,7 +458,7 @@ load(void)
 }
 
 static void
-deselect(void)
+fndeselect(void)
 {
 	/*
 	- get selected array
@@ -469,7 +469,7 @@ deselect(void)
 }
 
 static void
-select(ioff id)
+fnselect(ioff id)
 {
 	/*
 	- highlight node
@@ -479,7 +479,7 @@ select(ioff id)
 }
 
 static void
-nodecolor(char *lab, Awknum col)
+fnnodecolor(char *lab, Awknum col)
 {
 	ioff id;
 	Array *a;
@@ -505,20 +505,20 @@ addon(TNode **a, int)
 	setival(ret, 0);
 	switch(t){
 	case ALOAD:
-		load();
+		fnloadall();
 		break;
 	case ALOADBATCH:
-		loadbatch();
+		fnloadbatch();
 		break;
 	case ANODECOLOR:
 		s = getsval(x);
 		y = execute(nextarg);
-		nodecolor(s, getival(y));
+		fnnodecolor(s, getival(y));
 		tempfree(y);
 		nextarg = nextarg->nnext;
 		break;
 	case ASELECT:
-		//select(x->val.i);
+		//fnselect(x->val.i);
 		break;
 	case ADESELECT:
 		break;

@@ -27,8 +27,11 @@ THIS SOFTWARE.
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
 #include "awk.h"
 #include AWKTAB
+
+const char	*version = "version 20240731";
 
 #define	FULLTAB	2	/* rehash when table gets this x full */
 #define	GROWTAB 4	/* grow table by this factor */
@@ -68,6 +71,8 @@ TNode	*nullnode;	/* zero&null, converted into a node for comparisons */
 Cell	*literal0;
 
 extern Cell **fldtab;
+extern	FILE	*yyin;	/* lex input file */
+extern	size_t	npfile;
 
 void syminit(void)	/* initialize symbol table with builtin vars */
 {
@@ -690,4 +695,123 @@ const char *flags2str(int flags)
 	}
 
 	return buf;
+}
+
+static const char *
+setfs(char *p)
+{
+	/* wart: t=>\t */
+	if (p[0] == 't' && p[1] == '\0')
+		return "\t";
+	return p;
+}
+
+static char *
+getarg(int *argc, char ***argv, const char *msg)
+{
+	if ((*argv)[1][2] != '\0') {	/* arg is -fsomething */
+		return &(*argv)[1][2];
+	} else {			/* arg is -f something */
+		(*argc)--; (*argv)++;
+		if (*argc <= 1)
+			FATAL("%s", msg);
+		return (*argv)[1];
+	}
+}
+
+int awkmain(int argc, char **argv)
+{
+	const char *fs = NULL;
+	char *fn, *vn;
+
+	setlocale(LC_CTYPE, "");
+	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	initpool();
+	cmdname = argv[0];
+	if (argc == 1) {
+		fprintf(awkstderr,
+		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
+		  cmdname);
+		exit(1);
+	}
+	catchfpe();
+
+	/* Set and keep track of the random seed */
+	srand_seed = 1;
+	init_genrand64(srand_seed);
+
+	yyin = NULL;
+	symtab = makesymtab(NSYMTAB/NSYMTAB);
+	while (argc > 1 && argv[1][0] == '-' && argv[1][1] != '\0') {
+		if (strcmp(argv[1], "-version") == 0 || strcmp(argv[1], "--version") == 0) {
+			printf("awk %s\n", version);
+			return 0;
+		}
+		if (strcmp(argv[1], "--") == 0) {	/* explicit end of args */
+			argc--;
+			argv++;
+			break;
+		}
+		switch (argv[1][1]) {
+		case 'f':	/* next argument is program filename */
+			fn = getarg(&argc, &argv, "no program filename");
+			addfile(fn);
+ 			break;
+		case 'F':	/* set field separator */
+			fs = setfs(getarg(&argc, &argv, "no field separator"));
+			break;
+		case 'v':	/* -v a=1 to be done NOW.  one -v for each */
+			vn = getarg(&argc, &argv, "no variable name");
+			if (isclvar(vn))
+				setclvar(vn);
+			else
+				FATAL("invalid -v option argument: %s", vn);
+			break;
+		case 'd':
+			dbg = atoi(&argv[1][2]);
+			if (dbg == 0)
+				dbg = 1;
+			printf("awk %s\n", version);
+			break;
+		default:
+			WARNING("unknown option %s ignored", argv[1]);
+			break;
+		}
+		argc--;
+		argv++;
+	}
+
+	/* argv[1] is now the first argument */
+	if (npfile == 0) {	/* no -f; first argument is program */
+		if (argc <= 1) {
+			if (dbg)
+				exit(0);
+			FATAL("no program given");
+		}
+		DPRINTF("program = |%s|\n", argv[1]);
+		lexprog = argv[1];
+		argc--;
+		argv++;
+	}
+	recinit(recsize);
+	syminit();
+	compile_time = COMPILING;
+	argv[0] = cmdname;	/* put prog name at front of arglist */
+	DPRINTF("argc=%d, argv[0]=%s\n", argc, argv[0]);
+	arginit(argc, argv);
+	yyparse();
+#if 0
+	// Doing this would comply with POSIX, but is not compatible with
+	// other awks and with what most users expect. So comment it out.
+	setlocale(LC_NUMERIC, ""); /* back to whatever it is locally */
+#endif
+	if (fs)
+		*FS = qstring(fs, '\0');
+	DPRINTF("errorflag=%d\n", errorflag);
+	if (errorflag == 0) {
+		compile_time = RUNNING;
+		run(winner);
+	} else
+		bracecheck();
+	return(errorflag);
 }
