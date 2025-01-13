@@ -23,7 +23,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "continue",	CONTINUE,	CONTINUE },
 	{ "cos",	FCOS,		BLTIN },
 	{ "delete",	DELETE,		DELETE },
-//	{ "deselect",	ADESELECT,	ADDON },
+	{ "deselect",	ADESELECT,	ADDON },
 	{ "do",		DO,		DO },
 	{ "else",	ELSE,		ELSE },
 	{ "eval",	FEVAL,		BLTIN },

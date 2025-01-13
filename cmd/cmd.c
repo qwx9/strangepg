@@ -202,13 +202,6 @@ readcmd(char *s)
 		case 'r':
 			req |= Reqredraw;
 			continue;
-		case 's':
-			if(s[1] == 0){
-				showselected(nil);
-				req |= Reqshallowdraw;
-				continue;
-			}
-			break;
 		case 'N':
 		case 'X':
 		case 'Y':
@@ -216,6 +209,7 @@ readcmd(char *s)
 		case 'f':
 		case 'i':
 		case 'o':
+		case 's':
 		case 'x':
 		case 'y':
 			break;

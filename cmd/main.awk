@@ -194,15 +194,6 @@ function nodeinfo(id,	name, s){
 		return
 	print "I", "Node: " nodeinfostr(id)
 }
-function deselect(dontkill,	id){
-	if(length(selected) == 0)
-		return
-	for(id in selected)
-		printf "c\t%s\t0x%x\n", id, CL[label[id]]
-	delete selected
-	if(!dontkill)
-		print "s"
-}
 function deselectnodebyid(id){
 	if(!checknodeid(id))
 		return
@@ -225,7 +216,7 @@ function deselectnode(name,	id){
 function selectnodebyid(id){
 	if(!checknodeid(id) || id in selected)
 		return
-	selected[id] = 1
+	selected[id] = CL[label[id]]
 }
 function selectnode(name, id){
 	if(!checknodename(name))
@@ -244,7 +235,8 @@ function toggleselect(id){
 function reselectnode(id){
 	if(!checknodeid(id))
 		return
-	deselect(1)
+	#deselect(1)
+	deselect()
 	selectnodebyid(id)
 }
 function initx(name, x){

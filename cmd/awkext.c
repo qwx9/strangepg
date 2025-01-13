@@ -63,8 +63,7 @@ gettabarray(int t)
 	Array *a;
 
 	rlock(&buflock);
-	if((a = tabs[t].a) == nil)
-		sysfatal("gettabarray: uninitialized table %d",t);
+	a = tabs[t].a;
 	runlock(&buflock);
 	return a;
 }
@@ -154,25 +153,27 @@ getnodeid(char *lab)
 	Cell *c;
 	Array *a;
 
-	a = gettabarray(Tnode);
+	if((a = gettabarray(Tnode)) == nil)
+		sysfatal("getnodeid %s: uninitialized table", lab);
 	if((c = getcell(lab, a)) == nil)
-		sysfatal("getnodeid: no such node %s", lab);
+		sysfatal("getnodeid %s: no such node", lab);
 	if((id = getival(c)) < 0 || id >= dylen(nodes))
-		sysfatal("getnodeid: invalid node %s id %d", lab, id);
+		sysfatal("getnodeid %s: invalid node id %d", lab, id);
 	return id;
 }
 
 static inline char *
-getnodelabel(ioff i)
+getnodelabel(ioff id)
 {
 	char lab[24];
 	Cell *c;
 	Array *a;
 
-	a = gettabarray(Tlabel);
-	snprint(lab, sizeof lab, "%d", i);
+	if((a = gettabarray(Tlabel)) == nil)
+		sysfatal("getnodelabel %d: uninitialized label table", id);
+	snprint(lab, sizeof lab, "%d", id);
 	if((c = getcell(lab, a)) == nil)
-		sysfatal("getnodelabel: no such id %s (%d)", lab, i);
+		sysfatal("getnodelabel %d: no such id", id);
 	return c->sval;
 }
 
@@ -460,22 +461,45 @@ fnloadall(void)
 static void
 fndeselect(void)
 {
-	/*
-	- get selected array
-	- get CL array
-	- loop through selected then lookup element in arrahy
-	- reset color
-	*/
+	ioff id;
+	Array *a;
+	Cell **t, **te, *c, *cn;
+	RNode *r;
+
+	a = mkarray(Tselect);
+	for(t=a->tab, te=t+a->size; t<te; t++){
+		for(c=*t; c!=nil; c=cn){
+			cn = c->cnext;
+			id = atoi(c->nval);
+			r = rnodes + id;
+			setcolor(r->col, c->val.u);
+			free(c->nval);
+			if(freeable(c))
+				xfree(c->sval);
+			free(c);
+		}
+		*t = nil;
+	}
+	a->nelem = 0;
+	showselected(nil);
+	reqdraw(Reqshallowdraw);
 }
 
 static void
 fnselect(ioff id)
 {
 	/*
-	- highlight node
+	Array *a;
+
+	a = mkarray(Tselect);
+	*/
+	/*
+	- highlight node (move highlight functions to draw/color.c
 	- cache selected array
 	- add to selected array
+	- showselected(msg); reqdraw(Reqshallowdraw);
 	*/
+	/* FIXME: also, selection box shit can go directly through this */
 }
 
 static void
@@ -484,7 +508,8 @@ fnnodecolor(char *lab, Awknum col)
 	ioff id;
 	Array *a;
 
-	a = gettabarray(TCL);
+	if((a = gettabarray(TCL)) == nil)
+		 sysfatal("awk/nodecolor: uninitialized table");
 	setint(lab, col, a, nil);
 	id = getnodeid(lab);
 	setcolor(rnodes[id].col, col);
@@ -521,9 +546,7 @@ addon(TNode **a, int)
 		//fnselect(x->val.i);
 		break;
 	case ADESELECT:
-		break;
-		// FIXME:
-		// ...
+		fndeselect();
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
