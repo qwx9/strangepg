@@ -1,7 +1,7 @@
 #include "strpg.h"
 #include "threads.h"
 
-int mainstacksize = 2*1024*1024;	/* FIXME: default for pthreads? */
+int mainstacksize = 2*1024*1024;
 
 struct Thread{
 	pthread_t p;
@@ -35,12 +35,12 @@ _thread(void *tp)
 	Thread *th;
 
 	th = tp;
+	pthread_cleanup_push(wipe, th);
 	pkey = th->key;
 	if(pthread_setspecific(pkey, th) != 0)
 		sysfatal("newthread: pthread_setspecific: %s", error());
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-	pthread_cleanup_push(wipe, th);
 	th->fn(th->arg);
 	pthread_cleanup_pop(1);
 	return NULL;
