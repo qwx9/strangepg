@@ -77,7 +77,6 @@ sac(void *)
 			}
 			break;
 		case Lstart:
-			if(l != nil)
 			g->flags |= GFlayme;
 			break;
 		case Lidle:
