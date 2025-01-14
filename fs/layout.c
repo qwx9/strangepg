@@ -40,7 +40,10 @@ importlayout(char *path)
 		u.u = GBIT32(p);
 		r->pos[2] = u.f;
 	}
-	pushcmd("cmd(\"FHJ142\")");
+	if(debug & Debugload)
+		pushcmd("cmd(\"FJJ142\")");
+	else
+		pushcmd("cmd(\"FHJ142\")");
 	flushcmd();
 	if(x > 0 && x < sizeof buf){
 		werrstr("unexpected EOF: truncated input");

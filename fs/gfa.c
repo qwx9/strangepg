@@ -421,7 +421,7 @@ opengfa(Aux *a, char *path)
 	return f;
 }
 
-#define	TIME(lab)	if((debug & Debugperf) != 0) do{ \
+#define	TIME(lab)	if(d) do{ \
 	t = μsec(); \
 	warn("readgfa: " lab ": %.2f ms\n", (t - t0)/1000); \
 	t0 = t; \
@@ -430,10 +430,12 @@ opengfa(Aux *a, char *path)
 static void
 loadgfa1(void *arg)
 {
+	int d;
 	double t, t0;
 	File *f;
 	Aux a = {0};
 
+	d = debug & Debugperf;
 	t0 = μsec();
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
@@ -455,25 +457,25 @@ loadgfa1(void *arg)
 	}
 	names_destroy(a.names);
 	logmsg("loadgfa: reading node tags...\n");
-	if(debug & Debugperf)
+	if(d)
 		t0 = μsec();
 	if(readnodetags(&a, f) < 0)
 		sysfatal("loadgfa: readnodetags: %s", error());
 	TIME("readnodetags");
 	dyfree(a.nodeoff);
-	if(!gottagofast){
+	if(!gottagofast && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
 	}
 	logmsg("loadgfa: reading edge tags...\n");
-	if(debug & Debugperf)
+	if(d)
 		t0 = μsec();
 	if(readedgetags(&a, f) < 0)
 		sysfatal("loadgfa: readedgetags: %s", error());
 	TIME("readedgetags");
 	pushcmd("loadbatch()");
-	if((debug & Debugload) != 0)
-		pushcmd("quit()");
+	if(debug & Debugload)
+		pushcmd("cmd(\"FJJ142\")");
 	flushcmd();
 	logmsg("loadgfa: done\n");
 	dyfree(a.edgeoff);

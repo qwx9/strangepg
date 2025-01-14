@@ -88,7 +88,7 @@ loadcsv(void *arg)
 		goto end;
 	if(gottagofast)
 		wait = 0;
-	if(!wait){
+	if(!wait && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
 	}
@@ -112,7 +112,9 @@ loadcsv(void *arg)
 	}
 	r = 0;
 end:
-	if(wait)
+	if(debug & Debugload)
+		pushcmd("cmd(\"FJJ142\")");
+	else if(wait)
 		pushcmd("cmd(\"FHJ142\")");
 	else
 		pushcmd("loadbatch()");

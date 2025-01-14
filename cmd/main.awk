@@ -70,8 +70,7 @@ function cmd(code){
 		noreset = 0
 	}else if(code == "FJJ142"){	# mission completed, returning
 		die = 1
-		if(crm114)
-			quit()
+		cmd("FHJ142")
 	}else if(code == "OPL753"){	# wing to contact base immediately
 		loadall()
 		print "R"
