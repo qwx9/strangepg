@@ -20,14 +20,14 @@ jobs:
       env:
         CFLAGS: -mtune=native -O3 -pipe
       run: make -j 4
-    - name: test
-      run: ./strangepg -D load test/frag10.gfa
     - name: upload
       uses: actions/upload-artifact@v4
       with:
         name: strangepg-${{ matrix.os }}
         path: strangepg
         overwrite: true
+    - name: test
+      run: ./strangepg -D load test/frag10.gfa
   mac:
     name: mac
     strategy:
@@ -39,14 +39,14 @@ jobs:
     - uses: actions/checkout@v4
     - name: build
       run: make -j 3
-    - name: test
-      run: ./strangepg -D load test/frag10.gfa
     - name: upload
       uses: actions/upload-artifact@v4
       with:
         name: strangepg-${{ matrix.os }}
         path: strangepg
         overwrite: true
+    - name: test
+      run: ./strangepg -D load test/frag10.gfa
   win64:
     name: win64
     strategy:
@@ -64,14 +64,14 @@ jobs:
         CFLAGS: -mtune=native -O3 -pipe
         CC: gcc
       run: make TARGET=Win64 -j 4
-    #- name: test
-    #  run: ./strangepg -D load test/frag10.gfa
     - name: upload
       uses: actions/upload-artifact@v4
       with:
         name: strangepg-${{ matrix.os }}
         path: strangepg.exe
         overwrite: true
+    - name: test
+      run: ./strangepg -D load test/frag10.gfa
   release:
     name: release
     if: startsWith(github.ref, 'refs/tags/')
