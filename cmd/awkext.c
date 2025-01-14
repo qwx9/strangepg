@@ -116,6 +116,7 @@ getarray(char *arr)
 		c->sval = (char *)a;
 	}else
 		a = (Array *)c->sval;
+	assert(a != nil);
 	return a;
 }
 
@@ -376,7 +377,7 @@ vartype(char *val, V *v, int iscolor)
 			}
 		}
 	}
-	if(type == Tstring && (cp = getcell(val, symtab)) != nil){
+	if(type == Tstring && symtab != nil && (cp = getcell(val, symtab)) != nil){
 		if(cp->tval & FLT){
 			v->f = getfval(cp);
 			return Tfloat;
@@ -498,6 +499,7 @@ fnselect(ioff id)
 	- cache selected array
 	- add to selected array
 	- showselected(msg); reqdraw(Reqshallowdraw);
+	- ui: call select function here directly, no pushcmd?
 	*/
 	/* FIXME: also, selection box shit can go directly through this */
 }
