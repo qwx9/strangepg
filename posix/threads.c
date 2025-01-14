@@ -27,6 +27,8 @@ wipe(void *tp)
 	free(th);
 }
 
+/* don't use pthread_exit explicitely:
+ * https://www.sourceware.org/bugzilla/show_bug.cgi?id=13199 */
 static void *
 _thread(void *tp)
 {
@@ -41,7 +43,6 @@ _thread(void *tp)
 	pthread_cleanup_push(wipe, th);
 	th->fn(th->arg);
 	pthread_cleanup_pop(1);
-	pthread_exit(NULL);
 	return NULL;
 }
 
