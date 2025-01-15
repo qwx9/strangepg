@@ -62,17 +62,19 @@ drawedges(REdge *r, RNode *rn)
 	return r;
 }
 
-static void
+void
 resizenodes(void)
 {
 	double l, Δ, max;
 	RNode *r, *re;
 
-	if(drawing.flags & DFstalelen){
-		drawing.flags &= ~DFstalelen;
-		if(drawing.length.min <= 0)
-			drawing.length.min = 1;
-	}
+	if((drawing.flags & DFstalelen) == 0)
+		return;
+	drawing.flags &= ~DFstalelen;
+	if(drawing.length.min <= 0)
+		drawing.length.min = 1;
+	if(drawing.length.max <= drawing.length.min)
+		drawing.length.max = drawing.length.min + Nodesz;
 	Δ = MAX(1.0, drawing.length.max - drawing.length.min);
 	max = Nodesz * log(0.05 + Δ);
 	for(r=rnodes, re=r+dylen(r); r<re; r++){
@@ -150,9 +152,8 @@ drawworld(int go)
 	RNode *rn, *rne;
 	REdge *re;
 	Graph *g;
-	static vlong nf;
 
-	if(nf++ == 0)
+	if(drawing.flags & DFstalelen)
 		resizenodes();
 	r = 0;
 	rn = rnodes;
@@ -209,6 +210,7 @@ initdrw(void)
 	drawing.ybound = drawing.length;
 	drawing.zbound = drawing.length;
 	drawing.nodesz = Nodesz;
+	drawing.flags |= DFstalelen;
 	drawing.fatness = Ptsz;
 	settheme();
 	initcol();

@@ -157,6 +157,7 @@ enum{
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
+void	resizenodes(void);
 void	setnodeshape(int);
 void	updatedraw(void);
 void	reqdraw(int);

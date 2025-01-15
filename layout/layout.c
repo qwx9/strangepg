@@ -110,6 +110,7 @@ sac(void *)
 			warn("newlayout: nothing to layout\n");
 			continue;
 		}
+		resizenodes();	/* FIXME: unfortunate dependency */
 		if(l->scratch == nil && l->target->new != nil)
 			l->scratch = l->target->new();
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
