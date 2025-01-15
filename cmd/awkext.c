@@ -237,11 +237,9 @@ set(int i, int type, ioff id, V val)
 	Cell *c;
 	Array *a;
 
-	/* FIXME: more sanity checks, including i */
 	new = 0;
 	a = mkarray(i);
-	/* FIXME: may error after setattr, checks should be in setattr itself */
-	setattr(i, id, val);
+	/* FIXME: better type checking; merge with generic tag code */
 	switch(i){
 	case Tnode:
 		c = setint(val.s, id, a, &new);
@@ -267,7 +265,10 @@ set(int i, int type, ioff id, V val)
 			logerr(va("set CL[%s]: invalid non-integer color", lab));
 			break;
 		}
-		c = setint(lab, val.i, a, &new);
+		if(type == Tfloat)	/* FIXME */
+			val.u = val.f;
+		setattr(i, id, val);
+		c = setint(lab, val.u, a, &new);
 		if(new){
 			free(c->nval);
 			c->nval = lab;
@@ -279,7 +280,10 @@ set(int i, int type, ioff id, V val)
 			return;
 		}
 		lab = getnodelabel(id);
-		c = setint(lab, val.i, a, &new);
+		if(type == Tfloat)	/* FIXME */
+			val.u = val.f;
+		setattr(i, id, val);
+		c = setint(lab, val.u, a, &new);
 		if(new){
 			free(c->nval);
 			c->nval = lab;
@@ -292,6 +296,9 @@ set(int i, int type, ioff id, V val)
 	case Ty0:
 	case Tz0:
 		lab = getnodelabel(id);
+		if(type != Tfloat)	/* FIXME */
+			val.f = val.i;
+		setattr(i, id, val);
 		c = setfloat(lab, val.f, a, &new);
 		if(new){
 			free(c->nval);
@@ -299,6 +306,7 @@ set(int i, int type, ioff id, V val)
 		}
 		break;
 	default:
+		setattr(i, id, val);
 		rlock(&tablock);
 		intidx = tabs[i].intidx;
 		runlock(&tablock);

@@ -103,29 +103,17 @@ pushcmd(char *fmt, ...)
 	sendcmd(sb);
 }
 
+/* FIXME: this has to go away in favor of fix() or initpos() functions */
 static inline int
-fnsetpos(char *sid, char *pos, int fixed, int axis)
+fnsetpos(char *label, char *pos, int tag)
 {
 	ioff id;
-	float c;
-	char *p;
-	Node *n;
+	V v;
 
-	if((id = str2idx(sid)) < 0)
+	if((id = str2idx(label)) < 0)
 		return -1;
-	n = nodes + id;
-	c = strtod(pos, &p);
-	if(p == pos){
-		werrstr("invalid coordinate %s", pos);
-		return -1;
-	}
-	if(axis == 0){
-		n->flags |= fixed ? FNfixedx | FNinitx : FNinitx;
-		n->pos0.x = c;
-	}else{
-		n->flags |= fixed ? FNfixedy | FNinity : FNinity;
-		n->pos0.y = c;
-	}
+	v.f = atof(pos);
+	setattr(tag, id, v);
 	return 0;
 }
 
@@ -236,13 +224,19 @@ readcmd(char *s)
 		case 'X':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(fld[0], fld[1], 1, 0) < 0)
+			if(fnsetpos(fld[0], fld[1], Tfx) < 0)
 				goto error;
 			break;
 		case 'Y':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(fld[0], fld[1], 1, 1) < 0)
+			if(fnsetpos(fld[0], fld[1], Tfy) < 0)
+				goto error;
+			break;
+		case 'Z':
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(fld[0], fld[1], Tfz) < 0)
 				goto error;
 			break;
 		case 'f':
@@ -273,13 +267,19 @@ readcmd(char *s)
 		case 'x':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(fld[0], fld[1], 0, 0) < 0)
+			if(fnsetpos(fld[0], fld[1], Tx0) < 0)
 				goto error;
 			break;
 		case 'y':
 			if(m != 2)
 				goto invalid;
-			if(fnsetpos(fld[0], fld[1], 0, 1) < 0)
+			if(fnsetpos(fld[0], fld[1], Ty0) < 0)
+				goto error;
+			break;
+		case 'z':
+			if(m != 2)
+				goto invalid;
+			if(fnsetpos(fld[0], fld[1], Tz0) < 0)
 				goto error;
 			break;
 		}
