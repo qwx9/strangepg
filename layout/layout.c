@@ -4,7 +4,7 @@
 #include "threads.h"
 
 int nlaythreads = 4;
-int deflayout = LLpfr;
+int deflayout = -1;
 
 static Target *ttab[LLnil];
 
@@ -186,8 +186,16 @@ newlayout(Graph *g, int type)
 		l->ref--;
 	l = emalloc(sizeof *l);
 	l->ref = 1;
-	if(type < 0)
-		type = deflayout;
+	if(type < 0){
+		if(deflayout < 0){
+			if(dylen(rnodes) < 64){
+				nlaythreads = 1;
+				type = LLfr;
+			}else
+				type = LLpfr;
+		}else
+			type = deflayout;
+	}
 	l->target = ttab[type];
 	/* guarantees initialized state for deferred loading */
 	if(!gottagofast){
