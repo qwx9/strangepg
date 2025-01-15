@@ -1,7 +1,7 @@
 #include "strpg.h"
 #include "threads.h"
 
-int debug = Debuginfo;
+int debug;
 int onscreen;
 char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;

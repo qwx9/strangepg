@@ -63,7 +63,7 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-HMZbhqvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -71,12 +71,12 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
-		"-q             Suppress warning messages\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
+		"-W             Do not suppress warning messages\n"
 		"ALG may be one of:\n"
 		" fr            Fruchterman-Reingold algorithm\n"
 		" pfr           Parallelized variant of FR (default)\n"
@@ -88,7 +88,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-HMZbhqvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
@@ -97,10 +97,6 @@ parseargs(int argc, char **argv)
 	int type;
 	char *s;
 
-	/* FIXME: remove intype and -i, add an optional format specifier in filename:
-	 *	strpg ass.gfa; strpg i~ass.bct */
-	/* FIXME: we won't try to guess format, but we should validate it */
-	/* FIXME: lilu dallas mooltigraph */
 	type = FFgfa;
 	ARGBEGIN{
 	case 'D':
@@ -140,6 +136,7 @@ parseargs(int argc, char **argv)
 		break;
 	case 'H': drawing.flags |= DFhidpi; break;
 	case 'M': drawing.flags |= DFmsaa; break;
+	case 'W': debug |= Debuginfo; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;
@@ -159,9 +156,6 @@ parseargs(int argc, char **argv)
 			deflayout = LLcirc;
 		else
 			sysfatal("unknown layout type");
-		break;
-	case 'q':
-		debug = 0;
 		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
@@ -203,7 +197,7 @@ main(int argc, char **argv)
 	initui();
 	if(debug & Debugload)
 		for(;;)
-			sleep(60);
+			sleep(1000);
 	evloop();
 	quit();
 	return 0;

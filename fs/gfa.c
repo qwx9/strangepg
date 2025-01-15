@@ -370,11 +370,10 @@ readedge(Aux *a, File *f)
 static int
 readgfa(Aux *a, File *f)
 {
-	int r;
+	int nerr, nwarn, r;
 	char *s;
-	ioff nerr;
 
-	nerr = 0;
+	nerr = nwarn = 0;
 	while(readline(f) != nil){
 		if((s = nextfield(f)) == nil)
 			continue;
@@ -402,7 +401,10 @@ readgfa(Aux *a, File *f)
 			DPRINT(Debuginfo, "line %d: unhandled record type %c", f->nr, s[0]);
 		}
 		if(r < 0){
-			DPRINT(Debuginfo, "line %d: %s", f->nr, error());
+			if(debug & Debuginfo)
+				warn("line %d: %s\n", f->nr, error());
+			else
+				nwarn++;
 			if(r < -1 && ++nerr >= 10){
 				werrstr("too many errors");
 				return -1;
@@ -420,6 +422,8 @@ readgfa(Aux *a, File *f)
 	}
 	assert(dylen(a->degree) <= a->nnodes);
 	dyresize(a->degree, a->nnodes);
+	if(nwarn > 0)
+		warn("readgfa: suppressed %d warning messages (use -W to display them)\n", nwarn);
 	return 0;
 }
 
