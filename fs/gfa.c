@@ -404,6 +404,8 @@ readgfa(Aux *a, File *f)
 		werrstr("missing S lines: links reference non-existent segments");
 		return -1;
 	}
+	assert(dylen(a->degree) <= a->nnodes);
+	dyresize(a->degree, a->nnodes);
 	return 0;
 }
 
