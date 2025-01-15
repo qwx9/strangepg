@@ -74,8 +74,15 @@ new_(int is3d)
 	}
 	f = Nodesz * 2.0;
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
-		if(u->nedges == 0)
+		if(u->nedges == 0){
 			orphans++;
+			if((u->flags & (FNfixed | FNinitpos)) == 0){
+				r->pos[0] = var[0] - nrand(2 * var[0]);
+				r->pos[1] = var[1] - nrand(2 * var[1]);
+				r->pos[2] = var[2] - nrand(2 * var[2]);
+				continue;
+			}
+		}
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = (u->pos0.x - mid[0]) * W / var[0];
 		else
