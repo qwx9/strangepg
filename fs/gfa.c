@@ -235,6 +235,15 @@ mkbuckets(Aux *a)
 		offset[d] += d;
 	}
 	free(offset);
+	if(debug & Debugfs){
+		for(n=0, t=totals, te=t+dylen(t); t<te; t++){
+			m = *t;
+			if(m > n){
+				warn("totals[%zd] %d elements (%d total)\n", t-totals, m - n, m);
+				n = m;
+			}
+		}
+	}
 	dyfree(totals);
 	USED(totals);
 }
@@ -262,6 +271,7 @@ pushnode(Aux *a, char *s, int *abs)
 	return id;
 }
 
+/* -2: error; -1: warning; 0: success */
 static inline int
 readnode(Aux *a, File *f)
 {
@@ -274,7 +284,7 @@ readnode(Aux *a, File *f)
 	id = pushnode(a, s, &abs);
 	if(!abs && id < dylen(a->nodeoff) && a->nodeoff[id] != 0){
 		werrstr("duplicate S record");
-		return -1;
+		return -2;
 	}
 	s = nextfield(f);
 	w = f->toksz;
@@ -288,7 +298,7 @@ readnode(Aux *a, File *f)
 			w = 0;
 	}else if(w <= 0){	/* if 0, field is just too long */
 		werrstr("error reading segment sequence");
-		r = -1;
+		r = -2;
 		w = 0;
 	}
 	if(nextfield(f) != nil)
@@ -300,6 +310,7 @@ readnode(Aux *a, File *f)
 	return r;
 }
 
+/* -2: error; -1: warning; 0: success */
 static inline int
 readedge(Aux *a, File *f)
 {
@@ -312,13 +323,13 @@ readedge(Aux *a, File *f)
 	for(fp=fld; fp<fld+nelem(fld); fp++){
 		if((s = nextfield(f)) == nil){
 			werrstr("truncated link record");
-			return -1;
+			return -2;
 		}else if(f->toksz <= 0){
 			werrstr("field %d: prohibited empty field", f->nf);
-			return -1;
+			return -2;
 		}else if((fp - fld) % 2 == 1 && (f->toksz > 1 || s[0] != '+' && s[0] != '-')){
 			werrstr("field %d: invalid orientation", f->nf);
-			return -1;
+			return -2;
 		}
 		*fp = s;
 	}
@@ -344,8 +355,8 @@ readedge(Aux *a, File *f)
 	id = ((u64int)u << 1 | i) << 32ULL | v << 1 | j;
 	edges_put(a->edges, id, &abs);
 	if(!abs){
-		DPRINT(Debuginfo, "readgfa: line %d: duplicate edge, ignored", f->nr);
-		return 0;
+		werrstr("duplicate edge, ignored");
+		return -1;
 	}
 	dypush(a->edgeoff, off);
 	dyresize(a->degree, v+1);
@@ -359,6 +370,7 @@ readedge(Aux *a, File *f)
 static int
 readgfa(Aux *a, File *f)
 {
+	int r;
 	char *s;
 	ioff nerr;
 
@@ -367,34 +379,36 @@ readgfa(Aux *a, File *f)
 		if((s = nextfield(f)) == nil)
 			continue;
 		switch(s[0]){
-		err:
-			DPRINT(Debuginfo, "readgfa: line %d: %s", f->nr, error());
-			nerr++;
-			break;
 		case 'W':	/* v1.1 */
 		case 'J':	/* v1.2 */
 		case '#':
 		case 'H':
 		case 'C':
-		case 'P': continue;
+		case 'P':
+			continue;
 		case 'S':
-			if(readnode(a, f) < 0)
-				goto err;
+			if((r = readnode(a, f)) < 0)
+				break;
 			if(a->nnodes % 1000000 == 0)
 				warn("readgfa: %.3g nodes...\n", (double)a->nnodes);
 			break;
 		case 'L':
-			if(readedge(a, f) < 0)
-				goto err;
+			if((r = readedge(a, f)) < 0)
+				break;
 			if(a->nedges % 1000000 == 0)
 				warn("readgfa: %.3g edges...\n", (double)a->nedges);
 			break;
-		default: DPRINT(Debuginfo, "line %d: unhandled record type %c", f->nr, s[0]);
+		default:
+			DPRINT(Debuginfo, "line %d: unhandled record type %c", f->nr, s[0]);
 		}
-		if(nerr >= 10){
-			werrstr("too many errors");
-			return -1;
-		}
+		if(r < 0){
+			DPRINT(Debuginfo, "line %d: %s", f->nr, error());
+			if(r < -1 && ++nerr >= 10){
+				werrstr("too many errors");
+				return -1;
+			}
+		}else
+			nerr = 0;
 	}
 	if(a->nnodes <= 0){
 		werrstr("empty graph");
