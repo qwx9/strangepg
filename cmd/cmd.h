@@ -29,8 +29,9 @@ enum{
 	ALOAD,
 	ALOADBATCH,
 	ANODECOLOR,
-	ASELECT,
-	ADESELECT,
+	AUNSHOW,
+	AINFO,
+	AREFRESH,
 };
 
 extern int noreset;

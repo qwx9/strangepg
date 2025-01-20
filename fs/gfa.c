@@ -377,6 +377,7 @@ readgfa(Aux *a, File *f)
 	while(readline(f) != nil){
 		if((s = nextfield(f)) == nil)
 			continue;
+		r = 0;
 		switch(s[0]){
 		case 'W':	/* v1.1 */
 		case 'J':	/* v1.2 */

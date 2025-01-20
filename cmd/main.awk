@@ -144,7 +144,7 @@ function edgeinfo(id,	s, u, v, a, b){
 	s = "Edge: " u v
 	if(id in cigar)
 		s = s ", CIGAR=" cigar[id]
-	print "I", s
+	info(s)
 }
 function findnode(name,	id){
 	if(!checknodename(name))
@@ -171,29 +171,27 @@ function selinfostr(	id, name, l, n, m, s){
 			s = s ",..."
 		}
 	}
+	s = "Selected: " s
 	if(length(selected) == 1)
 		return s ", length=" l
 	return s "; total length=" l " in " length(selected) " nodes"
 }
-function nodeinfostr(id,	s){
-	name = label[id]
-	s = name
-	if(name in LN)
-		s = s ", length=" LN[name]
-	return s
-}
-function selinfo(){
-	if(length(selected) != 0)
-		print "s", selinfostr()
-	#else
-	#	print "E\tbug: nothing selected"
-}
 function nodeinfo(id,	name, s){
 	if(!checknodeid(id))
 		return
-	print "I", "Node: " nodeinfostr(id)
+	name = label[id]
+	s = "Node: " name
+	if(name in LN)
+		s = s ", length=" LN[name]
+	info(s)
 }
-function deselectnodebyid(id){
+function deselect(	id){
+	selinfo = ""
+	for(id in selected)
+		unshow(id, selected[id])
+	delete selected
+}
+function deselectnodebyid(id,	col){
 	if(!checknodeid(id))
 		return
 	if(!(id in selected)){
@@ -204,18 +202,24 @@ function deselectnodebyid(id){
 		deselect()
 		return
 	}
+	col = selected[id]
 	delete selected[id]
-	printf "c\t%s\t0x%x\n", id, CL[label[id]]
+	selinfo = selinfostr()
+	unshow(id, col)
 }
 function deselectnode(name,	id){
 	if(!checknodename(name))
 		return
 	deselectnodebyid(node[name])
 }
-function selectnodebyid(id){
+function selectnodebyid(id, noshow){
 	if(!checknodeid(id) || id in selected)
 		return
 	selected[id] = CL[label[id]]
+	if(!noshow){
+		selinfo = selinfostr()
+		refresh()
+	}
 }
 function selectnode(name, id){
 	if(!checknodename(name))
@@ -234,7 +238,6 @@ function toggleselect(id){
 function reselectnode(id){
 	if(!checknodeid(id))
 		return
-	#deselect(1)
 	deselect()
 	selectnodebyid(id)
 }

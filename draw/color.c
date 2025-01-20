@@ -186,7 +186,7 @@ rgb2lab(double c[3])
 	c[2] = 200.0 * (Fn(y / Yn) - Fn(z / Zn));
 }
 
-void
+static void
 mixcolors(float *cols, u32int v)
 {
 	double c1[3], c2[3];
@@ -206,6 +206,15 @@ mixcolors(float *cols, u32int v)
 	cols[0] = c1[0];
 	cols[1] = c1[1];
 	cols[2] = c1[2];
+}
+
+void
+highlightnode(ioff id)
+{
+	RNode *r;
+
+	r = rnodes + id;
+	mixcolors(r->col, theme[Chigh] >> 8);
 }
 
 Color *

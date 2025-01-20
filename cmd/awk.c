@@ -23,7 +23,6 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "continue",	CONTINUE,	CONTINUE },
 	{ "cos",	FCOS,		BLTIN },
 	{ "delete",	DELETE,		DELETE },
-	{ "deselect",	ADESELECT,	ADDON },
 	{ "do",		DO,		DO },
 	{ "else",	ELSE,		ELSE },
 	{ "eval",	FEVAL,		BLTIN },
@@ -37,6 +36,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "if",		IF,		IF },
 	{ "in",		IN,		IN },
 	{ "index",	INDEX,		INDEX },
+	{ "info",	AINFO,		ADDON },
 	{ "int",	FINT,		BLTIN },
 	{ "length",	FLENGTH,	BLTIN },
 	{ "loadall",	ALOAD,	ADDON },
@@ -49,8 +49,8 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "print",	PRINT,		PRINT },
 	{ "printf",	PRINTF,		PRINTF },
 	{ "rand",	FFRAND,		BLTIN },
+	{ "refresh",	AREFRESH,		ADDON },
 	{ "return",	RETURN,		RETURN },
-//	{ "select",	ASELECT,	ADDON },
 	{ "sin",	FSIN,		BLTIN },
 	{ "split",	SPLIT,		SPLIT },
 	{ "sprintf",	SPRINTF,	SPRINTF },
@@ -60,6 +60,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "substr",	SUBSTR,		SUBSTR },
 	{ "tolower",	FTOLOWER,	BLTIN },
 	{ "toupper",	FTOUPPER,	BLTIN },
+	{ "unshow",	AUNSHOW,	ADDON },
 	{ "while",	WHILE,		WHILE },
 };
 const size_t nkeywords = nelem(keywords);

@@ -31,7 +31,7 @@ enum{
 };
 struct Node{
 	uchar flags;
-	Vertex pos0;
+	Vertex pos0;	/* FIXME: very annoying to get rid of */
 	short nedges;
 	short nin;
 	ioff eoff;

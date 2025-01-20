@@ -127,13 +127,6 @@ fnfindnode(char *sid){
 	return 0;
 }
 
-static inline int
-fnsetsel(char *s)
-{
-	showselected(s);
-	return 0;
-}
-
 static char *
 nexttok(char *s, char **end)
 {
@@ -179,10 +172,6 @@ readcmd(char *s)
 		case 'E':
 			logerr(va("error: %s\n", s+2));
 			continue;
-		case 'I':
-			showobject(s + 2);
-			req |= Reqshallowdraw;
-			continue;
 		case 'R':
 			if(reqlayout(Lreset))
 				warn("readcmd: reqlayout: %s\n", error());
@@ -193,11 +182,9 @@ readcmd(char *s)
 		case 'N':
 		case 'X':
 		case 'Y':
-		case 'c':
 		case 'f':
 		case 'i':
 		case 'o':
-		case 's':
 		case 'x':
 		case 'y':
 			break;
@@ -256,13 +243,6 @@ readcmd(char *s)
 				goto invalid;
 			if(exportlayout(fld[0]) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
-			break;
-		case 's':
-			if(m != 1)
-				goto invalid;
-			if(fnsetsel(fld[0]) < 0)
-				goto error;
-			req |= Reqshallowdraw;
 			break;
 		case 'x':
 			if(m != 2)

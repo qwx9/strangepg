@@ -10,6 +10,10 @@ int prompting;
 char hoverstr[256], selstr[512];
 REdge selbox[4];
 
+/* FIXME: horrible */
+KHASHL_SET_INIT(KH_LOCAL, sel, sel, ioff, kh_hash_uint32, kh_eq_generic)
+static sel *sels;
+
 static ioff selected = -1, shown = -1, focused = -1;
 static Rekt rsel;
 
@@ -130,26 +134,6 @@ keyevent(Rune r, int down)
 	return 0;
 }
 
-static inline void
-highlightnode(ioff id)
-{
-	RNode *r;
-
-	r = rnodes + id;
-	if(theme[Cbg] >> 8 == 0 && r->col[0] > 0.6f && r->col[1] > 0.6f && r->col[2] > 0.6f
-	|| r->col[0] < 0.35f && r->col[1] < 0.35f && r->col[2] < 0.35f)	/* FIXME: gigakludge */
-		return;
-	mixcolors(r->col, theme[Chigh] >> 8);
-}
-
-/* FIXME: will fire off without cause */
-static void
-commitselect(void)
-{
-	pushcmd("selinfo()");
-	flushcmd();
-}
-
 /* FIXME: separate pipeline, quads? */
 static void
 resetbox(void)
@@ -158,6 +142,10 @@ resetbox(void)
 
 	if(rsel.x1 < 0)
 		return;
+	if(sels != nil){
+		sel_destroy(sels);
+		sels = nil;
+	}
 	rsel.x1 = -1;
 	r = selbox;
 	r->pos1[0] = r->pos2[0];
@@ -223,8 +211,10 @@ selectionbox(float x1, float y1, float x2, float y2)
 static int
 dragselect(int x, int y)
 {
+	int abs;
 	ioff Δx, Δy, id, oid;
 	Rekt rx, ry;
+	khint_t k;
 
 	if(rsel.x1 < 0){
 		rsel.x1 = rsel.x2 = x;
@@ -249,6 +239,8 @@ dragselect(int x, int y)
 	oid = -1;
 	rsel.x2 = x;
 	rsel.y2 = y;
+	if(sels == nil)
+		sels = sel_init();
 	for(x=rx.x1; x<rx.x2; x++)
 		for(y=rx.y1; y<rx.y2; y++)
 			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
@@ -256,10 +248,14 @@ dragselect(int x, int y)
 					continue;
 				if(--id == oid)
 					continue;
-				pushcmd("selectnodebyid(%d)", id);
+				sel_put(sels, id, &abs);
+				if(!abs)
+					continue;
+				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(id);
 				oid = id;
 			}
+	flushcmd();
 	for(x=ry.x1; x<ry.x2; x++)
 		for(y=ry.y1; y<ry.y2; y++)
 			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
@@ -267,7 +263,10 @@ dragselect(int x, int y)
 					continue;
 				if(--id == oid)
 					continue;
-				pushcmd("selectnodebyid(%d)", id);
+				sel_put(sels, id, &abs);
+				if(!abs)
+					continue;
+				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(id);
 				oid = id;
 			}
@@ -317,27 +316,6 @@ mousehover(int x, int y)
 	return id;
 }
 
-void
-showobject(char *s)
-{
-	strecpy(hoverstr, hoverstr+sizeof hoverstr, s);
-}
-
-/* FIXME: plan9 */
-void
-showselected(char *s)
-{
-	char *p;
-
-	if(s == nil){
-		selstr[0] = 0;
-		selected = -1;
-		return;
-	}
-	p = strecpy(selstr, selstr+sizeof selstr, "Selected: ");
-	strecpy(p, selstr+sizeof selstr, s);
-}
-
 static int
 mouseselect(ioff id, int multi)
 {
@@ -349,8 +327,8 @@ mouseselect(ioff id, int multi)
 				pushcmd("toggleselect(%d)", id);
 			else
 				pushcmd("reselectnode(%d)", id);
-			highlightnode(id);
 			flushcmd();
+			highlightnode(id);
 		}else{	/* FIXME: edges: not implemented */
 			;
 		}
@@ -406,10 +384,8 @@ mouseevent(Vertex v, Vertex Δ)
 	/* FIXME: clean up */
 	if(m == 0){
 		endmove();
-		if((omod & Mmask) == Mlmb){
-			commitselect();
+		if((omod & Mmask) == Mlmb)
 			resetbox();
-		}
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
 		resetbox();

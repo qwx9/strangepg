@@ -12,10 +12,11 @@
 #include "strawk/awk.h"
 
 /* FIXME: additional functions:
- * - get extant tables, or tables element is in + extra info to nodeinfo;
- *	 create array from info in Tab then delete it explicitely in main.awk
+ * - Tab → extant tables → extra info to nodeinfo;
  * - multigraph: query graph node ranges or whatever */
-/* FIXME: add hooks for the access of certain tables instead of regex? */
+/* FIXME: add hooks for the access of certain tables instead of regex?
+ * when we are batch loading, we can cheat with the syntax to avoid
+ * having to match at all */
 
 KHASHL_MAP_INIT(KH_LOCAL, tabmap, tab, char*, int, kh_hash_str, kh_eq_str)
 
@@ -55,17 +56,6 @@ gettab(char *s)
 	if(k == kh_end(map))
 		return -1;
 	return kh_val(map, k);
-}
-
-static inline Array *
-gettabarray(int t)
-{
-	Array *a;
-
-	rlock(&buflock);
-	a = tabs[t].a;
-	runlock(&buflock);
-	return a;
 }
 
 static inline int
@@ -121,16 +111,23 @@ getarray(char *arr)
 }
 
 static inline Array *
+gettabarray(int t)
+{
+	Array *a;
+
+	rlock(&tablock);
+	a = tabs[t].a;
+	runlock(&tablock);
+	return a;
+}
+
+static inline Array *
 mkarray(int t)
 {
 	Array *a;
 	Tab *tab;
 
-	rlock(&tablock);
-	tab = tabs + t;
-	a = tab->a;
-	runlock(&tablock);
-	if(a == nil){
+	if((a = gettabarray(t)) == nil){
 		wlock(&tablock);
 		tab = tabs + t;
 		assert(tab->name != nil);
@@ -468,51 +465,6 @@ fnloadall(void)
 }
 
 static void
-fndeselect(void)
-{
-	ioff id;
-	Array *a;
-	Cell **t, **te, *c, *cn;
-	RNode *r;
-
-	a = mkarray(Tselect);
-	for(t=a->tab, te=t+a->size; t<te; t++){
-		for(c=*t; c!=nil; c=cn){
-			cn = c->cnext;
-			id = atoi(c->nval);
-			r = rnodes + id;
-			setcolor(r->col, c->val.u);
-			free(c->nval);
-			if(freeable(c))
-				xfree(c->sval);
-			free(c);
-		}
-		*t = nil;
-	}
-	a->nelem = 0;
-	showselected(nil);
-	reqdraw(Reqshallowdraw);
-}
-
-static void
-fnselect(ioff id)
-{
-	/*
-	Array *a;
-
-	a = mkarray(Tselect);
-	*/
-	/*
-	- highlight node (move highlight functions to draw/color.c
-	- cache selected array
-	- add to selected array
-	- showselected(msg); reqdraw(Reqshallowdraw);
-	- ui: call select function here directly, no pushcmd?
-	*/
-	/* FIXME: also, selection box shit can go directly through this */
-}
-
-static void
 fnnodecolor(char *lab, Awknum col)
 {
 	ioff id;
@@ -532,6 +484,7 @@ addon(TNode **a, int)
 	char *s;
 	Cell *x, *y, *ret;
 	TNode *nextarg;
+	RNode *r;
 
 	t = ptoi(a[0]);
 	x = execute(a[1]);
@@ -548,15 +501,31 @@ addon(TNode **a, int)
 	case ANODECOLOR:
 		s = getsval(x);
 		y = execute(nextarg);
+		nextarg = nextarg->nnext;
 		fnnodecolor(s, getival(y));
 		tempfree(y);
+		break;
+	case AINFO:
+		strecpy(hoverstr, hoverstr+sizeof hoverstr, getsval(x));
+		reqdraw(Reqshallowdraw);
+		break;
+	case AUNSHOW:
+		r = rnodes + getival(x);
+		assert(r >= rnodes && r < rnodes + dylen(rnodes));
+		y = execute(nextarg);
 		nextarg = nextarg->nnext;
+		setcolor(r->col, getival(y));
+		tempfree(y);
+		if((y = getcell("selinfo", symtab)) == nil)
+			break;
+		strecpy(selstr, selstr+sizeof selstr, getsval(y));
+		reqdraw(Reqshallowdraw);
 		break;
-	case ASELECT:
-		//fnselect(x->val.i);
-		break;
-	case ADESELECT:
-		fndeselect();
+	case AREFRESH:
+		if((y = getcell("selinfo", symtab)) == nil)
+			break;
+		strecpy(selstr, selstr+sizeof selstr, getsval(y));
+		reqdraw(Reqshallowdraw);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
@@ -594,7 +563,7 @@ initext(void)
 		[Tedge] = {"edge", nil, 0},
 		[Tlabel] = {"label", nil, 0},
 		[TCL] = {"CL", "nodecolor", 1},
-		[Tselect] = {"selected", "select"},
+		[Tselect] = {"selected", nil, 1},
 	}, *pp;
 
 	map = tab_init();

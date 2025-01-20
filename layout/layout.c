@@ -43,6 +43,7 @@ wing(void *arg)
 	}
 }
 
+/* FIXME: remove Graph* stuff now that state is global */
 /* not really mooltigraph scheduler for now */
 static void
 sac(void *)

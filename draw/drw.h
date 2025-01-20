@@ -136,7 +136,7 @@ enum{
 };
 extern u32int *theme;
 
-void	mixcolors(float*, u32int);
+void	highlightnode(ioff);
 Color*	newcolor(u32int);
 Color*	color(u32int);
 u32int	somecolor(ioff, char**);
