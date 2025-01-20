@@ -533,7 +533,6 @@ addon(TNode **a, int)
 		FATAL("illegal function type %d", t);
 		break;
 	}
-	tempfree(x);
 	if(nextarg != nil){
 		WARNING("warning: function has too many arguments");
 		for(; nextarg; nextarg = nextarg->nnext){
