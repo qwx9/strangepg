@@ -128,10 +128,10 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfo(id,	s, u, v, a, b){
+function edgeinfostr(id,	s, u, v, a, b){
 	if(!((id "\x1c" 1) in edge)){
 		print "E\tno such edge id: " id
-		return
+		return ""
 	}
 	a = edge[id,1]
 	b = edge[id,2]
@@ -141,10 +141,15 @@ function edgeinfo(id,	s, u, v, a, b){
 		return
 	u = label[a >> 1] (a & 1 ? "-" : "+")
 	v = label[b >> 1] (b & 1 ? "-" : "+")
-	s = "Edge: " u v
+	s = u v
 	if(id in cigar)
 		s = s ", CIGAR=" cigar[id]
-	info(s)
+	return s
+}
+function edgeinfo(id,	s){
+	if((s = edgeinfostr(id)) == "")
+		return
+	info("Edge :" s)
 }
 function findnode(name,	id){
 	if(!checknodename(name))
