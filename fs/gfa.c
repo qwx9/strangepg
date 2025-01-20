@@ -136,7 +136,7 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
  	nn = dylen(edges);
 	nm = nn + 2 * nedges;
 	dyresize(edges, nm);
-	dyresize(redges, nm + nelem(selbox));
+	dyresize(redges, nedges + nelem(selbox));
 	h = eset;
 	deg = degree;
 	kh_foreach(h, k){

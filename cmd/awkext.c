@@ -451,15 +451,19 @@ fnloadall(void)
 			vv.i = somecolor(id, nil);
 			set(TCL, NUM, id, vv);
 		}
-		for(e=edges+n->eoff,ee=e+n->nedges; e<ee; e++, eid++){
-			p = seprint(s, s + sizeof s, "%d\x1c\x31", id);
+		for(e=edges+n->eoff,ee=e+n->nedges; e<ee; e++){
 			v = *e;
+			aid = v >> 2;
+			if(id > aid || id == aid && (v & 1) == 1)
+				continue;
+			p = seprint(s, s + sizeof s, "%d%c1", eid, '\034');
 			vv.s = s;
-			aid = id << 1 & (v & 1);
+			aid = id << 1 | (v & 1);
 			set(Tedge, 0, aid, vv);
 			p[-1] = '2';
 			aid = v >> 1;
 			set(Tedge, 0, aid, vv);
+			eid++;
 		}
 	}
 }

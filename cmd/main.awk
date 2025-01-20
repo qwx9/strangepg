@@ -128,8 +128,8 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfostr(id,	s, u, v, a, b){
-	if(!((id "\x1c" 1) in edge)){
+function edgeinfostr(id,	i, s, u, v, a, b){
+	if(!((id SUBSEP 1) in edge)){
 		print "E\tno such edge id: " id
 		return ""
 	}
@@ -149,7 +149,7 @@ function edgeinfostr(id,	s, u, v, a, b){
 function edgeinfo(id,	s){
 	if((s = edgeinfostr(id)) == "")
 		return
-	info("Edge :" s)
+	info("Edge: " s)
 }
 function findnode(name,	id){
 	if(!checknodename(name))
