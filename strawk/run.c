@@ -743,7 +743,8 @@ Cell *matchop(TNode **a, int n)	/* ~ and match() */
 		setival(rstartloc, start);
 		setival(rlengthloc, patlen);
 		x = gettemp();
-		x->tval = NUM;
+		x->tval &= ~STR;
+		x->tval |= NUM;
 		x->val.i = start;
 	} else if ((n == MATCH && i == 1) || (n == NOTMATCH && i == 0))
 		x = True;
@@ -1312,7 +1313,6 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 	tempfree(x);
 	x = gettemp();
 	x->sval = buf;
-	x->tval = STR|DONTFREE;
 	return(x);
 }
 
@@ -1682,7 +1682,6 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 	tempfree(y);
 	z = gettemp();
 	z->sval = tempstrdup(s);
-	z->tval = STR|DONTFREE;
 	return(z);
 }
 
@@ -1857,7 +1856,8 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	xfree(origs);
 	xfree(origfs);
 	x = gettemp();
-	x->tval = NUM;
+	x->tval &= ~STR;
+	x->tval |= NUM;
 	x->val.i = n;
 	return(x);
 }
@@ -2382,7 +2382,8 @@ next_search:
 
 	tempfree(x);
 	x = gettemp();
-	x->tval = NUM;
+	x->tval &= ~STR;
+	x->tval |= NUM;
 	x->val.i = m;
 	return x;
 }
