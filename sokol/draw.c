@@ -280,9 +280,9 @@ drawproc(void *)
 			sapp_wakethefup();
 		}else if((reqs & Reqshallowdraw) != 0)
 			sapp_wakethefup();
-		if(stop = !redraw(stop)){
+		if(stop = !redraw(stop))
 			sapp_input_wait(true);
-		}else
+		else
 			reqs |= Reqpickbuf;
 	}
 }
@@ -317,7 +317,7 @@ frame(void)
 	if((reqs & Reqpickbuf) != 0){
 		reqs &= ~Reqpickbuf;
 		t = μsec();
-		if(t - t0 >= 1000000 && frm > 2){
+		if(t - t0 >= 100000 && frm > 1){
 			render.stalepick = 1;
 			render.caching = 1;
 			t0 = t;
