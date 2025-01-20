@@ -214,7 +214,6 @@ dragselect(int x, int y)
 	int abs;
 	ioff Δx, Δy, id, oid;
 	Rekt rx, ry;
-	khint_t k;
 
 	if(rsel.x1 < 0){
 		rsel.x1 = rsel.x2 = x;

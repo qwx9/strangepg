@@ -13,7 +13,7 @@ flat out uint idx;
 
 void main(){
 	gl_Position = mvp * vec4(pos, 1.0);
-	idx = gl_InstanceIndex + 1 | 1<<31;
+	idx = (gl_VertexIndex >> 1) + 1 | 1<<31;
 }
 @end
 
