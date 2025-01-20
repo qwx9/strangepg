@@ -477,6 +477,7 @@ fnnodecolor(char *lab, Awknum col)
 	setcolor(rnodes[id].col, col);
 }
 
+/* FIXME: stricter error checking and recovery */
 Cell *
 addon(TNode **a, int)
 {
@@ -511,7 +512,8 @@ addon(TNode **a, int)
 		break;
 	case AUNSHOW:
 		r = rnodes + getival(x);
-		assert(r >= rnodes && r < rnodes + dylen(rnodes));
+		if(r < rnodes || r >= rnodes + dylen(rnodes))
+			FATAL("unknown nodeid or out of bounds access: %lld", x->val.i);
 		y = execute(nextarg);
 		nextarg = nextarg->nnext;
 		setcolor(r->col, getival(y));
