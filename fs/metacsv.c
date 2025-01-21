@@ -35,7 +35,11 @@ csvheader(File *f, int *wait)
 		return nil;
 	}
 	for(; (s = nextfield(f)) != nil;){
+		while(isspace((c=*s)))
+			s++;
 		for(p=s; (c=*p)!=0; p++){
+			if(isspace(c))
+				break;
 			if(p == s){
 				if(!isalpha(c)){
 					werrstr("loadcsv: invalid tag name \"%s\" in header", s);
