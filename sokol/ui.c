@@ -103,13 +103,13 @@ drawui(nk_context *ctx)
 			}
 			nk_group_end(ctx);
 		}
-		h = MAX(r.h - 13 * Colh - s->padding.y - s->border, 24);
+		h = MAX(r.h - Fonth * Colh - s->padding.y - s->border, 24);
 		if(nk_tree_push(ctx, NK_TREE_TAB, "Log", NK_MINIMIZED)){
 			nk_layout_row_dynamic(ctx, 6 * Colh, 1);
 			/* nk_text and nk_label do not handle newlines */
 			if(nk_group_begin(ctx, "all", 0)){
 				sz = logsz;
-				nk_layout_row_dynamic(ctx, nlog * 8 * Colh / 2, 1);
+				nk_layout_row_dynamic(ctx, nlog * (Fonth + 2.3), 1);
 				nk_edit_string(ctx, NKxopt, (char *)logbuf, &sz, logsz, nk_filter_default);
 				nk_group_end(ctx);
 			}
@@ -245,18 +245,17 @@ initnk(void)
 
 	if((drawing.flags & DFhaxx0rz) == 0){
 		nk_default_color_style[NK_COLOR_TEXT] = (nk_color){0x00, 0x00, 0x00, 0xcc};
-		nk_default_color_style[NK_COLOR_WINDOW] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
-		nk_default_color_style[NK_COLOR_HEADER] = (nk_color){0x99, 0x99, 0x99, 0xcc};
+		nk_default_color_style[NK_COLOR_WINDOW] = (nk_color){0xf7, 0xf7, 0xf7, 0xcc};
+		nk_default_color_style[NK_COLOR_HEADER] = (nk_color){0xe0, 0xe0, 0xe0, 0xcc};
+		nk_default_color_style[NK_COLOR_TAB_HEADER] = nk_default_color_style[NK_COLOR_HEADER];
 		nk_default_color_style[NK_COLOR_BORDER] = nk_default_color_style[NK_COLOR_HEADER];
-		nk_default_color_style[NK_COLOR_SELECT] = (nk_color){0xcc, 0xcc, 0xcc, 0xcc};
-		nk_default_color_style[NK_COLOR_SELECT_ACTIVE] = (nk_color){0x66, 0x66, 0x66, 0xcc};
+		nk_default_color_style[NK_COLOR_COMBO] = nk_default_color_style[NK_COLOR_HEADER];
 		nk_default_color_style[NK_COLOR_EDIT] = (nk_color){0xff, 0xff, 0xff, 0xff};
 		nk_default_color_style[NK_COLOR_EDIT_CURSOR] = (nk_color){0x00, 0x00, 0x00, 0xcc};
-		nk_default_color_style[NK_COLOR_SCROLLBAR] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
-		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR] = (nk_color){0xcc, 0xcc, 0x8e, 0xcc};
-		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
-		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = (nk_color){0xee, 0xee, 0x9e, 0xcc};
-		nk_default_color_style[NK_COLOR_TAB_HEADER] = (nk_color){0xaa, 0xaa, 0xaa, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR] = nk_default_color_style[NK_COLOR_HEADER];
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR] = (nk_color){0xd0, 0xd0, 0xd0, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = (nk_color){0xc0, 0xc0, 0xb0, 0xcc};
+		nk_default_color_style[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = (nk_color){0xb0, 0xb0, 0xb0, 0xcc};
 	}
 	snk_setup(&(snk_desc_t){
 		.dpi_scale = sapp_dpi_scale(),
