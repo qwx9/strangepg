@@ -8,7 +8,6 @@
 /* restrictions:
  * - NO internationalization
  * - no quoting, no escape sequences,',' is always a separator
- * - column names are valid variable names, ie. cannot have spaces
  * - currently first column is implied to be segment labels
  */
 
@@ -39,7 +38,7 @@ csvheader(File *f, int *wait)
 			s++;
 		for(p=s; (c=*p)!=0; p++){
 			if(isspace(c))
-				break;
+				continue;
 			if(p == s){
 				if(!isalpha(c)){
 					werrstr("loadcsv: invalid tag name \"%s\" in header", s);
@@ -47,7 +46,7 @@ csvheader(File *f, int *wait)
 				}
 			}else if(!isalnum(c)){
 				*p = 0;
-				warn("loadcsv: truncating tag name \"%s\" on invalid character %c\n", s, c);
+				warn("loadcsv: truncating tag name \"%s\" on invalid character \'%c\'\n", s, c);
 				break;
 			}
 		}
