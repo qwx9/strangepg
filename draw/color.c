@@ -19,7 +19,7 @@ static u32int theme1[Cend] = {
 static u32int theme2[Cend] = {
 	[Cbg]	= 0xffffffff,
 	[Ctext]	= 0xeeee00ff,
-	[Cedge]	= 0x77777730,
+	[Cedge]	= 0x44444477,
 	[Cemph]	= 0xff0000ff,
 	[Chigh] = 0x000000ff,
 };

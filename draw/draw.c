@@ -71,18 +71,19 @@ resizenodes(void)
 	if((drawing.flags & DFstalelen) == 0)
 		return;
 	drawing.flags &= ~DFstalelen;
-	if(drawing.length.min <= 0)
-		drawing.length.min = 1;
+	if(drawing.length.min <= Minsz)
+		drawing.length.min = Minsz;
 	if(drawing.length.max <= drawing.length.min)
-		drawing.length.max = drawing.length.min + Nodesz;
-	Δ = MAX(1.0, drawing.length.max - drawing.length.min);
-	max = Nodesz * log(0.05 + Δ);
+			drawing.length.max = Minsz;
+	Δ = MAX(Minsz, drawing.length.max - drawing.length.min);
+	max = Maxsz;
 	for(r=rnodes, re=r+dylen(r); r<re; r++){
 		l = r->len;
 		if(l == 0.0)
-			l = 1.0;
-		r->len = (max - (max - 0.05) * exp(-l / Δ));
+			l = Minsz;
+		r->len = (max - (max - Minsz) * exp(-l / Δ));
 	}
+	drawing.length.max = (max - (max - Minsz) * exp(-drawing.length.max / Δ));
 }
 
 static inline void
