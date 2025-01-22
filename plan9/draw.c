@@ -4,6 +4,8 @@
 #include "threads.h"
 #include <draw.h>
 
+Channel *drawc;
+
 struct Color{
 	u32int col;
 	Image *i;
@@ -13,7 +15,7 @@ struct Color{
 static Point panmax, ΔZP;
 static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
-static Channel *drawc, *ticc, *framec;
+static Channel *ticc, *framec;
 static QLock ticker;
 static ioff selected;	/* FIXME */
 

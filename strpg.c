@@ -63,13 +63,14 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
 		"-f FILE        Load layout from FILE\n"
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
+		"-n FILE        Run layouting headless, saving to FILE periodically\n"
 		"-t N           Set number of layouting threads (1-128, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
@@ -88,7 +89,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
@@ -157,6 +158,10 @@ parseargs(int argc, char **argv)
 		else
 			sysfatal("unknown layout type");
 		break;
+	case 'n':
+		drawing.layfile = EARGF(usage());
+		drawing.flags |= DFnope;
+		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
 		if(nlaythreads <= 0 || nlaythreads > 128){
@@ -194,11 +199,12 @@ main(int argc, char **argv)
 	init();
 	initlayout();
 	load();
-	initui();
-	if(debug & Debugload)
-		for(;;)
-			sleep(1000);
-	evloop();
+	if(drawing.flags & DFnope || debug & Debugload)
+		noloop();
+	else{
+		initui();
+		evloop();
+	}
 	quit();
 	return 0;
 }

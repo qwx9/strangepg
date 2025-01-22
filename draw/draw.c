@@ -4,12 +4,14 @@
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
+#include "cmd.h"
 
 View view;
 RNode *rnodes;
 REdge *redges;
 ssize ndnodes, ndedges;
 Drawing drawing;
+extern Channel *drawc;
 
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
@@ -199,6 +201,29 @@ redraw(int go)
 	drawui();
 	CLK1(clk);
 	return go;
+}
+
+static void
+ticker(void *)
+{
+	for(;;){
+		sleep(10);
+		sendul(drawc, Reqrefresh);
+	}
+}
+
+void
+noloop(void)
+{
+	ulong u;
+
+	newthread(ticker, nil, nil, nil, "ticker", mainstacksize); 
+	while((u = recvul(drawc)) > 0){
+		switch(u){
+		case Reqredraw:
+		case Reqrefresh: pushcmd("exportlayout(\"%s\")", drawing.layfile); flushcmd(); break;
+		}
+	}
 }
 
 /* note: view screen dimensions are *not* necessarily set by the

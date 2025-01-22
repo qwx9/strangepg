@@ -436,6 +436,8 @@ resetui(void)
 void
 initui(void)
 {
+	if(drawing.flags & DFnope)
+		return;
 	initsysui();
 	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);

@@ -28,6 +28,7 @@ enum{
 	DFstalelen = 1<<4,
 	DFmsaa = 1<<5,
 	DFhidpi = 1<<6,
+	DFnope = 1<<7,
 };
 struct Drawing{
 	int flags;
@@ -37,6 +38,7 @@ struct Drawing{
 	Range zbound;
 	float nodesz;
 	float fatness;
+	char *layfile;
 };
 extern Drawing drawing;
 
@@ -162,5 +164,6 @@ void	setnodeshape(int);
 void	updatedraw(void);
 void	reqdraw(int);
 void	initcol(void);
+void	noloop(void);
 void	initsysdraw(void);
 void	initdrw(void);

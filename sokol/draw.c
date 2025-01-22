@@ -40,7 +40,7 @@ void	event(const sapp_event*);
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
 
-static Channel *drawc;
+Channel *drawc;
 static int reqs;
 
 void
@@ -367,6 +367,8 @@ initsysdraw(void)
 void
 evloop(void)
 {
+	ulong u;
+
 	/* wait until at least one file asks for a redraw */
 	while(recvul(drawc) != Reqredraw)
 		;
