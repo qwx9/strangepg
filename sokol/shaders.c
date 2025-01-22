@@ -19,7 +19,7 @@ Render render;
 
 static sg_image fb, pickfb, zfb;
 
-ioff
+u32int
 mousepick(int x, int y)
 {
 	u32int i;
@@ -33,8 +33,8 @@ mousepick(int x, int y)
 	if(render.pickflip)
 		y = view.h - y;
 	if((i = render.pickfb[(view.h - y - 1) * view.w + x]) == 0)
-		return -1;
-	return i;
+		return 0xffffffff;
+	return i - 1;
 }
 
 void

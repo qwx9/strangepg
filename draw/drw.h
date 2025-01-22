@@ -125,7 +125,7 @@ void	zoomdraw(float, float, float);
 void	pandraw(float, float);
 void	rotdraw(Vertex);
 void	worldview(Vertex);
-ioff	mousepick(int, int);
+u32int	mousepick(int, int);
 int	redraw(int);
 
 enum{

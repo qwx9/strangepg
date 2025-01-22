@@ -212,8 +212,12 @@ static int
 dragselect(int x, int y)
 {
 	int abs;
-	ioff Δx, Δy, id, oid;
+	ioff id, Δx, Δy, oid;
 	Rekt rx, ry;
+	union{
+		ioff i;
+		u32int u;
+	} u;
 
 	if(rsel.x1 < 0){
 		rsel.x1 = rsel.x2 = x;
@@ -241,11 +245,10 @@ dragselect(int x, int y)
 	if(sels == nil)
 		sels = sel_init();
 	for(x=rx.x1; x<rx.x2; x++)
-		for(y=rx.y1; y<rx.y2; y++)
-			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
-				if((id & 1<<31) != 0)
-					continue;
-				if(--id == oid)
+		for(y=rx.y1; y<rx.y2; y++){
+			u.u = mousepick(x, y);
+			if(u.i >= 0){
+				if((id = u.i) == oid)
 					continue;
 				sel_put(sels, id, &abs);
 				if(!abs)
@@ -254,13 +257,13 @@ dragselect(int x, int y)
 				highlightnode(id);
 				oid = id;
 			}
+		}
 	flushcmd();
 	for(x=ry.x1; x<ry.x2; x++)
-		for(y=ry.y1; y<ry.y2; y++)
-			if((id = mousepick(x, y)) != -1 && id != oid && (id & 1<<31) == 0){
-				if((id & 1<<31) != 0)
-					continue;
-				if(--id == oid)
+		for(y=ry.y1; y<ry.y2; y++){
+			u.u = mousepick(x, y);
+			if(u.i >= 0){
+				if((id = u.i) == oid)
 					continue;
 				sel_put(sels, id, &abs);
 				if(!abs)
@@ -269,6 +272,7 @@ dragselect(int x, int y)
 				highlightnode(id);
 				oid = id;
 			}
+		}
 	flushcmd();
 	selectionbox(rsel.x1, rsel.y1, rsel.x2, rsel.y2);
 	return 0;
@@ -294,25 +298,32 @@ mousedrag(float Δx, float Δy)
 static ioff
 mousehover(int x, int y)
 {
+	ioff id;
 	int isedge;
-	u32int id;
+	union{
+		ioff i;
+		u32int u;
+	} u;
 
-	if(x < 0 || y < 0 || x >= view.w || y >= view.h
-	|| (id = mousepick(x, y)) == -1U){
+	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
+		return -1;
+	u.u = mousepick(x, y);
+	if(u.i == -1){
 		hoverstr[0] = 0;
 		return -1;
 	}
-	isedge = id & 1<<31;
-	id--;
+	isedge = u.u & 1<<31;
+	id = u.u & ~(1<<31);
+	if(isedge && id >= dylen(redges) - nelem(selbox))
+		return -1;
 	if(id == shown)
 		return id;
-	if(isedge){
-		pushcmd("edgeinfo(%d)", id & ~(1<<31));
-		id |= 1<<31;	/* safety */
-	}else
+	if(isedge)
+		pushcmd("edgeinfo(%d)", id);
+	else
 		pushcmd("nodeinfo(%d)", id);
 	flushcmd();
-	return id;
+	return u.i;
 }
 
 static int

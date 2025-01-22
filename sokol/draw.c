@@ -367,8 +367,6 @@ initsysdraw(void)
 void
 evloop(void)
 {
-	ulong u;
-
 	/* wait until at least one file asks for a redraw */
 	while(recvul(drawc) != Reqredraw)
 		;
