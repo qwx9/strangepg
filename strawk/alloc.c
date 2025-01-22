@@ -64,7 +64,7 @@ static inline uschar *grow(Pool *p, size_t n)
 	return s;
 }
 
-static inline uschar *alloc(size_t n, int istemp)
+static uschar *alloc(size_t n, int istemp)
 {
 	uschar *s;
 	Pool *p;

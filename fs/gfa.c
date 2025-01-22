@@ -248,7 +248,7 @@ mkbuckets(Aux *a)
 	USED(totals);
 }
 
-static inline ioff
+static ioff
 pushnode(Aux *a, char *s, int *abs)
 {
 	ioff id;

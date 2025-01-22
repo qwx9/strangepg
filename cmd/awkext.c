@@ -58,7 +58,7 @@ gettab(char *s)
 	return kh_val(map, k);
 }
 
-static inline int
+static int
 mktab(char *tab, int intidx)
 {
 	int i, abs;
