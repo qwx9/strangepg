@@ -27,7 +27,7 @@ jobs:
         path: strangepg
         overwrite: true
     - name: test
-      run: ./strangepg -D load test/frag10.gfa
+      run: ./strangepg -D load -D fs -D graph test/frag10.gfa
   mac:
     name: mac
     strategy:
@@ -46,7 +46,7 @@ jobs:
         path: strangepg
         overwrite: true
     - name: test
-      run: ./strangepg -D load test/frag10.gfa
+      run: ./strangepg -D load -D fs -D graph test/frag10.gfa
   win64:
     name: win64
     strategy:
@@ -71,7 +71,7 @@ jobs:
         path: strangepg.exe
         overwrite: true
     - name: test
-      run: ./strangepg -D load test/frag10.gfa
+      run: ./strangepg -D load -D fs -D graph test/frag10.gfa
   release:
     name: release
     if: startsWith(github.ref, 'refs/tags/')
