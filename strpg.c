@@ -24,16 +24,18 @@ quit(void)
 static void
 load(void)
 {
+	int force;
 	Input *in, *end;
 
+	force = drawing.flags & DFnope;
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
 		/* defer anything that must be loaded after the graph(s) */
 		case FFlayout:
-			pushcmd("importlayout(\"%s\")", in->path);
+			pushcmd("importlayout(\"%s\",%d)", in->path, force);
 			break;
 		case FFcsv:
-			pushcmd("readcsv(\"%s\")", in->path);
+			pushcmd("readcsv(\"%s\",%d)", in->path, force);
 			break;
 		default:
 			if(loadfs(in->path, in->type) < 0)

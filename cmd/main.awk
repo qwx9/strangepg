@@ -80,15 +80,15 @@ function exportlayout(f){
 	print "o", f
 }
 function importlayout(f, force){
-	if(crm114 == 1 || force)
+	if(crm114 == 1)
 		print "i", f
 	else{
 		deferred[++nd] = "i\t" f "\n"
-		noreset = 1
+		noreset = !force
 	}
 }
-function readcsv(f, force){
-	if(crm114 == 1 || force)
+function readcsv(f){
+	if(crm114 == 1)
 		print "f", f
 	else
 		deferred[++nd] = "f\t" f "\n"
@@ -272,7 +272,6 @@ function fixy(name, y){
 }
 function quit(){
 	print "!"
-	exit
 }
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]

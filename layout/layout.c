@@ -2,6 +2,8 @@
 #include "layout.h"
 #include "drw.h"
 #include "threads.h"
+#include "cmd.h"
+#include "fs.h"
 
 int nlaythreads = 4;
 int deflayout = -1;
@@ -85,8 +87,15 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if((g->flags & GFdrawme) != 0 && l->flags == 0)
+				if((g->flags & GFdrawme) != 0 && l->flags == 0){
+					if(drawing.flags & DFnope){
+						pushcmd("exportlayout(\"%s\")", drawing.layfile);
+						pushcmd("quit()");
+						flushcmd();
+						break;
+					}
 					logmsg("layout: done.\n");
+				}
 				g->flags &= ~GFdrawme;
 			}
 			break;
@@ -120,7 +129,7 @@ sac(void *)
 		g->flags &= ~GFlayme;
 		g->flags |= GFdrawme;
 		reqdraw(Reqredraw);
-		logmsg("computing layout...");
+		logmsg("computing layout...\n");
 	}
 }
 

@@ -81,6 +81,7 @@ exportlayout(char *path)
 			break;
 	}
 	freefs(fs);
-	logmsg("exportlayout: done\n");
+	if((drawing.flags & DFnope) == 0)
+		logmsg("exportlayout: done\n");
 	return x;
 }
