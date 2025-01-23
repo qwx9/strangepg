@@ -143,6 +143,8 @@ resetbox(void)
 	if(rsel.x1 < 0)
 		return;
 	if(sels != nil){
+		pushcmd("showselected()");
+		flushcmd();
 		sel_destroy(sels);
 		sels = nil;
 	}

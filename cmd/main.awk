@@ -217,14 +217,16 @@ function deselectnode(name,	id){
 		return
 	deselectnodebyid(node[name])
 }
+function showselected(){
+	selinfo = selinfostr()
+	refresh()
+}
 function selectnodebyid(id, noshow){
 	if(!checknodeid(id) || id in selected)
 		return
 	selected[id] = CL[label[id]]
-	if(!noshow){
-		selinfo = selinfostr()
-		refresh()
-	}
+	if(!noshow)
+		showselected()
 }
 function selectnode(name, id){
 	if(!checknodename(name))
