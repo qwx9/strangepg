@@ -47,6 +47,7 @@ static tabmap *map;
 static Tab *tabs;
 static RWLock buflock, tablock;
 
+/* FIXME: can replace with awk array and lookup */
 int
 gettab(char *s)
 {
@@ -101,7 +102,7 @@ getarray(char *arr)
 		if (freeable(c))
 			xfree(c->sval);
 		a = makesymtab(NSYMTAB);
-		c->tval &= ~(STR|NUM|DONTFREE);
+		c->tval &= ~(STR|NUM|FLT|DONTFREE);
 		c->tval |= ARR;
 		c->sval = (char *)a;
 	}else
@@ -110,6 +111,7 @@ getarray(char *arr)
 	return a;
 }
 
+/* FIXME: silly to do on every call */
 static inline Array *
 gettabarray(int t)
 {
@@ -468,6 +470,33 @@ fnloadall(void)
 	}
 }
 
+static TNode *
+fnexplode(Cell *x, TNode *nextarg)
+{
+	int i;
+	ioff id;
+	Cell *c;
+	Array *a;
+
+	if(nextarg == nil){
+		a = getarray("selected");
+		for(i=0; i<a->size; i++){
+			for(c=a->tab[i]; c!=nil; c=c->cnext){
+				id = atoi(c->nval);
+				explode(id);
+			}
+		}
+		return nil;
+	}
+	for(;nextarg!=nil; nextarg=nextarg->nnext){
+		tempfree(x);
+		x = execute(nextarg);
+		id = getnodeid(getsval(x));
+		explode(id);
+	}
+	return nil;
+}
+
 static void
 fnnodecolor(char *lab, Awknum col)
 {
@@ -533,6 +562,9 @@ addon(TNode **a, int)
 		strecpy(selstr, selstr+sizeof selstr, getsval(y));
 		reqdraw(Reqshallowdraw);
 		break;
+	case AEXPLODE:	/* explode(ids...) */
+		nextarg = fnexplode(x, nextarg);
+		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;
@@ -568,7 +600,6 @@ initext(void)
 		[Tedge] = {"edge", nil, 0},
 		[Tlabel] = {"label", nil, 0},
 		[TCL] = {"CL", "nodecolor", 1},
-		[Tselect] = {"selected", nil, 1},
 	}, *pp;
 
 	map = tab_init();

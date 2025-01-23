@@ -78,6 +78,17 @@ setattr(int type, ioff id, V val)
 	}
 }
 
+void
+explode(ioff id)
+{
+	RNode *r;
+
+	r = rnodes + id;
+	r->pos[0] += 32.0f * (0.5f - xfrand());
+	r->pos[1] += 32.0f * (0.5f - xfrand());
+	r->pos[2] += 32.0f * (0.5f - xfrand());
+}
+
 /* FIXME */
 /* usable once topology has been loaded */
 ioff

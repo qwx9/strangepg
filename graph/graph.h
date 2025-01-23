@@ -4,6 +4,7 @@ int	mergenodes(Graph*, ioff, ioff);
 
 ioff	newnode(Graph*, char*);
 ioff	newedge(Graph*, ioff, ioff, int, int, char*, ushort*);
+void	explode(ioff);
 ioff	str2idx(char*);
 void	lockgraph(Graph*, int);
 void	unlockgraph(Graph*, int);

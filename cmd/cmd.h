@@ -19,7 +19,6 @@ enum{
 	Tedge,
 	Tlabel,
 	TCL,
-	Tselect,
 	Tnil,
 
 	Tlayout = Tnode,	/* end of tags affecting layout */
@@ -32,6 +31,7 @@ enum{
 	AUNSHOW,
 	AINFO,
 	AREFRESH,
+	AEXPLODE,
 };
 
 extern int noreset;
