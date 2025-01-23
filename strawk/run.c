@@ -2159,7 +2159,11 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	case FINT:
 		u = getival(x); break;
 	case FNRAND:
-		u = genrand64_int64();	/* NOT [0, 2^63-1], I don't get it */
+		u = genrand64_int63();
+		if(u < 0)
+			u = -(u & (1ULL<<32)-1);
+		else
+			u = u & (1ULL<<32)-1;
 		break;
 	case FSRAND:
 		if (isrec(x))	/* no argument provided */
