@@ -363,27 +363,31 @@ vartype(char *val, V *v, int iscolor)
 	double f;
 	Cell *cp;
 
-	type = Tstring;
 	s = val;
 	if(s[0] == '#'){
 		s++;
 		i = strtoull(s, &p, 16);
 		if(iscolor && p - s < 8)	/* sigh */
 			i = i << 8 | 0xc0;
-	}else
+		type = Tuint;
+	}else{
 		i = strtoll(s, &p, 0);
+		type = Tint;
+	}
 	if(p != s){
 		if((c = *p) == '\0' || isspace(c)){
 			v->i = i;
-			return Tint;
+			return type;
 		}else if(c == 'e' || c == 'E' || c == '.'){
 			f = strtod(s, &p);
 			if(p != s && ((c = *p) == '\0' || isspace(c))){
 				v->f = f;
 				return Tfloat;
 			}
-		}
-	}
+		}else
+			type = Tstring;
+	}else
+		type = Tstring;
 	if(type == Tstring && symtab != nil && (cp = getcell(val, symtab)) != nil){
 		if(cp->tval & FLT){
 			v->f = getfval(cp);
@@ -431,7 +435,14 @@ setnamedtag(char *tag, char *name, char *val)
 	i = mktab(tag, 1);	/* assuming index by node */
 	id = getnodeid(name);
 	type = vartype(val, &v, i == TCL);
-	DPRINT(Debugawk, "setnamedtag %s[%s:%d] = %s (%d)", tag, name, id, val, type);
+	if(debug & Debugawk){
+		switch(type){
+		case Tint: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %lld (%s)", tag, name, id, v.i, val); break;
+		case Tuint: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %llx (%s)", tag, name, id, v.u, val); break;
+		case Tfloat: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %f (%s)", tag, name, id, v.f, val); break;
+		case Tstring: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = \"%s\" (%s)", tag, name, id, v.s, val); break;
+		}
+	}
 	pushval(i, type, id, v);
 }
 
