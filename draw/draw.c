@@ -5,6 +5,7 @@
 #include "ui.h"
 #include "threads.h"
 #include "cmd.h"
+#include "layout.h"
 
 View view;
 RNode *rnodes;
@@ -218,6 +219,11 @@ noloop(void)
 	ulong u;
 
 	newthread(ticker, nil, nil, nil, "ticker", mainstacksize); 
+	while((u = recvul(drawc)) > 0 && u != Reqredraw)
+		;
+	if(u <= 0)
+		return;
+	reqlayout(Lstart);
 	while((u = recvul(drawc)) > 0){
 		switch(u){
 		case Reqredraw:

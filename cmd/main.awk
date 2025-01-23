@@ -79,12 +79,12 @@ function cmd(code){
 function exportlayout(f){
 	print "o", f
 }
-function importlayout(f, force){
+function importlayout(f){
 	if(crm114 == 1)
 		print "i", f
 	else{
 		deferred[++nd] = "i\t" f "\n"
-		noreset = !force
+		noreset = 1
 	}
 }
 function readcsv(f){
