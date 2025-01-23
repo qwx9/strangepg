@@ -18,6 +18,11 @@ void	sysquit(void);
 void	quit(void);
 void	sysinit(void);
 
+void	xsrand(u64int);
+float	xfrand(void);
+u32int	xlrand(void);
+u32int	xnrand(u32int);
+
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 
