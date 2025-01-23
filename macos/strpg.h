@@ -68,8 +68,6 @@ extern char *argv0;
 
 #define	ARGC()		_argc
 
-int nrand(int);
-int	lrand(void);
 int	getfields(char*, char**, int, int, char*);
 char*	seprint(char*, char*, char*, ...);
 char*	strecpy(char*, char*, const char*);

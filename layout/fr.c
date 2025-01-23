@@ -50,8 +50,8 @@ new(void)
 
 	n = dylen(rnodes);
 	for(u=nodes, r=rnodes, re=r+n; r<re; r++, u++){
-		r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
-		r->pos[1] = (float)(L / 2 - nrand(L)) / (L / 2);
+		r->pos[0] = (float)(W / 2 - xfrand() * W) / (W / 2);
+		r->pos[1] = (float)(L / 2 - xfrand() * L) / (L / 2);
 		z = (double)(n - (r - rnodes)) / n;
 		r->pos[2] = (drawing.flags & DFnodepth) == 0
 			? 0.8 * (0.5 - z)

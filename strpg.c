@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "strawk/mt19937-64.h"
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"
@@ -14,6 +15,30 @@ struct Input{
 	char *path;
 };
 static Input *files;
+
+void
+xsrand(u64int s)
+{
+	init_genrand64(s);
+}
+
+float
+xfrand(void)
+{
+	return genrand64_real2();	/* [0,1) */
+}
+
+u32int
+xlrand(void)
+{
+	return genrand64_int63() & (1ULL<<32)-1;
+}
+
+u32int
+xnrand(u32int lim)
+{
+	return genrand64_int64() % lim;
+}
 
 void
 quit(void)
@@ -196,7 +221,7 @@ int
 main(int argc, char **argv)
 {
 	sysinit();
-	srand(time(nil));
+	init_genrand64(time(nil));
 	parseargs(argc, argv);
 	init();
 	initlayout();

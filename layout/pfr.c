@@ -77,20 +77,20 @@ new_(int is3d)
 		if(u->nedges == 0){
 			orphans++;
 			if((u->flags & (FNfixed | FNinitpos)) == 0){
-				r->pos[0] = var[0] - nrand(2 * var[0]);
-				r->pos[1] = var[1] - nrand(2 * var[1]);
-				r->pos[2] = var[2] - nrand(2 * var[2]);
+				r->pos[0] = var[0] - xfrand() * (2 * var[0]);
+				r->pos[1] = var[1] - xfrand() * (2 * var[1]);
+				r->pos[2] = var[2] - xfrand() * (2 * var[2]);
 				continue;
 			}
 		}
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = (u->pos0.x - mid[0]) * W / var[0];
 		else
-			r->pos[0] = (float)(var[0] - nrand(2 * var[0])) / (var[0] / f);
+			r->pos[0] = (float)(var[0] - xfrand() * (2 * var[0])) / (var[0] / f);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = (u->pos0.y - mid[1]) * H / var[1];
 		else
-			r->pos[1] = (float)(var[1] - nrand(2 * var[1])) / (var[1] / f);
+			r->pos[1] = (float)(var[1] - xfrand() * (2 * var[1])) / (var[1] / f);
 		if((u->flags & FNinitz) != 0)
 			r->pos[2] = (u->pos0.z - mid[2]) * W / var[2];
 		else if(!is3d){
@@ -99,7 +99,7 @@ new_(int is3d)
 				? 0.8 * (0.5 - z)
 				: 0.00001 * z;
 		}else
-			r->pos[2] = (float)(var[2] - nrand(2 * var[2])) / (var[2] / f);
+			r->pos[2] = (float)(var[2] - xfrand() * (2 * var[2])) / (var[2] / f);
 	}
 	if(orphans > 1)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));

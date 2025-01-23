@@ -51,11 +51,11 @@ new(void)
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = u->pos0.x;
 		else
-			r->pos[0] = (float)(W / 2 - nrand(W)) / (W / 2);
+			r->pos[0] = (float)(W / 2 - xfrand() * W) / (W / 2);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = u->pos0.y;
 		else
-			r->pos[1] = (float)(H / 2 - nrand(H)) / (H / 2);
+			r->pos[1] = (float)(H / 2 - xfrand() * H) / (H / 2);
 		if((u->flags & FNinitz) != 0)
 			r->pos[2] = u->pos0.z;
 		else{

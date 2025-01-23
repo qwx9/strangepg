@@ -74,7 +74,7 @@ readedgetags(Aux *a, File *f)
 		if((off = *o) < 0)
 			continue;
 		if(seekfs(f, off) < 0)
-			warn("readnodetags: %s\n", error());
+			warn("readedgetags: %s\n", error());
 		if(readline(f) == nil)
 			sysfatal("readedgetags: %s", error());
 		if((s = nextfield(f)) == nil)

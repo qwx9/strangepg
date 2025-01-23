@@ -53,7 +53,7 @@ new(void)
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = u->pos0.y;
 		else
-			r->pos[1] = (float)(H / 8 - nrand(H/4)) / (H / 8);
+			r->pos[1] = (float)(H / 8 - xfrand() * (H/4)) / (H / 8);
 		if((u->flags & FNinitz) != 0)
 			r->pos[2] = u->pos0.z;
 		else{
@@ -73,7 +73,7 @@ new(void)
 				break;
 		}
 		t = rnodes + i;
-		r->pos[0] = 3.0f - t->pos[0] + nrand(6);
+		r->pos[0] = 3.0f - t->pos[0] + xfrand() * 6;
 	}
 	if(orphans > 1)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));

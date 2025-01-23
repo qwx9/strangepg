@@ -23,6 +23,8 @@
 #include "chan.h"
 #include "queue.h"
 
+uint32_t	xnrand(uint32_t);
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -423,13 +425,18 @@ int chan_select(chan_t* recv_chans[], int recv_count, void** recv_out,
         return -1;
     }
 
+	/* what the actual fuck */
     // Seed rand using current time in nanoseconds.
+    /*
     struct timespec ts;
     current_utc_time(&ts);
     srand(ts.tv_nsec);
 
     // Select candidate and perform operation.
     select_op_t select = candidates[rand() % count];
+    */
+
+    select_op_t select = candidates[xnrand(count)];
     if (select.recv && chan_recv(select.chan, recv_out) != 0)
     {
         return -1;
