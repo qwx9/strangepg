@@ -136,7 +136,7 @@ faceyourfears(RNode *ru, Node *u)
 	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
-	ru->dir[2] = 0.0f;
+	ru->dir[2] = 1.0f - ru->dir[0];
 }
 
 static RNode *
