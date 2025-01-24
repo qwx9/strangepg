@@ -102,6 +102,13 @@ killthread(Thread *th)
 	pthread_cancel(th->p);
 }
 
+void
+initrwlock(RWLock *l)
+{
+	if(pthread_rwlock_init(l, NULL) != 0)
+		sysfatal("pthread_rwlock_init: %s", error());
+}
+
 Channel *
 chancreate(int elsize, int nel)
 {

@@ -45,7 +45,8 @@ struct Tab{
 };
 static tabmap *map;
 static Tab *tabs;
-static RWLock buflock, tablock;
+static RWLock tablock;
+static QLock buflock;
 
 /* FIXME: can replace with awk array and lookup */
 int
@@ -329,10 +330,10 @@ fnloadbatch(void)
 {
 	Val *v, *vs, *ve;
 
-	wlock(&buflock);
+	qlock(&buflock);
 	vs = valbuf;
 	valbuf = nil;
-	wunlock(&buflock);
+	qunlock(&buflock);
 	for(v=vs, ve=v+dylen(v); v<ve; v++)
 		set(v->tab, v->type, v->id, v->val);
 	dyfree(vs);
@@ -345,9 +346,9 @@ pushval(int tab, int type, ioff id, V val)
 	Val v;
 
 	v = (Val){tab, type, id, val};
-	wlock(&buflock);
+	qlock(&buflock);
 	dypush(valbuf, v);
-	wunlock(&buflock);
+	qunlock(&buflock);
 	if(dylen(valbuf) >= 64*1024){
 		pushcmd("loadbatch()");
 		flushcmd();
@@ -613,6 +614,7 @@ initext(void)
 		[TCL] = {"CL", "nodecolor", 1},
 	}, *pp;
 
+	initrwlock(&tablock);
 	map = tab_init();
 	for(pp=sptags; pp<sptags+nelem(sptags); pp++){
 		i = mktab(pp->name, pp->nodeidx);

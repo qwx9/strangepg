@@ -8,15 +8,15 @@
 #include "cmd.h"
 
 static File *cmdfs;
-RWLock cmdlock;
+static QLock cmdlock;
 
 void
 killcmd(void)
 {
-	wlock(&cmdlock);
+	qlock(&cmdlock);
 	freefs(cmdfs);
 	cmdfs = nil;
-	wunlock(&cmdlock);
+	qunlock(&cmdlock);
 	close(outfd[1]);
 	outfd[1] = -1;
 	close(infd[1]);
@@ -26,13 +26,13 @@ killcmd(void)
 void
 flushcmd(void)
 {
-	wlock(&cmdlock);
+	qlock(&cmdlock);
 	if(cmdfs == nil){
-		wunlock(&cmdlock);
+		qunlock(&cmdlock);
 		return;
 	}
 	flushfs(cmdfs);
-	wunlock(&cmdlock);
+	qunlock(&cmdlock);
 }
 
 static void
@@ -42,13 +42,13 @@ sendcmd(char *cmd)
 
 	n = strlen(cmd);
 	DPRINT(Debugcmd, "> [%d][%s]", n, cmd);
-	wlock(&cmdlock);
+	qlock(&cmdlock);
 	if(cmdfs == nil){
-		wunlock(&cmdlock);
+		qunlock(&cmdlock);
 		return;
 	}
 	writefs(cmdfs, cmd, n);
-	wunlock(&cmdlock);
+	qunlock(&cmdlock);
 }
 
 void

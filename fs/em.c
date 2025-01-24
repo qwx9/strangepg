@@ -58,13 +58,13 @@ struct EM{
 	int ref;
 	char flags;
 	int infd;
-	RWLock l;
+	QLock l;
 	Bank **banks;
 	Page *cur;
 };
 static int swapfd = -1;
 static Bank **banks;
-static RWLock elock;
+static QLock elock;
 static EM **etab, *emstrbuf;
 static Page pused = {.lleft = &pused, .lright = &pused};
 static uvlong poolsz = Poolsz;
@@ -112,7 +112,7 @@ cleanup(void *)
 
 	if(swapfd < 0)
 		return;
-	wlock(&elock);
+	qlock(&elock);
 	close(swapfd);
 	swapfd = -1;
 	for(em=etab; em<etab+dylen(etab); em++){
@@ -121,7 +121,7 @@ cleanup(void *)
 		free(*em);
 	}
 	dyfree(etab);
-	wunlock(&elock);
+	qunlock(&elock);
 }
 */
 
@@ -142,12 +142,12 @@ GETPAGE(EM *em, ssize off)
 			bank = emalloc(sizeof *bank);
 			bank->paddr = dylen(banks) << Ashift;
 			bank->em = em;
-			wlock(&elock);
+			qlock(&elock);
 			dypush(banks, bank);
-			wunlock(&elock);
-			wlock(&em->l);
+			qunlock(&elock);
+			qlock(&em->l);
 			dyinsert(em->banks, i, bank);
-			wunlock(&em->l);
+			qunlock(&em->l);
 			new = 1;
 		}else if((p = bank->pt[PAGE(off)]) == nil)
 			new = 1;
@@ -241,6 +241,7 @@ feedpages(void)
 	pl = emalloc(n * sizeof *pl);
 	memreallyfree -= n;
 	for(p=pl, pe=p+n; p<pe; p++){
+		initrwlock(&p->l);
 		p->lright = p + 1;
 		p->lleft = p - 1;
 	}

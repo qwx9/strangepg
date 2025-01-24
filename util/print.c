@@ -7,7 +7,7 @@ char logbuf[8192], lastmsg[3][64], iserrmsg[3];
 int nlog, logsz;
 
 static char *lp = logbuf;
-static RWLock llock;
+static QLock llock;
 
 static inline void
 writelog(char *s, int iserr)
@@ -49,9 +49,9 @@ writelog(char *s, int iserr)
 void
 logmsg(char *s)
 {
-	wlock(&llock);
+	qlock(&llock);
 	writelog(s, 0);
-	wunlock(&llock);
+	qunlock(&llock);
 	if(!onscreen)
 		warn("%s", s);
 }
@@ -59,9 +59,9 @@ logmsg(char *s)
 void
 logerr(char *s)
 {
-	wlock(&llock);
+	qlock(&llock);
 	writelog(s, 1);
-	wunlock(&llock);
+	qunlock(&llock);
 	warn("%s", s);
 }
 

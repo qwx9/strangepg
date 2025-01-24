@@ -11,8 +11,6 @@ Node *nodes;
 ioff *edges;
 Super *supers;
 
-static RWLock *locks;
-
 void
 setattr(int type, ioff id, V val)
 {
@@ -102,42 +100,16 @@ str2idx(char *s)
 	return id;
 }
 
-void
-lockgraph(Graph *g, int w)
-{
-	RWLock *l;
-
-	l = locks + (g - graphs);
-	if(w)
-		wlock(l);
-	else
-		rlock(l);
-}
-
-void
-unlockgraph(Graph *g, int w)
-{
-	RWLock *l;
-
-	l = locks + (g - graphs);
-	if(w)
-		wunlock(l);
-	else
-		runlock(l);
-}
-
 Graph *
 initgraph(int type)
 {
 	int n;
 	Graph g = {0}, *gp;
-	RWLock l = {0};
 
 	n = dylen(graphs);
 	g.type = type;
 	g.nfirst = dylen(nodes);
 	dypush(graphs, g);
-	dypush(locks, l);
 	gp = graphs + n;
 	return gp;
 }
