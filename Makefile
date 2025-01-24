@@ -1,5 +1,5 @@
 PROGRAM:= strangepg
-VERSION:= 0.8.17
+VERSION:= 0.8.18
 DIRS:=
 
 ifeq ($(wildcard .git),.git)
@@ -234,7 +234,7 @@ glsl/%.h: glsl/%.glsl
 	sokol-shdc -f sokol_impl -i $^ -l glsl430:hlsl5:metal_macos:glsl300es -o $@
 
 $(BINTARGET):	$(OBJ)
-	$(CC) $^ -o $@ $(LDLIBS) $(LDFLAGS)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
 install: $(ALLTARGETS) dirinstall
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)
