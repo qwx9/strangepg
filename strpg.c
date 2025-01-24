@@ -218,7 +218,8 @@ init(void)
 int
 main(int argc, char **argv)
 {
-	sysinit();
+	initsys();
+	initlog();
 	init_genrand64(time(nil));
 	parseargs(argc, argv);
 	init();

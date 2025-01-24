@@ -614,6 +614,7 @@ initext(void)
 		[TCL] = {"CL", "nodecolor", 1},
 	}, *pp;
 
+	initqlock(&buflock);
 	initrwlock(&tablock);
 	map = tab_init();
 	for(pp=sptags; pp<sptags+nelem(sptags); pp++){

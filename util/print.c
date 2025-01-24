@@ -101,3 +101,9 @@ dprint(int flags, char *fmt, ...)
 	va_start(arg, fmt);
 	vadebug(type, fmt, arg);
 }
+
+void
+initlog(void)
+{
+	initqlock(&llock);
+}

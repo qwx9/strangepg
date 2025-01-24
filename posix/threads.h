@@ -18,6 +18,7 @@ void*	nbrecvp(Channel*);
 typedef pthread_mutex_t	QLock;
 typedef pthread_rwlock_t RWLock;
 
+void	initqlock(QLock*);
 void	initrwlock(RWLock*);
 
 static inline void

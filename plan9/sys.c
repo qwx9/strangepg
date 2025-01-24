@@ -110,7 +110,7 @@ emalloc(usize n)
 /* FIXME: em: make sure we don't run into wrappers too much */
 
 void
-sysinit(void)
+initsys(void)
 {
 	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
 }

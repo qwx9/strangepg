@@ -103,6 +103,13 @@ killthread(Thread *th)
 }
 
 void
+initqlock(QLock *l)
+{
+	if(pthread_mutex_init(l, NULL) != 0)
+		sysfatal("pthread_mutex_init: %s", error());
+}
+
+void
 initrwlock(RWLock *l)
 {
 	if(pthread_rwlock_init(l, NULL) != 0)

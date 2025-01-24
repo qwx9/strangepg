@@ -447,6 +447,7 @@ emopen(char *path)
 	EM *em;
 
 	em = emalloc(sizeof *em);
+	initqlock(&em->l);
 	dypush(etab, em);
 	em->infd = -1;
 	if(path != nil && (em->infd = open(path, OREAD)) < 0){
@@ -471,6 +472,7 @@ emopen(char *path)
 void
 initem(void)
 {
+	initqlock(&elock);
 	if(multiplier < 28 || multiplier > 63)
 		sysfatal("invalid memory size");
 	poolsz = 1ULL << multiplier;

@@ -176,6 +176,6 @@ emalloc(usize n)
 }
 
 void
-sysinit(void)
+initsys(void)
 {
 }

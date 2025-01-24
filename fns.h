@@ -5,6 +5,7 @@ char*	va(char*, ...);
 void	dprint(int, char*, ...);
 void	vawarn(char*, va_list);
 void	vadebug(char*, char*, va_list);
+void	initlog(void);
 char*	error(void);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
@@ -16,7 +17,7 @@ vlong	μsec(void);
 void	lsleep(vlong);
 void	sysquit(void);
 void	quit(void);
-void	sysinit(void);
+void	initsys(void);
 
 void	xsrand(u64int);
 float	xfrand(void);

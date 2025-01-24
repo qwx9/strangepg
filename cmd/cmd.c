@@ -290,6 +290,7 @@ readcproc(void *)
 int
 initcmd(void)
 {
+	initqlock(&cmdlock);
 	if(initrepl() < 0){
 		logerr(va("initcmd: failed: %s\n", error()));
 		gottagofast = 1;
