@@ -14,10 +14,7 @@
 #include "lib/sokol_glue.h"
 #include "sokol_gfx_ext.h"
 #include "glsl/edge.h"
-#include "glsl/edgeidx.h"
 #include "glsl/node.h"
-#include "glsl/nodeidx.h"
-#include "glsl/scr.h"
 #define	NK_INCLUDE_FIXED_TYPES
 #define	NK_INCLUDE_STANDARD_IO
 #define	NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -154,32 +151,24 @@ renderdirect(void)
 	static Clk clk = {.lab = "renderdirect"};
 
 	CLK0(clk);
-	drawui(snk_new_frame());
 	sg_begin_pass(&(sg_pass){
 		.action = render.clearscreen,
 		.swapchain = sglue_swapchain(),
 	});
 	if((n = ndedges) >= 1){
-		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
-			.ptr = redges,
-			.size = n * sizeof *redges,
-		});
 		sg_apply_pipeline(render.edgepipe);
 		sg_apply_bindings(&render.edgebind);
-		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
-		sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
+		sg_apply_uniforms(UB_edge_Vparam, &SG_RANGE(render.cam));
+		sg_apply_uniforms(UB_edge_Fparam, &SG_RANGE(render.edgefs));
 		sg_draw(0, render.nedgev * n, 1);
 	}
 	if((n = ndnodes) >= 1){
-		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
-			.ptr = rnodes,
-			.size = n * sizeof *rnodes,
-		});
 		sg_apply_pipeline(render.nodepipe);
 		sg_apply_bindings(&render.nodebind);
-		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
+		sg_apply_uniforms(UB_node_Vparam, &SG_RANGE(render.cam));
 		sg_draw(0, render.nnodev, n);
 	}
+	drawui(snk_new_frame());
 	snk_render(view.w, view.h);
 	sg_end_pass();
 	CLK1(clk);
@@ -192,48 +181,49 @@ renderoffscreen(void)
 	static Clk clk = {.lab = "renderoffscreen"};
 
 	CLK0(clk);
-	drawui(snk_new_frame());
 	sg_begin_pass(&(sg_pass){
-		.action = render.clearscreen,
-		.attachments = render.offscrfb,
+		.action = render.clearpick,
+		.attachments = render.pickimg,
 	});
+	if((n = ndedges) >= 1){
+		sg_apply_pipeline(render.offscredgepipe);
+		sg_apply_bindings(&render.edgebind);
+		sg_apply_uniforms(UB_edge_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nedgev * n, 1);
+	}
+	if((n = ndnodes) >= 1){
+		sg_apply_pipeline(render.offscrnodepipe);
+		sg_apply_bindings(&render.nodebind);
+		sg_apply_uniforms(UB_node_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nnodev, n);
+	}
+	sg_end_pass();
+	CLK1(clk);
+}
+
+static void
+updatebuffers(void)
+{
+	int n;
+
 	if((n = ndedges) >= 1){
 		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 			.ptr = redges,
 			.size = n * sizeof *redges,
 		});
-		sg_apply_pipeline(render.offscredgepipe);
-		sg_apply_bindings(&render.edgebind);
-		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
-		sg_apply_uniforms(UB_Fparam, &SG_RANGE(render.edgefs));
-		sg_draw(0, render.nedgev * n, 1);
 	}
 	if((n = ndnodes) >= 1){
 		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
 			.ptr = rnodes,
 			.size = n * sizeof *rnodes,
 		});
-		sg_apply_pipeline(render.offscrnodepipe);
-		sg_apply_bindings(&render.nodebind);
-		sg_apply_uniforms(UB_Vparam, &SG_RANGE(render.cam));
-		sg_draw(0, render.nnodev, n);
 	}
-	sg_end_pass();
-	sg_begin_pass(&(sg_pass){
-		.action = render.nothing,
-		.swapchain = sglue_swapchain(),
-	});
-	sg_apply_pipeline(render.offscrpipe);
-	sg_apply_bindings(&render.offscrbind);
-	sg_draw(0, 4, 1);
-	snk_render(view.w, view.h);
-	sg_end_pass();
-	CLK1(clk);
 }
 
 static void
 clearscreen(void)
 {
+	drawui(snk_new_frame());
 	sg_begin_pass(&(sg_pass){
 		.action = render.clearscreen,
 		.swapchain = sglue_swapchain(),
@@ -245,12 +235,14 @@ clearscreen(void)
 static void
 flush(void)
 {
-	if(dylen(rnodes) <= 0)
+	if(dylen(rnodes) <= 0){
 		clearscreen();
-	else if(!render.caching)
-		renderdirect();
-	else
+		return;
+	}
+	updatebuffers();
+	if(render.caching)
 		renderoffscreen();
+	renderdirect();
 	sg_commit();
 }
 

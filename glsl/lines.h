@@ -14,12 +14,12 @@
         Vertex Shader: vs
         Fragment Shader: fs
         Attributes:
-            ATTR_line_pos => 0
-            ATTR_line_color => 1
+            ATTR_l_line_pos => 0
+            ATTR_l_line_color => 1
     Bindings:
         Uniform block 'Vparam':
             C struct: l_Vparam_t
-            Bind slot: UB_Vparam => 0
+            Bind slot: UB_l_Vparam => 0
 */
 #if !defined(SOKOL_GFX_INCLUDED)
 #error "Please include sokol_gfx.h before lines.h"
@@ -32,9 +32,9 @@
 #endif
 #endif
 const sg_shader_desc* l_line_shader_desc(sg_backend backend);
-#define ATTR_line_pos (0)
-#define ATTR_line_color (1)
-#define UB_Vparam (0)
+#define ATTR_l_line_pos (0)
+#define ATTR_l_line_color (1)
+#define UB_l_Vparam (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct l_Vparam_t {
     float mvp[16];

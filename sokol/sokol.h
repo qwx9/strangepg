@@ -16,16 +16,14 @@ struct Render{
 	int stalepick;	/* picking cache stale */
 	int pickflip;	/* non-gl: flip y for mouse picking (kludge) */
 	sg_pass_action clearscreen;
-	sg_pass_action nothing;
-	sg_attachments offscrfb;
+	sg_pass_action clearpick;
+	sg_attachments pickimg;
 	sg_pipeline nodepipe;
 	sg_pipeline offscrnodepipe;
 	sg_pipeline edgepipe;
 	sg_pipeline offscredgepipe;
-	sg_pipeline offscrpipe;
 	sg_bindings nodebind;
 	sg_bindings edgebind;
-	sg_bindings offscrbind;
 	u32int *pickfb;
 	int nnodev;
 	int nedgev;

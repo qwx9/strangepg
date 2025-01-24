@@ -6,10 +6,7 @@
 #include "sokol_gfx_ext.h"
 #include "sokol.h"
 #include "glsl/edge.h"
-#include "glsl/edgeidx.h"
 #include "glsl/node.h"
-#include "glsl/nodeidx.h"
-#include "glsl/scr.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
@@ -17,7 +14,7 @@
 
 Render render;
 
-static sg_image fb, pickfb, zfb;
+static sg_image pickfb, zfb;
 
 u32int
 mousepick(int x, int y)
@@ -93,13 +90,6 @@ initfb(int w, int h)
 {
 	view.w = w;
 	view.h = h;
-	/* multi-target rendering targets, without multisampling */
-	fb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
-		.width = w,
-		.height = h,
-		.sample_count = 1,
-	});
 	pickfb = sg_make_image(&(sg_image_desc){
 		.render_target = true,
 		.width = w,
@@ -114,25 +104,20 @@ initfb(int w, int h)
 		.pixel_format = SG_PIXELFORMAT_DEPTH,
 		.sample_count = 1,
 	});
-	render.offscrfb = sg_make_attachments(&(sg_attachments_desc){
-		.colors = {
-			[0].image = fb,
-			[1].image = pickfb,
-		},
+	render.pickimg = sg_make_attachments(&(sg_attachments_desc){
+		.colors[0].image = pickfb,
 		.depth_stencil.image = zfb,
 	});
-	render.offscrbind.images[IMG_tex] = fb;
 	render.pickfb = emalloc(w * h * sizeof *render.pickfb);
 }
 
 void
 resize(void)
 {
-	sg_destroy_image(fb);
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
 	free(render.pickfb);
-	sg_destroy_attachments(render.offscrfb);
+	sg_destroy_attachments(render.pickimg);
 	initfb(sapp_width(), sapp_height());
 	updateview();
 }
@@ -151,7 +136,7 @@ setupnodes(void)
 		},
 	};
 	setnodeshape(0);
-	sg_shader sh = sg_make_shader(n_node_shader_desc(sg_query_backend()));
+	sg_shader sh = sg_make_shader(node_s_shader_desc(sg_query_backend()));
 	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
@@ -164,23 +149,23 @@ setupnodes(void)
 				},
 			},
 			.attrs = {
-				[ATTR_node_geom] = {
+				[ATTR_node_s_geom] = {
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 0,
 				},
-				[ATTR_node_pos] = {
+				[ATTR_node_s_pos] = {
 					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
-				[ATTR_node_dir] = {
+				[ATTR_node_s_dir] = {
 					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
-				[ATTR_node_col0] = {
+				[ATTR_node_s_col] = {
 					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
-				[ATTR_node_len] = {
+				[ATTR_node_s_len] = {
 					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 1,
 				},
@@ -196,6 +181,7 @@ setupnodes(void)
 			.write_enabled = true
 		},
 		.color_count = 1,
+		/* NOTE: per-attachment blend state may not be supported */
 		.colors = {
 			[0] = {
 				.blend = {
@@ -211,7 +197,7 @@ setupnodes(void)
 		},
 		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
 	});
-	sh = sg_make_shader(ni_nodeidx_shader_desc(sg_query_backend()));
+	sh = sg_make_shader(node_idx_shader_desc(sg_query_backend()));
 	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
@@ -224,26 +210,21 @@ setupnodes(void)
 				},
 			},
 			.attrs = {
-				[ATTR_nodeidx_geom] = {
+				[ATTR_node_idx_geom] = {
 					.format = SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 0,
 				},
-				[ATTR_nodeidx_pos] = {
+				[ATTR_node_idx_pos] = {
 					.offset = offsetof(RNode, pos),
 					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
-				[ATTR_nodeidx_dir] = {
+				[ATTR_node_idx_dir] = {
 					.offset = offsetof(RNode, dir),
 					.format = SG_VERTEXFORMAT_FLOAT3,
 					.buffer_index = 1,
 				},
-				[ATTR_nodeidx_col0] = {
-					.offset = offsetof(RNode, col),
-					.format = SG_VERTEXFORMAT_FLOAT4,
-					.buffer_index = 1,
-				},
-				[ATTR_nodeidx_len] = {
+				[ATTR_node_idx_len] = {
 					.offset = offsetof(RNode, len),
 					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 1,
@@ -260,21 +241,9 @@ setupnodes(void)
 			.compare = SG_COMPAREFUNC_LESS_EQUAL,
 			.write_enabled = true
 		},
-		.color_count = 2,
-		/* NOTE: per-attachment blend state may not be supported */
+		.color_count = 1,
 		.colors = {
 			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-			[1] = {
 				.pixel_format = SG_PIXELFORMAT_R32UI,
 			},
 		},
@@ -295,11 +264,11 @@ setupedges(void)
 			}),
 		},
 	};
-	sh = sg_make_shader(e_edge_shader_desc(sg_query_backend()));
+	sh = sg_make_shader(edge_s_shader_desc(sg_query_backend()));
 	render.edgepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.attrs = {
-				[ATTR_edge_pos] = {
+				[ATTR_edge_s_pos] = {
 					.format = SG_VERTEXFORMAT_FLOAT3,
 				},
 			}
@@ -328,11 +297,11 @@ setupedges(void)
 		},
 		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
 	});
-	sh = sg_make_shader(ei_edgeidx_shader_desc(sg_query_backend()));
+	sh = sg_make_shader(edge_idx_shader_desc(sg_query_backend()));
 	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.attrs = {
-				[ATTR_edgeidx_pos] = {
+				[ATTR_edge_idx_pos] = {
 					.format = SG_VERTEXFORMAT_FLOAT3,
 				},
 			}
@@ -346,20 +315,9 @@ setupedges(void)
 			.compare = SG_COMPAREFUNC_LESS_EQUAL,
 			.write_enabled = true,
 		},
-		.color_count = 2,
+		.color_count = 1,
 		.colors = {
 			[0] = {
-				.blend = {
-					.enabled = true,
-					.src_factor_rgb = SG_BLENDFACTOR_ONE,
-					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_rgb = SG_BLENDOP_ADD,
-					.src_factor_alpha = SG_BLENDFACTOR_ONE,
-					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-					.op_alpha = SG_BLENDOP_ADD,
-				},
-			},
-			[1] = {
 				.pixel_format = SG_PIXELFORMAT_R32UI,
 			},
 		},
@@ -369,74 +327,27 @@ setupedges(void)
 }
 
 static void
-setupscreen(void)
-{
-	sg_shader sh;
-
-	/* drawing to display */
-	float quad_vertices[] = {
-		0.0f, 0.0f, 
-		1.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-	};
-	sg_buffer quad_vbuf = sg_make_buffer(&(sg_buffer_desc){
-		.data = SG_RANGE(quad_vertices)
-	});
-	sg_sampler smp = sg_make_sampler(&(sg_sampler_desc){
-		.min_filter = SG_FILTER_LINEAR,
-		.mag_filter = SG_FILTER_LINEAR,
-		.wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-		.wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-	});
-	render.offscrbind = (sg_bindings){
-		.vertex_buffers[IMG_tex] = quad_vbuf,
-		.samplers[SMP_smp] = smp,
-	};
-	sh = sg_make_shader(s_scr_shader_desc(sg_query_backend()));
-	render.offscrpipe = sg_make_pipeline(&(sg_pipeline_desc){
-		.layout = {
-			.attrs[ATTR_scr_pos].format = SG_VERTEXFORMAT_FLOAT2
-		},
-		.shader = sh,
-		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-	});
-}
-
-static void
 setuppasses(void)
 {
 	Color *c;
 
 	c = color(theme[Cbg]);
-	/* clear colors on the first pass, don't do anything on the second */
 	render.clearscreen = (sg_pass_action){
 		.colors = {
 			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.clear_value = { c->col[0], c->col[1], c->col[2], c->col[3] },
 			},
-			[1] = {
+		},
+	};
+	render.clearpick = (sg_pass_action){
+		.colors = {
+			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
 				.clear_value = { 0.0f },
 			},
 		},
 	};
-	/* screen pipeline: no clear needed, whole screen is overwritten */
-	render.nothing = (sg_pass_action){
-		.colors = {
-			[0] = {
-				.load_action = SG_LOADACTION_DONTCARE,
-				/* image set in initfb */
-			},
-		},
-	};
-}
-
-static void
-setuplines(void)
-{
-	/* FIXME */
 }
 
 void
@@ -446,8 +357,6 @@ initgl(void)
 
 	setupnodes();
 	setupedges();
-	setupscreen();
-	setuplines();
 	setuppasses();
 	setcolor(render.edgefs.color, theme[Cedge]);
 	initfb(sapp_width(), sapp_height());
