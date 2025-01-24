@@ -13,24 +13,24 @@ static QLock cmdlock;
 void
 killcmd(void)
 {
+	if(cmdfs == nil)
+		return;
 	qlock(&cmdlock);
 	freefs(cmdfs);
 	cmdfs = nil;
-	qunlock(&cmdlock);
 	close(outfd[1]);
 	outfd[1] = -1;
 	close(infd[1]);
 	infd[1] = -1;
+	qunlock(&cmdlock);
 }
 
 void
 flushcmd(void)
 {
-	qlock(&cmdlock);
-	if(cmdfs == nil){
-		qunlock(&cmdlock);
+	if(cmdfs == nil)
 		return;
-	}
+	qlock(&cmdlock);
 	flushfs(cmdfs);
 	qunlock(&cmdlock);
 }
@@ -40,13 +40,11 @@ sendcmd(char *cmd)
 {
 	int n;
 
+	if(cmdfs == nil)
+		return;
+	qlock(&cmdlock);
 	n = strlen(cmd);
 	DPRINT(Debugcmd, "> [%d][%s]", n, cmd);
-	qlock(&cmdlock);
-	if(cmdfs == nil){
-		qunlock(&cmdlock);
-		return;
-	}
 	writefs(cmdfs, cmd, n);
 	qunlock(&cmdlock);
 }
