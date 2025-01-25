@@ -37,23 +37,72 @@ mousepick(int x, int y)
 void
 setnodeshape(int arrow)
 {
-	float quadv[] = {
-		-Nodesz/2.0f, +Ptsz/2.0f,
-		+Nodesz/2.0f, +Ptsz/2.0f,
-		+Nodesz/2.0f, -Ptsz/2.0f,
-		-Nodesz/2.0f, -Ptsz/2.0f,
+	float quadv3d[] = {
+		-0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+	}, arrowv3d[] = {
+		-0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.0f * Nodesz,	-1.0f * Ptsz,	+0.0f * Ptsz,
+		-0.5f * Nodesz,	-0.0f * Ptsz,	+0.0f * Ptsz,
+		-0.0f * Nodesz,	 1.0f * Ptsz,	+0.0f * Ptsz,
+		/* FIXME: better tip */
+	}, quadv[] = {
+		-0.5f * Nodesz,	+0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.5f * Ptsz,
 	}, arrowv[] = {
-		 0.50f * Nodesz,	-0.5f * Ptsz,
-		-0.00f * Nodesz,	-0.5f * Ptsz,
-		-0.00f * Nodesz,	 0.5f * Ptsz,
-		 0.50f * Nodesz,	 0.5f * Ptsz,
-		-0.00f * Nodesz,	-1.0f * Ptsz,
-		-0.50f * Nodesz,	-0.0f * Ptsz,
-		-0.00f * Nodesz,	 1.0f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,
+		-0.0f * Nodesz,	-0.5f * Ptsz,
+		-0.0f * Nodesz,	+0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,
+		-0.0f * Nodesz,	-1.0f * Ptsz,
+		-0.5f * Nodesz,	-0.0f * Ptsz,
+		-0.0f * Nodesz,	+1.0f * Ptsz,
 	};
-	u16int quadi[] = {
-		0, 2, 1,	// first triangle
-		0, 3, 2,	// second triangle
+	u16int quadi3d[] = {
+		2, 0, 3,
+		2, 1, 0,
+		5, 2, 6,
+		5, 1, 2,
+		6, 3, 7,
+		6, 2, 3,
+		7, 0, 4,
+		7, 3, 0,
+		4, 1, 5,
+		4, 0, 1,
+		5, 7, 4,
+		5, 6, 7,
+	}, arrowi3d[] = {
+		2, 0, 3,	// shaft
+		2, 1, 0,
+		5, 2, 6,
+		5, 1, 2,
+		6, 3, 7,
+		6, 2, 3,
+		7, 0, 4,
+		7, 3, 0,
+		4, 1, 5,
+		4, 0, 1,
+		5, 7, 4,
+		5, 6, 7,
+		10, 9, 8,	// tip
+	}, quadi[] = {
+		2, 0, 3,
+		2, 1, 0,
 	}, arrowi[] = {
 		2, 0, 3,	// shaft
 		2, 1, 0,
@@ -65,23 +114,45 @@ setnodeshape(int arrow)
 		sg_destroy_buffer(render.nodebind.index_buffer);
 	}
 	if(arrow){
-		render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-			.data = SG_RANGE(arrowv),
-		});
-		render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-			.type = SG_BUFFERTYPE_INDEXBUFFER,
-			.data = SG_RANGE(arrowi),
-		}),
-		render.nnodev = nelem(arrowi);
+		if(drawing.flags & DF3d){
+			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.data = SG_RANGE(arrowv3d),
+			});
+			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+				.type = SG_BUFFERTYPE_INDEXBUFFER,
+				.data = SG_RANGE(arrowi3d),
+			}),
+			render.nnodev = nelem(arrowi3d);
+		}else{
+			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.data = SG_RANGE(arrowv),
+			});
+			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+				.type = SG_BUFFERTYPE_INDEXBUFFER,
+				.data = SG_RANGE(arrowi),
+			}),
+			render.nnodev = nelem(arrowi);
+		}
 	}else{
-		render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-			.data = SG_RANGE(quadv),
-		});
-		render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-			.type = SG_BUFFERTYPE_INDEXBUFFER,
-			.data = SG_RANGE(quadi),
-		}),
-		render.nnodev = nelem(quadi);
+		if(drawing.flags & DF3d){
+			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.data = SG_RANGE(quadv3d),
+			});
+			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+				.type = SG_BUFFERTYPE_INDEXBUFFER,
+				.data = SG_RANGE(quadi3d),
+			}),
+			render.nnodev = nelem(quadi3d);
+		}else{
+			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.data = SG_RANGE(quadv),
+			});
+			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+				.type = SG_BUFFERTYPE_INDEXBUFFER,
+				.data = SG_RANGE(quadi),
+			}),
+			render.nnodev = nelem(quadi);
+		}
 	}
 }
 
@@ -123,7 +194,7 @@ resize(void)
 }
 
 static void
-setupnodes(void)
+setupnodes(int threedee)
 {
 	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
 	 * is used for instance data */
@@ -136,12 +207,12 @@ setupnodes(void)
 		},
 	};
 	setnodeshape(0);
-	sg_shader sh = sg_make_shader(node_s_shader_desc(sg_query_backend()));
+	sg_shader sh = sg_make_shader((threedee ? node_s3d_shader_desc : node_s_shader_desc)(sg_query_backend()));
 	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
 				[0] = {
-					.stride = 2 * sizeof(float),
+					.stride = (threedee ? 3 : 2) * sizeof(float),
 				},
 				[1] = {
 					.stride = sizeof(RNode),
@@ -150,7 +221,7 @@ setupnodes(void)
 			},
 			.attrs = {
 				[ATTR_node_s_geom] = {
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = threedee ? SG_VERTEXFORMAT_FLOAT3 : SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 0,
 				},
 				[ATTR_node_s_pos] = {
@@ -197,12 +268,12 @@ setupnodes(void)
 		},
 		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
 	});
-	sh = sg_make_shader(node_idx_shader_desc(sg_query_backend()));
+	sh = sg_make_shader((threedee ? node_idx3d_shader_desc : node_idx_shader_desc)(sg_query_backend()));
 	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
 			.buffers = {
 				[0] = {
-					.stride = 2 * sizeof(float),
+					.stride = (threedee ? 3 : 2) * sizeof(float),
 				},
 				[1] = {
 					.stride = sizeof(RNode),
@@ -211,7 +282,7 @@ setupnodes(void)
 			},
 			.attrs = {
 				[ATTR_node_idx_geom] = {
-					.format = SG_VERTEXFORMAT_FLOAT2,
+					.format = threedee ? SG_VERTEXFORMAT_FLOAT3 : SG_VERTEXFORMAT_FLOAT2,
 					.buffer_index = 0,
 				},
 				[ATTR_node_idx_pos] = {
@@ -355,7 +426,7 @@ initgl(void)
 {
 	sg_backend b;
 
-	setupnodes();
+	setupnodes(drawing.flags & DF3d);
 	setupedges();
 	setuppasses();
 	setcolor(render.edgefs.color, theme[Cedge]);

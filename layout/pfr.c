@@ -109,12 +109,14 @@ new_(int is3d)
 static void *
 new(void)
 {
+	drawing.flags &= ~DF3d;
 	return new_(0);
 }
 
 static void *
 new3d(void)
 {
+	drawing.flags |= DF3d;
 	return new_(1);
 }
 

@@ -29,6 +29,7 @@ enum{
 	DFmsaa = 1<<5,
 	DFhidpi = 1<<6,
 	DFnope = 1<<7,
+	DF3d = 1<<8,
 };
 struct Drawing{
 	int flags;
