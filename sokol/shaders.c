@@ -47,18 +47,15 @@ setnodeshape(int arrow)
 		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
 		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
 	}, arrowv3d[] = {
-		-0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.0f * Nodesz,	-1.0f * Ptsz,	+0.0f * Ptsz,
-		-0.5f * Nodesz,	-0.0f * Ptsz,	+0.0f * Ptsz,
-		-0.0f * Nodesz,	 1.0f * Ptsz,	+0.0f * Ptsz,
-		/* FIXME: better tip */
+		-0.50f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.25f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.25f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.50f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.50f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.25f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.25f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.50f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		+0.50f * Nodesz,	-0.0f * Ptsz,	+0.0f * Ptsz,	/* tip */
 	}, quadv[] = {
 		-0.5f * Nodesz,	+0.5f * Ptsz,
 		+0.5f * Nodesz,	+0.5f * Ptsz,
@@ -69,9 +66,9 @@ setnodeshape(int arrow)
 		-0.0f * Nodesz,	-0.5f * Ptsz,
 		-0.0f * Nodesz,	+0.5f * Ptsz,
 		+0.5f * Nodesz,	+0.5f * Ptsz,
-		-0.0f * Nodesz,	-1.0f * Ptsz,
+		-0.0f * Nodesz,	-1.5f * Ptsz,
 		-0.5f * Nodesz,	-0.0f * Ptsz,
-		-0.0f * Nodesz,	+1.0f * Ptsz,
+		-0.0f * Nodesz,	+1.5f * Ptsz,
 	};
 	u16int quadi3d[] = {
 		2, 0, 3,
@@ -87,7 +84,7 @@ setnodeshape(int arrow)
 		5, 7, 4,
 		5, 6, 7,
 	}, arrowi3d[] = {
-		2, 0, 3,	// shaft
+		2, 0, 3,	/* shaft */
 		2, 1, 0,
 		5, 2, 6,
 		5, 1, 2,
@@ -99,7 +96,10 @@ setnodeshape(int arrow)
 		4, 0, 1,
 		5, 7, 4,
 		5, 6, 7,
-		10, 9, 8,	// tip
+		2, 8, 1,	/* tip */
+		6, 8, 2,
+		5, 8, 6,
+		1, 8, 5,
 	}, quadi[] = {
 		2, 0, 3,
 		2, 1, 0,
