@@ -96,7 +96,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
-		"-t N           Set number of layouting threads (1-128, default: 4)\n"
+		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
 		"-H             Enable Hi-DPI mode\n"
@@ -189,8 +189,8 @@ parseargs(int argc, char **argv)
 		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
-		if(nlaythreads <= 0 || nlaythreads > 128){
-			warn("invalid number of threads %d ∉ [1,128]\n", nlaythreads);
+		if(nlaythreads <= 0 || nlaythreads > 1024){
+			warn("invalid number of threads %d ∉ [1,1024]\n", nlaythreads);
 			usage();
 		}
 		break;
