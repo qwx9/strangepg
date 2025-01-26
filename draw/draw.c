@@ -51,15 +51,20 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 static REdge *
 drawedges(REdge *r, RNode *rn)
 {
-	ioff x, *e, *ee;
+	ioff id, eid, aid, x, *e, *ee;
 	Node *n, *ne;
 	RNode *u, *v;
 
-	for(u=rn, n=nodes, ne=n+dylen(n); n<ne; n++, u++){
-		for(e=edges+n->eoff, ee=e+n->nedges-n->nin; e<ee; e++, r++){
+	for(id=eid=0, u=rn, n=nodes, ne=n+dylen(n); n<ne; n++, u++, id++){
+		for(e=edges+n->eoff, ee=e+n->nedges; e<ee; e++){
 			x = *e;
+			aid = x >> 2;
+			if(id > aid || id == aid && (x & 1) == 1)
+				continue;
 			v = rnodes + (x >> 2);
 			drawedge(r, u, v, x & 1, x & 2);
+			r++;
+			eid++;
 		}
 	}
 	return r;
