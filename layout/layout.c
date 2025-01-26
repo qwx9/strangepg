@@ -207,6 +207,8 @@ newlayout(Graph *g, int type)
 		}else
 			type = deflayout;
 	}
+	if(type == LLpfr3d)
+		drawing.flags |= DF3d;
 	l->target = ttab[type];
 	/* guarantees initialized state for deferred loading */
 	if(!gottagofast){

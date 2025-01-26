@@ -48,6 +48,7 @@ new(void)
 	RNode *r, *re;
 	Node *u;
 
+	drawing.flags &= ~DF3d;
 	n = dylen(rnodes);
 	for(u=nodes, r=rnodes, re=r+n; r<re; r++, u++){
 		r->pos[0] = (float)(W / 2 - xfrand() * W) / (W / 2);
