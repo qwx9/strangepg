@@ -32,11 +32,6 @@ struct Render{
 };
 extern Render render;
 
-/* FIXME: provide aligned data as per std140? */
-struct Params{
-	HMM_Mat4 mvp;
-};
-
 struct Color{
 	float col[4];
 };

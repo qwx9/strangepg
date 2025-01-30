@@ -99,7 +99,7 @@ resizenodes(void)
 static inline void
 faceyourfears(RNode *ru, Node *u)
 {
-	float x, y, Δ, Δx, Δy;
+	float x, y, z, Δ, Δx, Δy, Δz;
 	float θ, c, s;
 	ioff *i, *ie;
 	u32int e;
@@ -107,7 +107,8 @@ faceyourfears(RNode *ru, Node *u)
 
 	x = ru->pos[0];
 	y = ru->pos[1];
-	c = s = 0.0;
+	z = ru->pos[2];
+	c = s = 0.0f;
 	for(i=edges+u->eoff, ie=i+u->nedges-u->nin; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
@@ -116,13 +117,15 @@ faceyourfears(RNode *ru, Node *u)
 		if((e & 1) != 0){
 			Δx = rv->pos[0] - x;
 			Δy = rv->pos[1] - y;
+			Δz = rv->pos[2] - z;
 		}else{
 			Δx = x - rv->pos[0];
 			Δy = y - rv->pos[1];
+			Δz = z - rv->pos[2];
 		}
-		Δ = sqrtf(Δx * Δx + Δy * Δy);
+		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
 		c += Δx / Δ;
-		s += Δy / Δ;
+		s += (Δy + Δz) / Δ;
 	}
 	for(ie+=u->nin; i<ie; i++){
 		e = *i;
@@ -132,18 +135,20 @@ faceyourfears(RNode *ru, Node *u)
 		if((e & 1) != 0){
 			Δx = rv->pos[0] - x;
 			Δy = rv->pos[1] - y;
+			Δz = rv->pos[2] - z;
 		}else{
 			Δx = x - rv->pos[0];
 			Δy = y - rv->pos[1];
+			Δz = z - rv->pos[2];
 		}
-		Δ = sqrtf(Δx * Δx + Δy * Δy);
+		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
 		c += Δx / Δ;
-		s += Δy / Δ;
+		s += (Δy + Δz) / Δ;
 	}
 	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
-	ru->dir[2] = 1.0f - ru->dir[0];
+	ru->dir[2] = 0.0f;
 }
 
 static RNode *
