@@ -50,6 +50,7 @@ in vec2 geom;
 in vec3 pos;
 in vec3 dir;
 in float len;
+in uint id;
 flat out uint idx;
 
 vec2 rotatez(vec2 v, float c, float s){
@@ -60,7 +61,7 @@ void main(){
 	vec2 g = geom * vec2(len, 1.0);
 	vec3 r = vec3(rotatez(g, dir.x, dir.y), 0.0);
 	gl_Position = mvp * vec4(r + pos, 1.0);
-	idx = gl_InstanceIndex + 1;
+	idx = id;
 }
 @end
 
@@ -132,6 +133,7 @@ in vec3 geom;
 in vec3 pos;
 in vec3 dir;
 in float len;
+in uint id;
 flat out uint idx;
 
 vec3 rotate(vec3 v, float c, float s){
@@ -145,7 +147,7 @@ void main(){
 	vec3 g = geom * vec3(len, 1.0, 1.0);
 	vec3 r = rotate(g, dir.x, dir.y);
 	gl_Position = mvp * vec4(r + pos, 1.0);
-	idx = gl_InstanceIndex + 1;
+	idx = id;
 }
 @end
 

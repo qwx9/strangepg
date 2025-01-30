@@ -299,6 +299,11 @@ setupnodes(int threedee)
 					.format = SG_VERTEXFORMAT_FLOAT,
 					.buffer_index = 1,
 				},
+				[ATTR_node_idx_id] = {
+					.offset = offsetof(RNode, id),
+					.format = SG_VERTEXFORMAT_FLOAT,
+					.buffer_index = 1,
+				},
 			}
 		},
 		.shader = sh,

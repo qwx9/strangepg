@@ -49,6 +49,11 @@ struct RNode{
 	float dir[3];
 	float col[4];
 	float len;
+	union{	/* FIXME: yikes, but what alternative? */
+		uchar u[4];
+		float f;
+		ioff i;
+	} id;
 };
 struct REdge{
 	float pos1[3];
