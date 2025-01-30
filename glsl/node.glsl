@@ -89,6 +89,7 @@ in vec3 dir;
 in vec4 col;
 in float len;
 out vec4 c;
+out flat uint ci;
 
 vec3 rotate(vec3 v, float c, float s){
 	return mat3(c, -s, 0, s, c, 0, 0, 0, 1)
@@ -102,6 +103,7 @@ void main(){
 	vec3 r = rotate(g, dir.x, dir.y);
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	c = col;
+	ci = gl_VertexIndex / 2;
 }
 @end
 
@@ -109,10 +111,12 @@ void main(){
 precision mediump float;
 
 in vec4 c;
+in flat uint ci;
 out vec4 fc;
 
 void main(){
-	fc = c;
+	vec4 m = vec4(0.01, 0.01, 0.01, 0.0) * ci;
+	fc = c - m;
 }
 @end
 
