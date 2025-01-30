@@ -11,10 +11,10 @@ typedef struct Range Range;
 
 #pragma incomplete Color
 
-#define	Nodesz	2.0f
-#define	Ptsz	1.5f
-#define	Minsz	0.2f
-#define	Maxsz	(100.0f * Minsz)
+#define	Nodesz	1.0f
+#define	Ptsz	1.0f
+#define	Minsz	0.5f
+#define	Maxsz	40.0f
 
 struct Range{
 	float min;

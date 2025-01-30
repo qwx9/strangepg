@@ -9,7 +9,7 @@ enum{
 	Area = W * H,
 };
 
-#define	C	(Ptsz * Ptsz * Minsz / Maxsz)
+#define	C	(Minsz / Maxsz)
 #define Tolerance	0.005f
 
 typedef struct Aux Aux;
@@ -132,7 +132,7 @@ compute3d(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, w, uw, vw, mw, Δr;
+	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
 	Node *u, *u0;
@@ -146,7 +146,6 @@ compute3d(void *arg, volatile int *stat, int i)
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(nodes);
 	skip = nlaythreads;
-	mw = 2.0f * drawing.length.max;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
@@ -158,7 +157,7 @@ compute3d(void *arg, volatile int *stat, int i)
 			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
-			uw = mw - r->len;
+			uw = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			z = r->pos[2];
@@ -171,30 +170,25 @@ compute3d(void *arg, volatile int *stat, int i)
 				δz = z - v->pos[2];
 				δ = Δ3(δx, δy, δz);
 				f = Fr(δ, k);
-				vw = mw - v->len;
-				w = C * MAX(uw, vw);
-				Δx += w * f * δx / δ;
-				Δy += w * f * δy / δ;
-				Δz += w * f * δz / δ;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
+				Δz += f * δz / δ;
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
 			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 				v = rnodes + (*e >> 2);
+				vw = v->len;
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
 				δz = v->pos[2] - z;
 				δ = Δ3(δx, δy, δz);
+				δ -= (uw + vw) / 2.0f;
+				δ += 0.0001f;
 				f = Fa(δ, k);
-				vw = mw - v->len;
-				if(uw < vw)
-					w = uw / vw;
-				else
-					w = vw / uw;
-				w *= C;
-				Δx += w * f * δx / δ;
-				Δy += w * f * δy / δ;
-				Δz += w * f * δz / δ;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
+				Δz += f * δz / δ;
 			}
 			δ = Δ3(Δx, Δy, Δz);
 			if((fixed & FNfixedx) == 0){
@@ -239,7 +233,7 @@ compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, w, uw, vw, mw, Δr;
+	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
 	Node *u, *u0;
@@ -253,7 +247,6 @@ compute(void *arg, volatile int *stat, int i)
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
-	mw = 2.0f * drawing.length.max;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
@@ -265,7 +258,7 @@ compute(void *arg, volatile int *stat, int i)
 			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
-			uw = mw - r->len;
+			uw = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			Δx = Δy = 0.0f;
@@ -276,27 +269,22 @@ compute(void *arg, volatile int *stat, int i)
 				δy = y - v->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
-				vw = mw - v->len;
-				w = C * MAX(uw, vw);
-				Δx += w * f * δx / δ;
-				Δy += w * f * δy / δ;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
 			}
 			if((*stat & LFstop) != 0)
 				return 0;
 			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 				v = rnodes + (*e >> 2);
+				vw = v->len;
 				δx = v->pos[0] - x;
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
+				δ -= (uw + vw) / 2.0f;
+				δ += 0.0001f;
 				f = Fa(δ, k);
-				vw = mw - v->len;
-				if(uw < vw)
-					w = uw / vw;
-				else
-					w = vw / uw;
-				w *= C;
-				Δx += w * f * δx / δ;
-				Δy += w * f * δy / δ;
+				Δx += f * δx / δ;
+				Δy += f * δy / δ;
 			}
 			δ = Δ(Δx, Δy);
 			/* limiting layouting area doesn't work well for long linear graphs */

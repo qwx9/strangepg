@@ -75,25 +75,29 @@ drawedges(REdge *r, RNode *rn)
 void
 resizenodes(void)
 {
-	double l, Δ, max;
+	double l, k, Δ, min, max;
 	RNode *r, *re;
 
 	if((drawing.flags & DFstalelen) == 0)
 		return;
-	drawing.flags &= ~DFstalelen;
-	if(drawing.length.min <= Minsz)
-		drawing.length.min = Minsz;
-	if(drawing.length.max <= drawing.length.min)
-			drawing.length.max = Minsz;
-	Δ = MAX(Minsz, drawing.length.max - drawing.length.min);
+	min = Minsz;
 	max = Maxsz;
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
-		l = r->len;
-		if(l == 0.0)
-			l = Minsz;
-		r->len = (max - (max - Minsz) * exp(-l / Δ));
+	drawing.flags &= ~DFstalelen;
+	if(drawing.length.min < 1.0)
+		drawing.length.min = 1.0;
+	if(drawing.length.max < drawing.length.min)
+		drawing.length.max = drawing.length.min;
+	if((Δ = drawing.length.max - drawing.length.min) < 1.0){
+		Δ = 1.0;
+		min = max = Nodesz;
 	}
-	drawing.length.max = (max - (max - Minsz) * exp(-drawing.length.max / Δ));
+	k = Minsz * log(2) / Δ;
+	for(r=rnodes, re=r+dylen(r); r<re; r++){
+		l = r->len - drawing.length.min;
+		if(l < 1.0)
+			l = 1.0;
+		r->len = min + (max - min) * ((exp(k * l) - 1) / (exp(k * Δ) - 1));
+	}
 }
 
 static inline void
@@ -279,7 +283,7 @@ reqdraw(int r)
 void
 initdrw(void)
 {
-	drawing.length = (Range){9999999.0f, 0.0f};
+	drawing.length = (Range){0.0f, 0.0f};
 	drawing.xbound = drawing.length;
 	drawing.ybound = drawing.length;
 	drawing.zbound = drawing.length;

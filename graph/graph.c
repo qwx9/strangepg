@@ -28,7 +28,7 @@ setattr(int type, ioff id, V val)
 			break;
 		}
 		r->len = val.i;
-		if(drawing.length.min > val.i){
+		if(drawing.length.min == 0.0f || drawing.length.min > val.i){
 			drawing.length.min = val.i;
 			drawing.flags |= DFstalelen;
 		}
