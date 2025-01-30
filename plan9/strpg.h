@@ -17,3 +17,5 @@ u64int	nanosec(void);
 
 #pragma	varargck	argpos	warn	1
 #pragma	varargck	argpos	dprint	2
+
+void	initp9draw(void);

@@ -4,8 +4,6 @@
 #include "threads.h"
 #include <draw.h>
 
-Channel *drawc;
-
 struct Color{
 	u32int col;
 	Image *i;
@@ -378,19 +376,8 @@ drawproc(void *)
 	}
 }
 
-/* throttling of draw requests happens here */
 void
-reqdraw(int r)
-{
-	static ulong f;
-
-	f |= r;
-	if(nbsendul(drawc, f) != 0)
-		f = 0;
-}
-
-void
-initsysdraw(void)
+initp9draw(void)
 {
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");

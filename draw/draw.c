@@ -12,7 +12,9 @@ RNode *rnodes;
 REdge *redges;
 ssize ndnodes, ndedges;
 Drawing drawing;
-extern Channel *drawc;
+Channel *rendc;
+
+static Channel *drawc;
 
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
@@ -210,30 +212,60 @@ redraw(int go)
 }
 
 static void
-ticker(void *)
+drawproc(void *)
 {
+	int r, go;
+
+	go = 1;
 	for(;;){
-		sleep(10);
-		sendul(drawc, Reqrefresh);
+		if((r = recvul(drawc)) == 0)
+			break;
+		if(r & Reqredraw)
+			go = 1;
+		if(!(go = redraw(go)))
+			reqdraw(Reqsleep);
+		else
+			reqdraw(Reqpickbuf);
 	}
 }
 
 void
-noloop(void)
+waitforit(void)
 {
-	ulong u;
-
-	newthread(ticker, nil, nil, nil, "ticker", mainstacksize); 
-	while((u = recvul(drawc)) > 0 && u != Reqredraw)
+	/* wait until at least one file asks for a redraw */
+	while((recvul(drawc) & Reqredraw) == 0)
 		;
-	if(u <= 0)
-		return;
-	reqlayout(Lstart);
-	while((u = recvul(drawc)) > 0){
-		switch(u){
-		case Reqredraw:
-		case Reqrefresh: pushcmd("exportlayout(\"%s\")", drawing.layfile); flushcmd(); break;
-		}
+	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
+	reqdraw(Reqredraw);
+}
+
+void
+reqdraw(int r)
+{
+	static ulong df, rf;
+
+	DPRINT(Debugdraw, "reqdraw %#x", r);
+	switch(r){
+	case Reqshallowdraw:
+	case Reqrefresh:
+	case Reqredraw:
+		wakedrawup();
+		df |= r;
+		if(nbsendul(drawc, df) != 0)
+			df = 0;
+		/* wet floor */
+	case Reqresetdraw:
+	case Reqresetui:
+	case Reqfocus:
+	case Reqpickbuf:
+	case Reqshape:
+	case Reqsleep:
+		rf |= r;
+		if(nbsendul(rendc, rf) != 0)
+			rf = 0;
+		break;
+	default:
+		warn("reqdraw: unknown request %#x\n", r);
 	}
 }
 
@@ -251,5 +283,8 @@ initdrw(void)
 	drawing.fatness = Ptsz;
 	settheme();
 	initcol();
-	initsysdraw();
+	/* FIXME: this chan implementation SUCKS */
+	if((drawc = chancreate(sizeof(ulong), 1)) == nil
+	|| (rendc = chancreate(sizeof(ulong), 1)) == nil)
+		sysfatal("initdrw: chancreate");
 }

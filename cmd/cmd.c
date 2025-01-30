@@ -204,7 +204,6 @@ readcmd(char *s)
 				goto invalid;
 			if(fnfindnode(fld[0]) < 0)
 				goto error;
-			req |= Reqfocus | Reqshallowdraw;
 			break;
 		case 'X':
 			if(m != 2)

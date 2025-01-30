@@ -40,7 +40,6 @@ struct Drawing{
 	Range zbound;
 	float nodesz;
 	float fatness;
-	char *layfile;
 };
 extern Drawing drawing;
 
@@ -157,15 +156,16 @@ enum{
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
-	Requpdatedraw = 1<<8,	/* nodes have been added or removed */
-	Reqstop = 1<<31,		/* cease all activity and operations */
+	Reqsleep = 1<<31,		/* cease all activity and operations */
 };
 
+void	updateedges(void);
+void	updatenode(ioff);
 void	resizenodes(void);
 void	setnodeshape(int);
 void	updatedraw(void);
+void	wakedrawup(void);
+void	waitforit(void);
 void	reqdraw(int);
 void	initcol(void);
-void	noloop(void);
-void	initsysdraw(void);
 void	initdrw(void);

@@ -107,8 +107,6 @@ emalloc(usize n)
 	return p;
 }
 
-/* FIXME: em: make sure we don't run into wrappers too much */
-
 void
 initsys(void)
 {

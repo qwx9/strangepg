@@ -170,6 +170,7 @@ evloop(void)
 void
 initsysui(void)
 {
+	initp9draw();
 	if((kc.c = chancreate(sizeof(Rune), 20)) == nil
 	|| (kbc = chancreate(sizeof(Kev), 8)) == nil)
 		sysfatal("initsysui:chancreate: %r");

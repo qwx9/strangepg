@@ -46,7 +46,6 @@ pan(float Δx, float Δy)
 	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
 	view.pan = v;
 	pandraw(Δx, Δy);
-	reqdraw(Reqshallowdraw);
 }
 
 static void
@@ -65,7 +64,6 @@ zoom(float Δx, float Δy)
 	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
 	v = mulv(center, Δ);
 	zoomdraw(Δ, v.x, v.y);
-	reqdraw(Reqshallowdraw);
 }
 
 static void
@@ -83,7 +81,6 @@ rotate(float Δx, float Δy)
 	v.y = Δy;
 	v.z = 0.0f;
 	rotdraw(v);
-	reqdraw(Reqshallowdraw);
 }
 
 int
@@ -165,6 +162,7 @@ resetbox(void)
 	r->pos1[0] = r->pos2[0];
 	r->pos1[1] = r->pos2[1];
 	r->pos1[2] = r->pos2[2];
+	updateedges();
 }
 
 static inline void
@@ -204,6 +202,7 @@ selectionbox(float x1, float y1, float x2, float y2)
 	r->pos2[0] = x1;
 	r->pos2[1] = y2;
 	r->pos1[2] = r->pos2[2] = z;
+	updateedges();
 }
 
 /* FIXME: this all SUCKS */
@@ -283,17 +282,19 @@ dragselect(int x, int y)
 static int
 mousedrag(float Δx, float Δy)
 {
+	ioff id;
 	RNode *r;
 
-	if((selected & 1<<31) != 0)
+	if(((id = selected) & 1<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
 	Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
 	Δy = 2 * Δy * view.Δeye.z * view.tfov;
-	r = rnodes + selected;
+	r = rnodes + id;
 	r->pos[0] += Δx;
 	r->pos[1] -= Δy;
+	updatenode(id);
 	return 1;
 }
 
@@ -341,10 +342,10 @@ mouseselect(ioff id, int multi)
 				pushcmd("reselectnode(%d)", id);
 			flushcmd();
 			highlightnode(id);
+			updatenode(id);
 		}else{	/* FIXME: edges: not implemented */
 			;
 		}
-		reqdraw(Reqshallowdraw);
 		return 1;
 	}
 	if(!multi){
@@ -353,7 +354,6 @@ mouseselect(ioff id, int multi)
 		selstr[0] = 0;
 	}
 	resetbox();
-	reqdraw(Reqshallowdraw);
 	return 0;
 }
 
@@ -379,6 +379,7 @@ void
 focusnode(ioff i)
 {
 	focused = i;
+	reqdraw(Reqfocus);
 }
 
 int
@@ -407,17 +408,14 @@ mouseevent(Vertex v, Vertex Δ)
 		shown = mousehover(v.x, v.y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			if(mouseselect(shown, mod & (Mshift|Mctrl)))
-				reqdraw(Reqrefresh);
-			else if(dragselect(v.x, v.y))
-				reqdraw(Reqrefresh);
+			if(!mouseselect(shown, mod & (Mshift|Mctrl)))
+				dragselect(v.x, v.y);
 		}else if(Δ.x != 0.0f || Δ.y != 0.0f){
 			/* FIXME: would be nice to just redraw the one node */
-			if(selected != -1){
-				if(mousedrag(Δ.x, Δ.y))
-					reqdraw(Reqredraw);
-			}else if(dragselect(v.x, v.y))
-				reqdraw(Reqrefresh);
+			if(selected != -1)
+				mousedrag(Δ.x, Δ.y);
+			else
+				dragselect(v.x, v.y);
 		}
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)

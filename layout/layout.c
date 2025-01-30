@@ -87,26 +87,22 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if((g->flags & GFdrawme) != 0 && l->flags == 0){
-					if(drawing.flags & DFnope){
-						pushcmd("exportlayout(\"%s\")", drawing.layfile);
-						pushcmd("quit()");
-						flushcmd();
-						break;
-					}
-					logmsg("layout: done.\n");
+				if((g->flags & GFdrawme) == 0)
+					break;
+				if(drawing.flags & DFnope){
+					pushcmd("exportlayout(layfile)");
+					pushcmd("quit()");
+					flushcmd();
+					break;
 				}
+				logmsg("layout: done.\n");
 				g->flags &= ~GFdrawme;
+				reqdraw(Reqredraw);
 			}
 			break;
 		}
-		if(nidle != nlaythreads)
+		if(l == nil || nidle != nlaythreads)
 			continue;
-		if(l == nil){
-			//if((g->flags & (GFlayme|GFdrawme)) != 0)
-			//	sysfatal("graph requesting layout before newlayout called");
-			continue;
-		}
 		if((l->flags & LFnuke) != 0 && l->target->cleanup != nil && l->scratch != nil){
 			l->target->cleanup(l->scratch);
 			l->scratch = nil;

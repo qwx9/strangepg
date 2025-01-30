@@ -190,7 +190,6 @@ resize(void)
 	free(render.pickfb);
 	sg_destroy_attachments(render.pickimg);
 	initfb(sapp_width(), sapp_height());
-	updateview();
 }
 
 static void

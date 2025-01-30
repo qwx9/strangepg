@@ -31,14 +31,13 @@
 #include "threads.h"
 #include "cmd.h"
 
+extern Channel *rendc;
+
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
 
 typedef struct GLNode GLNode;
 typedef struct GLEdge GLEdge;
-
-Channel *drawc;
-static int reqs;
 
 void
 setcolor(float *col, u32int v)
@@ -68,7 +67,8 @@ void
 endmove(void)
 {
 	render.moving = 0;
-	reqdraw(Reqpickbuf);
+	if(render.stalepick)
+		reqdraw(Reqpickbuf);
 }
 
 /* FIXME: promote following functions to portable code; alias HMM types? */
@@ -92,6 +92,8 @@ updateview(void)
 	vw = HMM_LookAt_RH(eye, center, up);
 	render.cam.mvp = HMM_MulM4(proj, vw);
 	render.moving = 1;
+	render.stalepick = 1;
+	reqdraw(Reqrefresh);
 }
 
 /* FIXME: pan/zoom in world coordinates; standardize this, make mvp global */
@@ -206,6 +208,8 @@ updatebuffers(void)
 {
 	int n;
 
+	if(dylen(rnodes) <= 0)
+		return;
 	if((n = ndedges) >= 1){
 		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 			.ptr = redges,
@@ -218,6 +222,21 @@ updatebuffers(void)
 			.size = n * sizeof *rnodes,
 		});
 	}
+}
+
+/* FIXME: individual nodes */
+void
+updatenode(ioff id)
+{
+	render.stalepick = 1;
+	reqdraw(Reqredraw);
+}
+
+void
+updateedges(void)
+{
+	render.stalepick = 1;
+	reqdraw(Reqrefresh);
 }
 
 static void
@@ -233,13 +252,12 @@ clearscreen(void)
 }
 
 static void
-flush(void)
+renderscene(void)
 {
 	if(dylen(rnodes) <= 0){
 		clearscreen();
 		return;
 	}
-	updatebuffers();
 	if(render.caching)
 		renderoffscreen();
 	renderdirect();
@@ -247,83 +265,55 @@ flush(void)
 }
 
 void
-reqdraw(int r)
+wakedrawup(void)
 {
-	static ulong f;
-
-	f |= r;
-	reqs |= r;
-	if(nbsendul(drawc, f) != 0)
-		f = 0;
-}
-
-static void
-drawproc(void *)
-{
-	int req, stop;
-
-	stop = 0;
-	for(;;){
-		if((req = recvul(drawc)) == 0)
-			break;
-		if((req & Reqredraw) != 0){
-			reqs &= ~Reqredraw;
-			stop = 0;
-			sapp_wakethefup();
-		}else if((reqs & Reqshallowdraw) != 0)
-			sapp_wakethefup();
-		if(stop = !redraw(stop))
-			sapp_input_wait(true);
-		else
-			reqs |= Reqpickbuf;
-	}
+	sapp_wakethefup();
 }
 
 void
 frame(void)
 {
+	int r;
 	vlong t;
-	static int frm;
+	Graph *g;
 	static vlong t0;
 
-	if((reqs & Reqresetdraw) != 0){
-		reqs &= ~Reqresetdraw;
-		resize();
+	if((r = nbrecvul(rendc)) != 0){
+		if(r & Reqresetdraw){
+			resize();
+			updateview();
+		}
+		if(r & Reqresetui){
+			resetui();
+			updateview();
+		}
+		if(r & Reqfocus)
+			focusobj();
+		if(r & Reqshape){
+			drawing.flags ^= DFdrawarrows;
+			setnodeshape(drawing.flags & DFdrawarrows);
+		}
+		if(r & Reqpickbuf){
+			t = μsec();
+			if(t - t0 >= 100000){
+				r &= ~Reqpickbuf;
+				render.stalepick = 1;
+				render.caching = 1;
+				t0 = t;
+			}
+		}
+		if(r & (Reqrefresh | Reqredraw))
+			updatebuffers();
+		if(r & Reqsleep)
+			sapp_input_wait(true);
 	}
-	if((reqs & Reqresetui) != 0){
-		reqs &= ~Reqresetui;
-		resetui();
-		updateview();
-	}
-	if((reqs & Reqfocus) != 0){
-		reqs &= ~Reqfocus;
-		focusobj();
-	}
-	if((reqs & Reqshape) != 0){
-		reqs &= ~Reqshape;
-		drawing.flags ^= DFdrawarrows;
-		setnodeshape(drawing.flags & DFdrawarrows);
-	}
-	if(ndedges == 0 && ndnodes == 0)
-		goto end;
-	if((reqs & Reqpickbuf) != 0){
-		reqs &= ~Reqpickbuf;
-		t = μsec();
-		if(t - t0 >= 100000 && frm > 1){
-			render.stalepick = 1;
-			render.caching = 1;
-			t0 = t;
-			frm = 0;
-		}else
-			frm++;
-	}else
-		frm++;
-	reqs &= ~Reqshallowdraw;	/* clear here to let us get some input events first */
-	flush();
-	if(render.caching)
-		render.caching = 0;
-end:
-	reqdraw(Reqrefresh);
+	renderscene();
+	render.caching = 0;
+	for(g=graphs; g<graphs+dylen(graphs); g++)
+		if(g->flags & GFdrawme){
+			reqdraw(Reqrefresh);
+			break;
+		}
 }
 
 static void
@@ -350,20 +340,8 @@ cleanup(void)
 }
 
 void
-initsysdraw(void)
-{
-	if((drawc = chancreate(sizeof(ulong), 32)) == nil)
-		sysfatal("initsysdraw: chancreate");
-}
-
-void
 evloop(void)
 {
-	/* wait until at least one file asks for a redraw */
-	while(recvul(drawc) != Reqredraw)
-		;
-	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
-	reqdraw(Reqredraw);
 	sapp_run(&(sapp_desc){
 		.init_cb = init,
 		.frame_cb = frame,

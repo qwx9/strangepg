@@ -1,6 +1,5 @@
 #include "strpg.h"
 #include "graph.h"
-#include "drw.h"
 #include "fs.h"
 #include "layout.h"
 #include "ui.h"

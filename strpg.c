@@ -186,7 +186,7 @@ parseargs(int argc, char **argv)
 			sysfatal("unknown layout type");
 		break;
 	case 'n':
-		drawing.layfile = EARGF(usage());
+		pushcmd("layfile=%s", EARGF(usage()));
 		drawing.flags |= DFnope;
 		break;
 	case 't':
@@ -208,31 +208,30 @@ parseargs(int argc, char **argv)
 		pushfile(*argv, type);
 }
 
-static void
-init(void)
-{
-	initcmd();	/* fork repl before starting other threads */
-	initdrw();
-	initfs();
-}
-
 /* note: npe already sets mainstacksize higher before renaming main */
 int
 main(int argc, char **argv)
 {
+	init_genrand64(time(nil));
 	initsys();
 	initlog();
-	init_genrand64(time(nil));
 	parseargs(argc, argv);
-	init();
 	initlayout();
+	initcmd();	/* fork repl before starting other threads */
+	initdrw();	/* load default drawing state before files override it */
+	initfs();
 	load();
-	if(drawing.flags & DFnope || debug & Debugload)
-		noloop();
-	else{
-		initui();
-		evloop();
-	}
+	if(debug & Debugload)
+		return 0;
+	if(drawing.flags & DFnope)
+		for(;;){
+			sleep(10);
+			pushcmd("exportlayout(layfile)");
+			flushcmd();
+		}
+	initui();
+	waitforit();
+	evloop();
 	quit();
 	return 0;
 }
