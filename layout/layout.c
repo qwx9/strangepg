@@ -194,13 +194,9 @@ newlayout(Graph *g, int type)
 	l = emalloc(sizeof *l);
 	l->ref = 1;
 	if(type < 0){
-		if(deflayout < 0){
-			if(dylen(rnodes) < 64){
-				nlaythreads = 1;
-				type = LLfr;
-			}else
-				type = LLpfr;
-		}else
+		if(deflayout < 0)
+			type = LLpfr;
+		else
 			type = deflayout;
 	}
 	if(type == LLpfr3d)
