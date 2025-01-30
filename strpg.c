@@ -88,7 +88,7 @@ pushfile(char *file, int type)
 static void
 help(void)
 {
-	warn("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -99,6 +99,7 @@ help(void)
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
+		"-A             Disable transparency (for performance)\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
@@ -114,7 +115,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-HMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
 }
 
 static void
@@ -125,6 +126,7 @@ parseargs(int argc, char **argv)
 
 	type = FFgfa;
 	ARGBEGIN{
+	case 'A': drawing.flags |= DFnoalpha; break;
 	case 'D':
 		s = EARGF(usage());
 		if(strcmp(s, "all") == 0)

@@ -30,6 +30,7 @@ enum{
 	DFhidpi = 1<<6,
 	DFnope = 1<<7,
 	DF3d = 1<<8,
+	DFnoalpha = 1<<9,
 };
 struct Drawing{
 	int flags;

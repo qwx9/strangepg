@@ -256,7 +256,7 @@ setupnodes(int threedee)
 		.colors = {
 			[0] = {
 				.blend = {
-					.enabled = true,
+					.enabled = (drawing.flags & DFnoalpha) == 0,
 					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
@@ -356,7 +356,7 @@ setupedges(void)
 		.colors = {
 			[0] = {
 				.blend = {
-					.enabled = true,
+					.enabled = (drawing.flags & DFnoalpha) == 0,
 					.src_factor_rgb = SG_BLENDFACTOR_ONE,
 					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 					.op_rgb = SG_BLENDOP_ADD,
