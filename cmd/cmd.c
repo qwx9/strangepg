@@ -293,8 +293,8 @@ initcmd(void)
 		gottagofast = 1;
 		return -1;
 	}
-	newthread(readcproc, nil, nil, nil, "readawk", mainstacksize);
 	if(infd[1] >= 0 && (cmdfs = fdopenfs(infd[1], OWRITE)) == nil)
 		sysfatal("initcmd: %s", error());
+	newthread(readcproc, nil, nil, nil, "readawk", mainstacksize);
 	return 0;
 }

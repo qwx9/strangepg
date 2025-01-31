@@ -186,7 +186,7 @@ parseargs(int argc, char **argv)
 			sysfatal("unknown layout type");
 		break;
 	case 'n':
-		pushcmd("layfile=%s", EARGF(usage()));
+		pushcmd("layfile=\"%s\"", EARGF(usage()));
 		drawing.flags |= DFnope;
 		break;
 	case 't':
@@ -215,9 +215,9 @@ main(int argc, char **argv)
 	init_genrand64(time(nil));
 	initsys();
 	initlog();
-	parseargs(argc, argv);
 	initlayout();
 	initcmd();	/* fork repl before starting other threads */
+	parseargs(argc, argv);
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
 	load();
