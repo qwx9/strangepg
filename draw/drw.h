@@ -161,7 +161,8 @@ enum{
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
-	Reqsleep = 1<<31,		/* cease all activity and operations */
+	Reqsleep = 1<<30,		/* force renderer to wait for events */
+	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
 void	updateedges(void);

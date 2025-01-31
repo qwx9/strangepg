@@ -229,7 +229,10 @@ drawproc(void *)
 	for(;;){
 		if((r = recvul(drawc)) == 0)
 			break;
-		if(r & Reqredraw)
+		if(r & Reqstop){
+			go = 0;
+			continue;
+		}else if(r & Reqredraw)
 			go = 1;
 		if(!(go = redraw(go)))
 			reqdraw(Reqsleep);
@@ -255,6 +258,7 @@ reqdraw(int r)
 
 	DPRINT(Debugdraw, "reqdraw %#x", r);
 	switch(r){
+	case Reqstop:
 	case Reqshallowdraw:
 	case Reqrefresh:
 	case Reqredraw:

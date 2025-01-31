@@ -279,6 +279,10 @@ frame(void)
 	static vlong t0;
 
 	if((r = nbrecvul(rendc)) != 0){
+		if(r & Reqstop){
+			sapp_input_wait(true);
+			return;
+		}
 		if(r & Reqresetdraw){
 			resize();
 			updateview();
