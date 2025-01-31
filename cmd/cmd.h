@@ -31,7 +31,6 @@ enum{
 	AUNSHOW,
 	AINFO,
 	AREFRESH,
-	AEXPLODE,
 };
 
 extern int noreset;

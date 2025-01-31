@@ -1,10 +1,10 @@
 #include "strpg.h"
+#include "threads.h"
 #include "graph.h"
 #include "drw.h"
 #include "fs.h"
 #include "layout.h"
 #include "ui.h"
-#include "threads.h"
 #include "cmd.h"
 #include <locale.h>
 #include <signal.h>
@@ -227,6 +227,7 @@ setfloat(char *lab, double f, Array *a, int *new)
 	return c;
 }
 
+/* FIXME: kind of feels like it's just native awk code... */
 /* not using Tab pointers to avoid locking; assumes string values are already
  * strdup'ed where appropriate */
 static void
@@ -509,17 +510,64 @@ fnexplode(Cell *x, TNode *nextarg)
 	return nil;
 }
 
-static void
-fnnodecolor(char *lab, Awknum col)
+static TNode *
+fnnodecolor(Cell *x, TNode *next)
 {
 	ioff id;
+	char *lab;
+	Cell *y;
 	Array *a;
+	Awknum col;
 
+	lab = getsval(x);
+	y = execute(next);
+	next = next->nnext;
+	col = getival(y);
 	if((a = gettabarray(TCL)) == nil)
 		 sysfatal("awk/nodecolor: uninitialized table");
 	setint(lab, col, a, nil);
 	id = getnodeid(lab);
 	setcolor(rnodes[id].col, col);
+	tempfree(y);
+	return next;
+}
+
+static void
+fninfo(Cell *x)
+{
+	strecpy(hoverstr, hoverstr+sizeof hoverstr, getsval(x));
+	reqdraw(Reqshallowdraw);
+}
+
+static TNode *
+fnunshow(Cell *x, TNode *next)
+{
+	RNode *r;
+	Cell *y;
+
+	r = rnodes + getival(x);
+	if(r < rnodes || r >= rnodes + dylen(rnodes))
+		FATAL("unknown nodeid or out of bounds access: %lld", x->val.i);
+	y = execute(next);
+	next = next->nnext;
+	setcolor(r->col, getival(y));
+	tempfree(y);
+	if((y = getcell("selinfo", symtab)) == nil)
+		return next;
+	strecpy(selstr, selstr+sizeof selstr, getsval(y));
+	reqdraw(Reqrefresh);
+	return next;
+}
+
+static void
+fnrefresh(void)
+{
+	Cell *y;
+
+	if((y = getcell("selinfo", symtab)) == nil)
+		return;
+	strecpy(selstr, selstr+sizeof selstr, getsval(y));
+	reqdraw(Reqshallowdraw);
 }
 
 /* FIXME: stricter error checking and recovery */
@@ -527,10 +575,8 @@ Cell *
 addon(TNode **a, int)
 {
 	int t;
-	char *s;
 	Cell *x, *y, *ret;
 	TNode *nextarg;
-	RNode *r;
 
 	t = ptoi(a[0]);
 	x = execute(a[1]);
@@ -538,45 +584,12 @@ addon(TNode **a, int)
 	ret = gettemp();
 	setival(ret, 0);
 	switch(t){
-	case ALOAD:
-		fnloadall();
-		break;
-	case ALOADBATCH:
-		fnloadbatch();
-		break;
-	case ANODECOLOR:
-		s = getsval(x);
-		y = execute(nextarg);
-		nextarg = nextarg->nnext;
-		fnnodecolor(s, getival(y));
-		tempfree(y);
-		break;
-	case AINFO:
-		strecpy(hoverstr, hoverstr+sizeof hoverstr, getsval(x));
-		reqdraw(Reqshallowdraw);
-		break;
-	case AUNSHOW:
-		r = rnodes + getival(x);
-		if(r < rnodes || r >= rnodes + dylen(rnodes))
-			FATAL("unknown nodeid or out of bounds access: %lld", x->val.i);
-		y = execute(nextarg);
-		nextarg = nextarg->nnext;
-		setcolor(r->col, getival(y));
-		tempfree(y);
-		if((y = getcell("selinfo", symtab)) == nil)
-			break;
-		strecpy(selstr, selstr+sizeof selstr, getsval(y));
-		reqdraw(Reqshallowdraw);
-		break;
-	case AREFRESH:
-		if((y = getcell("selinfo", symtab)) == nil)
-			break;
-		strecpy(selstr, selstr+sizeof selstr, getsval(y));
-		reqdraw(Reqshallowdraw);
-		break;
-	case AEXPLODE:	/* explode(ids...) */
-		nextarg = fnexplode(x, nextarg);
-		break;
+	case ALOAD: fnloadall(); break;
+	case ALOADBATCH: fnloadbatch(); break;
+	case ANODECOLOR: nextarg = fnnodecolor(x, nextarg); break;
+	case AINFO: fninfo(x); break;
+	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
+	case AREFRESH: fnrefresh(); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;
