@@ -221,13 +221,13 @@ main(int argc, char **argv)
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
 	load();
-	if(debug & Debugload)
-		return 0;
-	if(drawing.flags & DFnope)
+	if(drawing.flags & DFnope || debug & Debugload)
 		for(;;){
 			sleep(10);
-			pushcmd("exportlayout(layfile)");
-			flushcmd();
+			if(drawing.flags & DFnope){
+				pushcmd("exportlayout(layfile)");
+				flushcmd();
+			}
 		}
 	initui();
 	waitforit();
