@@ -5,11 +5,8 @@ enum{
 
 typedef struct Target Target;
 enum{
-	LLfr,
 	LLpfr,
 	LLpfr3d,
-	LLlinear,
-	LLcirc,
 	LLnil,
 };
 struct Target{
@@ -25,11 +22,8 @@ struct Target{
 extern int deflayout;
 extern int nlaythreads;
 
-Target*	regfr(void);
 Target*	regpfr(void);
 Target*	regpfr3d(void);
-Target*	reglinear(void);
-Target*	regcirc(void);
 
 enum{
 	Lidle,

@@ -105,9 +105,8 @@ help(void)
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"-W             Do not suppress warning messages\n"
 		"ALG may be one of:\n"
-		" fr            Fruchterman-Reingold algorithm\n"
-		" pfr           Parallelized variant of FR (default)\n"
-		" pfr3d         Experimental 3d version of the above\n"
+		" fr            Parallelized variant of Fruchterman-Reingold (default)\n"
+		" 3d            Experimental 3d version of the above\n"
 	);
 	quit();
 }
@@ -172,16 +171,10 @@ parseargs(int argc, char **argv)
 	case 'h': help(); break;
 	case 'l':
 		s = EARGF(usage());
-		if(strcmp(s, "linear") == 0)
-			deflayout = LLlinear;
-		else if(strcmp(s, "fr") == 0)
-			deflayout = LLfr;
-		else if(strcmp(s, "pfr") == 0)
+		if(strcmp(s, "fr") == 0)
 			deflayout = LLpfr;
-		else if(strcmp(s, "pfr3d") == 0)
+		else if(strcmp(s, "3d") == 0)
 			deflayout = LLpfr3d;
-		else if(strcmp(s, "circ") == 0)
-			deflayout = LLcirc;
 		else
 			sysfatal("unknown layout type");
 		break;

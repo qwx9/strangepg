@@ -127,10 +127,7 @@ OBJ:=\
 	fs/load.o\
 	fs/metacsv.o\
 	graph/graph.o\
-	layout/circ.o\
-	layout/fr.o\
 	layout/layout.o\
-	layout/linear.o\
 	layout/pfr.o\
 	ui/ui.o\
 	util/print.o\

@@ -214,9 +214,6 @@ newlayout(Graph *g, int type)
 void
 initlayout(void)
 {
-	ttab[LLfr] = regfr();
-	ttab[LLlinear] = reglinear();
 	ttab[LLpfr] = regpfr();
 	ttab[LLpfr3d] = regpfr3d();
-	ttab[LLcirc] = regcirc();
 }

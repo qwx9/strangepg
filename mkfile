@@ -22,10 +22,7 @@ OFILES=\
 	fs/load.$O\
 	fs/metacsv.$O\
 	graph/graph.$O\
-	layout/circ.$O\
-	layout/fr.$O\
 	layout/layout.$O\
-	layout/linear.$O\
 	layout/pfr.$O\
 	plan9/draw.$O\
 	plan9/fs.$O\
