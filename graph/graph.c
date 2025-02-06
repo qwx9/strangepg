@@ -9,7 +9,6 @@
 Graph *graphs;
 Node *nodes;
 ioff *edges;
-Super *supers;
 
 void
 setattr(int type, ioff id, V val)

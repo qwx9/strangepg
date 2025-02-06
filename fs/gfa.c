@@ -115,7 +115,6 @@ initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
 	dyresize(rnodes, (nn + nnodes));
 	for(i=nn, r=rnodes+nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, r++, i++){
 		n->nedges = *deg++;
-		n->nin = 0;
 		n->eoff = *off++;
 		v.i = *len++;
 		setspectag(TLN, i, v);
@@ -136,7 +135,7 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 	edgeset *h;
 	khint_t k;
 
- 	nn = dylen(edges);
+		nn = dylen(edges);
 	nm = nn + 2 * nedges;
 	dyresize(edges, nm);
 	dyresize(redges, nedges + nelem(selbox));
@@ -152,6 +151,8 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 			warn("map %d%c %d%c → ", i, u&1?'-':'+', j, v&1?'-':'+');
 		assert(i < dylen(nodes));
 		assert(j < dylen(nodes));
+		/* FIXME: now that we don't assume in edges are at the end, get rid
+		 * of this shit */
 		if(i == j){					/* self edge */
 			deg[i]--;
 			off = index[i]++;
@@ -164,7 +165,6 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 			if(debug & Debuggraph)
 				warn("in off=%d base=%d, ", off, nodes[i].eoff);
 			edges[off] = v << 1 | 1;
-			nodes[i].nin++;
 			deg[j]--;
 			off = index[j]++;
 			if(debug & Debuggraph)
@@ -181,7 +181,6 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 			if(debug & Debuggraph)
 				warn("in off=%d base=%d\n", off, nodes[j].eoff);
 			edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
-			nodes[j].nin++;
 		}
 	}
 }

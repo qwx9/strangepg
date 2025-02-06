@@ -113,25 +113,7 @@ faceyourfears(RNode *ru, Node *u)
 	y = ru->pos[1];
 	z = ru->pos[2];
 	c = s = 0.0f;
-	for(i=edges+u->eoff, ie=i+u->nedges-u->nin; i<ie; i++){
-		e = *i;
-		rv = rnodes + (e >> 2);
-		if(rv == ru)
-			continue;
-		if((e & 1) != 0){
-			Δx = rv->pos[0] - x;
-			Δy = rv->pos[1] - y;
-			Δz = rv->pos[2] - z;
-		}else{
-			Δx = x - rv->pos[0];
-			Δy = y - rv->pos[1];
-			Δz = z - rv->pos[2];
-		}
-		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
-		c += Δx / Δ;
-		s += (Δy + Δz) / Δ;
-	}
-	for(ie+=u->nin; i<ie; i++){
+	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)

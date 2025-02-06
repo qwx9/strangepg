@@ -4,9 +4,7 @@ typedef struct Node Node;
 typedef struct Layout Layout;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
-typedef struct Super Super;
 
-#pragma incomplete Super
 #pragma incomplete Layout
 #pragma incomplete Thread
 
@@ -27,18 +25,18 @@ enum{
 	FNinity = 1<<4,
 	FNinitz = 1<<5,
 	FNinitpos = FNinitx | FNinity | FNinitz,
-	FNvisible = 1<<6,
+	FNemptyinside = 1<<6,
+	FNnew = 1<<7,
 };
+/* FIXME: information now overlaps Super, maybe just use that */
 struct Node{
 	uchar flags;
 	Vertex pos0;	/* FIXME: very annoying to get rid of */
 	short nedges;
-	short nin;
 	ioff eoff;
 };
 extern Node *nodes;
 extern ioff *edges;
-extern Super *supers;
 
 enum{
 	GFlayme = 1<<0,
