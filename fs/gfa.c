@@ -118,9 +118,6 @@ initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
 		n->eoff = *off++;
 		v.i = *len++;
 		setspectag(TLN, i, v);
-		/* must be untouched in the shader it's passed as a float but specified
-		 * as a uint; due to limitations of integer type handling */
-		r->id.i = i + 1;	/* FIXME: if nn may be not 0, have to put id in elsewhere */
 	}
 }
 
@@ -135,7 +132,7 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 	edgeset *h;
 	khint_t k;
 
-		nn = dylen(edges);
+	nn = dylen(edges);
 	nm = nn + 2 * nedges;
 	dyresize(edges, nm);
 	dyresize(redges, nedges + nelem(selbox));
