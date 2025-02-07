@@ -48,14 +48,14 @@ setnodeshape(int arrow)
 		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
 	}, arrowv3d[] = {
 		+0.50f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.25f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.25f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		-0.10f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.10f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
 		+0.50f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
 		+0.50f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.25f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.25f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		-0.10f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.10f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
 		+0.50f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.50f * Nodesz,	+0.0f * Ptsz,	-0.0f * Ptsz,	/* tip */
+		-0.50f * Nodesz,	+0.0f * Ptsz,	-0.0f * Ptsz,	/* tip */
 	}, quadv[] = {
 		-0.5f * Nodesz,	+0.5f * Ptsz,
 		+0.5f * Nodesz,	+0.5f * Ptsz,

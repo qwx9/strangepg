@@ -19,7 +19,7 @@ static u32int theme1[Cend] = {
 static u32int theme2[Cend] = {
 	[Cbg]	= 0xffffffff,
 	[Ctext]	= 0xeeee00ff,
-	[Cedge]	= 0xaaaaaa77,
+	[Cedge]	= 0xcccccc77,
 	[Cemph]	= 0xff0000ff,
 	[Chigh] = 0x000000ff,
 };
@@ -237,13 +237,15 @@ color(u32int v)
 u32int
 somecolor(ioff i, char **name)
 {
-	uchar a;
+	u32int c;
 
 	i %= nelem(pal);
 	if(name != nil)
 		*name = pal[i].name;
-	a = drawing.flags & DFhaxx0rz ? 0x70 : 0xc0;
-	return pal[i].col << 8 | a;
+	c = pal[i].col << 8;
+	c |= drawing.flags & DFnoalpha ? 0xff
+		: drawing.flags & DFhaxx0rz ? 0x70 : 0xc0;
+	return c;
 }
 
 void
