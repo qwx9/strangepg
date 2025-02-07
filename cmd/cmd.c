@@ -176,6 +176,8 @@ readcmd(char *s)
 			continue;
 		case 'r':
 			req |= Reqredraw;
+			if(drawing.flags & DFnope && reqlayout(Lstart))
+				warn("readcmd: reqlayout: %s\n", error());
 			continue;
 		case 'N':
 		case 'X':
