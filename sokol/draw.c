@@ -80,11 +80,11 @@ updateview(void)
 
 	view.Δeye = subv(view.eye, view.center);
 	view.ar = (float)view.w / view.h;
-	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 100000.0f);
+	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 10000.0f);
 	rot = HMM_MulM4(
-			HMM_Rotate_RH(view.θ, HMM_V3(0.0f, 1.0f, 0.0f)),
-            HMM_Rotate_RH(view.φ, HMM_V3(1.0f, 0.0f, 0.0f))
-            );
+		HMM_Rotate_RH(view.φ, HMM_V3(1.0f, 0.0f, 0.0f)),
+		HMM_Rotate_RH(view.θ, HMM_V3(0.0f, 1.0f, 0.0f))
+	),
 	proj = HMM_MulM4(proj, rot);
 	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
 	center = HMM_V3(view.center.x, view.center.y, view.center.z);
@@ -100,9 +100,14 @@ updateview(void)
 void
 worldview(Vertex v)
 {
-	view.center.x = view.eye.x = v.x;
-	view.center.y = view.eye.y = v.y;
+	view.eye.x = v.x;
+	view.eye.y = v.y;
 	view.eye.z = v.z;
+	if((drawing.flags & DF3d) == 0){
+		view.center.x = v.x;
+		view.center.y = v.y;
+		view.center.z = v.z;
+	}
 	updateview();
 }
 
@@ -115,24 +120,45 @@ worldpandraw(float x, float y)
 void
 pandraw(float Δx, float Δy)
 {
-	Δx /= view.w;
-	Δy /= view.h;
-	Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
-	Δy *= 2 * view.Δeye.z * view.tfov;
-	view.eye.x += Δx;
-	view.eye.y -= Δy;
-	view.center.x += Δx;
-	view.center.y -= Δy;
-	updateview();
+	HMM_Vec4 vw;	
+	HMM_Mat4 rot;
+
+	if((drawing.flags & DF3d) == 0){
+		Δx /= view.w;
+		Δy /= view.h;
+		Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
+		Δy *= 2 * view.Δeye.z * view.tfov;
+		view.center.x += Δx;
+		view.center.y -= Δy;
+		view.eye.x += Δx;
+		view.eye.y -= Δy;
+		updateview();
+	}else{
+		Δx *= HMM_DegToRad * 0.5f;
+		Δy *= HMM_DegToRad * 0.5f;
+		rot = HMM_MulM4(
+			HMM_Rotate_RH(Δy, HMM_V3(1.0f, 0.0f, 0.0f)),
+			HMM_Rotate_RH(Δx, HMM_V3(0.0f, 1.0f, 0.0f))
+		);
+		vw = HMM_MulM4V4(rot, HMM_V4(view.eye.x, view.eye.y, view.eye.z, 1.0f));
+		view.eye = V(vw.X, vw.Y, vw.Z);
+		vw = HMM_MulM4V4(rot, HMM_V4(view.up.x, view.up.y, view.up.z, 1.0f));
+		view.up = V(vw.X, vw.Y, vw.Z);
+		updateview();
+	}
 }
 
-/* FIXME: geared towards 2D, where it doesn't make sense to zoom past
- * the canvas */
 void
 zoomdraw(float Δ, float Δx, float Δy)
 {
 	Vertex v;
 
+	if(drawing.flags & DF3d){
+		v = mulv(view.Δeye, Δ);
+		view.eye = subv(view.eye, v);
+		updateview();
+		return;
+	}
 	v = mulv(view.Δeye, Δ);
 	view.eye = subv(view.eye, v);
 	pandraw(Δx, Δy);
