@@ -33,12 +33,8 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 	p2.x = v->pos[0];
 	p2.y = v->pos[1];
 	p2.z = v->pos[2];
-	m = sqrtf(du.x * du.x + du.y * du.y) + 0.000001;
-	du = divv(du, m);
 	du = mulv(du, u->len * Nodesz / 2.0f);
 	du = urev ? addv(p1, du) : subv(p1, du);
-	m = sqrtf(dv.x * dv.x + dv.y * dv.y) + 0.000001;
-	dv = divv(dv, m);
 	dv = mulv(dv, v->len * Nodesz / 2.0f);
 	dv = vrev ? subv(p2, dv) : addv(p2, dv);
 	r->pos1[0] = du.x;
@@ -105,7 +101,7 @@ static inline void
 faceyourfears(RNode *ru, Node *u)
 {
 	float x, y, z, Δ, Δx, Δy, Δz;
-	float θ, c, s;
+	float θ, c, s, t;
 	ioff *i, *ie;
 	u32int e;
 	RNode *rv;
@@ -113,7 +109,7 @@ faceyourfears(RNode *ru, Node *u)
 	x = ru->pos[0];
 	y = ru->pos[1];
 	z = ru->pos[2];
-	c = s = 0.0f;
+	c = s = t = 0.0f;
 	for(i=vedges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
@@ -130,11 +126,17 @@ faceyourfears(RNode *ru, Node *u)
 		}
 		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
 		c += Δx / Δ;
-		s += (Δy + Δz) / Δ;
+		//s += (Δy + Δz) / Δ;
+		s += Δy / Δ;
+		t += Δz / Δ;
 	}
+	/* FIXME: 3d edge rotation is wrong as well, we need two angles */
 	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
+	θ = sqrtf(c * c + s * s);
+	θ = fmodf(atan2f(t, θ), 2.0f * (float)PI);
+	//ru->dir[2] = cosf(θ);
 	ru->dir[2] = 0.0f;
 }
 

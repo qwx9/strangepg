@@ -92,9 +92,9 @@ out vec4 c;
 out flat uint ci;
 
 vec3 rotate(vec3 v, float c, float s){
-	return mat3(c, -s, 0, s, c, 0, 0, 0, 1)
-		* mat3(c, 0, s, 0, 1, 0, -s, 0, c)
-		* mat3(1, 0, 0, 0, c, -s, 0, s, c)
+	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
+		* mat3(c, 0, -s, 0, 1, 0, s, 0, c)
+		* mat3(1, 0, 0, 0, c, s, 0, -s, c)
 		* v;
 }
 
@@ -135,9 +135,9 @@ in float len;
 flat out uint idx;
 
 vec3 rotate(vec3 v, float c, float s){
-	return mat3(c, -s, 0, s, c, 0, 0, 0, 1)
-		* mat3(c, 0, s, 0, 1, 0, -s, 0, c)
-		* mat3(1, 0, 0, 0, c, -s, 0, s, c)
+	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
+		* mat3(c, 0, -s, 0, 1, 0, s, 0, c)
+		* mat3(1, 0, 0, 0, c, s, 0, -s, c)
 		* v;
 }
 
