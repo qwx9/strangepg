@@ -3,6 +3,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/time.h>
+//#include <fenv.h>
 #include "threads.h"
 #include "cmd.h"
 
@@ -113,9 +114,9 @@ lsleep(vlong ns)
 	struct timespec t = {0};
 
 	t.tv_nsec = ns;
-	if(ns > 1000000){
-		t.tv_nsec %= 1000000;
-		t.tv_sec = ns / 1000000;
+	if(ns > 1000000000){
+		t.tv_nsec %= 1000000000;
+		t.tv_sec = ns / 1000000000;
 	}
 	if(nanosleep(&t, NULL) < 0)
 		sysfatal("lsleep: %s", error());
@@ -152,11 +153,10 @@ estrdup(char *s)
 void *
 erealloc(void *p, usize n, usize oldn)
 {
-	if((p = realloc(p, n)) == NULL){
-		if(n == 0)
-			return NULL;
+	if(n == 0)
+		return NULL;
+	if((p = realloc(p, n)) == NULL)
 		sysfatal("erealloc");
-	}
 	if(n > oldn)
 		memset((uchar *)p + oldn, 0, n - oldn);
 	return p;
@@ -167,15 +167,15 @@ emalloc(usize n)
 {
 	void *p;
 
-	if((p = calloc(1, n)) == NULL){
-		if(n == 0)
-			return NULL;
+	if(n == 0)
+		return NULL;
+	if((p = calloc(1, n)) == NULL)
 		sysfatal("emalloc");
-	}
 	return p;
 }
 
 void
 initsys(void)
 {
+	//feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
 }
