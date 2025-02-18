@@ -45,49 +45,44 @@ wing(void *arg)
 	}
 }
 
-/* FIXME: remove Graph* stuff now that state is global */
 /* not really mooltigraph scheduler for now */
 static void
 sac(void *)
 {
 	ulong x;
 	int nidle;
-	Graph *g;
 	Layout *l;
 	Channel **cp, **ce;
 
 	nidle = 0;
 	l = nil;
 	for(;;){
-		if((x = recvul(rxc)) == 0)
+		if((x = recvul(rxc)) == 0)	/* FIXME: just use recv instead of +1 */
 			break;
 		x--;
-		/* FIXME: no per-graph layouts, just work on global state */
-		//g = graphs + (x >> 2);
-		if((g = graphs) != nil)
-			l = g->layout;
+		l = graph.layout;
 		switch(x & 3){
 		case Lreset:
 			if(l != nil){
 				l->flags |= LFstop | LFnuke;
-				g->flags |= GFlayme;
+				graph.flags |= GFlayme;
 			}
 			break;
 		case Lstop:
 			if(l != nil){
 				l->flags |= LFstop;
-				g->flags &= ~GFlayme;
+				graph.flags &= ~GFlayme;
 			}
 			break;
 		case Lstart:
-			g->flags |= GFlayme;
+			graph.flags |= GFlayme;
 			break;
 		case Lidle:
 			nidle++;
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if((g->flags & GFdrawme) == 0)
+				if((graph.flags & GFdrawme) == 0)
 					break;
 				if(drawing.flags & DFnope){
 					pushcmd("exportlayout(layfile)");
@@ -96,7 +91,7 @@ sac(void *)
 					break;
 				}
 				logmsg("layout: done.\n");
-				g->flags &= ~GFdrawme;
+				graph.flags &= ~GFdrawme;
 				reqdraw(Reqredraw);
 			}
 			break;
@@ -108,7 +103,7 @@ sac(void *)
 			l->scratch = nil;
 		}
 		l->flags = 0;
-		if((g->flags & GFlayme) == 0){
+		if((graph.flags & GFlayme) == 0){
 			reqdraw(Reqrefresh);
 			continue;
 		}
@@ -122,8 +117,8 @@ sac(void *)
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
 			sendp(*cp, l);
 		nidle = 0;
-		g->flags &= ~GFlayme;
-		g->flags |= GFdrawme;
+		graph.flags &= ~GFlayme;
+		graph.flags |= GFdrawme;
 		reqdraw(Reqredraw);
 		logmsg("computing layout...\n");
 	}
@@ -151,37 +146,34 @@ int
 reqlayout(int type)
 {
 	Layout *l;
-	Graph *g;
 
 	/* FIXME: unclear why, but the very first layout, the automatic
 	 * one is always shitty and off-center */
 	if(rxc == nil)
 		opencomms();
-	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if((l = g->layout) == nil || l->target == nil){
-			werrstr("layout not initialized");
-			return -1;
-		}
-		switch(type){
-		case Lstop:
-			break;
-		case Lreset:
-		case Lstart:
-			if((g->flags & GFdrawme) != 0)
-				sendul(rxc, Lstop+1);
-			break;
-		case Lidle:
-		default:
-			warn("reqlayout: unknown req %d\n", type);
-			return -1;
-		}
-		sendul(rxc, type+1);
+	if((l = graph.layout) == nil || l->target == nil){
+		werrstr("layout not initialized");
+		return -1;
 	}
+	switch(type){
+	case Lstop:
+		break;
+	case Lreset:
+	case Lstart:
+		if((graph.flags & GFdrawme) != 0)
+			sendul(rxc, Lstop+1);
+		break;
+	case Lidle:
+	default:
+		warn("reqlayout: unknown req %d\n", type);
+		return -1;
+	}
+	sendul(rxc, type+1);
 	return 0;
 }
 
 int
-newlayout(Graph *g, int type)
+newlayout(int type)
 {
 	Layout *l;
 
@@ -189,7 +181,7 @@ newlayout(Graph *g, int type)
 		werrstr("newlayout: invalid layout %d\n", type);
 		return -1;
 	}
-	if((l = g->layout) != nil)
+	if((l = graph.layout) != nil)
 		l->ref--;
 	l = emalloc(sizeof *l);
 	l->ref = 1;
@@ -207,7 +199,7 @@ newlayout(Graph *g, int type)
 		if(l->scratch == nil && l->target->init != nil)
 			l->scratch = l->target->init();
 	}
-	g->layout = l;
+	graph.layout = l;
 	return 0;
 }
 

@@ -114,20 +114,18 @@ drawselected(void)
 	ioff id;
 	char s[128];
 	Node *n;
-	Graph *g;
 
-	g = graphs;
 	if(selected == -1)
 		return;
 	else if((selected & (1<<31)) == 0){
 		id = (uint)selected;
-		n = g->nodes + id;
+		n = nodes + id;
 		snprint(s, sizeof s, "V[%x]", id);
 		USED(n);
 	}else{
 		//id = (uint)selected & ~(1<<31);
 		// FIXME: update
-		//e = g->edges + id;
+		//e = edges + id;
 		//snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);
 	}
 	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);

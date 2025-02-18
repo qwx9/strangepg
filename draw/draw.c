@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "graph.h"
 #include "fs.h"
 #include "drw.h"
 #include "ui.h"
@@ -50,15 +49,17 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 	r->pos2[2] = dv.z;
 }
 
-static REdge *
-drawedges(REdge *r, RNode *rn)
+static intptr
+drawedges(void)
 {
 	ioff id, eid, aid, x, *e, *ee;
 	Node *n, *ne;
 	RNode *u, *v;
+	REdge *r;
 
-	for(id=eid=0, u=rn, n=nodes, ne=n+dylen(n); n<ne; n++, u++, id++){
-		for(e=edges+n->eoff, ee=e+n->nedges; e<ee; e++){
+	r = redges;
+	for(id=eid=0, u=rnodes, n=vnodes, ne=n+dylen(n); n<ne; n++, u++, id++){
+		for(e=vedges+n->eoff, ee=e+n->nedges; e<ee; e++){
 			x = *e;
 			aid = x >> 2;
 			if(id > aid || id == aid && (x & 1) == 1)
@@ -69,7 +70,7 @@ drawedges(REdge *r, RNode *rn)
 			eid++;
 		}
 	}
-	return r;
+	return r - redges;
 }
 
 void
@@ -113,7 +114,7 @@ faceyourfears(RNode *ru, Node *u)
 	y = ru->pos[1];
 	z = ru->pos[2];
 	c = s = 0.0f;
-	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
+	for(i=vedges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)
@@ -137,45 +138,31 @@ faceyourfears(RNode *ru, Node *u)
 	ru->dir[2] = 0.0f;
 }
 
-static RNode *
-drawnodes(RNode *r)
+static intptr
+drawnodes(void)
 {
 	Node *n, *e;
+	RNode *r;
 
-	for(n=nodes, e=n+dylen(n); n<e; n++, r++)
+	for(r=rnodes, n=vnodes, e=n+dylen(n); n<e; n++, r++)
 		faceyourfears(r, n);
-	return r;
+	return r - rnodes;
 }
 
 static int
 drawworld(int go)
 {
 	int r;
-	RNode *rn, *rne;
-	REdge *re;
-	Graph *g;
 
-	if(drawing.flags & DFstalelen)
-		resizenodes();
-	r = 0;
-	rn = rnodes;
-	re = redges;
-	for(g=graphs; g<graphs+dylen(graphs); g++){
-		if(g->type <= FFdead || g->layout == nil)
-			continue;
-		if((g->flags & GFdrawme) != 0)
-			r++;
-		else if(!go){
-			rn += g->nnodes;
-			re += g->nedges;
-			continue;
-		}
-		rne = drawnodes(rn);
-		re = drawedges(re, rn);
-		rn = rne;
+	if(graph.layout == nil)
+		return 0;
+	if((r = graph.flags & GFdrawme) == 0 && !go){
+		ndnodes = dylen(rnodes);
+		ndedges = dylen(redges);
+	}else{
+		ndnodes = drawnodes();
+		ndedges = drawedges();
 	}
-	ndnodes = rn - rnodes;
-	ndedges = re - redges;
 	return r;
 }
 
@@ -183,6 +170,7 @@ drawworld(int go)
 static void
 drawui(void)
 {
+	return;
 	if(ndedges < 1 || selbox[0].pos2[0] - selbox[0].pos1[0] == 0.0f)
 		return;
 	assert(ndedges + nelem(selbox) <= dylen(redges));	/* realloc would race */

@@ -301,7 +301,6 @@ frame(void)
 {
 	int r;
 	vlong t;
-	Graph *g;
 	static vlong t0;
 
 	if((r = nbrecvul(rendc)) != 0){
@@ -339,11 +338,8 @@ frame(void)
 	}
 	renderscene();
 	render.caching = 0;
-	for(g=graphs; g<graphs+dylen(graphs); g++)
-		if(g->flags & GFdrawme){
-			reqdraw(Reqrefresh);
-			break;
-		}
+	if(graph.flags & GFdrawme)
+		reqdraw(Reqrefresh);
 }
 
 static void

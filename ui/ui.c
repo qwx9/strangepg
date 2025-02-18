@@ -1,7 +1,6 @@
 #include "strpg.h"
 #include "threads.h"
 #include "cmd.h"
-#include "graph.h"
 #include "drw.h"
 #include "layout.h"
 #include "ui.h"
@@ -86,8 +85,7 @@ rotate(float Δx, float Δy)
 int
 keyevent(Rune r, int down)
 {
-	int p, m;
-	Graph *g;
+	int m;
 
 	DPRINT(Debugdraw, "keyevent %d", r);
 	if(prompting){
@@ -119,11 +117,7 @@ keyevent(Rune r, int down)
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
 	case 'r': reqlayout(Lreset); break;
-	case 'p':
-		for(g=graphs, p=0; g<graphs+dylen(graphs); g++)
-			p += g->flags & GFdrawme;
-		reqlayout(p ? Lstop : Lstart);
-		break;
+	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
 	case 'a': reqdraw(Reqshape); break;
 	case 'l': drawing.flags ^= DFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;

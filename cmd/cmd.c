@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "graph.h"
 #include "drw.h"
 #include "fs.h"
 #include "layout.h"
@@ -99,6 +98,19 @@ pushcmd(char *fmt, ...)
 		*sp++ = '\n';
 	*sp = 0;
 	sendcmd(sb);
+}
+
+/* FIXME: remove */
+/* usable once topology has been loaded */
+ioff
+str2idx(char *s)
+{
+	ioff id;
+	char *t;
+
+	if((id = strtoll(s, &t, 0)) == 0 && t == s)
+		return -1;
+	return id;
 }
 
 /* FIXME: this has to go away in favor of fix() or initpos() functions */

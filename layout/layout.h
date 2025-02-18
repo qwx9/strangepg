@@ -32,7 +32,7 @@ enum{
 	Lreset,
 };
 void	initlayout(void);
-int	newlayout(Graph*, int);
+int	newlayout(int);
 int reqlayout(int);
 
 #define SETDIR(dir, dx, dy)	do{\

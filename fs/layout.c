@@ -1,7 +1,6 @@
 #include "strpg.h"
 #include "fs.h"
 #include "cmd.h"
-#include "graph.h"
 #include "drw.h"
 #include "layout.h"
 #include "threads.h"

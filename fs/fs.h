@@ -24,8 +24,8 @@ struct File{
 struct Filefmt{
 	char *name;
 	void (*load)(void *);
-	int (*save)(Graph*);
-	void (*nuke)(Graph*);
+	int (*save)(void);
+	void (*nuke)(void);
 };
 
 enum{

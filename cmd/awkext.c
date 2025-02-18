@@ -1,10 +1,10 @@
 #include "strpg.h"
 #include "threads.h"
-#include "graph.h"
 #include "drw.h"
 #include "fs.h"
 #include "layout.h"
 #include "ui.h"
+#include "graph.h"
 #include "cmd.h"
 #include <locale.h>
 #include <signal.h>

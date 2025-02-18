@@ -28,15 +28,16 @@ enum{
 	FNemptyinside = 1<<6,
 	FNnew = 1<<7,
 };
-/* FIXME: information now overlaps Super, maybe just use that */
 struct Node{
 	uchar flags;
 	Vertex pos0;	/* FIXME: very annoying to get rid of */
 	short nedges;
 	ioff eoff;
 };
-extern Node *nodes;
-extern ioff *edges;
+extern Node *nodes;	/* immutable */
+extern ioff *edges;	/* immutable */
+extern Node *vnodes;	/* visible only */
+extern ioff *vedges;	/* visible only */
 
 enum{
 	GFlayme = 1<<0,
@@ -44,14 +45,10 @@ enum{
 	GFarmed = 1<<2,
 };
 struct Graph{
-	int type;
-	uchar flags;
+	int flags;
 	Layout *layout;
-	ioff nfirst;
-	vlong nnodes;
-	vlong nedges;
 };
-extern Graph *graphs;	/* dynamic array */
+extern Graph graph;
 
 enum{
 	Debugdraw = 1<<0,
@@ -82,7 +79,7 @@ struct Clk{
 };
 
 extern int debug;
-extern int gottagofast;
+extern int gottagofast;	/* FIXME: state flag */
 extern char logbuf[], lastmsg[3][64], iserrmsg[3];
 extern int nlog, logsz;
-extern int onscreen;
+extern int onscreen;	/* FIXME: state flag */

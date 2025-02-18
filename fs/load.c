@@ -24,20 +24,6 @@ loadfs(char *path, int type)
 	return 0;
 }
 
-/* FIXME: unused */
-void
-unloadfs(Graph *g)
-{
-	Filefmt *ff;
-
-	ff = fftab[g->type];
-	if(g->type <= FFdead || g->type >= nelem(fftab)){
-		warn("unloadfs: invalid graph type %d", g->type);
-		return;
-	}
-	ff->nuke(g);
-}
-
 void
 initfs(void)
 {

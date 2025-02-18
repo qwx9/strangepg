@@ -6,9 +6,11 @@
 #include "fs.h"
 #include "layout.h"
 
-Graph *graphs;
+Graph graph;
 Node *nodes;
 ioff *edges;
+Node *vnodes;
+ioff *vedges;
 
 void
 setattr(int type, ioff id, V val)
@@ -84,31 +86,4 @@ explode(ioff id)
 	r->pos[0] += 32.0f * (0.5f - xfrand());
 	r->pos[1] += 32.0f * (0.5f - xfrand());
 	r->pos[2] += 32.0f * (0.5f - xfrand());
-}
-
-/* FIXME */
-/* usable once topology has been loaded */
-ioff
-str2idx(char *s)
-{
-	ioff id;
-	char *t;
-
-	if((id = strtoll(s, &t, 0)) == 0 && t == s)
-		return -1;
-	return id;
-}
-
-Graph *
-initgraph(int type)
-{
-	int n;
-	Graph g = {0}, *gp;
-
-	n = dylen(graphs);
-	g.type = type;
-	g.nfirst = dylen(nodes);
-	dypush(graphs, g);
-	gp = graphs + n;
-	return gp;
 }

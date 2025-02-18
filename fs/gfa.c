@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "graph.h"
 #include "fs.h"
 #include "threads.h"
 #include "drw.h"
@@ -110,10 +109,12 @@ initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
 	RNode *r;
 	V v;
 
-	nn = dylen(nodes);
+	nn = dylen(nodes);	/* for mooltigraph */
 	dyresize(nodes, (nn + nnodes));
 	dyresize(rnodes, (nn + nnodes));
-	for(i=nn, r=rnodes+nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, r++, i++){
+	vnodes = nodes;
+	vedges = edges;
+	for(i=nn, r=rnodes+nn, n=vnodes+nn, ne=n+nnodes; n<ne; n++, r++, i++){
 		n->nedges = *deg++;
 		n->eoff = *off++;
 		v.i = *len++;
@@ -132,10 +133,11 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 	edgeset *h;
 	khint_t k;
 
-	nn = dylen(edges);
+	nn = dylen(edges);	/* mooltigraph */
 	nm = nn + 2 * nedges;
 	dyresize(edges, nm);
-	dyresize(redges, nedges + nelem(selbox));
+	vedges = edges;
+	dyresize(redges, nedges);
 	h = eset;
 	deg = degree;
 	kh_foreach(h, k){
@@ -182,23 +184,17 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 	}
 }
 
-static Graph *
+static void
 mkgraph(Aux *a)
 {
-	Graph *g;
-
-	g = initgraph(FFgfa);
 	initnodes(a->nnodes, a->length, a->index, a->degree);
 	dyfree(a->length);
 	initedges(a->nedges, a->edges, a->index, a->degree);
 	edges_destroy(a->edges);
 	dyfree(a->degree);
 	free(a->index);
-	g->nnodes = a->nnodes;
-	g->nedges = a->nedges;
-	if(newlayout(g, -1) < 0)
+	if(newlayout(-1) < 0)
 		warn("initgraph: %s\n", error());
-	return g;
 }
 
 static void
