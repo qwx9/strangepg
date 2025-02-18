@@ -47,15 +47,15 @@ setnodeshape(int arrow)
 		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
 		-0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
 	}, arrowv3d[] = {
-		+0.50f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.10f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.10f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.50f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.50f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.10f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
-		-0.10f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
-		+0.50f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
-		-0.50f * Nodesz,	+0.0f * Ptsz,	-0.0f * Ptsz,	/* tip */
+		-0.1f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.1f * Nodesz,	+0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.1f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	-0.5f * Ptsz,
+		+0.5f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.1f * Nodesz,	-0.5f * Ptsz,	+0.5f * Ptsz,
+		-0.5f * Nodesz,	-0.0f * Ptsz,	+0.0f * Ptsz,	/* tip */
 	}, quadv[] = {
 		-0.5f * Nodesz,	+0.5f * Ptsz,
 		+0.5f * Nodesz,	+0.5f * Ptsz,
@@ -90,16 +90,14 @@ setnodeshape(int arrow)
 		5, 1, 2,
 		6, 3, 7,
 		6, 2, 3,
-		7, 0, 4,
-		7, 3, 0,
 		4, 1, 5,
 		4, 0, 1,
 		5, 7, 4,
 		5, 6, 7,
-		2, 8, 1,	/* tip */
-		6, 8, 2,
-		5, 8, 6,
-		1, 8, 5,
+		8, 3, 0,	/* tip */
+		8, 7, 3,
+		8, 4, 7,
+		8, 0, 4,
 	}, quadi[] = {
 		2, 0, 3,
 		2, 1, 0,
