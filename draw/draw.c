@@ -18,7 +18,6 @@ static Channel *drawc;
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 {
-	float m;
 	Vertex p1, p2, du, dv;
 
 	du.x = u->dir[0];
@@ -54,8 +53,8 @@ drawedges(void)
 	REdge *r;
 
 	r = redges;
-	for(id=eid=0, u=rnodes, n=vnodes, ne=n+dylen(n); n<ne; n++, u++, id++){
-		for(e=vedges+n->eoff, ee=e+n->nedges; e<ee; e++){
+	for(id=eid=0, u=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, u++, id++){
+		for(e=edges+n->eoff, ee=e+n->nedges; e<ee; e++){
 			x = *e;
 			aid = x >> 2;
 			if(id > aid || id == aid && (x & 1) == 1)
@@ -110,7 +109,7 @@ faceyourfears(RNode *ru, Node *u)
 	y = ru->pos[1];
 	z = ru->pos[2];
 	c = s = t = 0.0f;
-	for(i=vedges+u->eoff, ie=i+u->nedges; i<ie; i++){
+	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
 		if(rv == ru)
@@ -146,7 +145,7 @@ drawnodes(void)
 	Node *n, *e;
 	RNode *r;
 
-	for(r=rnodes, n=vnodes, e=n+dylen(n); n<e; n++, r++)
+	for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
 		faceyourfears(r, n);
 	return r - rnodes;
 }

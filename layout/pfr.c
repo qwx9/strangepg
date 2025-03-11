@@ -72,7 +72,7 @@ new_(int is3d)
 		mid[2] = 0;
 	}
 	f = Nodesz * 2.0;
-	for(r=rnodes, u=vnodes, ue=u+dylen(u); u<ue; u++, r++){
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->nedges == 0){
 			orphans++;
 			if((u->flags & (FNfixed | FNinitpos)) == 0){
@@ -141,7 +141,7 @@ compute3d(void *arg, volatile int *stat, int i)
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = vnodes + i;
+	u0 = nodes + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
@@ -242,7 +242,7 @@ compute(void *arg, volatile int *stat, int i)
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = vnodes + i;
+	u0 = nodes + i;
 	r0 = rnodes + i;
 	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;

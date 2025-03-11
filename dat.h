@@ -25,19 +25,16 @@ enum{
 	FNinity = 1<<4,
 	FNinitz = 1<<5,
 	FNinitpos = FNinitx | FNinity | FNinitz,
-	FNemptyinside = 1<<6,
-	FNnew = 1<<7,
 };
 struct Node{
+	ioff id;
 	uchar flags;
-	Vertex pos0;	/* FIXME: very annoying to get rid of */
-	short nedges;
+	Vertex pos0;	/* FIXME: shouldn't be here, only query */
 	ioff eoff;
+	ioff nedges;
 };
-extern Node *nodes;	/* immutable */
-extern ioff *edges;	/* immutable */
-extern Node *vnodes;	/* visible only */
-extern ioff *vedges;	/* visible only */
+extern Node *nodes;	/* visible only */
+extern ioff *edges;	/* visible only */
 
 enum{
 	GFlayme = 1<<0,

@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "fs.h"
 #include "threads.h"
+#include "graph.h"
 #include "drw.h"
 #include "cmd.h"
 #include "layout.h"
@@ -100,28 +101,6 @@ readedgetags(Aux *a, File *f)
 	return 0;
 }
 
-static void
-initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
-{
-	int i;
-	vlong nn;
-	Node *n, *ne;
-	RNode *r;
-	V v;
-
-	nn = dylen(nodes);	/* for mooltigraph */
-	dyresize(nodes, (nn + nnodes));
-	dyresize(rnodes, (nn + nnodes));
-	vnodes = nodes;
-	vedges = edges;
-	for(i=nn, r=rnodes+nn, n=vnodes+nn, ne=n+nnodes; n<ne; n++, r++, i++){
-		n->nedges = *deg++;
-		n->eoff = *off++;
-		v.i = *len++;
-		setspectag(TLN, i, v);
-	}
-}
-
 /* UGH */
 static void
 initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
@@ -136,7 +115,6 @@ initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
 	nn = dylen(edges);	/* mooltigraph */
 	nm = nn + 2 * nedges;
 	dyresize(edges, nm);
-	vedges = edges;
 	dyresize(redges, nedges);
 	h = eset;
 	deg = degree;

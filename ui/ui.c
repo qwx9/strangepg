@@ -2,6 +2,7 @@
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"
+#include "graph.h"
 #include "layout.h"
 #include "ui.h"
 
@@ -126,6 +127,8 @@ keyevent(Rune r, int down)
 }
 
 /* FIXME: separate pipeline, quads? */
+/* FIXME: wrong viewpoint! */
+
 static void
 resetbox(void)
 {
@@ -279,7 +282,7 @@ mousedrag(float Δx, float Δy)
 	ioff id;
 	RNode *r;
 
-	if(((id = selected) & 1<<31) != 0)
+	if(((id = selected) & 1UL<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
@@ -309,10 +312,11 @@ mousehover(int x, int y)
 		hoverstr[0] = 0;
 		return -1;
 	}
-	isedge = u.u & 1<<31;
-	id = u.u & ~(1<<31);
-	if(isedge && id >= dylen(redges) - nelem(selbox))
+	isedge = u.u & 1UL<<31;
+	id = u.u & ~(1UL<<31);
+	if(isedge && id >= dylen(redges) - nelem(selbox))	/* FIXME */
 		return -1;
+	id = getrealid(id, isedge);
 	if(id == shown)
 		return id;
 	if(isedge)
@@ -329,7 +333,7 @@ mouseselect(ioff id, int multi)
 	if(selected >= 0 && selected == id && !multi || prompting)
 		return 0;
 	if((selected = id) != -1){
-		if((id & 1<<31) == 0){
+		if((id & 1UL<<31) == 0){
 			if(multi)
 				pushcmd("toggleselect(%d)", id);
 			else
@@ -361,7 +365,7 @@ focusobj(void)
 {
 	RNode *r;
 
-	if(focused == -1 || (focused & (1<<31)) != 0)	/* unimplemented */
+	if(focused == -1 || (focused & (1UL<<31)) != 0)	/* unimplemented */
 		return;
 	r = rnodes + focused;
 	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));

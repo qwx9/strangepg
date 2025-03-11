@@ -9,8 +9,31 @@
 Graph graph;
 Node *nodes;
 ioff *edges;
-Node *vnodes;
-ioff *vedges;
+
+void
+explode(ioff id)
+{
+	RNode *r;
+
+	r = rnodes + id;
+	r->pos[0] += 32.0f * (0.5f - xfrand());
+	r->pos[1] += 32.0f * (0.5f - xfrand());
+	r->pos[2] += 32.0f * (0.5f - xfrand());
+}
+
+ioff
+getrealid(ioff id, int isedge)
+{
+	if(isedge){
+		/* FIXME: use id as is and have awk print this edge instead of indexing redges;
+		 * in other words maybe get rid of edges[] and shit, right now they're unusable
+		 * anyway */
+		return id >= dylen(redges) ? -1 : id;
+	}
+	if(id < 0 || id >= dylen(nodes))
+		sysfatal("getrealid: %d out of bounds %d", id, dylen(nodes));
+	return nodes[id].id;
+}
 
 void
 setattr(int type, ioff id, V val)
@@ -78,12 +101,21 @@ setattr(int type, ioff id, V val)
 }
 
 void
-explode(ioff id)
+initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
 {
-	RNode *r;
+	int i;
+	vlong nn;
+	Node *n, *ne;
+	V v;
 
-	r = rnodes + id;
-	r->pos[0] += 32.0f * (0.5f - xfrand());
-	r->pos[1] += 32.0f * (0.5f - xfrand());
-	r->pos[2] += 32.0f * (0.5f - xfrand());
+	nn = dylen(nodes);	/* for mooltigraph */
+	dyresize(nodes, (nn + nnodes));
+	dyresize(rnodes, (nn + nnodes));
+	for(i=nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, i++){
+		n->id = i;
+		n->nedges = *deg++;
+		n->eoff = *off++;
+		v.i = *len++;
+		setspectag(TLN, i, v);
+	}
 }
