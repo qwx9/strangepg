@@ -56,19 +56,24 @@ CPPFLAGS+=\
 
 CFLAGS?= -O3 -pipe -march=native
 # with minor plan9esque violations
-CFLAGS+= -std=c99
+# such as omitting parameter names in function definitions
+# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
+CFLAGS+= -std=c11
 CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas -Winline
 ifdef DEBUG
 	ifdef ASAN
-		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		CFLAGS+= -O1 -fsanitize=address -fsanitize=leak -fsanitize=undefined
 		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
+	else
+		CFLAGS+= -O0
 	endif
-	CPPFLAGS+= -O1 -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
 	CFLAGS+= -fasynchronous-unwind-tables
 	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
 	ifeq ($(CC), clang)
 		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
-		CFLAGS+= -glldb -fprofile-instr-generate -fcoverage-mapping
+		CFLAGS+= -glldb -fprofile-instr-generate -fcoverage-mapping \
+				 -Wno-c23-extensions
 	else
 		CFLAGS+= -ggdb -Wno-suggest-attribute=format
 	endif
@@ -80,8 +85,6 @@ else
 	#CPPFLAGS+= -DNDEBUG
 	CFLAGS+= -g -flto
 	LDFLAGS+= -flto
-	# c2x for omitting parameter names in a function definition
-	# gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
 	ifeq ($(CC), clang)
 		CFLAGS+= -Wno-c2x-extensions
 	else
