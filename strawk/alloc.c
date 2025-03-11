@@ -74,7 +74,7 @@ static uschar *alloc(size_t n, int istemp)
 	if(s + n >= p->end)
 		s = grow(p, n);
 	assert(p->end - p->tail >= n);
-	p->tail += n;
+	p->tail += n + 7 & ~7;
 	return s;
 }
 
