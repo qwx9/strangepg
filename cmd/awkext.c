@@ -609,6 +609,7 @@ addon(TNode **a, int)
 	case AINFO: fninfo(x); break;
 	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	case AREFRESH: fnrefresh(); break;
+	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);

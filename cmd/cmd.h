@@ -31,6 +31,7 @@ enum{
 	AUNSHOW,
 	AINFO,
 	AREFRESH,
+	AEXPLODE,
 	AREALEDGE,
 };
 
