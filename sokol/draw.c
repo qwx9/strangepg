@@ -106,7 +106,6 @@ worldview(Vertex v)
 	if((drawing.flags & DF3d) == 0){
 		view.center.x = v.x;
 		view.center.y = v.y;
-		view.center.z = v.z;
 	}
 	updateview();
 }
