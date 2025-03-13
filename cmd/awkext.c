@@ -454,8 +454,7 @@ static void
 fnloadall(void)
 {
 	static char already;
-	ioff id, eid, aid, *e, *ee, v;
-	char s[16], *p;
+	ioff id;
 	Node *n, *ne;
 	RNode *r;
 	V vv;
@@ -464,27 +463,12 @@ fnloadall(void)
 		return;
 	already++;
 	fnloadbatch();
-	for(id=eid=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
+	for(id=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
 		if(r->col[3] == 0.0f){
 			vv.i = somecolor(id, nil);
 			set(TCL, NUM, id, vv);
 		}
-		/* FIXME: unused
-		for(e=edges+n->eoff,ee=e+n->nedges; e<ee; e++){
-			v = *e;
-			aid = v >> 2;
-			if(id > aid || id == aid && (v & 1) == 1)
-				continue;
-			p = seprint(s, s + sizeof s, "%d%c1", eid, '\034');
-			vv.s = s;
-			aid = id << 1 | (v & 1);
-			set(Tedge, 0, aid, vv);
-			p[-1] = '2';
-			aid = v >> 1;
-			set(Tedge, 0, aid, vv);
-			eid++;
-		}
-		*/
+		/* FIXME: edges */
 	}
 }
 
@@ -592,6 +576,23 @@ fnrealedge(Cell *x, Cell *ret)
 	setival(ret, uv);
 }
 
+static void
+fncollapse(Cell *x)
+{
+	ioff i;
+	char *s;
+
+	s = getsval(x);
+	i = getnodeid(s);
+	if(collapse(i) < 0 || coarsen() < 0)
+		FATAL("%s: %s", s, error());
+}
+
+static void
+fnexpand(Cell *)
+{
+}
+
 /* FIXME: stricter error checking and recovery */
 Cell *
 addon(TNode **a, int)
@@ -614,6 +615,8 @@ addon(TNode **a, int)
 	case AREFRESH: fnrefresh(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
+	case ACOLLAPSE: fncollapse(x); break;
+	case AEXPAND: fnexpand(x); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;

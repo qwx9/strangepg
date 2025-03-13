@@ -66,7 +66,7 @@ static int
 readedgetags(Aux *a, File *f)
 {
 	int nerr;
-	char *s, tag[8] = {'e', '\0'};
+	char *s;
 	ioff id;
 	vlong off, *o, *oe;
 
@@ -90,14 +90,8 @@ readedgetags(Aux *a, File *f)
 				}
 				continue;
 			}
-			/* FIXME: edge tags may have the same name as node tags and
-			 * overwrite them; we need a better mechanism for this */
 			/* FIXME: unhandled for now; these names aren't used, and we
-			 * need an actual correspondence with cid's
-			tag[1] = s[0];
-			tag[2] = s[1];
-			settag(tag, id, s+5, 1);
-			*/
+			 * need an actual correspondence with cid's */
 			nerr = 0;
 		}
 	}

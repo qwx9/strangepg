@@ -129,6 +129,7 @@ OBJ:=\
 	fs/layout.o\
 	fs/load.o\
 	fs/metacsv.o\
+	graph/coarse.o\
 	graph/graph.o\
 	layout/layout.o\
 	layout/pfr.o\

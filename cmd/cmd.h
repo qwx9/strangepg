@@ -33,6 +33,8 @@ enum{
 	AREFRESH,
 	AEXPLODE,
 	AREALEDGE,
+	ACOLLAPSE,
+	AEXPAND,
 };
 
 extern int noreset;

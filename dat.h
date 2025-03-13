@@ -25,6 +25,7 @@ enum{
 	FNinity = 1<<4,
 	FNinitz = 1<<5,
 	FNinitpos = FNinitx | FNinity | FNinitz,
+	FNalias = 1<<6,
 };
 struct Node{
 	ioff id;

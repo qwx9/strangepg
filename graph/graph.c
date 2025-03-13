@@ -48,12 +48,6 @@ getrealedge(ioff idx)
 }
 
 ioff
-getnodeidx(ioff id)
-{
-	return id;
-}
-
-ioff
 getrealid(ioff idx)
 {
 	if(idx < 0 || idx >= dylen(nodes))
@@ -64,11 +58,14 @@ getrealid(ioff idx)
 void
 setattr(int type, ioff id, V val)
 {
+	ioff idx;
 	Node *n;
 	RNode *r;
 
-	n = nodes + id;
-	r = rnodes + id;
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	n = nodes + idx;
+	r = rnodes + idx;
 	switch(type){
 	case TLN:
 		if(r->len > 0.0f || val.i == 0)

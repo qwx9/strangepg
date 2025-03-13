@@ -18,6 +18,8 @@ importlayout(char *path)
 	File *fs;
 	RNode *r;
 
+	/* FIXME: needs to be coarsen-aware, or just index into cnodes
+	 * instead of nodes, but then we have to walk nodes[] as well */
 	reqlayout(Lstop);
 	if((fs = openfs(path, OREAD)) == nil)
 		return -1;
@@ -53,6 +55,7 @@ importlayout(char *path)
 	return x;
 }
 
+/* FIXME: coarsen: same comment as above */
 /* technically rnodes are shared with all graphs */
 int
 exportlayout(char *path)

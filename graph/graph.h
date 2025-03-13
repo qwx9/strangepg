@@ -1,4 +1,8 @@
 void	explode(ioff);
+int	coarsen(void);
+int	uncoarsen(void);
+int	collapse(ioff);
+int	expand(ioff);
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
 u64int	getrealedge(ioff);
