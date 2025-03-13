@@ -274,7 +274,7 @@ initdrw(void)
 	settheme();
 	initcol();
 	/* FIXME: this chan implementation SUCKS */
-	if((drawc = chancreate(sizeof(ulong), 1)) == nil
-	|| (rendc = chancreate(sizeof(ulong), 1)) == nil)
+	if((drawc = chancreate(sizeof(ulong), 16)) == nil
+	|| (rendc = chancreate(sizeof(ulong), 16)) == nil)
 		sysfatal("initdrw: chancreate");
 }
