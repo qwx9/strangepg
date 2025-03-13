@@ -458,8 +458,9 @@ fnloadall(void)
 	RNode *r;
 	V vv;
 
-	if(already++)
+	if(already)
 		return;
+	already++;
 	fnloadbatch();
 	for(id=eid=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
 		if(r->col[3] == 0.0f){
