@@ -154,12 +154,18 @@ getnodeid(char *lab)
 	Cell *c;
 	Array *a;
 
-	if((a = gettabarray(Tnode)) == nil)
-		sysfatal("getnodeid %s: uninitialized table", lab);
-	if((c = getcell(lab, a)) == nil)
-		sysfatal("getnodeid %s: no such node", lab);
-	if((id = getival(c)) < 0)
-		sysfatal("getnodeid %s: invalid node id %d", lab, id);
+	if((a = gettabarray(Tnode)) == nil){
+		werrstr("uninitialized table %s", lab);
+		return -1;
+	}
+	if((c = getcell(lab, a)) == nil){
+		werrstr("no such node %s", lab);
+		return -1;
+	}
+	if((id = getival(c)) < 0){
+		werrstr("invalid node %s", lab);
+		return -1;
+	}
 	return id;
 }
 
@@ -437,7 +443,8 @@ setnamedtag(char *tag, char *name, char *val)
 	V v;
 
 	i = mktab(tag, 1);	/* assuming index by node */
-	id = getnodeid(name);
+	if((id = getnodeid(name)) < 0)
+		FATAL("%s", error());
 	type = vartype(val, &v, i == TCL);
 	if(debug & Debugawk){
 		switch(type){
@@ -495,9 +502,12 @@ fnexplode(Cell *x, TNode *nextarg)
 	for(;nextarg!=nil; nextarg=nextarg->nnext){
 		tempfree(x);
 		x = execute(nextarg);
-		id = getnodeid(getsval(x));
-		if((idx = getnodeidx(id)) < 0)
+		if((id = getnodeid(getsval(x))) < 0)
+			FATAL("%s", error());
+		if((idx = getnodeidx(id)) < 0){
+			DPRINT(Debuggraph, "explode: ignoring inactive node %d", id);
 			continue;
+		}
 		explode(idx);
 	}
 	return nil;
@@ -519,9 +529,12 @@ fnnodecolor(Cell *x, TNode *next)
 	if((a = gettabarray(TCL)) == nil)
 		 sysfatal("awk/nodecolor: uninitialized table");
 	setint(lab, col, a, nil);
-	id = getnodeid(lab);
+	if((id = getnodeid(lab)) < 0)
+		FATAL("%s", error());
 	if((idx = getnodeidx(id)) >= 0)
 		setcolor(rnodes[idx].col, col);
+	else
+		DPRINT(Debuggraph, "nodecolor: ignoring inactive node %d", id);
 	tempfree(y);
 	return next;
 }
@@ -583,7 +596,8 @@ fncollapse(Cell *x)
 	char *s;
 
 	s = getsval(x);
-	i = getnodeid(s);
+	if((i = getnodeid(s)) < 0)
+		FATAL("%s", error());
 	if(collapse(i) < 0 || coarsen() < 0)
 		FATAL("%s: %s", s, error());
 }
