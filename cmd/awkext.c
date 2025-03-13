@@ -344,13 +344,15 @@ fnloadbatch(void)
 static inline void
 pushval(int tab, int type, ioff id, V val)
 {
+	ssize n;
 	Val v;
 
 	v = (Val){tab, type, id, val};
 	qlock(&buflock);
 	dypush(valbuf, v);
+	n = dylen(valbuf);
 	qunlock(&buflock);
-	if(dylen(valbuf) >= 64*1024){
+	if(n >= 64*1024){
 		pushcmd("loadbatch()");
 		flushcmd();
 	}
