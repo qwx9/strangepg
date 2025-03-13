@@ -64,7 +64,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 };
 const size_t nkeywords = nelem(keywords);
 
-static noreturn void
+static void
 awk(void *)
 {
 	char *args[] = {"strawk", awkprog};
