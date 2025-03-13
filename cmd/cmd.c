@@ -102,8 +102,8 @@ pushcmd(char *fmt, ...)
 
 /* FIXME: remove */
 /* usable once topology has been loaded */
-ioff
-str2idx(char *s)
+static inline ioff
+str2id(char *s)
 {
 	ioff id;
 	char *t;
@@ -120,7 +120,7 @@ fnsetpos(char *label, char *pos, int tag)
 	ioff id;
 	V v;
 
-	if((id = str2idx(label)) < 0)
+	if((id = str2id(label)) < 0)
 		return -1;
 	v.f = atof(pos);
 	setattr(tag, id, v);
@@ -131,7 +131,7 @@ static inline int
 fnfindnode(char *sid){
 	ioff id;
 
-	if((id = str2idx(sid)) < 0)
+	if((id = str2id(sid)) < 0)
 		return -1;
 	focusnode(id);
 	return 0;

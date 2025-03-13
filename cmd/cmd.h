@@ -31,6 +31,7 @@ enum{
 	AUNSHOW,
 	AINFO,
 	AREFRESH,
+	AREALEDGE,
 };
 
 extern int noreset;

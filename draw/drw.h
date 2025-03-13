@@ -50,6 +50,7 @@ struct RNode{
 	float col[4];
 	float len;
 };
+/* FIXME: should be able to reuse the node vertices from rnodes */
 struct REdge{
 	float pos1[3];
 	float pos2[3];

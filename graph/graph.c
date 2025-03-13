@@ -11,28 +11,54 @@ Node *nodes;
 ioff *edges;
 
 void
-explode(ioff id)
+explode(ioff idx)
 {
 	RNode *r;
 
-	r = rnodes + id;
+	if(idx < 0 || idx >= dylen(rnodes))
+		sysfatal("explode: out of bounds index: %d > %d", idx, dylen(rnodes)-1);
+	r = rnodes + idx;
 	r->pos[0] += 32.0f * (0.5f - xfrand());
 	r->pos[1] += 32.0f * (0.5f - xfrand());
 	r->pos[2] += 32.0f * (0.5f - xfrand());
 }
 
-ioff
-getrealid(ioff id, int isedge)
+/* FIXME: this is a problem; we're also reencoding and decoding in
+ * awk again */
+/* bleh, our edge data structures aren't making lookups easy;
+ * our list is unsorted, but there shouldn't be many objects on
+ * screen in the end */
+u64int
+getrealedge(ioff idx)
 {
-	if(isedge){
-		/* FIXME: use id as is and have awk print this edge instead of indexing redges;
-		 * in other words maybe get rid of edges[] and shit, right now they're unusable
-		 * anyway */
-		return id >= dylen(redges) ? -1 : id;
-	}
-	if(id < 0 || id >= dylen(nodes))
-		sysfatal("getrealid: %d out of bounds %d", id, dylen(nodes));
-	return nodes[id].id;
+	ioff e;
+	u64int uv;
+	Node *u, *v, *ue;
+
+	idx = vedges[idx];	/* FIXME: horrible crutch */
+	for(u=nodes, ue=u+dylen(u); u<ue; u++)
+		if(idx >= u->eoff && idx < u->eoff + u->nedges)
+			break;
+	assert(u < ue);
+	uv = (u64int)u->id << 32;
+	e = edges[idx];
+	v = nodes + (e >> 2);
+	uv |= v->id << 2 | e & 3;
+	return uv;
+}
+
+ioff
+getnodeidx(ioff id)
+{
+	return id;
+}
+
+ioff
+getrealid(ioff idx)
+{
+	if(idx < 0 || idx >= dylen(nodes))
+		sysfatal("getrealid: %d out of bounds %d", idx, dylen(nodes));
+	return nodes[idx].id;
 }
 
 void

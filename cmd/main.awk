@@ -110,10 +110,6 @@ function delnode(name){
 	delete label[node[name]]
 	delete node[name]
 }
-function addedge(id, u, v){
-	edge[id,1] = u << 1 & (v & 1)
-	edge[id,2] = v >> 1
-}
 function checknodeid(id){
 	if(!(id in label)){
 		print "E\tno such nodeid: " id
@@ -128,26 +124,21 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfostr(id,	i, s, u, v, a, b){
-	if(!((id SUBSEP 1) in edge)){
-		print "E\tno such edge id: " id
-		return ""
-	}
-	a = edge[id,1]
-	b = edge[id,2]
-	u = a >> 1
-	v = b >> 1
-	if(!checknodeid(a >> 1) || !checknodeid(b >> 1))
+function edgeinfostr(i,	e, u, v, a, b, s){
+	e = realedge(i)
+	u = e >> 32
+	v = e >> 2 & 0x3fffffff
+	a = e & 1 ? "-" : "+"
+	b = e & 2 ? "-" : "+"
+	if(!checknodeid(u) || !checknodeid(v))
 		return
-	u = label[a >> 1] (a & 1 ? "-" : "+")
-	v = label[b >> 1] (b & 1 ? "-" : "+")
-	s = u v
-	if(id in cigar)
-		s = s ", CIGAR=" cigar[id]
+	s = label[u] a label[v] b
+	if(i in cigar)
+		s = s ", CIGAR=" cigar[i]
 	return s
 }
-function edgeinfo(id,	s){
-	if((s = edgeinfostr(id)) == "")
+function edgeinfo(i, s){
+	if((s = edgeinfostr(i)) == "")
 		return
 	info("Edge: " s)
 }

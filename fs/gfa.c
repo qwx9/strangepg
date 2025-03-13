@@ -92,9 +92,12 @@ readedgetags(Aux *a, File *f)
 			}
 			/* FIXME: edge tags may have the same name as node tags and
 			 * overwrite them; we need a better mechanism for this */
+			/* FIXME: unhandled for now; these names aren't used, and we
+			 * need an actual correspondence with cid's
 			tag[1] = s[0];
 			tag[2] = s[1];
 			settag(tag, id, s+5, 1);
+			*/
 			nerr = 0;
 		}
 	}
@@ -464,6 +467,7 @@ loadgfa1(void *arg)
 	logmsg("loadgfa: reading edge tags...\n");
 	if(d)
 		t0 = μsec();
+	/* FIXME: nothing is loaded besides overlap */
 	if(readedgetags(&a, f) < 0)
 		sysfatal("loadgfa: readedgetags: %s", error());
 	TIME("readedgetags");

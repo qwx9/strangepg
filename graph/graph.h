@@ -1,3 +1,5 @@
 void	explode(ioff);
-ioff	getrealid(ioff, int);
+ioff	getnodeidx(ioff);
+ioff	getrealid(ioff);
+u64int	getrealedge(ioff);
 void	initnodes(ioff, int*, ioff*, ushort*);

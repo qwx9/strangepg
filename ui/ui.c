@@ -210,7 +210,7 @@ static int
 dragselect(int x, int y)
 {
 	int abs;
-	ioff id, Δx, Δy, oid;
+	ioff idx, Δx, Δy, oid;
 	Rekt rx, ry;
 	union{
 		ioff i;
@@ -246,14 +246,14 @@ dragselect(int x, int y)
 		for(y=rx.y1; y<rx.y2; y++){
 			u.u = mousepick(x, y);
 			if(u.i >= 0){
-				if((id = u.i) == oid)
+				if((idx = u.i) == oid)
 					continue;
-				sel_put(sels, id, &abs);
+				sel_put(sels, idx, &abs);
 				if(!abs)
 					continue;
-				pushcmd("selectnodebyid(%d,1)", id);
-				highlightnode(id);
-				oid = id;
+				pushcmd("selectnodebyid(%d,1)", getrealid(idx));
+				highlightnode(idx);
+				oid = idx;
 			}
 		}
 	flushcmd();
@@ -261,14 +261,14 @@ dragselect(int x, int y)
 		for(y=ry.y1; y<ry.y2; y++){
 			u.u = mousepick(x, y);
 			if(u.i >= 0){
-				if((id = u.i) == oid)
+				if((idx = u.i) == oid)
 					continue;
-				sel_put(sels, id, &abs);
+				sel_put(sels, idx, &abs);
 				if(!abs)
 					continue;
-				pushcmd("selectnodebyid(%d,1)", id);
-				highlightnode(id);
-				oid = id;
+				pushcmd("selectnodebyid(%d,1)", getrealid(idx));
+				highlightnode(idx);
+				oid = idx;
 			}
 		}
 	flushcmd();
@@ -279,26 +279,26 @@ dragselect(int x, int y)
 static int
 mousedrag(float Δx, float Δy)
 {
-	ioff id;
+	ioff idx;
 	RNode *r;
 
-	if(((id = selected) & 1UL<<31) != 0)
+	if(((idx = selected) & 1UL<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
 	Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
 	Δy = 2 * Δy * view.Δeye.z * view.tfov;
-	r = rnodes + id;
+	r = rnodes + idx;
 	r->pos[0] += Δx;
 	r->pos[1] -= Δy;
-	updatenode(id);
+	updatenode(idx);
 	return 1;
 }
 
 static ioff
 mousehover(int x, int y)
 {
-	ioff id;
+	ioff idx;
 	int isedge;
 	union{
 		ioff i;
@@ -312,35 +312,35 @@ mousehover(int x, int y)
 		hoverstr[0] = 0;
 		return -1;
 	}
+	if(u.i == shown)
+		return u.i;
 	isedge = u.u & 1UL<<31;
-	id = u.u & ~(1UL<<31);
-	if(isedge && id >= dylen(redges) - nelem(selbox))	/* FIXME */
-		return -1;
-	id = getrealid(id, isedge);
-	if(id == shown)
-		return id;
+	idx = u.u & ~(1UL<<31);
 	if(isedge)
-		pushcmd("edgeinfo(%d)", id);
+		pushcmd("edgeinfo(%d)", idx);	/* untranslated to avoid lookup lag */
 	else
-		pushcmd("nodeinfo(%d)", id);
+		pushcmd("nodeinfo(%d)", getrealid(idx));
 	flushcmd();
 	return u.i;
 }
 
 static int
-mouseselect(ioff id, int multi)
+mouseselect(ioff idx, int multi)
 {
-	if(selected >= 0 && selected == id && !multi || prompting)
+	ioff id;
+
+	if(selected >= 0 && selected == idx && !multi || prompting)
 		return 0;
-	if((selected = id) != -1){
-		if((id & 1UL<<31) == 0){
+	if((selected = idx) != -1){
+		if((idx & 1UL<<31) == 0){
+			id = getrealid(idx);
 			if(multi)
 				pushcmd("toggleselect(%d)", id);
 			else
 				pushcmd("reselectnode(%d)", id);
 			flushcmd();
-			highlightnode(id);
-			updatenode(id);
+			highlightnode(idx);
+			updatenode(idx);
 		}else{	/* FIXME: edges: not implemented */
 			;
 		}
@@ -374,9 +374,10 @@ focusobj(void)
 }
 
 void
-focusnode(ioff i)
+focusnode(ioff id)
 {
-	focused = i;
+	if((focused = getnodeidx(id)) < 0)
+		return;
 	reqdraw(Reqfocus);
 }
 

@@ -35,6 +35,7 @@ struct Node{
 };
 extern Node *nodes;	/* visible only */
 extern ioff *edges;	/* visible only */
+extern ioff *vedges;	/* redge index to edge index */
 
 enum{
 	GFlayme = 1<<0,

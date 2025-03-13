@@ -209,11 +209,11 @@ mixcolors(float *cols, u32int v)
 }
 
 void
-highlightnode(ioff id)
+highlightnode(ioff idx)
 {
 	RNode *r;
 
-	r = rnodes + id;
+	r = rnodes + idx;
 	mixcolors(r->col, theme[Chigh] >> 8);
 }
 

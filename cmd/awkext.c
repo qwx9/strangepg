@@ -158,7 +158,7 @@ getnodeid(char *lab)
 		sysfatal("getnodeid %s: uninitialized table", lab);
 	if((c = getcell(lab, a)) == nil)
 		sysfatal("getnodeid %s: no such node", lab);
-	if((id = getival(c)) < 0 || id >= dylen(nodes))
+	if((id = getival(c)) < 0)
 		sysfatal("getnodeid %s: invalid node id %d", lab, id);
 	return id;
 }
@@ -466,6 +466,7 @@ fnloadall(void)
 			vv.i = somecolor(id, nil);
 			set(TCL, NUM, id, vv);
 		}
+		/* FIXME: unused
 		for(e=edges+n->eoff,ee=e+n->nedges; e<ee; e++){
 			v = *e;
 			aid = v >> 2;
@@ -480,6 +481,7 @@ fnloadall(void)
 			set(Tedge, 0, aid, vv);
 			eid++;
 		}
+		*/
 	}
 }
 
@@ -487,7 +489,7 @@ static TNode *
 fnexplode(Cell *x, TNode *nextarg)
 {
 	int i;
-	ioff id;
+	ioff idx, id;
 	Cell *c;
 	Array *a;
 
@@ -496,7 +498,9 @@ fnexplode(Cell *x, TNode *nextarg)
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){
 				id = atoi(c->nval);
-				explode(id);
+				if((idx = getnodeidx(id)) < 0)
+					continue;
+				explode(idx);
 			}
 		}
 		return nil;
@@ -505,7 +509,9 @@ fnexplode(Cell *x, TNode *nextarg)
 		tempfree(x);
 		x = execute(nextarg);
 		id = getnodeid(getsval(x));
-		explode(id);
+		if((idx = getnodeidx(id)) < 0)
+			continue;
+		explode(idx);
 	}
 	return nil;
 }
@@ -513,7 +519,7 @@ fnexplode(Cell *x, TNode *nextarg)
 static TNode *
 fnnodecolor(Cell *x, TNode *next)
 {
-	ioff id;
+	ioff id, idx;
 	char *lab;
 	Cell *y;
 	Array *a;
@@ -527,7 +533,8 @@ fnnodecolor(Cell *x, TNode *next)
 		 sysfatal("awk/nodecolor: uninitialized table");
 	setint(lab, col, a, nil);
 	id = getnodeid(lab);
-	setcolor(rnodes[id].col, col);
+	if((idx = getnodeidx(id)) >= 0)
+		setcolor(rnodes[idx].col, col);
 	tempfree(y);
 	return next;
 }
@@ -542,12 +549,13 @@ fninfo(Cell *x)
 static TNode *
 fnunshow(Cell *x, TNode *next)
 {
+	ioff idx;
 	RNode *r;
 	Cell *y;
 
-	r = rnodes + getival(x);
-	if(r < rnodes || r >= rnodes + dylen(rnodes))
-		FATAL("unknown nodeid or out of bounds access: %lld", x->val.i);
+	if((idx = getnodeidx(getival(x))) < 0)
+		FATAL("not a visible node: %d", idx);
+	r = rnodes + idx;
 	y = execute(next);
 	next = next->nnext;
 	setcolor(r->col, getival(y));
@@ -570,6 +578,17 @@ fnrefresh(void)
 	reqdraw(Reqshallowdraw);
 }
 
+static void
+fnrealedge(Cell *x, Cell *ret)
+{
+	ioff idx;
+	u64int uv;
+
+	idx = getival(x);
+	uv = getrealedge(idx);
+	setival(ret, uv);
+}
+
 /* FIXME: stricter error checking and recovery */
 Cell *
 addon(TNode **a, int)
@@ -590,6 +609,7 @@ addon(TNode **a, int)
 	case AINFO: fninfo(x); break;
 	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	case AREFRESH: fnrefresh(); break;
+	case AREALEDGE: fnrealedge(x, ret); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;
