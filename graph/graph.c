@@ -122,23 +122,3 @@ setattr(int type, ioff id, V val)
 		break;
 	}
 }
-
-void
-initnodes(ioff nnodes, int *len, ioff *off, ushort *deg)
-{
-	int i;
-	vlong nn;
-	Node *n, *ne;
-	V v;
-
-	nn = dylen(nodes);	/* for mooltigraph */
-	dyresize(nodes, (nn + nnodes));
-	dyresize(rnodes, (nn + nnodes));
-	for(i=nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, i++){
-		n->id = i;
-		n->nedges = *deg++;
-		n->eoff = *off++;
-		v.i = *len++;
-		setspectag(TLN, i, v);
-	}
-}

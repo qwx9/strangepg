@@ -21,10 +21,9 @@ typedef struct Aux Aux;
 struct Aux{
 	namemap *names;
 	edgeset *edges;
-	vlong *nodeoff;
 	int *length;
 	ushort *degree;
-	ioff *index;
+	vlong *nodeoff;
 	vlong *edgeoff;
 	ioff nnodes;
 	ioff nedges;
@@ -98,124 +97,104 @@ readedgetags(Aux *a, File *f)
 	return 0;
 }
 
-/* UGH */
 static void
-initedges(ioff nedges, edgeset *eset, ioff *index, ushort *degree)
+printgraph(void)
 {
-	ushort d, *deg;
-	ioff off, i, j;
-	vlong nn, nm;
-	u64int e, u, v;
+	ioff i, j, x, *e, *ee;
+	Node *u, *ue;
+
+	warn("current graph: %d nodes (%d rnodes) %d edges (%d redges)\n",
+		dylen(nodes), dylen(rnodes), dylen(edges), dylen(redges));
+	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
+		warn("[%d] off=%d ne=%d\n", i, u->eoff, u->nedges);
+		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
+			x = *e;
+			j = x >> 2;
+			warn("\t<%zd> %08x %d%c%d%c\n", e-edges, x,
+				i, x&1?'-':'+', j, x&2?'-':'+');
+		}
+	}
+}
+
+static void
+initedges(ioff nedges, edgeset *eset)
+{
+	ioff off, ne, x, u, v;
+	Node *n;
+	u64int e;
 	edgeset *h;
 	khint_t k;
 
-	nn = dylen(edges);	/* mooltigraph */
-	nm = nn + 2 * nedges;
-	dyresize(edges, nm);
-	dyresize(redges, nedges);
+	ne = kh_size(eset);
+	x = dylen(redges);	/* mooltigraph */
+	dyresize(redges, x + ne);
+	x = dylen(edges);
+	dyresize(edges, x + nedges);
 	h = eset;
-	deg = degree;
 	kh_foreach(h, k){
 		e = kh_key(h, k);
-		u = e >> 32ULL & 0xffffffff;
-		v = e & 0xffffffff;
-		i = u >> 1;
-		j = v >> 1;
-		if(debug & Debuggraph)
-			warn("map %d%c %d%c → ", i, u&1?'-':'+', j, v&1?'-':'+');
-		assert(i < dylen(nodes));
-		assert(j < dylen(nodes));
-		/* FIXME: now that we don't assume in edges are at the end, get rid
-		 * of this shit */
-		if(i == j){					/* self edge */
-			deg[i]--;
-			off = index[i]++;
-			if(debug & Debuggraph)
-				warn("self off=%d base=%d\n", off, nodes[j].eoff);
-			edges[off] = v << 1 | u & 1;
-		}else if(u & 1){			/* in edge */
-			d = --deg[i];
-			off = index[i] + d;
-			if(debug & Debuggraph)
-				warn("in off=%d base=%d, ", off, nodes[i].eoff);
-			edges[off] = v << 1 | 1;
-			deg[j]--;
-			off = index[j]++;
-			if(debug & Debuggraph)
-				warn("out off=%d base=%d\n", off, nodes[j].eoff);
-			edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
-		}else{						/* out edge */
-			deg[i]--;
-			off = index[i]++;
-			if(debug & Debuggraph)
-				warn("out off=%d base=%d, ", off, nodes[i].eoff);
-			edges[off] = v << 1 | 0;
-			d = --deg[j];
-			off = index[j] + d;
-			if(debug & Debuggraph)
-				warn("in off=%d base=%d\n", off, nodes[j].eoff);
-			edges[off] = (u ^ 1) << 1 | v & 1 ^ 1;
-		}
+		u = e >> 32 & 0x7fffffff;
+		v = e >> 2 & 0x3fffffff;
+		assert(u < dylen(nodes) && v < dylen(nodes));
+		n = nodes + u;
+		off = n->eoff + n->nedges++;
+		assert(off >= 0 && off < dylen(edges));
+		x = v << 2 | e & 3;
+		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
+			u, e&1?'-':'+', v, e&2?'-':'+', off, x);
+		edges[off] = x;
+		if(u == v)
+			continue;
+		n = nodes + v;
+		off = n->eoff + n->nedges++;
+		assert(off >= 0 && off < dylen(edges));
+		x = u << 2 | (e >> 1 & 1 | e << 1 & 2) ^ 3;
+		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
+			v, e&2?'+':'-', u, e&1?'+':'-', off, x);
+		edges[off] = x;
 	}
 }
 
+static void
+initnodes(ioff nnodes, int *len, ushort *deg)
+{
+	int i;
+	ioff off;
+	vlong nn;
+	Node *n, *ne;
+	V v;
+
+	nn = dylen(nodes);	/* for mooltigraph */
+	if(nn > 0){
+		n = nodes + nn - 1;
+		off = n->eoff + n->nedges;
+	}else
+		off = 0;
+	dyresize(nodes, (nn + nnodes));
+	dyresize(rnodes, (nn + nnodes));
+	for(i=nn, n=nodes+nn, ne=n+nnodes; n<ne; n++, i++){
+		n->id = i;
+		n->eoff = off;
+		off += *deg++;
+		v.i = *len++;
+		setspectag(TLN, i, v);
+	}
+}
+
+/* FIXME: mooltigraph: can preprocess the gfas in parallel, then
+ * once all threads are done, we can join everything here; we 
+ * can use common stuff if we add locks; else we just have to load
+ * gfas sequentially */
 static void
 mkgraph(Aux *a)
 {
-	initnodes(a->nnodes, a->length, a->index, a->degree);
+	initnodes(a->nnodes, a->length, a->degree);
 	dyfree(a->length);
-	initedges(a->nedges, a->edges, a->index, a->degree);
-	edges_destroy(a->edges);
 	dyfree(a->degree);
-	free(a->index);
+	initedges(a->nedges, a->edges);
+	edges_destroy(a->edges);
 	if(newlayout(-1) < 0)
 		warn("initgraph: %s\n", error());
-}
-
-static void
-mkbuckets(Aux *a)
-{
-	ioff *off, *offset, *idx, *t, *te, *totals;
-	uint k, n, m;
-	ushort d, *dp, *de;
-
-	/* cumulative total number of edges per degree */
-	totals = nil;
-	for(dp=a->degree, de=dp+dylen(dp); dp<de; dp++){
-		d = *dp;
-		dyresize(totals, d+1);
-		totals[d]++;
-	}
-	/* offset of node's current adjacency list */
-	offset = emalloc(dylen(totals) * sizeof *offset);
-	for(n=m=0, d=0, off=offset, t=totals, te=t+dylen(t); t<te; d++, off++){
-		k = *t;
-		n += k;
-		*t++ = n;
-		if(d > 0){
-			*off = m;
-			m += k * d;
-		}
-	}
-	/* allot nodes by increasing degree number */
-	a->index = emalloc(dylen(a->degree) * sizeof *a->index);
-	for(idx=a->index, dp=a->degree, de=dp+dylen(dp); dp<de; dp++){
-		d = *dp;
-		*idx++ = offset[d];
-		offset[d] += d;
-	}
-	free(offset);
-	if(debug & Debugfs){
-		for(n=0, t=totals, te=t+dylen(t); t<te; t++){
-			m = *t;
-			if(m > n){
-				warn("totals[%zd] %d elements (%d total)\n", t-totals, m - n, m);
-				n = m;
-			}
-		}
-	}
-	dyfree(totals);
-	USED(totals);
 }
 
 static ioff
@@ -235,9 +214,9 @@ pushnode(Aux *a, char *s, int *abs)
 		kh_val(h, k) = id;
 		v.s = s;
 		setspectag(Tnode, id, v);
+		DPRINT(Debugfs, "node \"%s\" → %d", s, id);
 	}else
 		id = kh_val(h, k);
-	DPRINT(Debugfs, "node[%d] %s", id, s);
 	return id;
 }
 
@@ -285,7 +264,7 @@ static inline int
 readedge(Aux *a, File *f)
 {
 	int i, j, abs;
-	ioff n, u, v;
+	ioff x, u, v;
 	vlong off;
 	u64int id;
 	char *s, *fld[4], **fp;
@@ -307,43 +286,43 @@ readedge(Aux *a, File *f)
 	v = pushnode(a, fld[2], &abs);
 	i = *fld[1] == '+' ? 0 : 1;
 	j = *fld[3] == '+' ? 0 : 1;
-	DPRINT(Debugfs, "edge[%d] %d%c,%d%c", a->nedges, u, *fld[1], v, *fld[3]);
 	if(nextfield(f) != nil)
 		off = f->foff;
 	else
 		off = -1;
 	/* precedence rule: always flip edge st. u < v or u is forward if self edge */
-	if(u > v || u == v && i == 1){
-		n = u;
-		u = v;
-		v = n;
-		n = i ^ 1;
-		i = j ^ 1;
-		j = n;
-	}
+	if(u > v || u == v && i == 1)
+		id = (u64int)v << 32 | u << 2 | (i << 1 | j) ^ 3;
+	else
+		id = (u64int)u << 32 | v << 2 | j << 1 | i;
 	/* guard against duplicate records */
-	id = ((u64int)u << 1 | i) << 32ULL | v << 1 | j;
 	edges_put(a->edges, id, &abs);
 	if(!abs){
 		werrstr("duplicate edge, ignored");
 		return -1;
 	}
+	DPRINT(Debugfs, "edge \"%s%c,%s%c\" → %d%c%d%c",
+		fld[0], *fld[1], fld[2], *fld[3],
+		u, i?'-':'+', v, j?'-':'+');
 	dypush(a->edgeoff, off);
-	dyresize(a->degree, v+1);
+	x = u > v ? u : v;
+	dyresize(a->degree, x+1);
 	a->degree[u]++;
-	if(v != u)
+	if(v != u){
 		a->degree[v]++;
-	a->nedges++;
+		a->nedges += 2;
+	}else
+		a->nedges++;
 	return 0;
 }
 
 static int
 readgfa(Aux *a, File *f)
 {
-	int nerr, nwarn, r;
+	int ns, nl, nerr, nwarn, r;
 	char *s;
 
-	nerr = nwarn = 0;
+	ns = nl = nerr = nwarn = 0;
 	while(readline(f) != nil){
 		if((s = nextfield(f)) == nil)
 			continue;
@@ -359,14 +338,14 @@ readgfa(Aux *a, File *f)
 		case 'S':
 			if((r = readnode(a, f)) < 0)
 				break;
-			if(a->nnodes % 1000000 == 0)
-				warn("readgfa: %.3g nodes...\n", (double)a->nnodes);
+			if(++ns % 1000000 == 0)
+				warn("readgfa: %.3g nodes...\n", (double)ns);
 			break;
 		case 'L':
 			if((r = readedge(a, f)) < 0)
 				break;
-			if(a->nedges % 1000000 == 0)
-				warn("readgfa: %.3g edges...\n", (double)a->nedges);
+			if(++nl % 1000000 == 0)
+				warn("readgfa: %.3g edges...\n", (double)nl);
 			break;
 		default:
 			DPRINT(Debuginfo, "line %d: unhandled record type %c", f->nr, s[0]);
@@ -385,6 +364,10 @@ readgfa(Aux *a, File *f)
 	}
 	if(a->nnodes <= 0){
 		werrstr("empty graph");
+		return -1;
+	}
+	if(a->nedges <= 0){
+		werrstr("no edges");
 		return -1;
 	}
 	if(dylen(a->nodeoff) < a->nnodes){	/* the reverse is fine */
@@ -433,15 +416,11 @@ loadgfa1(void *arg)
 	pushcmd("loadbatch()");
 	flushcmd();
 	TIME("readgfa");
-	if(a.nnodes == 0)
-		sysfatal("loadgfa: no nodes\n");
-	else if(a.nedges == 0)
-		sysfatal("loadgfa: no edges\n");
 	logmsg("loadgfa: initializing graph...\n");
-	mkbuckets(&a);			/* compute slots for each node's edges */
-	TIME("mkbuckets");
 	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
 	TIME("mkgraph");
+	if(debug & Debuggraph)
+		printgraph();
 	if(gottagofast){	/* FIXME: very much unsafe, won't work with csv, etc. */
 		pushcmd("cmd(\"OPL753\")");	/* load what we have and start layouting */
 		flushcmd();					/* awk must be in on it or it won't work */
