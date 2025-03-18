@@ -111,6 +111,8 @@ faceyourfears(RNode *ru, Node *u)
 	u32int e;
 	RNode *rv;
 
+	if(u->nedges == 0)
+		return;
 	x = ru->pos[0];
 	y = ru->pos[1];
 	z = ru->pos[2];
@@ -139,8 +141,8 @@ faceyourfears(RNode *ru, Node *u)
 	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
-	θ = sqrtf(c * c + s * s);
-	θ = fmodf(atan2f(t, θ), 2.0f * (float)PI);
+	//θ = sqrtf(c * c + s * s);
+	//θ = fmodf(atan2f(t, θ), 2.0f * (float)PI);
 	//ru->dir[2] = cosf(θ);
 	ru->dir[2] = 0.0f;
 }
