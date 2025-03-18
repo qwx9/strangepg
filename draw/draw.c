@@ -12,7 +12,7 @@ REdge *redges;
 ioff *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFORMAT_UBYTE4N instead */
 ssize ndnodes, ndedges;
 Drawing drawing;
-Channel *rendc;
+Channel *rendc, *ctlc;
 
 static Channel *drawc;
 
@@ -208,6 +208,15 @@ drawproc(void *)
 	for(;;){
 		if((r = recvul(drawc)) == 0)
 			break;
+		if(r & Reqthaw)
+			drawing.flags &= ~DFnodraw;
+		if(drawing.flags & DFnodraw)
+			continue;
+		if(r & Reqfreeze){
+			sendul(ctlc, DFnodraw);
+			drawing.flags |= DFnodraw;
+			continue;
+		}
 		if(r & Reqstop){
 			go = 0;
 			continue;
@@ -218,6 +227,22 @@ drawproc(void *)
 		else
 			reqdraw(Reqpickbuf);
 	}
+}
+
+void
+freezedraw(void)
+{
+	reqdraw(Reqfreeze);
+	reqlayout(Lstop);
+	recvul(ctlc);
+	recvul(ctlc);
+}
+
+void
+thawdraw(void)
+{
+	reqdraw(Reqthaw);
+	reqlayout(Lstart);
 }
 
 void
@@ -237,6 +262,8 @@ reqdraw(int r)
 
 	DPRINT(Debugdraw, "reqdraw %#x", r);
 	switch(r){
+	case Reqfreeze:
+	case Reqthaw:
 	case Reqstop:
 	case Reqshallowdraw:
 	case Reqrefresh:
@@ -277,6 +304,7 @@ initdrw(void)
 	initcol();
 	/* FIXME: this chan implementation SUCKS */
 	if((drawc = chancreate(sizeof(ulong), 16)) == nil
-	|| (rendc = chancreate(sizeof(ulong), 16)) == nil)
+	|| (rendc = chancreate(sizeof(ulong), 16)) == nil
+	|| (ctlc = chancreate(sizeof(ulong), 2)) == nil)
 		sysfatal("initdrw: chancreate");
 }

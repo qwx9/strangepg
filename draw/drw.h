@@ -31,6 +31,8 @@ enum{
 	DFnope = 1<<7,
 	DF3d = 1<<8,
 	DFnoalpha = 1<<9,
+	DFnodraw = 1<<10,
+	DFnorend = 1<<11,
 };
 struct Drawing{
 	int flags;
@@ -157,6 +159,8 @@ enum{
 	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
+	Reqthaw = 1<<28,		/* revert communication to standard */
+	Reqfreeze = 1<<29,		/* ignore all orders until signaled */
 	Reqsleep = 1<<30,		/* force renderer to wait for events */
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
@@ -167,6 +171,8 @@ void	resizenodes(void);
 void	setnodeshape(int);
 void	updatedraw(void);
 void	wakedrawup(void);
+void	thawdraw(void);
+void	freezedraw(void);
 void	waitforit(void);
 void	reqdraw(int);
 void	initcol(void);

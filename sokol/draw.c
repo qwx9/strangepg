@@ -31,7 +31,7 @@
 #include "threads.h"
 #include "cmd.h"
 
-extern Channel *rendc;
+extern Channel *rendc, *ctlc;
 
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
@@ -249,6 +249,34 @@ updatebuffers(void)
 	}
 }
 
+static void
+resizebuf(void)
+{
+	ssize n;
+	sg_buffer_desc d;
+
+	n = dylen(redges);
+	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
+	if(d.size / sizeof *redges != n){
+		warn("redges: %d → %zd\n", d.size/sizeof *redges, n);
+		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
+		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+			.size = dylen(redges) * sizeof *redges,
+			.usage = SG_USAGE_STREAM,
+		});
+	}
+	n = dylen(rnodes);
+	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
+	if(d.size / sizeof *rnodes != n){
+		warn("rnodes: %d → %zd\n", d.size/sizeof *rnodes, n);
+		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
+		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+			.size = n * sizeof *rnodes,
+			.usage = SG_USAGE_STREAM,
+		});
+	}
+}
+
 /* FIXME: individual nodes */
 void
 updatenode(ioff id)
@@ -303,6 +331,16 @@ frame(void)
 	static vlong t0;
 
 	if((r = nbrecvul(rendc)) != 0){
+		if(r & Reqfreeze){
+			sendul(ctlc, DFnorend);
+			drawing.flags |= DFnorend;
+		}
+		if(r & Reqthaw){
+			resizebuf();
+			drawing.flags &= ~DFnorend;
+		}
+		if(drawing.flags & DFnorend)
+			return;
 		if(r & Reqstop){
 			sapp_input_wait(true);
 			return;
