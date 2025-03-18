@@ -134,27 +134,15 @@ opencomms(void)
 	for(c=txc, i=0; i<nlaythreads; i++, c++)
 		if((*c = chancreate(sizeof(Layout*), 0)) == nil)
 			sysfatal("chancreate: %s", error());
-	if((rxc = chancreate(sizeof(ulong), 8)) == nil)
-		sysfatal("chancreate: %s", error());
 	newthread(sac, nil, nil, nil, "sac", mainstacksize);
 	for(c=txc, i=0; i<nlaythreads; i++, c++)
 		newthread(wing, nil, (void*)(intptr)i, nil, "wing", mainstacksize);
 }
 
-/* FIXME: silly */
+/* will queue events while layouting hasn't been initialized */
 int
 reqlayout(int type)
 {
-	Layout *l;
-
-	/* FIXME: unclear why, but the very first layout, the automatic
-	 * one is always shitty and off-center */
-	if(rxc == nil)
-		opencomms();
-	if((l = graph.layout) == nil || l->target == nil){
-		werrstr("layout not initialized");
-		return -1;
-	}
 	switch(type){
 	case Lstop:
 		break;
@@ -184,6 +172,7 @@ newlayout(int type)
 	if((l = graph.layout) != nil)
 		l->ref--;
 	l = emalloc(sizeof *l);
+	graph.layout = l;
 	l->ref = 1;
 	if(type < 0){
 		if(deflayout < 0)
@@ -194,12 +183,13 @@ newlayout(int type)
 	if(type == LLpfr3d)
 		drawing.flags |= DF3d;
 	l->target = ttab[type];
+	if(txc == nil)
+		opencomms();
 	/* guarantees initialized state for deferred loading */
 	if(!gottagofast){
 		if(l->scratch == nil && l->target->init != nil)
 			l->scratch = l->target->init();
 	}
-	graph.layout = l;
 	return 0;
 }
 
@@ -208,4 +198,6 @@ initlayout(void)
 {
 	ttab[LLpfr] = regpfr();
 	ttab[LLpfr3d] = regpfr3d();
+	if((rxc = chancreate(sizeof(ulong), 8)) == nil)
+		sysfatal("chancreate: %s", error());
 }
