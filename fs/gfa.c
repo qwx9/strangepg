@@ -45,6 +45,7 @@ readnodetags(Aux *a, File *f)
 		if(readline(f) == nil)
 			sysfatal("readnodetags: %s", error());
 		while((s = nextfield(f)) != nil){
+			DPRINT(Debugmeta, "readnodetags: [%d] %s", id, s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
 				warn("invalid segment tag \"%s\"\n", s);
 				if(nerr++ > 10){
@@ -81,6 +82,7 @@ readedgetags(Aux *a, File *f)
 		if(strcmp(s, "*") != 0)
 			settag("cigar", id, s, 1);
 		while((s = nextfield(f)) != nil){
+			DPRINT(Debugmeta, "readedgetags: [%d] %s", id, s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
 				warn("invalid edge tag \"%s\"\n", s);
 				if(nerr++ > 10){
@@ -254,8 +256,8 @@ readnode(Aux *a, File *f)
 		off = f->foff;
 	else
 		off = -1;
-	dyinsert(a->nodeoff, id, off);
-	dyinsert(a->length, id, w);
+	dypushat(a->nodeoff, id, off);
+	dypushat(a->length, id, w);
 	return r;
 }
 
@@ -305,8 +307,8 @@ readedge(Aux *a, File *f)
 		fld[0], *fld[1], fld[2], *fld[3],
 		u, i?'-':'+', v, j?'-':'+');
 	dypush(a->edgeoff, off);
-	x = u > v ? u : v;
-	dyresize(a->degree, x+1);
+	x = MAX(u, v);
+	dygrow(a->degree, x);
 	a->degree[u]++;
 	if(v != u){
 		a->degree[v]++;
@@ -371,7 +373,7 @@ readgfa(Aux *a, File *f)
 		return -1;
 	}
 	if(dylen(a->nodeoff) < a->nnodes){	/* the reverse is fine */
-		werrstr("missing S lines: links reference non-existent segments");
+		werrstr("missing S lines: links reference non-existent segments %d != %d", dylen(a->nodeoff), a->nnodes);
 		return -1;
 	}
 	assert(dylen(a->degree) <= a->nnodes);

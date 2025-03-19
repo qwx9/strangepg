@@ -146,7 +146,7 @@ GETPAGE(EM *em, ssize off)
 			dypush(banks, bank);
 			qunlock(&elock);
 			qlock(&em->l);
-			dyinsert(em->banks, i, bank);
+			dypushat(em->banks, i, bank);
 			qunlock(&em->l);
 			new = 1;
 		}else if((p = bank->pt[PAGE(off)]) == nil)

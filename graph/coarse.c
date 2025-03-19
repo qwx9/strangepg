@@ -216,10 +216,10 @@ coarsen(void)
 	DPRINT(Debugcoarse, "coarsen: %d → %zd nodes, %d → %d (%d) edges",
 		dylen(rnodes), p-nodes, dylen(redges), ne, off);
 	x = p - nodes;
-	dyshrink(nodes, x);
-	dyshrink(rnodes, x);
-	dyshrink(edges, off);
-	dyshrink(redges, ne);
+	dyresize(nodes, x);
+	dyresize(rnodes, x);
+	dyresize(edges, off);
+	dyresize(redges, ne);
 	/* reassign edges */
 	DPRINT(Debugcoarse, "coarsen: redistribute power");
 	kh_foreach(eset, k){
