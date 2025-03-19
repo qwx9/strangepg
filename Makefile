@@ -59,7 +59,7 @@ CFLAGS?= -O3 -pipe -march=native
 # such as omitting parameter names in function definitions
 # gnu designator: plan9 extension: struct dicks = {[enum1] {..}, [enum2] {..}}
 CFLAGS+= -std=c11
-CFLAGS+= -Wall -Wformat=2 -Wunused  -Wno-parentheses -Wno-unknown-pragmas -Winline
+CFLAGS+= -Wall -Wformat=2 -Wunused -Wno-parentheses -Wno-unknown-pragmas
 ifdef DEBUG
 	ifdef ASAN
 		CFLAGS+= -O1 -fsanitize=address -fsanitize=leak -fsanitize=undefined
@@ -68,16 +68,17 @@ ifdef DEBUG
 	else
 		CFLAGS+= -O0
 	endif
+	CFLAGS+= -DSOKOL_DEBUG
 	CFLAGS+= -fasynchronous-unwind-tables
 	CFLAGS+= -fstack-clash-protection -fstack-protector-strong
 	ifeq ($(CC), clang)
 		export LLVM_PROFILE_FILE:= ./llvm_%p.prof
 		CFLAGS+= -glldb -fprofile-instr-generate -fcoverage-mapping \
-				 -Wno-c23-extensions
+				 -Wno-c2x-extensions -Wno-cast-align
 	else
-		CFLAGS+= -ggdb -Wno-suggest-attribute=format
+		CFLAGS+= -ggdb -Wno-suggest-attribute=format -Wno-inline
 	endif
-	CFLAGS+= -Wcast-align -Wdisabled-optimization -Winit-self \
+	CFLAGS+= -Wdisabled-optimization -Winit-self \
 			 -Winvalid-pch -Wmissing-format-attribute -Wpacked \
 			 -Wredundant-decls -Wshadow -Wstack-protector \
 			 -Wvariadic-macros
