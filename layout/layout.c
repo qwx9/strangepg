@@ -57,7 +57,7 @@ sac(void *)
 	nidle = 0;
 	l = nil;
 	for(;;){
-		if((x = recvul(rxc)) == 0)	/* FIXME: just use recv instead of +1 */
+		if((x = recvul(rxc)) == 0)
 			break;
 		x--;
 		l = graph.layout;
@@ -198,6 +198,6 @@ initlayout(void)
 {
 	ttab[LLpfr] = regpfr();
 	ttab[LLpfr3d] = regpfr3d();
-	if((rxc = chancreate(sizeof(ulong), 8)) == nil)
+	if((rxc = chancreate(sizeof(ulong), 1)) == nil)
 		sysfatal("chancreate: %s", error());
 }

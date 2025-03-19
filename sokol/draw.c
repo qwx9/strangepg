@@ -320,30 +320,27 @@ renderscene(void)
 void
 wakedrawup(void)
 {
+	/* FIXME: yes, but there are no events pending */
 	sapp_wakethefup();
 }
 
 void
 frame(void)
 {
-	int r;
+	int f, r;
 	vlong t;
 	static vlong t0;
 
-	if((r = nbrecvul(rendc)) != 0){
-		if(r & Reqfreeze){
-			sendul(ctlc, DFnorend);
-			drawing.flags |= DFnorend;
-		}
+	r = 0;
+	while((f = nbrecvul(rendc)) != 0)
+		r |= f;
+	if(r != 0){
 		if(r & Reqthaw){
 			resizebuf();
 			drawing.flags &= ~DFnorend;
-		}
-		if(drawing.flags & DFnorend)
-			return;
-		if(r & Reqstop){
-			sapp_input_wait(true);
-			return;
+		}else if(r & Reqfreeze){	/* FIXME: race */
+			sendul(ctlc, DFnorend);
+			drawing.flags |= DFnorend;
 		}
 		if(r & Reqresetdraw){
 			resize();
@@ -368,11 +365,13 @@ frame(void)
 				t0 = t;
 			}
 		}
-		if(r & (Reqrefresh | Reqredraw))
+		if((drawing.flags & DFnorend) == 0 && r & (Reqrefresh | Reqredraw))
 			updatebuffers();
-		if(r & Reqsleep)
+		if(r & (Reqstop|Reqsleep))
 			sapp_input_wait(true);
 	}
+	if(drawing.flags & DFnorend)
+		return;
 	renderscene();
 	render.caching = 0;
 	if(graph.flags & GFdrawme)

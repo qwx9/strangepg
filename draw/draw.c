@@ -55,10 +55,7 @@ drawedges(void)
 
 	r = redges;
 	x = dylen(redges);
-	if(dylen(vedges) < x)
-		dyresize(vedges, x);
-	else if(dylen(vedges) > x)
-		dyshrink(vedges, x);
+	dyresize(vedges, x);
 	for(id=eid=0, u=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, u++, id++){
 		for(e=edges+n->eoff, ee=e+n->nedges; e<ee; e++){
 			x = *e;
@@ -208,15 +205,15 @@ drawproc(void *)
 	for(;;){
 		if((r = recvul(drawc)) == 0)
 			break;
-		if(r & Reqthaw)
+		if(r & Reqthaw){
 			drawing.flags &= ~DFnodraw;
-		if(drawing.flags & DFnodraw)
-			continue;
-		if(r & Reqfreeze){
+			reqdraw(Reqrefresh);
+		}else if(r & Reqfreeze){
 			sendul(ctlc, DFnodraw);
 			drawing.flags |= DFnodraw;
-			continue;
 		}
+		if(drawing.flags & DFnodraw)
+			continue;
 		if(r & Reqstop){
 			go = 0;
 			continue;
@@ -241,6 +238,7 @@ freezedraw(void)
 void
 thawdraw(void)
 {
+	reqdraw(Reqrefresh);
 	reqdraw(Reqthaw);
 	reqlayout(Lstart);
 }
@@ -260,7 +258,7 @@ reqdraw(int r)
 {
 	static ulong df, rf;
 
-	DPRINT(Debugdraw, "reqdraw %#x", r);
+	DPRINT(Debugdraw, "reqdraw %#x df %#x rf %#x ", r, df, rf);
 	switch(r){
 	case Reqfreeze:
 	case Reqthaw:
@@ -270,7 +268,7 @@ reqdraw(int r)
 	case Reqredraw:
 		wakedrawup();
 		df |= r;
-		if(nbsendul(drawc, df) != 0)
+		if(nbsendul(drawc, df) == 1)
 			df = 0;
 		/* wet floor */
 	case Reqresetdraw:
@@ -280,7 +278,7 @@ reqdraw(int r)
 	case Reqshape:
 	case Reqsleep:
 		rf |= r;
-		if(nbsendul(rendc, rf) != 0)
+		if(nbsendul(rendc, rf) == 1)
 			rf = 0;
 		break;
 	default:
@@ -303,8 +301,8 @@ initdrw(void)
 	settheme();
 	initcol();
 	/* FIXME: this chan implementation SUCKS */
-	if((drawc = chancreate(sizeof(ulong), 16)) == nil
-	|| (rendc = chancreate(sizeof(ulong), 16)) == nil
+	if((drawc = chancreate(sizeof(ulong), 1)) == nil
+	|| (rendc = chancreate(sizeof(ulong), 1)) == nil
 	|| (ctlc = chancreate(sizeof(ulong), 2)) == nil)
 		sysfatal("initdrw: chancreate");
 }
