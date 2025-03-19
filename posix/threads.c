@@ -129,9 +129,7 @@ sendul(Channel *c, ulong n)
 	uintptr v;
 
 	v = (uintptr)n;
-	if(chan_send(c, (void*)v) < 0)
-		return -1;
-	return 0;
+	return chan_send(c, (void*)v);
 }
 
 void *
@@ -150,16 +148,14 @@ recvul(Channel *c)
 	uintptr v;
 
 	if(chan_recv(c, (void **)&v) < 0)
-		return 0;
+		return -1;
 	return (ulong)v;
 }
 
 int
 nbsendp(Channel *c, void *p)
 {
-	if(chan_select(nil, 0, nil, &c, 1, &p) < 0)
-		return 0;
-	return 1;
+	return chan_nbsend(c, p);
 }
 
 int
@@ -168,17 +164,16 @@ nbsendul(Channel *c, ulong n)
 	uintptr v;
 
 	v = (uintptr)n;
-	if(chan_select(nil, 0, nil, &c, 1, (void**)&v) < 0)
-		return 0;
-	return 1;
+	return chan_nbsend(c, (void *)v);
 }
 
 ulong
 nbrecvul(Channel *c)
 {
+	int r;
 	uintptr v;
 
-	if(chan_select(&c, 1, (void **)&v, nil, 0, nil) < 0)
+	if((r = chan_nbrecv(c, (void **)&v)) <= 0)
 		return 0;
 	return (ulong)v;
 }
@@ -186,9 +181,10 @@ nbrecvul(Channel *c)
 void*
 nbrecvp(Channel *c)
 {
+	int r;
 	void *p;
 
-	if(chan_select(&c, 1, &p, nil, 0, nil) < 0)
+	if((r = chan_nbrecv(c, &p)) <= 0)
 		return nil;
 	return p;
 }

@@ -56,10 +56,12 @@ int chan_is_closed(chan_t* chan);
 // capacity, this will block until a receiver receives a value. Returns 0 if
 // the send succeeded or -1 if it failed.
 int chan_send(chan_t* chan, void* data);
+int chan_nbsend(chan_t* chan, void* data);
 
 // Receives a value from the channel. This will block until there is data to
 // receive. Returns 0 if the receive succeeded or -1 if it failed.
 int chan_recv(chan_t* chan, void** data);
+int chan_nbrecv(chan_t* chan, void** data);
 
 // Returns the number of items in the channel buffer. If the channel is
 // unbuffered, this will return 0.
@@ -74,6 +76,9 @@ int chan_size(chan_t* chan);
 // the case of a send, the value at the same index as the channel will be sent.
 int chan_select(chan_t* recv_chans[], int recv_count, void** recv_out,
     chan_t* send_chans[], int send_count, void* send_msgs[]);
+
+int chan_sendp(chan_t*, void*);
+int chan_recvp(chan_t*, void*);
 
 // Typed interface to send/recv chan.
 int chan_send_int32(chan_t*, int32_t);

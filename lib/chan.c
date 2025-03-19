@@ -32,10 +32,14 @@ uint32_t	xnrand(uint32_t);
 static int buffered_chan_init(chan_t* chan, size_t capacity);
 static int buffered_chan_send(chan_t* chan, void* data);
 static int buffered_chan_recv(chan_t* chan, void** data);
+static int buffered_chan_nbsend(chan_t* chan, void* data);
+static int buffered_chan_nbrecv(chan_t* chan, void** data);
 
 static int unbuffered_chan_init(chan_t* chan);
 static int unbuffered_chan_send(chan_t* chan, void* data);
 static int unbuffered_chan_recv(chan_t* chan, void** data);
+static int unbuffered_chan_nbsend(chan_t* chan, void* data);
+static int unbuffered_chan_nbrecv(chan_t* chan, void** data);
 
 static int chan_can_recv(chan_t* chan);
 static int chan_can_send(chan_t* chan);
@@ -221,6 +225,20 @@ int chan_send(chan_t* chan, void* data)
         unbuffered_chan_send(chan, data);
 }
 
+int chan_nbsend(chan_t* chan, void* data)
+{
+    if (chan_is_closed(chan))
+    {
+        // Cannot send on closed channel.
+        errno = EPIPE;
+        return -1;
+    }
+
+    return chan_is_buffered(chan) ?
+        buffered_chan_nbsend(chan, data) :
+        unbuffered_chan_nbsend(chan, data);
+}
+
 // Receives a value from the channel. This will block until there is data to
 // receive. Returns 0 if the receive succeeded or -1 if it failed. If -1 is
 // returned, errno will be set.
@@ -229,6 +247,25 @@ int chan_recv(chan_t* chan, void** data)
     return chan_is_buffered(chan) ?
         buffered_chan_recv(chan, data) :
         unbuffered_chan_recv(chan, data);
+}
+
+int chan_nbrecv(chan_t* chan, void** data)
+{
+    return chan_is_buffered(chan) ?
+        buffered_chan_nbrecv(chan, data) :
+        unbuffered_chan_nbrecv(chan, data);
+}
+
+static int buffered_chan_nbsend(chan_t* chan, void* data)
+{
+	int sz;
+
+    pthread_mutex_lock(&chan->m_mu);
+    sz = chan->queue->size;
+    pthread_mutex_unlock(&chan->m_mu);
+	if(sz >= chan->queue->capacity)
+		return 0;
+	return buffered_chan_send(chan, data);
 }
 
 static int buffered_chan_send(chan_t* chan, void* data)
@@ -242,7 +279,11 @@ static int buffered_chan_send(chan_t* chan, void* data)
         chan->w_waiting--;
     }
 
-    int success = queue_add(chan->queue, data);
+	int success;
+    if((success = queue_add(chan->queue, data)) < 0)	// ????
+    	success = 0;
+    else
+    	success = 1;
 
     if (chan->r_waiting > 0)
     {
@@ -252,6 +293,18 @@ static int buffered_chan_send(chan_t* chan, void* data)
 
     pthread_mutex_unlock(&chan->m_mu);
     return success;
+}
+
+static int buffered_chan_nbrecv(chan_t* chan, void** data)
+{
+	int sz;
+
+    pthread_mutex_lock(&chan->m_mu);
+    sz = chan->queue->size;
+    pthread_mutex_unlock(&chan->m_mu);
+	if (sz == 0)
+		return 0;
+	return buffered_chan_recv(chan, data);
 }
 
 static int buffered_chan_recv(chan_t* chan, void** data)
@@ -285,7 +338,19 @@ static int buffered_chan_recv(chan_t* chan, void** data)
     }
 
     pthread_mutex_unlock(&chan->m_mu);
-    return 0;
+    return 1;
+}
+
+static int unbuffered_chan_nbsend(chan_t* chan, void* data)
+{
+	void *p;
+
+    pthread_mutex_lock(&chan->m_mu);
+    p = chan->data;
+    pthread_mutex_unlock(&chan->m_mu);
+	if (p != NULL)
+		return 0;
+	return unbuffered_chan_send(chan, data);
 }
 
 static int unbuffered_chan_send(chan_t* chan, void* data)
@@ -315,7 +380,19 @@ static int unbuffered_chan_send(chan_t* chan, void* data)
 
     pthread_mutex_unlock(&chan->m_mu);
     pthread_mutex_unlock(&chan->w_mu);
-    return 0;
+    return 1;
+}
+
+static int unbuffered_chan_nbrecv(chan_t* chan, void** data)
+{
+	void *p;
+
+    pthread_mutex_lock(&chan->m_mu);
+    p = chan->data;
+    pthread_mutex_unlock(&chan->m_mu);
+	if(p == NULL)
+		return 0;
+	return unbuffered_chan_recv(chan, data);
 }
 
 static int unbuffered_chan_recv(chan_t* chan, void** data)
@@ -342,6 +419,7 @@ static int unbuffered_chan_recv(chan_t* chan, void** data)
     if (data)
     {
         *data = chan->data;
+        chan->data = NULL;
     }
     chan->w_waiting--;
 
@@ -350,7 +428,7 @@ static int unbuffered_chan_recv(chan_t* chan, void** data)
 
     pthread_mutex_unlock(&chan->m_mu);
     pthread_mutex_unlock(&chan->r_mu);
-    return 0;
+    return 1;
 }
 
 // Returns the number of items in the channel buffer. If the channel is
@@ -436,6 +514,7 @@ int chan_select(chan_t* recv_chans[], int recv_count, void** recv_out,
     select_op_t select = candidates[rand() % count];
     */
 
+	/* fuck you. seriously. */
     select_op_t select = candidates[xnrand(count)];
     if (select.recv && chan_recv(select.chan, recv_out) != 0)
     {
@@ -447,6 +526,20 @@ int chan_select(chan_t* recv_chans[], int recv_count, void** recv_out,
     }
 
     return select.index;
+}
+
+int chan_sendp(chan_t *c, void *p)
+{
+	if(chan_send(c, p) != 0)
+		return -1;
+	return 0;
+}
+
+int chan_recvp(chan_t *c, void *p)
+{
+	if(chan_recv(c, p) != 0)
+		return -1;
+	return 0;
 }
 
 static int chan_can_recv(chan_t* chan)
