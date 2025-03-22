@@ -2,38 +2,4 @@
 
 /* FIXME: fuck */
 
-int epfd[2];
-int haxx0rz;
-
-u32int
-col2int(Color *)
-{
-	return -1ULL;
-}
-
-void
-pushcmd(char *, ...)
-{
-}
-
-Color *
-somecolor(Graph*)
-{
-	return nil;
-}
-
-void
-somepalette(Graph*)
-{
-}
-
-void
-haltlayout(Graph*)
-{
-}
-
-int
-newlayout(Graph*, int)
-{
-	return -1;
-}
+int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
