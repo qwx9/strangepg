@@ -119,7 +119,7 @@ worldpandraw(float x, float y)
 void
 pandraw(float Δx, float Δy)
 {
-	HMM_Vec4 vw;	
+	HMM_Vec4 vw;
 	HMM_Mat4 rot;
 
 	if((drawing.flags & DF3d) == 0){
@@ -133,16 +133,18 @@ pandraw(float Δx, float Δy)
 		view.eye.y -= Δy;
 		updateview();
 	}else{
-		Δx *= HMM_DegToRad * 0.5f;
-		Δy *= HMM_DegToRad * 0.5f;
+		Δx *= HMM_DegToRad * 0.2f;
+		Δy *= HMM_DegToRad * 0.2f;
 		rot = HMM_MulM4(
-			HMM_Rotate_RH(Δy, HMM_V3(1.0f, 0.0f, 0.0f)),
-			HMM_Rotate_RH(Δx, HMM_V3(0.0f, 1.0f, 0.0f))
+			HMM_Rotate_RH(Δy, HMM_V3(view.right.x, view.right.y, view.right.z)),
+			HMM_Rotate_RH(Δx, HMM_V3(view.up.x, view.up.y, view.up.z))
 		);
 		vw = HMM_MulM4V4(rot, HMM_V4(view.eye.x, view.eye.y, view.eye.z, 1.0f));
 		view.eye = V(vw.X, vw.Y, vw.Z);
 		vw = HMM_MulM4V4(rot, HMM_V4(view.up.x, view.up.y, view.up.z, 1.0f));
 		view.up = V(vw.X, vw.Y, vw.Z);
+		vw = HMM_MulM4V4(rot, HMM_V4(view.right.x, view.right.y, view.right.z, 1.0f));
+		view.right = V(vw.X, vw.Y, vw.Z);
 		updateview();
 	}
 }

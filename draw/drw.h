@@ -117,6 +117,7 @@ struct View{
 	Vertex eye;
 	Vertex center;
 	Vertex up;
+	Vertex right;
 	Vertex Δeye;
 	Vertex pan;
 	double zoom;

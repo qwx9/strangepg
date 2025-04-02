@@ -438,6 +438,7 @@ resetui(void)
 	view.φ = 0.0f;
 	view.eye = V(0.0f, 0.0f, 100.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
+	view.right = V(1.0f, 0.0f, 0.0f);
 	view.Δeye = subv(view.eye, view.center);
 	view.pan = ZV;
 	view.zoom = 1.0;
