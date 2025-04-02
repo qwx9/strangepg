@@ -227,7 +227,7 @@ setupnodes(int threedee)
 					.buffer_index = 1,
 				},
 				[ATTR_node_s_dir] = {
-					.format = SG_VERTEXFORMAT_FLOAT3,
+					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
 				[ATTR_node_s_col] = {
@@ -290,7 +290,7 @@ setupnodes(int threedee)
 				},
 				[ATTR_node_idx_dir] = {
 					.offset = offsetof(RNode, dir),
-					.format = SG_VERTEXFORMAT_FLOAT3,
+					.format = SG_VERTEXFORMAT_FLOAT4,
 					.buffer_index = 1,
 				},
 				[ATTR_node_idx_len] = {

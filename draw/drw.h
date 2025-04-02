@@ -48,7 +48,7 @@ extern Drawing drawing;
 /* FIXME: later, vertices or HMM vectors? also, alignment */
 struct RNode{
 	float pos[3];
-	float dir[3];
+	float dir[4];
 	float col[4];
 	float len;
 };

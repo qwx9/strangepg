@@ -10,7 +10,7 @@ layout(binding=0) uniform Vparam {
 };
 in vec2 geom;
 in vec3 pos;
-in vec3 dir;
+in vec4 dir;
 in vec4 col;
 in float len;
 out vec4 c;
@@ -48,7 +48,7 @@ layout(binding=0) uniform Vparam {
 };
 in vec2 geom;
 in vec3 pos;
-in vec3 dir;
+in vec4 dir;
 in float len;
 flat out uint idx;
 
@@ -85,22 +85,23 @@ layout(binding=0) uniform Vparam {
 };
 in vec3 geom;
 in vec3 pos;
-in vec3 dir;
+in vec4 dir;
 in vec4 col;
 in float len;
 out vec4 c;
 out flat uint ci;
 
-vec3 rotate(vec3 v, float c, float s){
+vec3 rotate(vec3 v, float c, float s, float t, float w){
 	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
-		* mat3(c, 0, -s, 0, 1, 0, s, 0, c)
-		* mat3(1, 0, 0, 0, c, s, 0, -s, c)
+		* mat3(1, 0, 0, 0, t, w, 0, -w, t)
+		//* mat3(t, 0, -w, 0, 1, 0, w, 0, t)
 		* v;
 }
 
 void main(){
 	vec3 g = geom * vec3(len, 1.0, 1.0);
-	vec3 r = rotate(g, dir.x, dir.y);
+	vec3 r0 = rotate(g, dir.x, dir.y, dir.z, dir.w);
+	vec3 r = r0;
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	c = col;
 	ci = gl_VertexIndex / 2;
@@ -130,20 +131,21 @@ layout(binding=0) uniform Vparam {
 };
 in vec3 geom;
 in vec3 pos;
-in vec3 dir;
+in vec4 dir;
 in float len;
 flat out uint idx;
 
-vec3 rotate(vec3 v, float c, float s){
+vec3 rotate(vec3 v, float c, float s, float t, float w){
 	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
-		* mat3(c, 0, -s, 0, 1, 0, s, 0, c)
-		* mat3(1, 0, 0, 0, c, s, 0, -s, c)
+		* mat3(1, 0, 0, 0, t, w, 0, -w, t)
+		//* mat3(t, 0, -w, 0, 1, 0, w, 0, t)
 		* v;
 }
 
 void main(){
 	vec3 g = geom * vec3(len, 1.0, 1.0);
-	vec3 r = rotate(g, dir.x, dir.y);
+	vec3 r0 = rotate(g, dir.x, dir.y, dir.z, dir.w);
+	vec3 r = r0;
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	idx = gl_InstanceIndex + 1;
 }

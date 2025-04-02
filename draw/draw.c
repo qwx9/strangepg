@@ -5,6 +5,7 @@
 #include "threads.h"
 #include "cmd.h"
 #include "layout.h"
+#include "../lib/HandmadeMath.h"
 
 View view;
 RNode *rnodes;
@@ -24,13 +25,13 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 
 	du.x = u->dir[0];
 	du.y = u->dir[1];
-	du.z = u->dir[2];
+	du.z = 0.0f;
 	p1.x = u->pos[0];
 	p1.y = u->pos[1];
 	p1.z = u->pos[2];
 	dv.x = v->dir[0];
 	dv.y = v->dir[1];
-	dv.z = v->dir[2];
+	dv.z = 0.0f;
 	p2.x = v->pos[0];
 	p2.y = v->pos[1];
 	p2.z = v->pos[2];
@@ -103,6 +104,7 @@ resizenodes(void)
 static inline void
 faceyourfears(RNode *ru, Node *u)
 {
+	int n;
 	float x, y, z, Δ, Δx, Δy, Δz;
 	float θ, c, s, t;
 	ioff *i, *ie;
@@ -115,6 +117,7 @@ faceyourfears(RNode *ru, Node *u)
 	y = ru->pos[1];
 	z = ru->pos[2];
 	c = s = t = 0.0f;
+	n = 0;
 	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
@@ -131,18 +134,22 @@ faceyourfears(RNode *ru, Node *u)
 		}
 		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
 		c += Δx / Δ;
-		//s += (Δy + Δz) / Δ;
 		s += Δy / Δ;
 		t += Δz / Δ;
+		n++;
 	}
-	/* FIXME: 3d edge rotation is wrong as well, we need two angles */
-	θ = fmodf(atan2f(s, c), 2.0f*(float)PI);
+	if(n == 0)
+		n = 1;
+	Δx /= n;
+	Δy /= n;
+	Δz /= n;
+	θ = fmodf(atan2f(s, c), 2.0f * (float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);
-	//θ = sqrtf(c * c + s * s);
-	//θ = fmodf(atan2f(t, θ), 2.0f * (float)PI);
-	//ru->dir[2] = cosf(θ);
-	ru->dir[2] = 0.0f;
+	θ = sqrtf(c * c + s * s);
+	θ = fmodf(atan2f(θ, t), 2.0f * (float)PI);
+	ru->dir[2] = cosf(θ);
+	ru->dir[3] = sinf(θ);
 }
 
 static intptr
