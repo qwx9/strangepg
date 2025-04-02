@@ -1,3 +1,4 @@
+void	printgraph(void);
 void	explode(ioff);
 int	coarsen(void);
 int	uncoarsen(void);
