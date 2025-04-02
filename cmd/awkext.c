@@ -46,7 +46,7 @@ struct Tab{
 static tabmap *map;
 static Tab *tabs;
 static RWLock tablock;
-static QLock buflock;
+static QLock buflock, symlock;
 
 /* FIXME: can replace with awk array and lookup */
 int
@@ -91,8 +91,13 @@ getarray(char *arr)
 	Array *a;
 	Value v = {.i = 0};
 
-	if((c = lookup(arr, symtab)) == nil){
+	qlock(&symlock);
+	c = lookup(arr, symtab);
+	qunlock(&symlock);
+	if(c == nil){
+		qlock(&symlock);
 		c = setsymtab(arr, nil, v, ARR, symtab);
+		qunlock(&symlock);
 		a = makesymtab(NSYMTAB);
 		c->sval = (char *)a;
 		c->tval |= ARR;
@@ -103,8 +108,11 @@ getarray(char *arr)
 		c->tval &= ~(STR|NUM|FLT|DONTFREE);
 		c->tval |= ARR;
 		c->sval = (char *)a;
-	}else
+	}else{
+		qlock(&symlock);
 		a = (Array *)c->sval;
+		qunlock(&symlock);
+	}
 	assert(a != nil);
 	return a;
 }
@@ -140,8 +148,13 @@ mkarray(int t)
 static inline Cell *
 getcell(char *lab, Array *a)
 {
+	Cell *c;
+
 	assert(a != nil);
-	return lookup(lab, a);
+	qlock(&symlock);
+	c = lookup(lab, a);
+	qunlock(&symlock);
+	return c;
 }
 
 static inline ioff
@@ -189,7 +202,9 @@ setstr(char *lab, char *s, Array *a, int *new)
 
 	if((c = getcell(lab, a)) == nil){
 		v.u = 0;
+		qlock(&symlock);
 		c = setsymtab(lab, nil, v, STR, a);
+		qunlock(&symlock);
 		if(new != nil)
 			*new = 1;
 	}else if(freeable(c))
@@ -206,7 +221,9 @@ setint(char *lab, s64int i, Array *a, int *new)
 
 	if((c = getcell(lab, a)) == nil){
 		v.i = i;
+		qlock(&symlock);
 		c = setsymtab(lab, nil, v, NUM, a);
+		qunlock(&symlock);
 		if(new != nil)
 			*new = 1;
 	}else
@@ -222,7 +239,9 @@ setfloat(char *lab, double f, Array *a, int *new)
 
 	if((c = getcell(lab, a)) == nil){
 		v.f = f;
+		qlock(&symlock);
 		c = setsymtab(lab, nil, v, NUM|FLT, a);
+		qunlock(&symlock);
 		if(new != nil)
 			*new = 1;
 	}else
@@ -487,14 +506,18 @@ fnexplode(Cell *x, TNode *nextarg)
 
 	if(nextarg == nil){
 		a = getarray("selected");
+		qlock(&symlock);
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){
+				qunlock(&symlock);
 				id = atoi(c->nval);
 				if((idx = getnodeidx(id)) < 0)
 					continue;
 				explode(idx);
+				qlock(&symlock);
 			}
 		}
+		qunlock(&symlock);
 		return nil;
 	}
 	for(;nextarg!=nil; nextarg=nextarg->nnext){
@@ -667,6 +690,7 @@ initext(void)
 	}, *pp;
 
 	initqlock(&buflock);
+	initqlock(&symlock);
 	initrwlock(&tablock);
 	map = tab_init();
 	for(pp=sptags; pp<sptags+nelem(sptags); pp++){
