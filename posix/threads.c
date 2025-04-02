@@ -119,7 +119,7 @@ initrwlock(RWLock *l)
 Channel *
 chancreate(int elsize, int nel)
 {
-	USED(elsize);
+	assert(elsize <= sizeof(void *));	/* fuck. you. */
 	return chan_init(nel);
 }
 
@@ -147,7 +147,7 @@ recvul(Channel *c)
 {
 	uintptr v;
 
-	if(chan_recv(c, (void **)&v) < 0)
+	if(chan_recv(c, (void **)&v) <= 0)
 		return -1;
 	return (ulong)v;
 }

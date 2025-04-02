@@ -260,9 +260,7 @@ static int buffered_chan_nbsend(chan_t* chan, void* data)
 {
 	int sz;
 
-    pthread_mutex_lock(&chan->m_mu);
     sz = chan->queue->size;
-    pthread_mutex_unlock(&chan->m_mu);
 	if(sz >= chan->queue->capacity)
 		return 0;
 	return buffered_chan_send(chan, data);
@@ -299,9 +297,7 @@ static int buffered_chan_nbrecv(chan_t* chan, void** data)
 {
 	int sz;
 
-    pthread_mutex_lock(&chan->m_mu);
     sz = chan->queue->size;
-    pthread_mutex_unlock(&chan->m_mu);
 	if (sz == 0)
 		return 0;
 	return buffered_chan_recv(chan, data);
@@ -309,6 +305,8 @@ static int buffered_chan_nbrecv(chan_t* chan, void** data)
 
 static int buffered_chan_recv(chan_t* chan, void** data)
 {
+	int r;
+
     pthread_mutex_lock(&chan->m_mu);
     while (chan->queue->size == 0)
     {
@@ -325,7 +323,10 @@ static int buffered_chan_recv(chan_t* chan, void** data)
         chan->r_waiting--;
     }
 
+	r = 1;
     void* msg = queue_remove(chan->queue);
+    if (msg == NULL)
+    	r = 0;
     if (data)
     {
         *data = msg;
@@ -338,16 +339,14 @@ static int buffered_chan_recv(chan_t* chan, void** data)
     }
 
     pthread_mutex_unlock(&chan->m_mu);
-    return 1;
+    return r;
 }
 
 static int unbuffered_chan_nbsend(chan_t* chan, void* data)
 {
 	void *p;
 
-    pthread_mutex_lock(&chan->m_mu);
     p = chan->data;
-    pthread_mutex_unlock(&chan->m_mu);
 	if (p != NULL)
 		return 0;
 	return unbuffered_chan_send(chan, data);
@@ -387,9 +386,7 @@ static int unbuffered_chan_nbrecv(chan_t* chan, void** data)
 {
 	void *p;
 
-    pthread_mutex_lock(&chan->m_mu);
     p = chan->data;
-    pthread_mutex_unlock(&chan->m_mu);
 	if(p == NULL)
 		return 0;
 	return unbuffered_chan_recv(chan, data);
