@@ -477,6 +477,7 @@ fnloadall(void)
 		}
 		/* FIXME: edges */
 	}
+	resizenodes();
 }
 
 static TNode *
