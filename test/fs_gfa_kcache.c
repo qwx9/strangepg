@@ -1,11 +1,8 @@
 #include "strpg.h"
 #include "fs.h"
-#include "threads.h"
-#include "../lib/khashl.h"
-#include "stubs.h"
 
-KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
-KHASHL_SET_INIT(KH_LOCAL, edgeset, edges, u64int, kh_hash_uint64, kh_eq_generic)
+KHASHL_CMAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
+KHASHL_CSET_INIT(KH_LOCAL, edgeset, edges, u64int, kh_hash_uint64, kh_eq_generic)
 
 typedef struct Aux Aux;
 struct Aux{
@@ -128,7 +125,6 @@ readnode(Aux *a, File *f)
 		r = -2;
 		w = 0;
 	}
-	USED(w);
 	return r;
 }
 
@@ -254,17 +250,11 @@ main(int argc, char **argv)
 	File *f;
 	Aux a = {0};
 
-	if(argc < 2)
+	if(argc != 2)
 		sysfatal("usage: %s GFA", argv[0]);
-	else if(argc > 2)
-		debug |= Debugfs | Debuggraph;
 	if((f = opengfa(&a, argv[1])) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
 	mkgraph(&a);
-	if(debug){
-		printgraph();
-		warn("%d nodes %d edges\n", a.nnodes, a.nedges);
-	}
 	freefs(f);
 	return 0;
 }

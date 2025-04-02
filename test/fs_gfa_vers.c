@@ -1,16 +1,19 @@
 #include "strpg.h"
 #include "fs.h"
-#include "threads.h"
-#include "../lib/khashl.h"
-#include "stubs.h"
 
-KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
-KHASHL_SET_INIT(KH_LOCAL, edgeset, edges, u64int, kh_hash_uint64, kh_eq_generic)
+#define	NAME	namemap
+#define	KEY_TY	char*
+#define	VAL_TY	ioff
+#include "../lib/verstable.h"
+#undef	VAL_TY
+#define	NAME	edgeset
+#define	KEY_TY	u64int
+#include "../lib/verstable.h"
 
 typedef struct Aux Aux;
 struct Aux{
-	namemap *names;
-	edgeset *edges;
+	namemap names;
+	edgeset edges;
 	ushort *degree;
 	ioff nnodes;
 	ioff nedges;
@@ -22,13 +25,11 @@ initedges(ioff nedges, edgeset *eset)
 	ioff off, x, u, v;
 	Node *n;
 	u64int e;
-	edgeset *h;
-	khint_t k;
+	edgeset_itr k;
 
 	dyresize(edges, nedges);
-	h = eset;
-	kh_foreach(h, k){
-		e = kh_key(h, k);
+	for(k=vt_first(eset); !vt_is_end(k); k=vt_next(k)){
+		e = k.data->key;
 		u = e >> 32 & 0x7fffffff;
 		v = e >> 2 & 0x3fffffff;
 		assert(u < dylen(nodes) && v < dylen(nodes));
@@ -68,34 +69,35 @@ initnodes(ioff nnodes, ushort *deg)
 static void
 mkgraph(Aux *a)
 {
-	khint_t k;
+	namemap_itr k;
 
 	initnodes(a->nnodes, a->degree);
+	for(k=vt_first(&a->names); !vt_is_end(k); k=vt_next(k)){
+		free((char *)k.data->key);
+		k.data->key = nil;
+	}
+	vt_clear(&a->names);	// or vt_cleanup?
 	dyfree(a->degree);
-	kh_foreach(a->names, k)
-		free(kh_key(a->names, k));
-	names_destroy(a->names);
-	initedges(a->nedges, a->edges);
-	edges_destroy(a->edges);
+	initedges(a->nedges, &a->edges);
+	vt_clear(&a->edges);
 }
 
 static ioff
 pushnode(Aux *a, char *s, int *abs)
 {
 	ioff id;
-	khint_t k;
-	namemap *h;
+	namemap_itr k;
 
-	h = a->names;
-	k = names_put(h, s, abs);
-	if(*abs){
+	k = vt_get(&a->names, s);
+	if(vt_is_end(k)){
 		id = a->nnodes++;
 		s = estrdup(s);
-		kh_key(h, k) = s;
-		kh_val(h, k) = id;
+		k = vt_insert(&a->names, s, id);
+		if(vt_is_end(k))
+			sysfatal("pushnode %s: out of memory", s);
 		DPRINT(Debugfs, "node \"%s\" → %d", s, id);
 	}else
-		id = kh_val(h, k);
+		id = k.data->val;
 	return id;
 }
 
@@ -128,7 +130,6 @@ readnode(Aux *a, File *f)
 		r = -2;
 		w = 0;
 	}
-	USED(w);
 	return r;
 }
 
@@ -140,6 +141,7 @@ readedge(Aux *a, File *f)
 	ioff x, u, v;
 	u64int id;
 	char *s, *fld[4], **fp;
+	edgeset_itr k;
 
 	for(fp=fld; fp<fld+nelem(fld); fp++){
 		if((s = nextfield(f)) == nil){
@@ -163,12 +165,14 @@ readedge(Aux *a, File *f)
 		id = (u64int)v << 32 | u << 2 | (i << 1 | j) ^ 3;
 	else
 		id = (u64int)u << 32 | v << 2 | j << 1 | i;
-	/* guard against duplicate records */
-	edges_put(a->edges, id, &abs);
-	if(!abs){
+	k = vt_get(&a->edges, id);
+	if(!vt_is_end(k)){
 		werrstr("duplicate edge, ignored");
 		return -1;
 	}
+	k = vt_insert(&a->edges, id);
+	if(vt_is_end(k))
+		sysfatal("readedge: out of memory");
 	DPRINT(Debugfs, "edge \"%s%c,%s%c\" → %d%c%d%c",
 		fld[0], *fld[1], fld[2], *fld[3],
 		u, i?'-':'+', v, j?'-':'+');
@@ -243,8 +247,8 @@ opengfa(Aux *a, char *path)
 
 	if((f = openfs(path, OREAD)) == nil)
 		return nil;
-	a->names = names_init();
-	a->edges = edges_init();
+	vt_init(&a->names);
+	vt_init(&a->edges);
 	return f;
 }
 
@@ -254,17 +258,11 @@ main(int argc, char **argv)
 	File *f;
 	Aux a = {0};
 
-	if(argc < 2)
+	if(argc != 2)
 		sysfatal("usage: %s GFA", argv[0]);
-	else if(argc > 2)
-		debug |= Debugfs | Debuggraph;
 	if((f = opengfa(&a, argv[1])) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
 	mkgraph(&a);
-	if(debug){
-		printgraph();
-		warn("%d nodes %d edges\n", a.nnodes, a.nedges);
-	}
 	freefs(f);
 	return 0;
 }

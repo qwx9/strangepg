@@ -39,7 +39,7 @@ main(int, char **)
 
 	initem();
 	path = touch(Pagesz);	// next test: maxgreed then beyond
-	if((em = emopen(path)) == nil)
+	if((em = emopen(path)) < 0)
 		sysfatal("emopen: %s", error());
 	emw64(em, Pagesz/8, 0xdeadbeefcafebabeULL);
 	if(emr64(em, Pagesz/8) != 0xdeadbeefcafebabeULL)
@@ -47,6 +47,5 @@ main(int, char **)
 	emclose(em);
 	assert(access(path, AEXIST) == 0);
 	remove(path);
-	sysquit();
 	return 0;
 }

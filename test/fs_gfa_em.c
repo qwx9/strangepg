@@ -1,9 +1,24 @@
 #include "strpg.h"
 #include "fs.h"
+#include "em.h"
 #include "threads.h"
 #include "../lib/khashl.h"
-#include "stubs.h"
 
+void	printgraph(void);
+
+static EM enodes, eedges;
+
+static inline int
+kh_eq_emstr(char *a, char *b)
+{
+	char *s;
+
+	s = emgetstr((EMstring)a);
+	assert(s != nil);
+	return strcmp(s, b) == 0;
+}
+
+//KHASHL_CMAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_emstr)
 KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
 KHASHL_SET_INIT(KH_LOCAL, edgeset, edges, u64int, kh_hash_uint64, kh_eq_generic)
 
@@ -11,16 +26,17 @@ typedef struct Aux Aux;
 struct Aux{
 	namemap *names;
 	edgeset *edges;
-	ushort *degree;
+	EM degree;
 	ioff nnodes;
 	ioff nedges;
 };
 
 static void
-initedges(ioff nedges, edgeset *eset)
+initedges(ioff nnodes, ioff nedges, edgeset *eset)
 {
 	ioff off, x, u, v;
-	Node *n;
+	//Node *n;
+	Node n;
 	u64int e;
 	edgeset *h;
 	khint_t k;
@@ -31,19 +47,33 @@ initedges(ioff nedges, edgeset *eset)
 		e = kh_key(h, k);
 		u = e >> 32 & 0x7fffffff;
 		v = e >> 2 & 0x3fffffff;
-		assert(u < dylen(nodes) && v < dylen(nodes));
+		assert(u < nnodes && v < nnodes);
+		/*
 		n = nodes + u;
 		off = n->eoff + n->nedges++;
-		assert(off >= 0 && off < dylen(edges));
+		DPRINT(Debugem, "off %d eoff %d ne %d /%d",
+			off, n->eoff, n->nedges-1, nedges);
+		*/
+		emreadi(enodes, u, &n, sizeof n);
+		off = n.eoff + n.nedges++;
+		emwritei(enodes, u, &n, sizeof n);
+		DPRINT(Debugem, "off %d eoff %d ne %d /%d",
+			off, n.eoff, n.nedges-1, nedges);
+		assert(off >= 0 && off < nedges);
 		x = v << 2 | e & 3;
 		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
 			u, e&1?'-':'+', v, e&2?'-':'+', off, x);
 		edges[off] = x;
 		if(u == v)
 			continue;
+		/*
 		n = nodes + v;
 		off = n->eoff + n->nedges++;
-		assert(off >= 0 && off < dylen(edges));
+		*/
+		emreadi(enodes, v, &n, sizeof n);
+		off = n.eoff + n.nedges++;
+		emwritei(enodes, v, &n, sizeof n);
+		assert(off >= 0 && off < nedges);
 		x = u << 2 | (e >> 1 & 1 | e << 1 & 2) ^ 3;
 		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
 			v, e&2?'+':'-', u, e&1?'+':'-', off, x);
@@ -52,17 +82,35 @@ initedges(ioff nedges, edgeset *eset)
 }
 
 static void
-initnodes(ioff nnodes, ushort *deg)
+initnodes(ioff nnodes, EM degree)
 {
 	ioff i, off;
-	Node *n, *ne;
+	//Node *n, *ne;
+	Node n = {0};
+	u16int d;
 
+	if((enodes = emopen(nil)) < 0)
+		sysfatal("initnodes: %s", error());
+	for(off=i=0; i<nnodes; i++){
+		n.id = i;
+		n.eoff = off;
+		emwritei(enodes, i, &n, sizeof n);
+		d = emr16(degree, i);
+		off += d;
+		DPRINT(Debugem, "initnodes: [%d] d %d eoff %d ne %d total %d",
+			i, d, n.eoff, n.nedges, off);
+	}
+	/*
 	dyresize(nodes, nnodes);
 	for(off=0, i=0, n=nodes, ne=n+nnodes; n<ne; n++, i++){
 		n->id = i;
 		n->eoff = off;
-		off += *deg++;
+		d = emr16(degree, i);
+		off += d;
+		DPRINT(Debugem, "initnodes: [%d] d %d eoff %d ne %d total %d",
+			i, d, n->eoff, n->nedges, off);
 	}
+	*/
 }
 
 static void
@@ -71,11 +119,11 @@ mkgraph(Aux *a)
 	khint_t k;
 
 	initnodes(a->nnodes, a->degree);
-	dyfree(a->degree);
+	emclose(a->degree);
 	kh_foreach(a->names, k)
 		free(kh_key(a->names, k));
 	names_destroy(a->names);
-	initedges(a->nedges, a->edges);
+	initedges(a->nnodes, a->nedges, a->edges);
 	edges_destroy(a->edges);
 }
 
@@ -172,11 +220,15 @@ readedge(Aux *a, File *f)
 	DPRINT(Debugfs, "edge \"%s%c,%s%c\" → %d%c%d%c",
 		fld[0], *fld[1], fld[2], *fld[3],
 		u, i?'-':'+', v, j?'-':'+');
-	x = MAX(u, v);
-	dygrow(a->degree, x);
-	a->degree[u]++;
+	x = emr16(a->degree, u);
+	emw16(a->degree, u, x+1);
+	DPRINT(Debugem, "[%d] degree[%d] ← %d", a->degree, u, x+1);
+	assert(emr16(a->degree, u) == x+1);
 	if(v != u){
-		a->degree[v]++;
+		x = emr16(a->degree, v);
+		emw16(a->degree, v, x+1);
+		DPRINT(Debugem, "[%d] degree[%d] ← %d", a->degree, v, x+1);
+		assert(emr16(a->degree, v) == x+1);
 		a->nedges += 2;
 	}else
 		a->nedges++;
@@ -231,8 +283,6 @@ readgfa(Aux *a, File *f)
 		werrstr("no edges");
 		return -1;
 	}
-	assert(dylen(a->degree) <= a->nnodes);
-	dyresize(a->degree, a->nnodes);
 	return 0;
 }
 
@@ -245,6 +295,7 @@ opengfa(Aux *a, char *path)
 		return nil;
 	a->names = names_init();
 	a->edges = edges_init();
+	a->degree = emopen(nil);
 	return f;
 }
 
@@ -254,17 +305,16 @@ main(int argc, char **argv)
 	File *f;
 	Aux a = {0};
 
-	if(argc < 2)
-		sysfatal("usage: %s GFA", argv[0]);
-	else if(argc > 2)
-		debug |= Debugfs | Debuggraph;
+	if(argc != 3)
+		sysfatal("usage: %s GFA MULTIPLIER", argv[0]);
+	multiplier = atoi(argv[2]);
+	//debug |= Debugfs | Debugem | Debuggraph;
+	//debug |= Debugem | Debuggraph;
+	initem();
 	if((f = opengfa(&a, argv[1])) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
 	mkgraph(&a);
-	if(debug){
-		printgraph();
-		warn("%d nodes %d edges\n", a.nnodes, a.nedges);
-	}
+	printgraph();
 	freefs(f);
 	return 0;
 }

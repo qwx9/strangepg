@@ -1,13 +1,7 @@
 </$objtype/mkfile
-TARG=`{ls *.c | grep -v stubs\.c | sed -n '/\.c$/s/\.c$//p'}
+#TARG=`{ls *.c | grep -v stubs\.c | sed -n '/\.c$/s/\.c$//p'}
 
-OFILES=\
-	../graph/graph.$O\
-	../fs/fs.$O\
-	../fs/em.$O\
-	../fs/index.$O\
-	../fs/meta.$O\
-	../plan9/awk.$O\
+COMMON=\
 	../plan9/fs.$O\
 	../plan9/nanosec.$O\
 	../plan9/sys.$O\
@@ -29,3 +23,12 @@ CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
 
 %.$O: %.c
 	$CC $CFLAGS -o $target $stem.c
+
+$O.fs_gfa:	fs_gfa.$O $COMMON ../fs/fs.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.fs_gfa_em_new:	fs_gfa_em.$O $COMMON ../fs/fs.$O ../fs/em_new.$O
+	$LD $LDFLAGS -o $target $prereq
+
+$O.fs_gfa_em_hash:	fs_gfa_em.$O $COMMON ../fs/fs.$O ../fs/em.$O
+	$LD $LDFLAGS -o $target $prereq

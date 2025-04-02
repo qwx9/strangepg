@@ -149,21 +149,76 @@ endif
 
 COMMON+=\
 	stubs.o\
-	../cmd/cmd.o\
-	../graph/graph.o\
+	../lib/chan.o\
+	../lib/queue.o\
 	../posix/sys.o\
+	../posix/threads.o\
+	../strawk/mt19937-64.o\
 	../util/print.o\
+	../util/rand.o\
 
 OBJ:=$(patsubst %.c,%.o,$(wildcard *.c))
 DEPS:=$(patsubst %.o,%.d,$(OBJ) $(COMMON))
 
 ALLTARGETS:=\
-	fs_gfa
+	fs_gfa\
+	fs_gfa_kcache\
+	fs_gfa_em\
+	fs_em_01\
+	fs_em_03\
+	fs_em_05\
+	fs_em_07\
+	fs_em_08\
+	fs_em_09\
+	fs_em_10\
+	fs_em_11\
+	fs_em_12\
+	fs_em_13\
 
 fs_gfa:	fs_gfa.o ../fs/fs.o ../posix/fs.o $(COMMON)
-	echo $(ASS)
 	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
+fs_gfa_kcache:	fs_gfa_kcache.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_gfa_em:	fs_gfa_em.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_gfa_vers:	fs_gfa_vers.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_01:	fs_em_01.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_03:	fs_em_03.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_05:	fs_em_05.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_07:	fs_em_07.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_08:	fs_em_08.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_09:	fs_em_09.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_10:	fs_em_10.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_11:	fs_em_11.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_12:	fs_em_12.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+fs_em_13:	fs_em_13.o ../fs/em.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+.PHONY:	all
+.DEFAULT:	all
 all:	$(ALLTARGETS)
 
 clean:
