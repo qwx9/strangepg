@@ -104,8 +104,8 @@ usage(void)
 static char **
 parseargs(int argc, char **argv)
 {
-	int i, n, type;
-	char *s, *p;
+	int type;
+	char *s;
 
 	type = FFgfa;
 	ARGBEGIN{
@@ -201,13 +201,7 @@ main(int argc, char **argv)
 	initfs();
 	load();
 	if(drawing.flags & DFnope || debug & Debugload)
-		for(;;){
-			sleep(10);
-			if(drawing.flags & DFnope){
-				pushcmd("exportlayout(layfile)");
-				flushcmd();
-			}
-		}
+		exportforever();
 	initui();
 	waitforit();
 	deferred(d);

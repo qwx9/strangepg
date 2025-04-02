@@ -61,23 +61,34 @@ sac(void *)
 			break;
 		x--;
 		l = graph.layout;
-		switch(x & 3){
+		switch(x){
+		case Lexport:
+			DPRINT(Debuglayout, "sac: export");
+			if(graph.flags & (GFlayme | GFdrawme)){
+				pushcmd("exportlayout(layfile)");
+				flushcmd();
+			}
+			continue;
 		case Lreset:
+			DPRINT(Debuglayout, "sac: reset");
 			if(l != nil){
 				l->flags |= LFstop | LFnuke;
 				graph.flags |= GFlayme;
 			}
 			break;
 		case Lstop:
+			DPRINT(Debuglayout, "sac: stop");
 			if(l != nil){
 				l->flags |= LFstop;
 				graph.flags &= ~GFlayme;
 			}
 			break;
 		case Lstart:
+			DPRINT(Debuglayout, "sac: start");
 			graph.flags |= GFlayme;
 			break;
 		case Lidle:
+			DPRINT(Debuglayout, "sac: idle %d/%d", nidle, nlaythreads);
 			nidle++;
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
@@ -94,30 +105,33 @@ sac(void *)
 				graph.flags &= ~GFdrawme;
 				reqdraw(Reqredraw);
 			}
+			if(l != nil)
+				l->flags &= ~LFstop;
 			break;
 		}
 		if(l == nil || nidle != nlaythreads)
 			continue;
-		if((l->flags & LFnuke) != 0 && l->target->cleanup != nil && l->scratch != nil){
+		if(l->flags & LFnuke && l->target->cleanup != nil && l->scratch != nil){
 			l->target->cleanup(l->scratch);
 			l->scratch = nil;
 		}
-		l->flags = 0;
 		if((graph.flags & GFlayme) == 0){
 			reqdraw(Reqrefresh);
+			l->flags = 0;
 			continue;
 		}
 		if(dylen(rnodes) < 1 || dylen(redges) < 1){
 			warn("newlayout: nothing to layout\n");
+			l->flags = 0;
 			continue;
 		}
 		if(l->scratch == nil && l->target->new != nil)
-			l->scratch = l->target->new();
+			l->scratch = l->target->new(l->flags & LFnuke);
+		l->flags = 0;
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
 			sendp(*cp, l);
 		nidle = 0;
-		graph.flags &= ~GFlayme;
-		graph.flags |= GFdrawme;
+		graph.flags = graph.flags & ~GFlayme | GFdrawme;
 		reqdraw(Reqredraw);
 		logmsg("computing layout...\n");
 	}
@@ -138,11 +152,21 @@ opencomms(void)
 		newthread(wing, nil, (void*)(intptr)i, nil, "wing", mainstacksize);
 }
 
+void
+exportforever(void)
+{
+	for(;;){
+		sleep(10000);
+		reqlayout(Lexport);
+	}
+}
+
 /* will queue events while layouting hasn't been initialized */
 int
 reqlayout(int type)
 {
 	switch(type){
+	case Lexport:
 	case Lstop:
 		break;
 	case Lreset:

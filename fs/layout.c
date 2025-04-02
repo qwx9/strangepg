@@ -41,6 +41,8 @@ importlayout(char *path)
 		u.u = GBIT32(p);
 		r->pos[2] = u.f;
 	}
+	if(r < rnodes + dylen(rnodes))
+		warn("fewer records than expected\n");
 	if(debug & Debugload)
 		pushcmd("cmd(\"FJJ142\")");
 	else
@@ -52,6 +54,7 @@ importlayout(char *path)
 	}
 	freefs(fs);
 	logmsg("importlayout: done\n");
+	reqdraw(Reqredraw);
 	return x;
 }
 

@@ -42,13 +42,15 @@ init(void)
 }
 
 static void *
-new_(int is3d)
+new_(int nuke, int is3d)
 {
 	int orphans;
 	double z, f, var[3], mid[3];
 	Node *u, *ue;
 	RNode *r;
 
+	if(!nuke)
+		return init();
 	orphans = 0;
 	if(drawing.xbound.min < drawing.xbound.max){
 		var[0] = (drawing.xbound.max - drawing.xbound.min) / 2;
@@ -106,17 +108,17 @@ new_(int is3d)
 }
 
 static void *
-new(void)
+new(int nuke)
 {
 	drawing.flags &= ~DF3d;
-	return new_(0);
+	return new_(nuke, 0);
 }
 
 static void *
-new3d(void)
+new3d(int nuke)
 {
 	drawing.flags |= DF3d;
-	return new_(1);
+	return new_(nuke, 1);
 }
 
 static void

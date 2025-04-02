@@ -12,7 +12,7 @@ enum{
 struct Target{
 	char *name;
 	void* (*init)(void);
-	void* (*new)(void);
+	void* (*new)(int);
 	void (*update)(void*);
 	void (*cleanup)(void*);
 	/* FIXME: ??????????????? clang needs volatile or it optimizes
@@ -30,10 +30,12 @@ enum{
 	Lstop,
 	Lstart,
 	Lreset,
+	Lexport,
 };
 void	initlayout(void);
 int	newlayout(int);
 int reqlayout(int);
+void	exportforever(void);
 
 #define SETDIR(dir, dx, dy)	do{\
 	if((dx) != 0.0f) \
