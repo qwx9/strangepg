@@ -130,5 +130,6 @@ int	dupfd(int, int);
 #define sleep(x)	lsleep((x) * 1000000ULL)
 #define snprint	snprintf
 #define	cistrcmp	strcasecmp
+#define	cistrncmp	strncasecmp
 #define print	printf
 #define	dup	dupfd

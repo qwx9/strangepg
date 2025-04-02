@@ -54,7 +54,6 @@ importlayout(char *path)
 	}
 	freefs(fs);
 	logmsg("importlayout: done\n");
-	reqdraw(Reqredraw);
 	return x;
 }
 

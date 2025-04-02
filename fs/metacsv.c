@@ -50,9 +50,10 @@ csvheader(File *f, int *wait)
 			}
 		}
 		/* don't wait for csv to load if there are  no layout tags */
-		if(cistrcmp(s, "color") == 0)
+		if(cistrncmp(s, "color", 5) == 0){
 			s = "CL";
-		else if((z = gettab(s)) >= 0 && z < Tlayout)
+			w++;
+		}else if((z = gettab(s)) >= 0 && z < Tlayout)
 				w++;
 		p = estrdup(s);
 		dypush(tags, p);
@@ -114,6 +115,10 @@ loadcsv(void *arg)
 	}
 	r = 0;
 end:
+	if(r < 0)
+		logerr(va("loadcsv %s: %s\n", path, error()));
+	else
+		logmsg(va("loadcsv: done, read %d records\n", nr));
 	if(debug & Debugload)
 		pushcmd("cmd(\"FJJ142\")");
 	else if(wait)
@@ -121,10 +126,6 @@ end:
 	else
 		pushcmd("loadbatch()");
 	flushcmd();
-	if(r < 0)
-		logerr(va("loadcsv %s: %s\n", path, error()));
-	else
-		logmsg(va("loadcsv: done, read %d records\n", nr));
 	for(nf=0; nf<dylen(tags); nf++)
 		free(tags[nf]);
 	dyfree(tags);

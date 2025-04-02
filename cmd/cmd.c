@@ -183,13 +183,18 @@ readcmd(char *s)
 			logerr(va("error: %s\n", s+2));
 			continue;
 		case 'R':
+			graph.flags |= GFarmed;
 			if(reqlayout(Lreset))
 				warn("readcmd: reqlayout: %s\n", error());
+			req |= Reqredraw;
 			continue;
 		case 'r':
-			req |= Reqredraw;
-			if(drawing.flags & DFnope && reqlayout(Lstart))
-				warn("readcmd: reqlayout: %s\n", error());
+			graph.flags |= GFarmed;
+			if(drawing.flags & DFnope){
+				if(reqlayout(Lstart))
+					warn("readcmd: reqlayout: %s\n", error());
+			}else
+				req |= Reqredraw;
 			continue;
 		case 'N':
 		case 'X':
@@ -242,12 +247,16 @@ readcmd(char *s)
 				goto invalid;
 			if(loadfs(fld[0], FFcsv) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
+			if(graph.flags & GFarmed)
+				req |= Reqredraw;
 			break;
 		case 'i':
 			if(m != 1)
 				goto invalid;
 			if(importlayout(fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
+			if(graph.flags & GFarmed)
+				req |= Reqredraw;
 			break;
 		case 'o':
 			if(m != 1)
