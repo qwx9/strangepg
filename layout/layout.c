@@ -185,11 +185,6 @@ newlayout(int type)
 	l->target = ttab[type];
 	if(txc == nil)
 		opencomms();
-	/* guarantees initialized state for deferred loading */
-	if(!gottagofast){
-		if(l->scratch == nil && l->target->init != nil)
-			l->scratch = l->target->init();
-	}
 	return 0;
 }
 
