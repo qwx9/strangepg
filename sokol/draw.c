@@ -15,6 +15,7 @@
 #include "sokol_gfx_ext.h"
 #include "glsl/edge.h"
 #include "glsl/node.h"
+#include "glsl/line.h"
 #define	NK_INCLUDE_FIXED_TYPES
 #define	NK_INCLUDE_STANDARD_IO
 #define	NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -197,6 +198,12 @@ renderdirect(void)
 		sg_apply_uniforms(UB_node_Vparam, &SG_RANGE(render.cam));
 		sg_draw(0, render.nnodev, n);
 	}
+	if((n = ndlines) >= 1){
+		sg_apply_pipeline(render.linepipe);
+		sg_apply_bindings(&render.linebind);
+		sg_apply_uniforms(UB_line_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nlinev * n, 1);
+	}
 	drawui(snk_new_frame());
 	snk_render(view.w, view.h);
 	sg_end_pass();
@@ -249,6 +256,12 @@ updatebuffers(void)
 			.size = n * sizeof *rnodes,
 		});
 	}
+	if((n = ndlines) >= 1){
+		sg_update_buffer(render.linebind.vertex_buffers[0], &(sg_range){
+			.ptr = rlines,
+			.size = n * sizeof *rlines,
+		});
+	}
 }
 
 static void
@@ -281,14 +294,14 @@ resizebuf(void)
 
 /* FIXME: individual nodes */
 void
-updatenode(ioff id)
+updatenode(ioff id)	/* FIXME */
 {
 	render.stalepick = 1;
 	reqdraw(Reqredraw);
 }
 
 void
-updateedges(void)
+updateedges(void)	/* FIXME */
 {
 	render.stalepick = 1;
 	reqdraw(Reqrefresh);

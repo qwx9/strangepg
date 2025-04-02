@@ -22,11 +22,14 @@ struct Render{
 	sg_pipeline offscrnodepipe;
 	sg_pipeline edgepipe;
 	sg_pipeline offscredgepipe;
+	sg_pipeline linepipe;
 	sg_bindings nodebind;
 	sg_bindings edgebind;
+	sg_bindings linebind;
 	u32int *pickfb;
 	int nnodev;
 	int nedgev;
+	int nlinev;
 	Fparam edgefs;
 	Vparam cam;
 };

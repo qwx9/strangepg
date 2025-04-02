@@ -1,13 +1,12 @@
 #include "strpg.h"
 #include "drw.h"
 #include "fs.h"
-#include "em.h"
 #include "lib/khashl.h"
+
+u32int *theme;
 
 KHASHL_MAP_INIT(KH_LOCAL, colormap, cmap, u32int, Color*, kh_hash_uint32, kh_eq_generic)
 static colormap *cmap;
-
-u32int *theme;
 
 static u32int theme1[Cend] = {
 	[Cbg]	= 0x000000ff,
@@ -15,6 +14,9 @@ static u32int theme1[Cend] = {
 	[Cedge]	= 0xaaaaaa80,
 	[Cemph]	= 0xff0000ff,
 	[Chigh] = 0xffffccff,
+	[Cxaxis] = 0xffccccff,
+	[Cyaxis] = 0xccffccff,
+	[Czaxis] = 0xccccffff,
 };
 static u32int theme2[Cend] = {
 	[Cbg]	= 0xffffffff,
@@ -22,6 +24,9 @@ static u32int theme2[Cend] = {
 	[Cedge]	= 0xcccccc77,
 	[Cemph]	= 0xff0000ff,
 	[Chigh] = 0x000000ff,
+	[Cxaxis] = 0xff0000ff,
+	[Cyaxis] = 0x00ff00ff,
+	[Czaxis] = 0x0000ffff,
 };
 
 typedef struct Palette Palette;

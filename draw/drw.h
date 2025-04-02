@@ -58,15 +58,16 @@ struct REdge{
 	float pos2[3];
 };
 /* FIXME: selection, etc. */
-struct RLines{
-	float pos1[3];
+struct RLine{
+	float pos1[4];
 	float col1[4];
-	float pos2[3];
+	float pos2[4];
 	float col2[4];
 };
 extern RNode *rnodes;
-extern REdge *redges, selbox[4];
-extern ssize ndnodes, ndedges;
+extern REdge *redges, selbox[4];	/* FIXME: selbox -> lines */
+extern RLine *rlines;
+extern ssize ndnodes, ndedges, ndlines;
 
 struct Quad{
 	Vertex tl;
@@ -139,6 +140,9 @@ enum{
 	Cedge,
 	Cemph,
 	Chigh,
+	Cxaxis,
+	Cyaxis,
+	Czaxis,
 	Cend,
 };
 extern u32int *theme;

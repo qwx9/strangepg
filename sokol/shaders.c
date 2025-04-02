@@ -7,6 +7,7 @@
 #include "sokol.h"
 #include "glsl/edge.h"
 #include "glsl/node.h"
+#include "glsl/line.h"
 #include "drw.h"
 #include "ui.h"
 #include "threads.h"
@@ -395,6 +396,98 @@ setupedges(void)
 }
 
 static void
+setupaxes(void)
+{
+	RLine *r;
+
+	if((debug & Debugdraw) == 0)
+		return;
+	r = rlines;
+	r->pos1[0] = 0.0f;
+	r->pos1[1] = 0.0f;
+	r->pos1[2] = 0.0f;
+	r->pos1[3] = 1.0f;
+	r->pos2[0] = 200.0f * view.up.x;
+	r->pos2[1] = 200.0f * view.up.y;
+	r->pos2[2] = 200.0f * view.up.z;
+	r->pos2[3] = 1.0f;
+	setcolor(r->col1, theme[Cxaxis]);
+	setcolor(r->col2, theme[Cxaxis]);
+	r++;
+	warn("%d\n", sizeof r->pos1);
+	memcpy(r->pos1, rlines[0].pos1, sizeof r->pos1);
+	r->pos2[0] = 200.0f * view.right.x;
+	r->pos2[1] = 200.0f * view.right.y;
+	r->pos2[2] = 200.0f * view.right.z;
+	r->pos2[3] = 1.0f;
+	setcolor(r->col1, theme[Cyaxis]);
+	setcolor(r->col2, theme[Cyaxis]);
+	r++;
+	memcpy(r->pos1, rlines[0].pos1, sizeof r->pos1);
+	r->pos2[0] = 200.0f * 0.0f;
+	r->pos2[1] = 200.0f * 0.0f;
+	r->pos2[2] = 200.0f * -1.0f;
+	r->pos2[3] = 1.0f;
+	setcolor(r->col1, theme[Czaxis]);
+	setcolor(r->col2, theme[Czaxis]);
+	ndlines = 3;
+}
+
+static void
+setuplines(void)
+{
+	sg_shader sh;
+
+	dygrow(rlines, 8);
+	setupaxes();
+	render.linebind = (sg_bindings){
+		.vertex_buffers = {
+			[0] = sg_make_buffer(&(sg_buffer_desc){
+				.size = dylen(rlines) * sizeof *rlines,
+				.usage = SG_USAGE_STREAM,
+			}),
+		},
+	};
+	sh = sg_make_shader(line_s_shader_desc(sg_query_backend()));
+	render.linepipe = sg_make_pipeline(&(sg_pipeline_desc){
+		.layout = {
+			.attrs = {
+				[ATTR_line_s_pos] = {
+					.format = SG_VERTEXFORMAT_FLOAT4,
+				},
+				[ATTR_line_s_color] = {
+					.format = SG_VERTEXFORMAT_FLOAT4,
+				},
+			}
+		},
+		.shader = sh,
+		.primitive_type = SG_PRIMITIVETYPE_LINES, 
+		.face_winding = SG_FACEWINDING_CCW,
+		.cull_mode = SG_CULLMODE_BACK,
+		.depth = {
+			.compare = SG_COMPAREFUNC_LESS_EQUAL,
+			.write_enabled = true,
+		},
+		.color_count = 1,
+		.colors = {
+			[0] = {
+				.blend = {
+					.enabled = (drawing.flags & DFnoalpha) == 0,
+					.src_factor_rgb = SG_BLENDFACTOR_ONE,
+					.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_rgb = SG_BLENDOP_ADD,
+					.src_factor_alpha = SG_BLENDFACTOR_ONE,
+					.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+					.op_alpha = SG_BLENDOP_ADD,
+				},
+			},
+		},
+		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
+	});
+	render.nlinev = 2;
+}
+
+static void
 setuppasses(void)
 {
 	Color *c;
@@ -425,6 +518,7 @@ initgl(void)
 
 	setupnodes(drawing.flags & DF3d);
 	setupedges();
+	setuplines();
 	setuppasses();
 	setcolor(render.edgefs.color, theme[Cedge]);
 	initfb(sapp_width(), sapp_height());

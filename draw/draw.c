@@ -9,8 +9,9 @@
 View view;
 RNode *rnodes;
 REdge *redges;
+RLine *rlines;
 ioff *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFORMAT_UBYTE4N instead */
-ssize ndnodes, ndedges;
+ssize ndnodes, ndedges, ndlines;
 Drawing drawing;
 Channel *rendc, *ctlc;
 

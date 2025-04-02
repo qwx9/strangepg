@@ -1,4 +1,4 @@
-@module l
+@module line
 
 @vs vs
 @glsl_options fixup_clipspace
@@ -8,12 +8,12 @@ precision mediump float;
 layout(binding=0) uniform Vparam {
 	mat4 mvp;
 };
-in vec3 pos;
+in vec4 pos;
 in vec4 color;
 out vec4 col0;
 
 void main(){
-	gl_Position = mvp * vec4(pos, 1.0);
+	gl_Position = mvp * pos;
 	col0 = color;
 }
 @end
@@ -29,4 +29,4 @@ void main(){
 }
 @end
 
-@program line vs fs
+@program s vs fs
