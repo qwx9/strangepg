@@ -84,13 +84,13 @@ sac(void *)
 			else if(nidle == nlaythreads && l != nil){
 				if((graph.flags & GFdrawme) == 0)
 					break;
+				logmsg("layout: done.\n");
 				if(drawing.flags & DFnope){
 					pushcmd("exportlayout(layfile)");
 					pushcmd("quit()");
 					flushcmd();
 					break;
 				}
-				logmsg("layout: done.\n");
 				graph.flags &= ~GFdrawme;
 				reqdraw(Reqredraw);
 			}
