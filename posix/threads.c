@@ -116,6 +116,13 @@ initrwlock(RWLock *l)
 		sysfatal("pthread_rwlock_init: %s", error());
 }
 
+void
+nukerwlock(RWLock *l)
+{
+	if(pthread_rwlock_destroy(l) != 0)
+		sysfatal("pthread_rwlock_destroy: %s", error());
+}
+
 Channel *
 chancreate(int elsize, int nel)
 {

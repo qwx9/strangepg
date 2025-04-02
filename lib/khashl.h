@@ -115,6 +115,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 		khint_t bits, count; \
 		khint32_t *used; \
 		khkey_t *keys; \
+		RWLock l; \
 	} HType;
 
 #define __KHASHL_PROTOTYPES(HType, prefix, khkey_t) \
@@ -128,18 +129,23 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 
 #define __KHASHL_IMPL_BASIC(SCOPE, HType, prefix) \
 	SCOPE HType *prefix##_init(void) { \
-		return (HType*)kcalloc(1, sizeof(HType)); \
+		HType *h = kcalloc(1, sizeof(HType)); \
+		initrwlock(&h->l); \
+		return h; \
 	} \
 	SCOPE void prefix##_destroy(HType *h) { \
 		if (!h) return; \
 		kfree((void *)h->keys); kfree(h->used); \
+		nukerwlock(&h->l); \
 		kfree(h); \
 	} \
 	SCOPE void prefix##_clear(HType *h) { \
 		if (h && h->used) { \
+			wlock(&h->l); \
 			khint_t n_buckets = (khint_t)1U << h->bits; \
 			memset(h->used, 0, __kh_fsize(n_buckets) * sizeof(khint32_t)); \
 			h->count = 0; \
+			wunlock(&h->l); \
 		} \
 	}
 
@@ -147,13 +153,18 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 	SCOPE khint_t prefix##_getp_core(const HType *h, const khkey_t *key, khint_t hash) { \
 		khint_t i, last, n_buckets, mask; \
 		if (h->keys == 0) return 0; \
+		rlock(&h->l); \
 		n_buckets = (khint_t)1U << h->bits; \
 		mask = n_buckets - 1U; \
 		i = last = __kh_h2b(hash, h->bits); \
 		while (__kh_used(h->used, i) && !__hash_eq(h->keys[i], *key)) { \
 			i = (i + 1U) & mask; \
-			if (i == last) return n_buckets; \
+			if (i == last){ \
+				runlock(&h->l); \
+				return n_buckets; \
+			} \
 		} \
+		runlock(&h->l); \
 		return !__kh_used(h->used, i)? n_buckets : i; \
 	} \
 	SCOPE khint_t prefix##_getp(const HType *h, const khkey_t *key) { return prefix##_getp_core(h, key, __hash_fn(*key)); } \
@@ -167,14 +178,21 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 		if (new_n_buckets & (new_n_buckets - 1)) ++j; \
 		new_bits = j > 2? j : 2; \
 		new_n_buckets = (khint_t)1U << new_bits; \
-		if (h->count > kh_max_count(new_n_buckets)) return 0; /* requested size is too small */ \
+		wlock(&h->l); \
+		if (h->count > kh_max_count(new_n_buckets)) { \
+			wunlock(&h->l); \
+			 return 0; /* requested size is too small */ \
+		} \
 		new_used = (khint32_t*)kmalloc(__kh_fsize(new_n_buckets) * sizeof(khint32_t)); \
 		memset(new_used, 0, __kh_fsize(new_n_buckets) * sizeof(khint32_t)); \
-		if (!new_used) return -1; /* not enough memory */ \
+		if (!new_used) { \
+			wunlock(&h->l); \
+			return -1; /* not enough memory */ \
+		} \
 		n_buckets = h->keys? (khint_t)1U<<h->bits : 0U; \
 		if (n_buckets < new_n_buckets) { /* expand */ \
 			khkey_t *new_keys = (khkey_t*)krealloc((void*)h->keys, new_n_buckets * sizeof(khkey_t)); \
-			if (!new_keys) { kfree(new_used); return -1; } \
+			if (!new_keys) { kfree(new_used); wunlock(&h->l); return -1; } \
 			h->keys = new_keys; \
 		} /* otherwise shrink */ \
 		new_mask = new_n_buckets - 1; \
@@ -201,17 +219,20 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 			h->keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
 		kfree(h->used); /* free the working space */ \
 		h->used = new_used, h->bits = new_bits; \
+		wunlock(&h->l); \
 		return 0; \
 	}
 
 #define __KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE khint_t prefix##_putp_core(HType *h, const khkey_t *key, khint_t hash, int *absent) { \
 		khint_t n_buckets, i, last, mask; \
+		wlock(&h->l); \
 		n_buckets = h->keys? (khint_t)1U<<h->bits : 0U; \
 		*absent = -1; \
 		if (h->count >= kh_max_count(n_buckets)) { /* rehashing */ \
-			if (prefix##_resize(h, n_buckets + 1U) < 0) \
-				return n_buckets; \
+			wunlock(&h->l); \
+			if (prefix##_resize(h, n_buckets + 1U) < 0) return n_buckets; \
+			wlock(&h->l); \
 			n_buckets = (khint_t)1U<<h->bits; \
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		mask = n_buckets - 1; \
@@ -226,6 +247,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 			++h->count; \
 			*absent = 1; \
 		} else *absent = 0; /* Don't touch h->keys[i] if present */ \
+		wunlock(&h->l); \
 		return i; \
 	} \
 	SCOPE khint_t prefix##_putp(HType *h, const khkey_t *key, int *absent) { return prefix##_putp_core(h, key, __hash_fn(*key), absent); } \
@@ -234,7 +256,11 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 #define __KHASHL_IMPL_DEL(SCOPE, HType, prefix, khkey_t, __hash_fn) \
 	SCOPE int prefix##_del(HType *h, khint_t i) { \
 		khint_t j = i, k, mask, n_buckets; \
-		if (h->keys == 0) return 0; \
+		wlock(&h->l); \
+		if (h->keys == 0) { \
+			wunlock(&h->l); \
+			 return 0; \
+		} \
 		n_buckets = (khint_t)1U<<h->bits; \
 		mask = n_buckets - 1U; \
 		while (1) { \
@@ -246,6 +272,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 		} \
 		__kh_set_unused(h->used, i); \
 		--h->count; \
+		wunlock(&h->l); \
 		return 1; \
 	}
 

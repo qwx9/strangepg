@@ -20,6 +20,7 @@ typedef pthread_rwlock_t RWLock;
 
 void	initqlock(QLock*);
 void	initrwlock(RWLock*);
+void	nukerwlock(RWLock*);
 
 static inline void
 rlock(RWLock *l)

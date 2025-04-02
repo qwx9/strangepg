@@ -19,3 +19,7 @@ u64int	nanosec(void);
 #pragma	varargck	argpos	dprint	2
 
 void	initp9draw(void);
+
+#define	initqlock(x)
+#define	initrwlock(x)
+#define	nukerwlock(x)

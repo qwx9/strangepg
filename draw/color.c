@@ -1,6 +1,7 @@
 #include "strpg.h"
 #include "drw.h"
 #include "fs.h"
+#include "threads.h"
 #include "lib/khashl.h"
 
 u32int *theme;

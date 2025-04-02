@@ -68,22 +68,19 @@ mktab(char *tab, int intidx)
 	Tab t;
 	khint_t k;
 
-	rlock(&tablock);
 	k = tab_put(map, tab, &abs);
 	if(!abs){
 		i = kh_val(map, k);
-		runlock(&tablock);
 		return i;
 	}
-	runlock(&tablock);
-	wlock(&tablock);
 	s = estrdup(tab);
 	t = (Tab){intidx, s, nil, nil};
+	wlock(&tablock);
 	i = dylen(tabs);
 	dypush(tabs, t);
+	wunlock(&tablock);
 	kh_key(map, k) = s;
 	kh_val(map, k) = i;
-	wunlock(&tablock);
 	return i;
 }
 
