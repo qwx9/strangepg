@@ -114,7 +114,7 @@ lsleep(vlong ns)
 	struct timespec t = {0};
 
 	t.tv_nsec = ns;
-	if(ns > 1000000000){
+	if(ns >= 1000000000){
 		t.tv_nsec %= 1000000000;
 		t.tv_sec = ns / 1000000000;
 	}
