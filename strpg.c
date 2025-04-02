@@ -138,8 +138,8 @@ parseargs(int argc, char **argv)
 			debug |= Debugcoarse;
 		else if(strcmp(s, "draw") == 0)
 			debug |= Debugdraw;
-		else if(strcmp(s, "extmem") == 0)
-			debug |= Debugextmem;
+		else if(strcmp(s, "em") == 0)
+			debug |= Debugem;
 		else if(strcmp(s, "fs") == 0)
 			debug |= Debugfs;
 		else if(strcmp(s, "graph") == 0)

@@ -26,6 +26,7 @@ enum{
 	FNinitz = 1<<5,
 	FNinitpos = FNinitx | FNinity | FNinitz,
 	FNalias = 1<<6,
+	FNglotzenuff = 1<<7,
 };
 struct Node{
 	ioff id;
@@ -55,7 +56,7 @@ enum{
 	Debuglayout = 1<<2,
 	Debugfs = 1<<3,
 	Debugcoarse = 1<<4,
-	Debugextmem = 1<<5,
+	Debugem = 1<<5,
 	Debugcmd = 1<<6,
 	Debugperf = 1<<7,
 	Debugmeta = 1<<8,

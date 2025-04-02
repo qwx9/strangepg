@@ -219,7 +219,7 @@ cacheproc(void *arg)
 		}
 		if((em->flags & Eclosing) == 0){
 			wlock(&p->l);
-			DPRINT(Debugextmem, "flush %#p:%#p:%#p\n", em, p, p->buf);
+			DPRINT(Debugem, "flush %#p:%#p:%#p\n", em, p, p->buf);
 			if(pwrite(swapfd, p->buf, sizeof p->buf, PADDR(p->vaddr, bank->paddr)) < 0)
 				warn("flush: %s\n", error());
 			wunlock(&p->l);
@@ -310,7 +310,7 @@ emw64(EM *em, vlong off, u64int v)
 	u = PLEA(p, off);
 	PBIT64(u, v);
 	p->flags |= Fdirty;
-	DPRINT(Debugextmem, "w64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) → %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
+	DPRINT(Debugem, "w64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) → %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
 }
 
 u64int
@@ -324,7 +324,7 @@ emr64(EM *em, vlong off)
 	p = GETPAGE(em, off);
 	u = PLEA(p, off);
 	v = GBIT64(u);
-	DPRINT(Debugextmem, "r64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
+	DPRINT(Debugem, "r64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
 	return v;
 }
 
