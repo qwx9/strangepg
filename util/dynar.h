@@ -43,13 +43,9 @@ enum{
 								(a) = nil; \
 							} \
 						}while(0)
-#define	dychecksz(a,n)	do{ \
-							if((a) == nil || _dysz(a) <= (n)) \
-								_dyrealloc((a), (n) + 1); \
-						}while(0)
 #define	dyresize(a,n)	do{ \
 							if((a) == nil || _dysz(a) != (n)) \
-								_dyrealloc((a), (n) + 1); \
+								_dyrealloc((a), (n)); \
 							_dylen(a) = (n); \
 						}while(0)
 #define	dygrow(a,i)		do{ \
