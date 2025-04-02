@@ -136,6 +136,7 @@ OBJ:=\
 	layout/pfr.o\
 	ui/ui.o\
 	util/print.o\
+	util/rand.o\
 	strpg.o\
 	strawk/alloc.o\
 	strawk/awkgram.tab.o\

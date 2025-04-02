@@ -8,10 +8,10 @@ TARG=\
 #	strawk\
 
 OFILES=\
+	cmd/awkprog.$O\
 	strpg.$O\
 	cmd/awk.$O\
 	cmd/awkext.$O\
-	cmd/awkprog.$O\
 	cmd/cmd.$O\
 	draw/color.$O\
 	draw/draw.$O\
@@ -42,6 +42,7 @@ OFILES=\
 	strawk/mt19937-64.$O\
 	ui/ui.$O\
 	util/print.$O\
+	util/rand.$O\
 
 OCOARSEN=\
 	coarsen.$O\
