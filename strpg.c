@@ -8,6 +8,7 @@
 
 int gottagofast = 0;
 
+/* FIXME: doesn't need to be a global */
 typedef struct Input Input;
 struct Input{
 	int type;
@@ -61,6 +62,14 @@ pushfile(char *file, int type)
 }
 
 static void
+deferred(char **argv)
+{
+	while(*argv != nil)
+		pushcmd(*argv++);
+	flushcmd();
+}
+
+static void
 help(void)
 {
 	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE\n", argv0);
@@ -92,11 +101,11 @@ usage(void)
 	sysfatal("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
 }
 
-static void
+static char **
 parseargs(int argc, char **argv)
 {
-	int type;
-	char *s;
+	int i, n, type;
+	char *s, *p;
 
 	type = FFgfa;
 	ARGBEGIN{
@@ -172,20 +181,22 @@ parseargs(int argc, char **argv)
 	}ARGEND
 	if(*argv == nil)
 		help();
-	for(; *argv!=nil; argv++)
-		pushfile(*argv, type);
+	pushfile(*argv++, type);
+	return argv;
 }
 
 /* note: npe already sets mainstacksize higher before renaming main */
 int
 main(int argc, char **argv)
 {
+	char **d;
+
 	xsrand(time(nil));
 	initsys();
 	initlog();
 	initlayout();
 	initcmd();	/* fork repl before starting other threads */
-	parseargs(argc, argv);
+	d = parseargs(argc, argv);
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
 	load();
@@ -199,6 +210,7 @@ main(int argc, char **argv)
 		}
 	initui();
 	waitforit();
+	deferred(d);
 	evloop();
 	quit();
 	return 0;
