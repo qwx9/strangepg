@@ -30,6 +30,8 @@ struct Render{
 	int nnodev;
 	int nedgev;
 	int nlinev;
+	vlong nframes;
+	vlong noframes;
 	Fparam edgefs;
 	Vparam cam;
 };

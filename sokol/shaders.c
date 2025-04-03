@@ -22,16 +22,26 @@ mousepick(int x, int y)
 {
 	u32int i;
 
-	if(x < 0 || x >= view.w || y < 0 || y >= view.h)
+	if(x < 0 || x >= view.w || y < 0 || y >= view.h){
+		DPRINT("mousepick %d,%d: out of bounds", x, y);
 		return -1;
+	}
+	if(render.noframes < 1){
+		DPRINT("mousepick: no offscreen render yet");
+		return -1;
+	}
+	DPRINT(Debugdraw, "mousepick %d,%d stale %d move %d",
+		x, y, render.stalepick, render.moving);
 	if(render.stalepick && !render.moving){
 		sgx_query_image_pixels(pickfb, render.pickfb);
 		render.stalepick = 0;
 	}
 	if(render.pickflip)
 		y = view.h - y;
-	if((i = render.pickfb[(view.h - y - 1) * view.w + x]) == 0)
-		return 0xffffffff;
+	i = render.pickfb[(view.h - y - 1) * view.w + x];
+	DPRINT(Debugdraw, "mousepick: %x", i);
+	if(i == 0)
+		return -1;
 	return i - 1;
 }
 
@@ -505,7 +515,7 @@ setuppasses(void)
 		.colors = {
 			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
-				.clear_value = { 0.0f },
+				.clear_value = { 0.0f, 0.0f, 0.0f, 1.0f },
 			},
 		},
 	};
@@ -524,5 +534,6 @@ initgl(void)
 	initfb(sapp_width(), sapp_height());
 	b = sg_query_backend();
 	render.pickflip = b != SG_BACKEND_GLCORE && b != SG_BACKEND_GLCORE;
+	render.stalepick = 1;
 	onscreen = 1;
 }

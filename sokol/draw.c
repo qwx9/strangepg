@@ -124,8 +124,8 @@ pandraw(float Δx, float Δy)
 	HMM_Mat4 rot;
 
 	if((drawing.flags & DF3d) == 0){
-		Δx /= view.w;
-		Δy /= view.h;
+		Δx /= view.w * 0.5f;
+		Δy /= view.h * 0.5f;
 		Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
 		Δy *= 2 * view.Δeye.z * view.tfov;
 		view.center.x += Δx;
@@ -146,6 +146,9 @@ pandraw(float Δx, float Δy)
 		view.up = V(vw.X, vw.Y, vw.Z);
 		vw = HMM_MulM4V4(rot, HMM_V4(view.right.x, view.right.y, view.right.z, 1.0f));
 		view.right = V(vw.X, vw.Y, vw.Z);
+		warn("up %f,%f,%f right %f,%f,%f\n",
+			view.up.x, view.up.y, view.up.z,
+			view.right.x, view.right.y, view.right.z);
 		updateview();
 	}
 }
@@ -208,6 +211,7 @@ renderdirect(void)
 	snk_render(view.w, view.h);
 	sg_end_pass();
 	CLK1(clk);
+	render.nframes++;
 }
 
 static void
@@ -235,6 +239,7 @@ renderoffscreen(void)
 	}
 	sg_end_pass();
 	CLK1(clk);
+	render.noframes++;
 }
 
 static void
@@ -339,6 +344,7 @@ wakedrawup(void)
 	sapp_wakethefup();
 }
 
+/* FIXME: promote to global code */
 void
 frame(void)
 {
