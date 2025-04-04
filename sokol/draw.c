@@ -124,8 +124,8 @@ pandraw(float Δx, float Δy)
 	HMM_Mat4 rot;
 
 	if((drawing.flags & DF3d) == 0){
-		Δx /= view.w * 0.5f;
-		Δy /= view.h * 0.5f;
+		Δx /= view.w;
+		Δy /= view.h;
 		Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
 		Δy *= 2 * view.Δeye.z * view.tfov;
 		view.center.x += Δx;
