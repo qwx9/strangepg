@@ -532,7 +532,7 @@ initgl(void)
 	setcolor(render.edgefs.color, theme[Cedge]);
 	initfb(sapp_width(), sapp_height());
 	b = sg_query_backend();
-	render.pickflip = b != SG_BACKEND_GLCORE && b != SG_BACKEND_GLCORE;
+	render.pickflip = b != SG_BACKEND_GLCORE && b != SG_BACKEND_GLES3;
 	render.stalepick = 1;
 	onscreen = 1;
 }
