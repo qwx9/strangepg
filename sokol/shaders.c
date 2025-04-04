@@ -424,7 +424,6 @@ setupaxes(void)
 	setcolor(r->col1, theme[Cxaxis]);
 	setcolor(r->col2, theme[Cxaxis]);
 	r++;
-	warn("%d\n", sizeof r->pos1);
 	memcpy(r->pos1, rlines[0].pos1, sizeof r->pos1);
 	r->pos2[0] = 200.0f * view.right.x;
 	r->pos2[1] = 200.0f * view.right.y;
