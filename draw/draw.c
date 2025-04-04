@@ -13,7 +13,14 @@ REdge *redges;
 RLine *rlines;
 ioff *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFORMAT_UBYTE4N instead */
 ssize ndnodes, ndedges, ndlines;
-Drawing drawing;
+Drawing drawing = {
+	.length = {0.0f, 0.0f},
+	.xbound = {0.0f, 0.0f},
+	.ybound = {0.0f, 0.0f},
+	.zbound = {0.0f, 0.0f},
+	.nodesz = Nodesz,
+	.fatness = Ptsz,
+};
 Channel *rendc, *ctlc;
 
 static Channel *drawc;
@@ -35,9 +42,9 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 	p2.x = v->pos[0];
 	p2.y = v->pos[1];
 	p2.z = v->pos[2];
-	du = mulv(du, u->len * Nodesz / 2.0f);
+	du = mulv(du, u->len * drawing.nodesz / 2.0f);
 	du = urev ? addv(p1, du) : subv(p1, du);
-	dv = mulv(dv, v->len * Nodesz / 2.0f);
+	dv = mulv(dv, v->len * drawing.nodesz / 2.0f);
 	dv = vrev ? subv(p2, dv) : addv(p2, dv);
 	r->pos1[0] = du.x;
 	r->pos1[1] = du.y;
@@ -90,7 +97,7 @@ resizenodes(void)
 		drawing.length.max = drawing.length.min;
 	if((Δ = drawing.length.max - drawing.length.min) < 1.0){
 		Δ = 1.0;
-		min = max = Nodesz;
+		min = max = drawing.nodesz;
 	}
 	k = Minsz * log(2) / Δ;
 	for(r=rnodes, re=r+dylen(r); r<re; r++){
@@ -291,13 +298,7 @@ reqdraw(int r)
 void
 initdrw(void)
 {
-	drawing.length = (Range){0.0f, 0.0f};
-	drawing.xbound = drawing.length;
-	drawing.ybound = drawing.length;
-	drawing.zbound = drawing.length;
-	drawing.nodesz = Nodesz;
 	drawing.flags |= DFstalelen;
-	drawing.fatness = Ptsz;
 	settheme();
 	initcol();
 	/* FIXME: this chan implementation SUCKS */

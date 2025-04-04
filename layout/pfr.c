@@ -8,7 +8,7 @@ enum{
 	Area = W * H,
 };
 
-#define	C	(Minsz / Maxsz)
+#define	C	(drawing.nodesz * Minsz / Maxsz)
 #define Tolerance	0.005f
 
 typedef struct Aux Aux;
@@ -73,7 +73,7 @@ new_(int nuke, int is3d)
 		var[2] = W;
 		mid[2] = 0;
 	}
-	f = Nodesz * 2.0;
+	f = drawing.nodesz * 2.0;
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->nedges == 0){
 			orphans++;

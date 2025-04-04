@@ -72,7 +72,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -80,6 +80,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
+		"-s LEN WIDE    Set node length and width (max: 40, default: 1.0 1.0)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
@@ -165,6 +166,15 @@ parseargs(int argc, char **argv)
 	case 'n':
 		pushcmd("layfile=\"%s\"", EARGF(usage()));
 		drawing.flags |= DFnope;
+		break;
+	case 's':
+		drawing.nodesz = atof(EARGF(usage()));
+		drawing.fatness = atof(EARGF(usage()));
+		if(drawing.nodesz <= 0.0f || drawing.nodesz >= Maxsz
+		|| drawing.fatness <= 0.0f || drawing.fatness >= Maxsz){
+			warn("invalid node dimensions\n");
+			usage();
+		}
 		break;
 	case 't':
 		nlaythreads = atoi(EARGF(usage()));
