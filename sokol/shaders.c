@@ -434,9 +434,9 @@ setupaxes(void)
 	setcolor(r->col2, theme[Cyaxis]);
 	r++;
 	memcpy(r->pos1, rlines[0].pos1, sizeof r->pos1);
-	r->pos2[0] = 200.0f * 0.0f;
-	r->pos2[1] = 200.0f * 0.0f;
-	r->pos2[2] = 200.0f * -1.0f;
+	r->pos2[0] = 200.0f * view.front.x;
+	r->pos2[1] = 200.0f * view.front.y;
+	r->pos2[2] = 200.0f * view.front.z;
 	r->pos2[3] = 1.0f;
 	setcolor(r->col1, theme[Czaxis]);
 	setcolor(r->col2, theme[Czaxis]);

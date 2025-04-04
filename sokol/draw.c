@@ -146,9 +146,6 @@ pandraw(float Δx, float Δy)
 		view.up = V(vw.X, vw.Y, vw.Z);
 		vw = HMM_MulM4V4(rot, HMM_V4(view.right.x, view.right.y, view.right.z, 1.0f));
 		view.right = V(vw.X, vw.Y, vw.Z);
-		warn("up %f,%f,%f right %f,%f,%f\n",
-			view.up.x, view.up.y, view.up.z,
-			view.right.x, view.right.y, view.right.z);
 		updateview();
 	}
 }
@@ -170,10 +167,12 @@ zoomdraw(float Δ, float Δx, float Δy)
 }
 
 void
-rotdraw(Vertex v)
+rotdraw(float Δx, float Δy)
 {
-	view.θ += v.x;
-	view.φ += v.y;
+	Δx *= HMM_DegToRad * 0.2f;
+	Δy *= HMM_DegToRad * 0.2f;
+	view.θ += Δx;
+	view.φ += Δy;
 	updateview();
 }
 
@@ -299,7 +298,7 @@ resizebuf(void)
 
 /* FIXME: individual nodes */
 void
-updatenode(ioff id)	/* FIXME */
+updatenode(ioff id)	/* FIXME: single update */
 {
 	render.stalepick = 1;
 	reqdraw(Reqredraw);

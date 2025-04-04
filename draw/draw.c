@@ -104,7 +104,6 @@ resizenodes(void)
 static inline void
 faceyourfears(RNode *ru, Node *u)
 {
-	int n;
 	float x, y, z, Δ, Δx, Δy, Δz;
 	float θ, c, s, t;
 	ioff *i, *ie;
@@ -117,7 +116,6 @@ faceyourfears(RNode *ru, Node *u)
 	y = ru->pos[1];
 	z = ru->pos[2];
 	c = s = t = 0.0f;
-	n = 0;
 	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
 		e = *i;
 		rv = rnodes + (e >> 2);
@@ -136,13 +134,7 @@ faceyourfears(RNode *ru, Node *u)
 		c += Δx / Δ;
 		s += Δy / Δ;
 		t += Δz / Δ;
-		n++;
 	}
-	if(n == 0)
-		n = 1;
-	Δx /= n;
-	Δy /= n;
-	Δz /= n;
 	θ = fmodf(atan2f(s, c), 2.0f * (float)PI);
 	ru->dir[0] = cosf(θ);
 	ru->dir[1] = sinf(θ);

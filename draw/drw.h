@@ -119,6 +119,7 @@ struct View{
 	Vertex center;
 	Vertex up;
 	Vertex right;
+	Vertex front;
 	Vertex Δeye;
 	Vertex pan;
 	double zoom;
@@ -129,7 +130,7 @@ extern View view;
 void	endmove(void);
 void	zoomdraw(float, float, float);
 void	pandraw(float, float);
-void	rotdraw(Vertex);
+void	rotdraw(float, float);
 void	worldview(Vertex);
 u32int	mousepick(int, int);
 int	redraw(int);

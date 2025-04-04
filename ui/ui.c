@@ -69,18 +69,9 @@ zoom(float Δx, float Δy)
 static void
 rotate(float Δx, float Δy)
 {
-	Vertex v;
-
 	if(Δx == 0.0f && Δy == 0.0f)
 		return;
-	Δx *= PI / 180.0f;
-	Δy *= PI / 180.0f;
-	Δx *= 0.1f;
-	Δy *= 0.1f;
-	v.x = Δx;
-	v.y = Δy;
-	v.z = 0.0f;
-	rotdraw(v);
+	rotdraw(Δx, Δy);
 }
 
 int
@@ -280,17 +271,30 @@ static int
 mousedrag(float Δx, float Δy)
 {
 	ioff idx;
+	float d;
 	RNode *r;
+	Vertex v;
 
 	if(((idx = selected) & 1UL<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
-	Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
-	Δy = 2 * Δy * view.Δeye.z * view.tfov;
 	r = rnodes + idx;
-	r->pos[0] += Δx;
-	r->pos[1] -= Δy;
+	if((drawing.flags & DF3d) == 0){
+		Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
+		Δy = 2 * Δy * view.Δeye.z * view.tfov;
+		r->pos[0] += Δx;
+		r->pos[1] -= Δy;
+	}else{
+		v = V(r->pos[0], r->pos[1], r->pos[2]);
+		v = subv(view.eye, v);
+		d = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+		Δx *= d * view.ar * view.tfov;
+		Δy *= d * view.tfov;
+		r->pos[0] += Δx * view.right.x - Δy * view.up.x;
+		r->pos[1] += Δx * view.right.y - Δy * view.up.y;
+		r->pos[2] += Δx * view.right.z - Δy * view.up.z;
+	}
 	updatenode(idx);
 	return 1;
 }
@@ -305,9 +309,11 @@ mousehover(int x, int y)
 		u32int u;
 	} u;
 
+	DPRINT(Debugdraw, "mousehover %d,%d win [%d,%d]", x, y, view.w, view.h);
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
 		return -1;
 	u.u = mousepick(x, y);
+	DPRINT(Debugdraw, "mousehover %d,%d: %x", x, y, u.u);
 	if(u.i == -1){
 		hoverstr[0] = 0;
 		return -1;
@@ -387,6 +393,7 @@ mouseevent(Vertex v, Vertex Δ)
 	int m;
 	static int omod, inwin;
 
+	DPRINT(Debugdraw, "mouseevent %f,%f Δ %f,%f mod %d", v.x, v.y, Δ.x, Δ.y, mod);
 	m = mod & Mmask;
 	if(vinrect(v, view.prompt) || m != 0 && inwin){
 		inwin = 1;
@@ -421,6 +428,7 @@ mouseevent(Vertex v, Vertex Δ)
 			zoom(-Δ.x, -Δ.y);
 		else
 			pan(-Δ.x, -Δ.y);
+	/* FIXME: 2d mode rotation */
 	}else if(m == Mmmb)
 		rotate(-Δ.x, -Δ.y);
 	else if(m == (Mlmb | Mrmb))
@@ -439,6 +447,7 @@ resetui(void)
 	view.eye = V(0.0f, 0.0f, 100.0f);
 	view.up = V(0.0f, 1.0f, 0.0f);
 	view.right = V(1.0f, 0.0f, 0.0f);
+	view.front = V(0.0f, 0.0f, 1.0f);
 	view.Δeye = subv(view.eye, view.center);
 	view.pan = ZV;
 	view.zoom = 1.0;
