@@ -4,7 +4,7 @@ Interactive visualization of large genome graphs
 in [GFAv1 format](https://github.com/GFA-spec/GFA-spec/blob/master/GFA1.md)
 à la [Bandage](https://github.com/rrwick/Bandage).
 
-<p align="center"><img src=".pics/bobub.png"/></p>
+<p align="center"><img src=".pics/zoom.png"/></p>
 
 Named in reference to the Dr. Strangelove character
 in Stanley Kubrick's __Dr. Strangelove or: how I learned to stop
@@ -28,8 +28,6 @@ additions. Git tags do **not** mark stable releases.
 Please consider this to be a public beta of sorts
 and feel free to send bug reports, feature requests or comments.
 Thanks!_
-
-<p align="center"><img src=".pics/zoom.png"/></p>
 
 ## Table of contents
 
@@ -61,6 +59,7 @@ Thanks!_
   + [Conga line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segments-order)
   + [Random coordinates](#random-coordinates)
   + [Linear layout using bubble id tags from gaftools](#linear-layout-using-bubble-id-tags-from-gaftools)
+  + [Rapid visual inspection of long linear segments](#rapid_visual_inspection_of_long_linear_segments)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
 - [References](#references)
@@ -93,30 +92,30 @@ Right now, because layouting is parallelized, in real-time and can be interacted
 not that much is left to make it more useful in practice.
 
 Near finished:
-- Offline coarsening and usage
-- Proper 3D navigation, 3d nodes
+- Online and offline coarsening and usage
 - Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
-- Online coarsening without preprocessing
+- Better external memory implementation and hooks
 - Manpage
 
 Near future:
 - Path handling: highlighting, coloring
 - Better UI; macros as user-defined buttons
-- GBZ support
 - Newick format and phylogenetic tree layouts
-- External memory implementation: either improve or replace with S3-fifo
 - Additional capabilities in the graph language
+- Multiple graph handling
 
 Future:
 - Prettier graphs: node/line thickness and curvature
 - Additional annotation overlays
-- Better graph manipulation language; single binary
+- Better graph manipulation language
 - More user-friendly layout specification/implementation
 - IGV-like subviews (?)
-- Multiple graph handling (?)
 - Further graphics performance improvements if warranted
+- GBZ support
 
 Released under the terms of the MIT license.
+
+<p align="center"><img src=".pics/darkmode2.png"/></p>
 
 
 ## TL;DR
@@ -136,10 +135,10 @@ Increase number of threads for layouting:
 strangepg -t 8 some.gfa
 ```
 
-Select a different layout algorithm:
+Select a different layout type:
 
 ```bash
-strangepg -l fr some.gfa
+strangepg -l 3d some.gfa
 ```
 
 Load a CSV file named some.csv:
@@ -155,6 +154,15 @@ Load layout from a file named some.lay
 strangepg -f some.lay some.gfa
 ```
 
+Compute a layout offline, ie. non-interactively and without graphics, writing snapshots to a file:
+```bash
+strangepg -n some.lay some.gfa
+# resuming from snapshot:
+strangepg -f some.lay -n some.lay some.gfa
+```
+
+<p align="center"><img src=".pics/rna.png"/></p>
+
 ## Installation
 
 Currently Linux, macOS, Windows, OpenBSD and Plan9front
@@ -162,7 +170,8 @@ are supported (x86, amd64, arm64).
 Other BSDs might work as well, but it's untested.
 
 Installation can be done from source or via [bioconda](https://bioconda.github.io/).
-Test binaries, probably out of date, can be downloaded from the Releases github page as well.
+Binaries for Linux, macOS and Windows, probably out of date,
+can be downloaded from the Releases github page as well.
 
 #### Hardware requirements
 
@@ -225,7 +234,7 @@ make -j install
 ```
 
 _-j_ is an optional flag to enable parallel building using all available cores.
-This installs the binaries ```strangepg``` and ```strawk```,
+This installs the binary ```strangepg```,
 by default in **$HOME/.local/bin**.
 If this directory is not in your `$PATH` or a different installation directory is desired,
 use the `PREFIX` make variable:
@@ -234,7 +243,7 @@ use the `PREFIX` make variable:
 sudo make PREFIX=/usr/local install
 ```
 
-**NOTE**: manual compilation with **clang is recommended** as it currently __may__ produce somewhat faster binaries.
+**NOTE**: manual compilation with **clang is recommended** as it currently __may__ produce noticeably faster binaries.
 
 To set the compiler, use the `CC` make variable:
 
@@ -255,10 +264,11 @@ Known to work on Ubuntu 22.04/24.04, Arch Linux and Void Linux.
 #### MacOS
 
 Native binaries using Metal can be built on both amd64 and arm64 machines.
-Install the Xcode Command Line Tools from the App Store,
-then start a Terminal and run:
+Install the _Xcode Command Line Tools_, then clone the repository and build:
 
 ```bash
+xcode-select --install
+
 git clone https://github.com/qwx9/strangepg
 cd strangepg
 make -j
@@ -269,8 +279,10 @@ This will install strangepg in `/usr/local/bin` by default.
 Use the `PREFIX` make variable to override it:
 
 ```bash
-make PREFIX=$HOME/bin install
+make PREFIX=$HOME/.local install
 ```
+
+Make sure that this new installation directory is in your `PATH`.
 
 #### Windows (MinGW64)
 
@@ -293,7 +305,7 @@ in the same way as for other systems.
 
 #### Windows (Cygwin)
 
-Windows binaries using OpenGL can be built directly on Windows via Cygwin.
+Windows binaries using OpenGL can also be built directly on Windows via Cygwin.
 Tested only via MobaXterm (v24.2+, or any version with gcc 10.1+).
 To build and run the Cygwin port, install the following packages
 and their dependencies:
@@ -347,7 +359,8 @@ Install with:
 gmake -j install
 ```
 
-The default `PREFIX` is `$HOME/.local/bin`.
+The default `PREFIX` is `$HOME/.local`,
+installing the binary in `$HOME/.local/bin`.
 Change this by adding a `PREFIX=` to your gmake command line.
 
 You might want to enable SMT/Hyperthreading or lose much of the performance.
@@ -365,8 +378,8 @@ Currently broken until the rendering component is brought up to date.
 
 ## Usage
 
-strangepg requires at least one input file as argument.
-It currently supports graphs in GFA format.
+strangepg requires one input file as argument.
+It currently only supports graphs in GFA format.
 
 ```bash
 strangepg file.gfa
@@ -385,31 +398,39 @@ strangepg test/02.gfa
 
 ```bash
 $ strangepg -h
-usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE
+usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE [CMD..]
 -b             White-on-black color theme
 -c FILE        Load tags from csv FILE
 -f FILE        Load layout from FILE
 -l ALG         Set layouting algorithm (default: pfr)
+-n FILE        Run layouting without graphics, saving snapshots to FILE
 -t N           Set number of layouting threads (1-128, default: 4)
 -w             Do not wait for all files to load to start layouting
--H             Enable Hi-DPI mode
+-A             Disable transparency (for performance)
+-H             Enable Hi-DPI mode (macOS only)
 -M             Enable 4x multisample anti-aliasing (MSAA)
+-W             Do not suppress warning messages
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
 ```
 
 The most important options are:
 
 - `-l ALG`: select the [layouting algorithm](#layouting) to use.
-The default should be good enough for graphs with more at least 3 times the number of threads. Use fewer threads or the `fr` algorithm otherwise.
 - `-t N` sets the number of threads spawned for layouting.
 It's recommended to set it to or near the number of all available cores.
-Single-threaded layout algorithms will only use one of them.
+Single-threaded layout algorithms will spawn them all but only use one of them.
+The default should be good enough for graphs with more than 5-10 times the number of threads.
 
 Optional input files:
 
 - `-c FILE` [loads a CSV file](#csv).
 It can be specified multiple times to load tags from more than one CSV file.
+Each file's changes are applied on top of previous ones.
 - `-f FILE` loads a layout previous saved to the file.
+- `-n FILE` shunts the entire graphics and UI stack and computes a layout.
+Suitable for running on headless (displayless) servers.
+Snapshots are written every 10 seconds;
+layouting can be resumed from one by using `-f` flag.
 
 Additional settings:
 
@@ -423,6 +444,10 @@ layouting only begins when it is safe to assume that everything is ready.
 This option completely ignores all of this
 and instead signals layouting to begin immediately after all nodes and
 edges have been created.
+- `-W` do not suppress warnings:
+redundant edges and such are discarded, but printing warnings about this
+and some other cases is too common;
+this prevents printing a ton of output that may not be relevant.
 
 <p align="center"><img src=".pics/darkmode.png"/></p>
 
@@ -438,11 +463,39 @@ so as to appear as if there is no depth.
 
 Additional graphics options
 
-- `-H`: enable hi-DPI mode (macOS only).
+- `-A`: disable transparency, trading visual quality for higher performance.
+- `-H`: enable hi-DPI mode for high resolution screens (macOS only).
 - `-M`: enable 4x multi-sample antialiasing (MSAA), which smooths lines
 and provides much more aesthetically pleasant visuals,
 at the cost of performance.
 
+#### Notes on GFA file format
+
+`strangepg` makes no assumptions about the order of records within the file,
+whether nodes are interspersed with edges or not,
+and what the nodes' labels look like (strings, integers, etc.).
+It boasts one of the fastest and leanest GFA loading regardless,
+so no preprocessing is needed.
+
+ecords must conform to the GFAv1 standard; syntax errors are reported,
+but parsing will continue if possible:
+
+- redundant L and S records are treated as duplicates and discarded
+(note, edge tags are currently unused).
+For example:
+
+	L	a	+	b	+
+	L	b	-	a	-
+
+Here, `b-a-` is seen as a duplicate of `a+b+` since
+the bidirectionality is already captured by `a+b+`.
+Which of the duplicate edges is kept should be considered arbitrary,
+but currently the reference edge is the one with the lowest ranked left-hand node.
+- the field separator is a single tab character;
+two successive ones are treated as an empty field.
+- nodes must have a non-empty sequence field which cannot exceed 128k characters.
+
+<p align="center"><img src=".pics/ignored.png"/></p>
 
 ## Layouting
 
@@ -470,32 +523,35 @@ The basic layouting algorithm serves as a backbone for more specific visualizati
 changing the type of geometry: circular, spherical, non-euclidean, etc.
 These basic additional layouts are currently under development.
 
-<p align="center"><img src=".pics/bo.png"/></p>
+<p align="center"><img src=".pics/layout.png"/></p>
 
 #### Basic layouting
 
 Available algorithms:
-- `-l pfr`: the default, a slightly optimized and parallelized version
+- `-l fr`: the default, a slightly optimized and parallelized version
 of the original algorithm. The time complexity is essentially the same,
-so while it may run faster, it will not scale on its own for 10k node graphs and beyond. Because it splits the graph across threads, it will produce nonsense results
+so while it may run faster, it will not scale on its own for 10k node graphs and beyond.
+Because it splits the graph across threads, it will produce nonsense results
 if the number of nodes is less than 2-3 times the number of threads.
-- `-l pfr3d`: same as `pfr` but additionally using the z axis to layout in 3D.
-- `-l fr`: the classic algorithm, single-threaded. Use this for very small graphs (<1000 nodes) where `pfr` is not appropriate.
+- `-l 3d`: same as `fr` but additionally using the z axis to layout in 3D.
 
 Use the [`-t` command line parameter](#usage) to change the number of threads
 used for layouting, 4 by default.
 Single threaded algorithms will always only use one of them.
+
+<p align="center"><img src=".pics/basic.png"/></p>
 
 #### Interaction
 
 The following keyboard shortcuts are available:
 - `r`: restart layouting from scratch
 - `p`: stop layouting, or restart from current state
+- `Esc`: reset position on screen
 
 Nodes may be dragged around with the mouse.
 Moving nodes does not fix their position to a constant position,
 and if layouting is currently underway it will influence the layout as a whole.
-Nodes can be fixed via [tags](#interaction).
+Node positions are fixed via [tags](#interaction) instead.
 
 Restarting it is cheap; try it if the layout doesn't look good.
 Intermediate or final results can be saved to file,
@@ -517,7 +573,7 @@ The current layout may be exported or imported at runtime
 with the `exportlayout("file")` and `importlayout("file")` functions
 (see [Graph manipulation](#interaction)).
 
-<p align="center"><img src=".pics/export.png"/></p>
+<p align="center"><img src=".pics/import.png"/></p>
 
 
 ## Navigation
@@ -702,9 +758,8 @@ Lines must be terminated with a new line (LF) character, ie. the return characte
 
 Each line must have the same number of fields as the header, but fields may be empty.
 
-<p align="center"><img src=".pics/space.png"/></p>
+<p align="center"><img src=".pics/colors.png"/></p>
 
-_Soon, deathmatching in graph space_
 
 ## Example applications
 
@@ -735,7 +790,7 @@ fx[1] = 8 * 1024 * node[i]
 fy[1] = 8 * 1280 * rand()
 ```
 
-#### Linear layout using bubble id tags from gaftools
+#### Linear layout using bubble id tags from [gaftools](https://github.com/marschall-lab/gaftools)
 
 ```awk
 min = 999999
@@ -744,10 +799,40 @@ for(i in BO) if(BO[i] < min) min = BO[i]; if(BO[i] > max) max = BO[i]
 fx[CL[i] == orange] = 8 * (BO[i] - min - (max - min) / 2)
 fy[CL[i] == orange] = 0
 x0[CL[i] != orange] = 8 * (BO[i] - min - (max - min) / 2)
-y0[CL[i] != orange] = 2 - 4 * rand() 
+y0[CL[i] != orange] = 2 - 4 * rand()
 ```
 
 <p align="center"><img src=".pics/bo.png"/></p>
+
+#### Rapid visual inspection of long linear segments
+
+The objective is to visually verify the absence of certain nodes within a region of interest.
+Other existing programs may make it difficult to accomplish due to a limited interface,
+or a layout producing too many overlaps, masking potential sites.
+`strangepg` attempts to maintain some separation between nodes
+and offers a relatively simple solution with partial 3d layouting.
+The layout is partially computed on a server with 64 cores,
+ie. run once for a limited period of time.
+A csv file colors the region and critical nodes.
+Nodes are enlarged to make them easier to distinguish and all nodes not in the csv
+are colored in light gray.
+The random colors and default node dimensions make it difficult to see what is happening,
+but we can use a simple command to color all nodes not mentioned in the CSV file.
+We'll append the command to the command line so as to not have to type it in the prompt;
+this approach works well with scripts.
+
+```bash
+strangepg \
+        -s 8 8 \
+        -M \
+        -l 3d \
+        -c ~/chr17_16823490-18384190_0.csv \
+        -f chr17_16823490-18384190_10000.gfa \
+        ~/strpg-testgraphs/hufsah/thesis/chr17_16823490-18384190_10000.gfa \
+        'CL[CL[i] != 0xfbff00c0 && CL[i] != 0xff0000c0] = 0xeeeeee10'
+```
+
+<p align="center"><img src=".pics/yellow.png"/></p>
 
 
 ## Known bugs
@@ -759,15 +844,13 @@ but because it is shown in real time and the algorithms currently used being slo
 (improvements underway), the initial plot looks... underwhelming.
 
 Less major bugs:
-- strawk could still use less memory and be faster; its language is very limited
-- Layouting currently doesn't place some of the nodes nicely;
-many plots look ugly by default but can be fixed by just moving the nodes around.
-- 3d navigation is a kludge on top of 2d navigation
+- strawk could still use less memory and be faster; its language is very limited;
+yet to be hooked up to external memory
 - The selection box is a kludge and is stupidly resource-heavy
+- 3d navigation still suffers from some bugs (roll angle especially)
 - The renderer is fairly efficient, but it could be made orders of magnitude faster
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well
-- transient pthreads error on exit: libgcc_s.so.1 must be installed for pthread_exit to work
 
 
 ## Used and bundled alien software
@@ -786,8 +869,10 @@ Used but not bundled:
 
 strawk is based on [onetrueawk](https://github.com/onetrueawk/awk).
 
+<p align="center"><img src=".pics/space.png"/></p>
 
-![](.pics/plan.png)
+_Soon, deathmatching in graph space_
+
 
 ## References
 
