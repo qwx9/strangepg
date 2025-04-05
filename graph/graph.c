@@ -77,7 +77,7 @@ getrealid(ioff idx)
 	return nodes[idx].id;
 }
 
-void
+int
 setattr(int type, ioff id, V val)
 {
 	ioff idx;
@@ -85,7 +85,7 @@ setattr(int type, ioff id, V val)
 	RNode *r;
 
 	if((idx = getnodeidx(id)) < 0)
-		return;
+		return - 1;
 	n = nodes + idx;
 	r = rnodes + idx;
 	switch(type){
@@ -94,7 +94,7 @@ setattr(int type, ioff id, V val)
 			break;
 		if(val.i < 0){
 			logerr(va("setattr: nonsense segment length %d\n", val.i));
-			break;
+			return -1;
 		}
 		r->len = val.i;
 		if(drawing.length.min == 0.0f || drawing.length.min > val.i){
@@ -107,7 +107,7 @@ setattr(int type, ioff id, V val)
 		}
 		break;
 	case TCL:
-		setcolor(r->col, val.u);
+		setcolor(r->col, setalpha(val.u));
 		break;
 	case Tfx:
 		n->flags |= FNfixedx;
@@ -143,4 +143,5 @@ setattr(int type, ioff id, V val)
 			drawing.zbound.max = val.f;
 		break;
 	}
+	return 0;
 }

@@ -299,7 +299,7 @@ set(int i, int type, ioff id, V val)
 		break;
 	case TLN:
 		if(type != Tuint && type != Tint){
-			DPRINT(Debuginfo, "not assigning string value %s to CL[%d]", val.s, id);
+			DPRINT(Debuginfo, "not assigning string value %s to LN[%d]", val.s, id);
 			return;
 		}
 		lab = getnodelabel(id);
@@ -394,7 +394,7 @@ vartype(char *val, V *v, int iscolor)
 		s++;
 		i = strtoull(s, &p, 16);
 		if(iscolor && p - s < 8)	/* sigh */
-			i = i << 8 | 0xc0;
+			i = i << 8;
 		type = Tuint;
 	}else{
 		i = strtoll(s, &p, 0);
@@ -488,7 +488,7 @@ fnloadall(void)
 	fnloadbatch();
 	for(id=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
 		if(r->col[3] == 0.0f){
-			vv.i = somecolor(id, nil);
+			vv.u = somecolor(id, nil);
 			set(TCL, NUM, id, vv);
 		}
 		/* FIXME: edges */
@@ -537,26 +537,25 @@ fnexplode(Cell *x, TNode *nextarg)
 static TNode *
 fnnodecolor(Cell *x, TNode *next)
 {
-	ioff id, idx;
+	ioff id;
 	char *lab;
 	Cell *y;
 	Array *a;
-	Awknum col;
+	V v;
 
 	lab = getsval(x);
 	y = execute(next);
 	next = next->nnext;
-	col = getival(y);
+	v.u = getival(y);
 	if((a = gettabarray(TCL)) == nil)
 		 sysfatal("awk/nodecolor: uninitialized table");
-	setint(lab, col, a, nil);
 	if((id = getnodeid(lab)) < 0)
 		FATAL("%s", error());
-	if((idx = getnodeidx(id)) >= 0)
-		setcolor(rnodes[idx].col, col);
-	else
+	setint(lab, v.u, a, nil);
+	if(setattr(TCL, id, v) < 0)
 		DPRINT(Debuggraph, "nodecolor: ignoring inactive node %d", id);
 	tempfree(y);
+	reqdraw(Reqrefresh);
 	return next;
 }
 
@@ -571,6 +570,7 @@ static TNode *
 fnunshow(Cell *x, TNode *next)
 {
 	ioff idx;
+	u32int col;
 	RNode *r;
 	Cell *y;
 
@@ -579,7 +579,8 @@ fnunshow(Cell *x, TNode *next)
 	r = rnodes + idx;
 	y = execute(next);
 	next = next->nnext;
-	setcolor(r->col, getival(y));
+	col = setalpha(getival(y));
+	setcolor(r->col, col);
 	tempfree(y);
 	if((y = getcell("selinfo", symtab)) == nil)
 		return next;

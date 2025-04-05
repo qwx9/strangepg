@@ -37,7 +37,7 @@ enum{
 	AEXPAND,
 };
 
-extern int noreset;
+extern int noreset;	// FIXME: flag
 
 extern char *awkprog;
 extern int infd[2], outfd[2];
@@ -55,4 +55,4 @@ int	sysinitcmd(void);
 int	initrepl(void);
 int	initcmd(void);
 
-void	setattr(int, ioff id, V val);
+int	setattr(int, ioff, V);

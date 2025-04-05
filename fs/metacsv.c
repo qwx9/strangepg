@@ -33,7 +33,7 @@ csvheader(File *f, int *wait)
 		return nil;
 	}
 	for(; (s = nextfield(f)) != nil;){
-		while(isspace((c=*s)))
+		while(isspace(*s))
 			s++;
 		for(p=s; (c=*p)!=0; p++){
 			if(isspace(c))

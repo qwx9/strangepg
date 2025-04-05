@@ -1,50 +1,54 @@
 BEGIN{
-	black = 0x000000c0
-	blue = 0x1f78b4c0
-	bluegreen = 0x5fc69fc0
-	brightblue = 0x0000ffc0
-	brightgreen = 0x00ff00c0
-	brightpurple = 0x00ffffc0
-	brightred = 0xff0000c0
-	brightyellow = 0xffff00c0
-	brown = 0xb15928c0
-	cyan = 0x7acdcdc0
-	darkgray = 0x3f3f3fc0
-	darkgreen = 0x33a02cc0
-	darkpink = 0xc96088c0
-	darkpurple = 0x6a3d9ac0
-	gray = 0x777777c0
-	green = 0x8ec65ec0
-	greyblue = 0xbebadac0
-	greybrown = 0x7f5f67c0
-	greygreen = 0xccebc5c0
-	greyred = 0xc76758c0
-	lightblue = 0x80b1d3c0
-	lightbrown = 0xca9560c0
-	lightgray = 0xc0c0c0c0
-	lightgreen = 0xd5f65fc0
-	lightgrey = 0xd9d9d9c0
-	lightorange = 0xfdb462c0
-	lightpink = 0xfccde5c0
-	lightpurple = 0xbc80bdc0
-	lightred = 0xfb8072c0
-	lightteal = 0x8dd3c7c0
-	orange = 0xff7f00c0
-	paleblue = 0xa6cee3c0
-	palegray = 0xdcdcdcc0
-	palegreen = 0xb2df8ac0
-	paleorange = 0xfdbf6fc0
-	palepurple = 0xc893f0c0
-	palered = 0xfb9a99c0
-	paleviolet = 0xcab2d6c0
-	paleyellow = 0xffffb3c0
-	purple = 0xb160c9c0
-	purpleblue = 0x8080ffc0
-	red = 0xe31a1cc0
-	teal = 0x009696c0
+	black = 0x00000000
+	blue = 0x1f78b400
+	bluegreen = 0x5fc69f00
+	brightblue = 0x0000ff00
+	brightgreen = 0x00ff0000
+	brightpurple = 0x00ffff00
+	brightred = 0xff000000
+	brightyellow = 0xffff0000
+	brown = 0xb1592800
+	cyan = 0x7acdcd00
+	darkgray = 0x3f3f3f00
+	darkgreen = 0x33a02c00
+	darkpink = 0xc9608800
+	darkpurple = 0x6a3d9a00
+	gray = 0x77777700
+	grayblue = 0xbebada00
+	graybrown = 0x7f5f6700
+	graygreen = 0xccebc500
+	grayred = 0xc7675800
+	grey = gray
+	greybrown = graybrown
+	greygreen = graygreen
+	greyred = grayred
+	green = 0x8ec65e00
+	lightblue = 0x80b1d300
+	lightbrown = 0xca956000
+	lightgray = 0xc0c0c000
+	lightgreen = 0xd5f65f00
+	lightgrey = 0xd9d9d900
+	lightorange = 0xfdb46200
+	lightpink = 0xfccde500
+	lightpurple = 0xbc80bd00
+	lightred = 0xfb807200
+	lightteal = 0x8dd3c700
+	orange = 0xff7f0000
+	paleblue = 0xa6cee300
+	palegray = 0xdcdcdc00
+	palegreen = 0xb2df8a00
+	paleorange = 0xfdbf6f00
+	palepurple = 0xc893f000
+	palered = 0xfb9a9900
+	paleviolet = 0xcab2d600
+	paleyellow = 0xffffb300
+	purple = 0xb160c900
+	purpleblue = 0x8080ff00
+	red = 0xe31a1c00
+	teal = 0x00969600
 	violet = purple
-	white = 0xffffffc0
-	yellow = 0xffed6fc0
+	white = 0xffffff00
+	yellow = 0xffed6f00
 	srand()
 	OFS = "\t"
 }
@@ -92,23 +96,6 @@ function readcsv(f){
 		print "f", f
 	else
 		deferred[++nd] = "f\t" f "\n"
-}
-function addnode(id, name, color){
-	# remove placeholder for nodes spawned from out of order links
-	if(id in label){
-		delete node[label[id]]
-		delete label[id]
-	}
-	node[name] = id
-	label[id] = name
-	if(color != "")
-		CL[name] = color
-}
-function delnode(name){
-	if(!checknodename(name))
-		return
-	delete label[node[name]]
-	delete node[name]
 }
 function checknodeid(id){
 	if(!(id in label)){

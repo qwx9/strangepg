@@ -241,17 +241,23 @@ color(u32int v)
 }
 
 u32int
+setalpha(u32int c)
+{
+	if((c & 0xff) == 0){
+		c &= ~0xff;
+		c |= (drawing.flags & DFnoalpha ? 0xff
+			: drawing.flags & DFhaxx0rz ? 0x70 : 0xc0);
+	}
+	return c;
+}
+
+u32int
 somecolor(ioff i, char **name)
 {
-	u32int c;
-
 	i %= nelem(pal);
 	if(name != nil)
 		*name = pal[i].name;
-	c = pal[i].col << 8;
-	c |= drawing.flags & DFnoalpha ? 0xff
-		: drawing.flags & DFhaxx0rz ? 0x70 : 0xc0;
-	return c;
+	return pal[i].col << 8;
 }
 
 void

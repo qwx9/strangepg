@@ -359,7 +359,7 @@ readgfa(Aux *a, File *f)
 		return -1;
 	}
 	if(dylen(a->nodeoff) < a->nnodes){	/* the reverse is fine */
-		werrstr("missing S lines: links reference non-existent segments %d != %d", dylen(a->nodeoff), a->nnodes);
+		werrstr("missing S lines: links reference non-existent segments %zd != %d", dylen(a->nodeoff), a->nnodes);
 		return -1;
 	}
 	assert(dylen(a->degree) <= a->nnodes);

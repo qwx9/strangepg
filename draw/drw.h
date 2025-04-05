@@ -151,6 +151,7 @@ extern u32int *theme;
 void	highlightnode(ioff);
 Color*	newcolor(u32int);
 Color*	color(u32int);
+u32int	setalpha(u32int);
 u32int	somecolor(ioff, char**);
 void	settheme(void);
 u32int	getcolor(float*);

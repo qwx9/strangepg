@@ -55,7 +55,6 @@ sac(void *)
 	Channel **cp, **ce;
 
 	nidle = 0;
-	l = nil;
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
