@@ -557,7 +557,7 @@ Restarting it is cheap; try it if the layout doesn't look good.
 Intermediate or final results can be saved to file,
 then used as an initial state for another round of layouting.
 
-<p align="center"><img src=".pics/3d.png"/></p>
+<p align="center"><img src=".pics/small.png"/></p>
 
 
 #### Loading from and saving to file
@@ -828,7 +828,7 @@ strangepg \
         -l 3d \
         -c ~/chr17_16823490-18384190_0.csv \
         -f chr17_16823490-18384190_10000.gfa \
-        ~/strpg-testgraphs/hufsah/thesis/chr17_16823490-18384190_10000.gfa \
+        chr17_16823490-18384190_10000.gfa \
         'CL[CL[i] != 0xfbff00c0 && CL[i] != 0xff0000c0] = 0xeeeeee10'
 ```
 
