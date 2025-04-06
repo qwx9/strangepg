@@ -51,7 +51,11 @@ Thanks!_
   + [Interaction](#interaction)
   + [Loading from and saving to file](#loading-from-and-saving-to-file)
 - [Navigation](#navigation)
-- [Graph manipulation](#interaction)
+  + [2D mode](#2d-mode)
+  + [3D mode](#3d-mode)
+  + [Selection](#selection)
+  + [Keyboard shortcuts](#keyboard-shortcuts)
+- [Graph manipulation](#graph-manipulation)
   + [Examples](#examples)
 - [Loading tags from CSV files](#loading-tags-from-csv-files)
   + [Format notes](#format-notes)
@@ -73,7 +77,7 @@ all in separate and independent threads to reduce any waiting time to a minimum;
 immediate output and interaction whenever possible.
 - Layouting is in real time and can be interrupted or influenced by moving nodes; it can be saved to or loaded from a file as a final result or an initial/reproducible state, hence guiding/improving previous layouts is possible; tags such as color can be changed at any time.
 - High performance graphics with modern and efficient renderer.
-- Fast GFA loading by splitting topology from sequence/tags in separate passes;
+- Some of the fastest GFA loading, by splitting topology from sequence/tags in separate passes;
 no assumptions about ordering, type of labels (strings or integers) or tags.
 - Console with an embedded graph manipulation language based on GFA tags.
 - Any tags, including user-defined ones, can be loaded from the GFA file,
@@ -105,6 +109,7 @@ Near future:
 - Multiple graph handling
 
 Future:
+- Edge bundling
 - Prettier graphs: node/line thickness and curvature
 - Additional annotation overlays
 - Better graph manipulation language
@@ -234,8 +239,8 @@ make -j install
 ```
 
 _-j_ is an optional flag to enable parallel building using all available cores.
-This installs the binary ```strangepg```,
-by default in **$HOME/.local/bin**.
+This installs the binary `strangepg`,
+by default in **\$HOME/.local/bin**.
 If this directory is not in your `$PATH` or a different installation directory is desired,
 use the `PREFIX` make variable:
 
@@ -398,19 +403,25 @@ strangepg test/02.gfa
 
 ```bash
 $ strangepg -h
-usage: strangepg [-Zbhvw] [-f FILE] [-l ALG] [-t N] [-c FILE] FILE [CMD..]
+usage: ./strangepg [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]
 -b             White-on-black color theme
 -c FILE        Load tags from csv FILE
 -f FILE        Load layout from FILE
+-h             Print usage information and exit
 -l ALG         Set layouting algorithm (default: pfr)
--n FILE        Run layouting without graphics, saving snapshots to FILE
--t N           Set number of layouting threads (1-128, default: 4)
+-n FILE        Run layouting headless, saving to FILE periodically
+-s LEN WIDE    Set node length and width (max: 40, default: 1.0 1.0)
+-t N           Set number of layouting threads (1-1024, default: 4)
+-v             Print version and exit
 -w             Do not wait for all files to load to start layouting
 -A             Disable transparency (for performance)
--H             Enable Hi-DPI mode (macOS only)
+-H             Enable Hi-DPI mode
 -M             Enable 4x multisample anti-aliasing (MSAA)
--W             Do not suppress warning messages
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
+-W             Do not suppress warning messages
+ALG may be one of:
+ fr            Parallelized variant of Fruchterman-Reingold (default)
+ 3d            Experimental 3d version of the above
 ```
 
 The most important options are:
@@ -423,7 +434,7 @@ The default should be good enough for graphs with more than 5-10 times the numbe
 
 Optional input files:
 
-- `-c FILE` [loads a CSV file](#csv).
+- `-c FILE` [loads a CSV file](#loading-tags-from-csv-files).
 It can be specified multiple times to load tags from more than one CSV file.
 Each file's changes are applied on top of previous ones.
 - `-f FILE` loads a layout previous saved to the file.
@@ -444,7 +455,7 @@ layouting only begins when it is safe to assume that everything is ready.
 This option completely ignores all of this
 and instead signals layouting to begin immediately after all nodes and
 edges have been created.
-- `-W` do not suppress warnings:
+- `-W` disables suppressing warnings:
 redundant edges and such are discarded, but printing warnings about this
 and some other cases is too common;
 this prevents printing a ton of output that may not be relevant.
@@ -453,6 +464,12 @@ this prevents printing a ton of output that may not be relevant.
 
 Drawing options:
 
+- `-s` changes the dimensions of the nodes shown on screen.
+The default is a compromise between edge length, visibility, and overall layout quality.
+For bigger graphs, where one has to zoom out a lot, nodes become indistinguishable.
+Use this option to make nodes longer and/or wider.
+This will affect new layouts somewhat,
+but it's most effective when used in conjunction with `-f`.
 - `-Z`: by default, nodes are placed with some slight offset in the z axis,
 ie. a distance away from the viewer,
 both to avoid nodes overlapping and to improve graphics performance
@@ -523,6 +540,9 @@ The basic layouting algorithm serves as a backbone for more specific visualizati
 changing the type of geometry: circular, spherical, non-euclidean, etc.
 These basic additional layouts are currently under development.
 
+**Note**: to accomodate for navigating in 3 dimensions rather than only 2,
+[navigation](#navigation) in 3D layouts is different.
+
 <p align="center"><img src=".pics/layout.png"/></p>
 
 #### Basic layouting
@@ -539,7 +559,9 @@ Use the [`-t` command line parameter](#usage) to change the number of threads
 used for layouting, 4 by default.
 Single threaded algorithms will always only use one of them.
 
-<p align="center"><img src=".pics/basic.png"/></p>
+Due to a bug, graphs are not locked to the center of the screen
+and may jump around during layouting if they're too small.
+If there's nothing on the screen, try zooming out or re-layouting.
 
 #### Interaction
 
@@ -551,7 +573,7 @@ The following keyboard shortcuts are available:
 Nodes may be dragged around with the mouse.
 Moving nodes does not fix their position to a constant position,
 and if layouting is currently underway it will influence the layout as a whole.
-Node positions are fixed via [tags](#interaction) instead.
+Node positions are fixed via [tags](#graph-manipulation) instead.
 
 Restarting it is cheap; try it if the layout doesn't look good.
 Intermediate or final results can be saved to file,
@@ -571,7 +593,7 @@ of segments (S records) and in the __same order of appearance__
 
 The current layout may be exported or imported at runtime
 with the `exportlayout("file")` and `importlayout("file")` functions
-(see [Graph manipulation](#interaction)).
+(see [Graph manipulation](#graph-manipulation)).
 
 <p align="center"><img src=".pics/import.png"/></p>
 
@@ -579,38 +601,75 @@ with the `exportlayout("file")` and `importlayout("file")` functions
 ## Navigation
 
 Moving the graph around is done primarily with the mouse.
+There are two styles of navigation, 2D and 3D, determined by the layout type.
 
-- Select object: click left mouse button (click on nothing to unselect).
-- Move selected object (nodes only): click and drag the mouse.
-- Move (pan) view: drag with right mouse button or press a cursor key to jump by screenful.
-- 3D Rotate (around X/Y axes): click and hold middle button
-- Zoom view: three options:
-	* Mouse scroll.
-	* Hold control + right mouse.
-	* Hold left + right mouse button and drag:
-pull (drag towards bottom right) to zoom in,
-push (draw towards top left) to zoom out.
+#### 2D mode
 
-To select multiple nodes, click and drag a selection box.
-Currently, it only works when dragging in one direction only,
-from northwest to southeast, and does not deselect anything.
-Clicking on empty space deselects everything;
-to avoid it, hold Control or Shift when clicking
-or dragging another selection box.
+In 2D, the view (camera) can be moved vertically and horizontally (pan),
+or zoomed in and out (depth).
+The maximal zoom level is right on top of the graph (ie. it cannot go behind it).
 
-Keyboard shortcuts:
+Controls:
 
-- `a`: Toggle showing oriented nodes as arrows
-- `p`: Pause/unpause layout (unpause = restart layout from current state)
-- `r`: Restart layouting from scratch
-- `q`: Quit
-- `Esc`: Reset view to initial position
-- Arrow keys: move view by screenful up/down/left/right
+- Left click: select object (click on nothing to deselect).
+Click and hold to move a node around.
+- Shift (or Control) + left click on object: toggle selection for a single node
+- Right click (hold): pan the screen horizontally and/or vertically.
+- Left + right click (hold): zoom in by pulling in (drag mouse toward bottom right corner),
+or zoom out by pushing away (drag mouse toward upper left corner).
+- Scrollwheel: zoom in or out.
+- Control + right click (hold): zoom in or out.
+
+Use `Esc` to reset the view.
+
+#### 3D mode
+
+The graph is locked to a center point, and the camera moves around it.
+Simply put, one rotates the graph around a center point as if it were a ball,
+and zooms in or out towards its center.
+
+Controls:
+
+- Left click: select object (click on nothing to deselect).
+Click and hold to move a node around.
+- Shift (or Control) + left click on object: toggle selection for a single node
+- Right click (hold): rotate the graph around its center.
+- Left + right click (hold): zoom in by pulling in (drag mouse toward bottom right corner),
+or zoom out by pushing away (drag mouse toward upper left corner).
+- Scrollwheel: zoom in or out.
+- Control + right click (hold): zoom in or out.
+- Middle click (hold): rotate the view instead of the graph.
+
+Use `Esc` to reset the view.
+
+
+#### Selection
+
+Selection is done either with the left mouse button, or through [commands](#graph-manipulation).
+Clicking on a node selects it, deselecting everything else.
+Clicking while holding the shift or control key toggles its selection,
+ie. adds or removes it to the current selection.
+Dragging a selection box selects all intersecting nodes
+(current implementation is [very limited](#known-bugs)).
+Clicking on empty space deselects everything.
+
+Nodes can be dragged around by clicking and holding the left mouse button.
+Currently, only one node can be moved at a time.
+
+
+#### Keyboard shortcuts:
+
+- `Esc`: Reset view to initial position.
+- `a`: Toggle showing oriented nodes as arrows (oriented in read direction).
+- `p`: Pause/unpause layout (unpause = restart layout from current state).
+- `r`: Restart layouting from scratch.
+- `q`: Quit.
+- Arrow keys: move view by 1/3 of the screen up/down/left/right.
 
 <p align="center"><img src=".pics/arrows.png"/></p>
 
 A status window currently labeled `Prompt`
-presents a text box to write [commands](#interaction) in,
+presents a text box to write [commands](#graph-manipulation) in,
 and shows selected and hovered over objects.
 Currently, it only shows the name and length (nodes)
 or endpoints, orientation and CIGAR string (edges),
@@ -619,9 +678,10 @@ but will be extended to show all of a node's tags.
 The window can be moved around with the mouse,
 collapsed by clicking the top right button,
 or resized by dragging the lower right corner.
-It now shows the last 3 status messages and command outputs,
+It now also shows the last 3 status messages and command outputs,
 and has a collapsible message log widget for more.
-Feedback from [commands](#interaction) will appear here.
+Feedback from [commands](#graph-manipulation) will appear here.
+Error messages are drawn in red.
 
 <p align="center"><img src=".pics/log.png"/></p>
 
@@ -711,7 +771,7 @@ Load existing layout from file:
 importlayout("filepath")
 ```
 
-Read in [a CSV file](#csv):
+Read in [a CSV file](#loading-tags-from-csv-files):
 ```awk
 readcsv("filepath")
 ```
@@ -738,15 +798,19 @@ utig4-143,0,53,red
 
 The name of the first column does not matter.
 The `CL` tag is used as a node's color and can thus also be set in this way.
-`Color` can also be used.
+`Color` can also be used (in any casing).
 Node labels must refer to existing nodes from the input GFA file.
 
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
-(see [Graph manipulation](#interaction)).
+(see [Graph manipulation](#graph-manipulation)).
 
 **Loading multiple CSV files one after the other is allowed.**
 In other words, variables such as color are not reset between files.
 CSV files thus needn't be merged together.
+It cannot be undone however,
+but once colors are known, selections can be made based on them.
+
+<p align="center"><img src=".pics/basic.png"/></p>
 
 #### Format notes
 
@@ -755,7 +819,8 @@ The implementation is not localized, ie. commas are always field separators.
 There are no escape sequences or special quoting rules, ie. quotes are not special characters.
 Line breaks within a field are disallowed.
 Lines must be terminated with a new line (LF) character, ie. the return character (CR) is not handled.
-
+Spaces in the column names of header are allowed;
+extra spaces preceding or following each name are stripped.
 Each line must have the same number of fields as the header, but fields may be empty.
 
 <p align="center"><img src=".pics/colors.png"/></p>
@@ -813,7 +878,7 @@ or a layout producing too many overlaps, masking potential sites.
 and offers a relatively simple solution with partial 3d layouting.
 The layout is partially computed on a server with 64 cores,
 ie. run once for a limited period of time.
-A csv file colors the region and critical nodes.
+A csv file colors the region in yellow (#fbff00) and critical nodes in red (#ff0000).
 Nodes are enlarged to make them easier to distinguish and all nodes not in the csv
 are colored in light gray.
 The random colors and default node dimensions make it difficult to see what is happening,
@@ -829,7 +894,7 @@ strangepg \
         -c ~/chr17_16823490-18384190_0.csv \
         -f chr17_16823490-18384190_10000.gfa \
         chr17_16823490-18384190_10000.gfa \
-        'CL[CL[i] != 0xfbff00c0 && CL[i] != 0xff0000c0] = 0xeeeeee10'
+        'CL[CL[i] != 0xfbff0000 && CL[i] != 0xff000000] = 0xeeeeee10'
 ```
 
 <p align="center"><img src=".pics/yellow.png"/></p>
@@ -842,21 +907,34 @@ Major bugs:
 this is the initial state for any of the layouting algorithms,
 but because it is shown in real time and the algorithms currently used being slow
 (improvements underway), the initial plot looks... underwhelming.
+- Graphs are not re-centered or locked to the center of the screen;
+either the algorithm should compensate for random movements beyond what the FR
+algorithm does, or it should be translated to the center of the screen, or
+the screen to the center of the graph.
+- Edges are ugly and are 1 pixel-wide lines, making them difficult to select.
+- Self-edges aren't drawn well. A `a+a+` edge will appear as a line inside the node,
+and a `a+a-` edge will be a dot at the end of the node (in read direction).
 
 Less major bugs:
 - strawk could still use less memory and be faster; its language is very limited;
-yet to be hooked up to external memory
-- The selection box is a kludge and is stupidly resource-heavy
-- 3d navigation still suffers from some bugs (roll angle especially)
-- The renderer is fairly efficient, but it could be made orders of magnitude faster
+yet to be hooked up to external memory.
+- The selection box is a kludge and is stupidly resource-heavy.
+- The selection box is currently not drawn and only works in one direction.
+- Only one node can be moved at a time.
+- 3d navigation still suffers from some bugs (roll angle especially).
+- The renderer is fairly efficient, but it could be made an order of magnitude faster.
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
-place them on better fixed locations as well
+place them on better fixed locations as well.
+- The text boxes suck, a lot. Nuklear doesn't handle edit boxes much.
+- strawk leaks about 200 bytes during initialization.
+- ... and many more!
 
 
 ## Used and bundled alien software
 
 Data structures:
-- [khashl](https://github.com/attractivechaos/khashl)
+- [khashl](https://github.com/attractivechaos/khashl),
+modified to use readers-writer locks for concurrent access
 - [chan](https://github.com/tylertreat/chan)
 
 Linux graphics:
