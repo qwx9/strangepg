@@ -1313,6 +1313,7 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 	tempfree(x);
 	x = gettemp();
 	x->sval = buf;
+	x->tval &= ~NUM;
 	return(x);
 }
 
@@ -1682,6 +1683,7 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 	tempfree(y);
 	z = gettemp();
 	z->sval = tempstrdup(s);
+	z->tval &= ~NUM;
 	return(z);
 }
 
