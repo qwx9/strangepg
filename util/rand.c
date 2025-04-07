@@ -24,3 +24,9 @@ xnrand(u32int lim)
 {
 	return genrand64_int64() % lim;
 }
+
+void
+initrand(void)
+{
+	xsrand(time(nil));
+}

@@ -17,7 +17,7 @@ main(int argc, char **argv)
 	if(argc > 2)
 		debug |= Debugem;
 	initem();
-	srand(42);
+	xsrand(42);
 	for(i=0; i<nelem(em); i++)
 		if((em[i] = emopen(nil)) < 0)
 			sysfatal("emopen: %s", error());

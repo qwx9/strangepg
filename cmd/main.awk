@@ -49,7 +49,6 @@ BEGIN{
 	violet = purple
 	white = 0xffffff00
 	yellow = 0xffed6f00
-	srand()
 	OFS = "\t"
 }
 function cmd(code){
@@ -226,6 +225,14 @@ function reselectnode(id){
 	deselect()
 	selectnodebyid(id)
 }
+function collapse(id){
+	if(id != ""){
+		if(!checknodeid(id))
+			return
+		collapse1(id)
+	}else
+		collapse1()
+}
 function initx(name, x){
 	if(!checknodename(name))
 		return
@@ -284,5 +291,6 @@ crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 		subexpr(s, v, "fixy")
 }
 {
+	i = ""
 	eval("{" $0 "}")
 }

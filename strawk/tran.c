@@ -726,9 +726,6 @@ int compileawk(int argc, char **argv)
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
 	initpool();
 	catchfpe();
-	/* Set and keep track of the random seed */
-	srand_seed = 1;
-	init_genrand64(srand_seed);	/* FIXME */
 	yyin = NULL;
 	cmdname = argv[0];
 	lexprog = argv[1];
@@ -737,9 +734,9 @@ int compileawk(int argc, char **argv)
 	syminit();
 	arginit(0, NULL);
 	yyparse();
-	if (errorflag == 0) {
+	if (errorflag == 0)
 		compile_time = RUNNING;
-	} else
+	else
 		bracecheck();
 	return(errorflag);
 }
@@ -765,11 +762,7 @@ int awkmain(int argc, char **argv)
 		exit(1);
 	}
 	catchfpe();
-
-	/* Set and keep track of the random seed */
-	srand_seed = 1;
 	init_genrand64(srand_seed);
-
 	yyin = NULL;
 	symtab = makesymtab(NSYMTAB/NSYMTAB);
 	while (argc > 1 && argv[1][0] == '-' && argv[1][1] != '\0') {

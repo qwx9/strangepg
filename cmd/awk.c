@@ -20,7 +20,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "atan2",	FATAN,		BLTIN },
 	{ "break",	BREAK,		BREAK },
 	{ "bytes",	FBYTES,		BLTIN },
-	{ "collapse",	ACOLLAPSE,	ADDON },
+	{ "collapse1",	ACOLLAPSE,	ADDON },
 	{ "continue",	CONTINUE,	CONTINUE },
 	{ "cos",	FCOS,		BLTIN },
 	{ "delete",	DELETE,		DELETE },
@@ -79,6 +79,8 @@ awk(void *)
 	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
 		sysfatal("awk: %s", error());
 	dbg = (debug & Debugstrawk) != 0;
+	/* note: srand has already been called, so awk's srand_seed
+	 * has a wrong value of 1; we don't care. */
 	qlock(&symlock);
 	compileawk(nelem(args), args);
 	qunlock(&symlock);

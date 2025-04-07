@@ -14,7 +14,7 @@ main(int argc, char **argv)
 	initem();
 	if((em = emopen(nil)) < 0)
 		sysfatal("emopen: %s", error());
-	srand(42);
+	xsrand(42);
 	for(i=0; i<50000000; i++){
 		r = xlrand() & ((1ULL<<32>>3)-1);
 		v = r | r<<32;
@@ -22,7 +22,7 @@ main(int argc, char **argv)
 		if(i % 100000 == 0 && i > 0)
 			warn("%.3g write iterations...\n", (double)i);
 	}
-	srand(42);
+	xsrand(42);
 	for(i=0; i<50000000; i++){
 		r = xlrand() & ((1ULL<<32>>3)-1);
 		v = r | r<<32;

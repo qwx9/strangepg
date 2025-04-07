@@ -19,6 +19,7 @@ void	sysquit(void);
 void	quit(void);
 void	initsys(void);
 
+void	initrand(void);
 void	xsrand(u64int);
 float	xfrand(void);
 u32int	xlrand(void);

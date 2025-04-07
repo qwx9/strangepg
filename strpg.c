@@ -72,7 +72,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE\n", argv0);
+	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -201,11 +201,11 @@ main(int argc, char **argv)
 {
 	char **d;
 
-	xsrand(time(nil));
 	initsys();
 	initlog();
-	initlayout();
+	initrand();
 	initcmd();	/* fork repl before starting other threads */
+	initlayout();
 	d = parseargs(argc, argv);
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
