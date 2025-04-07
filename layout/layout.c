@@ -87,8 +87,8 @@ sac(void *)
 			graph.flags |= GFlayme;
 			break;
 		case Lidle:
-			DPRINT(Debuglayout, "sac: idle %d/%d", nidle, nlaythreads);
 			nidle++;
+			DPRINT(Debuglayout, "sac: idle %d/%d", nidle, nlaythreads);
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
@@ -104,8 +104,6 @@ sac(void *)
 				graph.flags &= ~GFdrawme;
 				reqdraw(Reqredraw);
 			}
-			if(l != nil)
-				l->flags &= ~LFstop;
 			break;
 		}
 		if(l == nil || nidle != nlaythreads)
@@ -116,16 +114,17 @@ sac(void *)
 		}
 		if((graph.flags & GFlayme) == 0){
 			reqdraw(Reqrefresh);
-			l->flags = 0;
 			continue;
 		}
 		if(dylen(rnodes) < 1 || dylen(redges) < 1){
 			warn("newlayout: nothing to layout\n");
-			l->flags = 0;
 			continue;
 		}
-		if(l->scratch == nil && l->target->new != nil)
+		if(l->scratch == nil && l->target->new != nil){
+			DPRINT(Debuglayout, "sac: reinit f=%d", l->flags);
 			l->scratch = l->target->new(l->flags & LFnuke);
+		}
+		DPRINT(Debuglayout, "sac: launch f=%d", l->flags);
 		l->flags = 0;
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
 			sendp(*cp, l);
@@ -196,6 +195,7 @@ newlayout(int type)
 	l = emalloc(sizeof *l);
 	graph.layout = l;
 	l->ref = 1;
+	l->flags = LFstop;
 	if(type < 0){
 		if(deflayout < 0)
 			type = LLpfr;
