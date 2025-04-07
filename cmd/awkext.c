@@ -11,6 +11,8 @@
 #include "lib/khashl.h"
 #include "strawk/awk.h"
 
+QLock symlock;	/* shared with awk process to not outrun compilation */
+
 /* FIXME: additional functions:
  * - Tab → extant tables → extra info to nodeinfo;
  * - multigraph: query graph node ranges or whatever */
@@ -46,7 +48,7 @@ struct Tab{
 static tabmap *map;
 static Tab *tabs;
 static RWLock tablock;
-static QLock buflock, symlock;
+static QLock buflock;
 
 /* FIXME: can replace with awk array and lookup */
 int

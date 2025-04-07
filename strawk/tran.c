@@ -719,6 +719,36 @@ getarg(int *argc, char ***argv, const char *msg)
 	}
 }
 
+int compileawk(int argc, char **argv)
+{
+	compile_time = COMPILING;
+	setlocale(LC_CTYPE, "");
+	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	initpool();
+	catchfpe();
+	/* Set and keep track of the random seed */
+	srand_seed = 1;
+	init_genrand64(srand_seed);	/* FIXME */
+	yyin = NULL;
+	cmdname = argv[0];
+	lexprog = argv[1];
+	symtab = makesymtab(NSYMTAB/NSYMTAB);
+	recinit(recsize);
+	syminit();
+	arginit(0, NULL);
+	yyparse();
+	if (errorflag == 0) {
+		compile_time = RUNNING;
+	} else
+		bracecheck();
+	return(errorflag);
+}
+
+void runawk(void)
+{
+	run(winner);
+}
+
 int awkmain(int argc, char **argv)
 {
 	const char *fs = NULL;

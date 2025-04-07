@@ -154,6 +154,8 @@ extern	int	getrec(char **, int *, bool);
 extern	int	readrec(char **buf, int *bufsize, FILE *inf, bool isnew);
 
 extern	int	awkmain(int, char **);
+extern	int	compileawk(int, char**);
+extern	void	runawk(void);
 extern	void	catchfpe(void);
 extern	char	*getargv(int);
 extern	void	setclvar(char *);

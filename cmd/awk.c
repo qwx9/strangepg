@@ -8,6 +8,8 @@
 #include "strawk/awk.h"
 #include "strawk/awkgram.tab.h"
 
+extern QLock symlock;
+
 /* [0] is read, [1] is write to cater to windows' _pipe */
 int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
 
@@ -77,7 +79,10 @@ awk(void *)
 	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
 		sysfatal("awk: %s", error());
 	dbg = (debug & Debugstrawk) != 0;
-	awkmain(nelem(args), args);
+	qlock(&symlock);
+	compileawk(nelem(args), args);
+	qunlock(&symlock);
+	runawk();
 }
 
 /* use [1] on our side, [0] on awk side */
