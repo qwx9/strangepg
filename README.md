@@ -57,8 +57,10 @@ Thanks!_
   + [Keyboard shortcuts](#keyboard-shortcuts)
 - [Graph manipulation](#graph-manipulation)
   + [Examples](#examples)
+  + [Quick function reference](#quick-function-reference)
 - [Loading tags from CSV files](#loading-tags-from-csv-files)
   + [Format notes](#format-notes)
+  + [On colors](#on-colors)
 - [Example applications](#example-applications)
   + [Conga line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segments-order)
   + [Random coordinates](#random-coordinates)
@@ -488,7 +490,7 @@ at the cost of performance.
 
 #### Notes on GFA file format
 
-`strangepg` makes no assumptions about the order of records within the file,
+strangepg makes no assumptions about the order of records within the file,
 whether nodes are interspersed with edges or not,
 and what the nodes' labels look like (strings, integers, etc.).
 It boasts one of the fastest and leanest GFA loading regardless,
@@ -672,7 +674,7 @@ A status window currently labeled `Prompt`
 presents a text box to write [commands](#graph-manipulation) in,
 and shows selected and hovered over objects.
 Currently, it only shows the name and length (nodes)
-or endpoints, orientation and CIGAR string (edges),
+or endpoints, orientation and overlap (edges),
 but will be extended to show all of a node's tags.
 
 The window can be moved around with the mouse,
@@ -689,9 +691,9 @@ Error messages are drawn in red.
 ## Graph manipulation
 
 strangepg embeds a simple graph manipulation language,
-which presents tags as tables (associative arrays)
+which presents GFA tags as tables (associative arrays)
 and provides means to manipulate the graph and its
-properties via those tags.
+properties via those and additional tags.
 Using it involves typing commands in the text prompt
 of the status window.
 
@@ -701,20 +703,23 @@ the new value.
 For example, in GFA files the `LN` tag indicates the length of a
 node's sequence.
 Upon loading the GFA file, each S line with a non-empty sequence
-and/or an LN tag will add an element to the `LN` table.
+and/or an `LN` tag will add an element to the `LN` table.
 `LN[name]` then stores the value for a node labeled `name` in the GFA.
-This can be used for instance to change the color of all nodes
-matching some condition such as `LN[name] < 1000` (more examples below).
+This can be used for instance to change the color of a node
+depending on some condition such as `LN[name] < 1000`
+(more examples below).
 
 The editing box is currently ugly and inconvenient due to limitations
 of the UI framework used, but this will be fixed soon.
-It has clipboard support
-(Ctrl-C for copy, Ctrl-V for paste, mouse selection).
+It has supports mouse highlighting and selection
+and has clipboard support, with shortcuts Ctrl-C for copy and Ctrl-V for paste.
+For X11, only the primary clipboard is currently used.
 
 The language is a fork of [_awk_](https://awk.dev),
 hacked up to evaluate commands interactively.
-Any awk code valid within a pattern (inside braces)
-is also valid here, but functions cannot be defined yet.
+Any awk code valid within a pattern or function (ie. inside braces)
+is also valid here.
+New functions may not yet be defined.
 Currently, it's somewhat limited and a bit hacky, but it works.
 It will be improved later on.
 
@@ -779,10 +784,37 @@ readcsv("filepath")
 See [strawk.md](strawk.md) for a more detailed overview.
 
 
+#### Quick function reference
+
+```awk
+nodecolor(name, color)     change a node's color
+findnode(name)             zoom onto and select a node
+quit()                     give up
+```
+
+Layouts:
+
+```awk
+explode(name)              add random jitter to a node or to the selection if no name is given
+fixx(name, x)              force node to a fixed x coordinate
+fixy(name, y)              force node to a fixed y coordinate
+```
+
+Files:
+
+```awk
+readcsv(path)              read a csv file
+exportlayou(path)          export layout to file
+importlayout(path)         import layout from file
+```
+
+Paths are absolute or relative to the current working directory.
+
+
 ## Loading tags from CSV files
 
 CSV files can be loaded at start up with the `-c` flag or at runtime
-uuto feed or modify tags for existing nodes.
+to feed or modify tags for existing nodes.
 The '-c' flag may be used multiple times to load more than one CSV file at startup.
 
 The first column is always reserved for node labels, and all subsequent columns are tags values.
@@ -823,12 +855,48 @@ Spaces in the column names of header are allowed;
 extra spaces preceding or following each name are stripped.
 Each line must have the same number of fields as the header, but fields may be empty.
 
+#### On colors
+
+Colors are represented as integers in RGBA32 format.
+Some names such as `red`, `darkblue` or `palegreen` are predefined (see [strawk document](strawk.md) for a list).
+In strawk, the alpha component (transparency) is 0 by default.
+For example, the color `orange` is set to `0xFF7F0000` (in RRGGBBAA format in hexadecimal).
+The actual alpha value depends on the theme, but it can be overridden by setting a value different than 0.
+For example:
+
+```awk
+red = 0xff00007f      # 50% opacity
+mycolor = 0x123456ff  # full opacity
+```
+
+Colors in CSV files don't need to specify an alpha value.
+They can be HTML colors like `#FF0000`,
+hexadecimal ones like `0xff0000`,
+and symbolic ones like `blue` or `purple`.
+HTML colors with an alpha value will keep it.
+Once loaded in strawk, they will be represented in the above format.
+
+For example, with the following CSV file:
+
+	Name,CL
+	s1,blue
+	s2,#1F78B4
+	s3,#1F78B4FF
+	s4,#1f78b4ff
+	s5,0x1f78b4ff
+	s6,0x1f78b400
+
+Nodes `s1` to `s6` will all have the same color and transparency,
+except `s3` to `s5` are set to full opacity.
+
+The same rules apply to GFA file tags.
+
 <p align="center"><img src=".pics/colors.png"/></p>
 
 
 ## Example applications
 
-One of the goals of _strangepg_ is to enable experimentation with layouting.
+One of the goals of strangepg is to enable experimentation with layouting.
 Currently, the default layouting algorithm honors a set of tags
 which set initial coordinates and/or fixes them (makes them unmovable).
 
@@ -874,7 +942,7 @@ y0[CL[i] != orange] = 2 - 4 * rand()
 The objective is to visually verify the absence of certain nodes within a region of interest.
 Other existing programs may make it difficult to accomplish due to a limited interface,
 or a layout producing too many overlaps, masking potential sites.
-`strangepg` attempts to maintain some separation between nodes
+strangepg attempts to maintain some separation between nodes
 and offers a relatively simple solution with partial 3d layouting.
 The layout is partially computed on a server with 64 cores,
 ie. run once for a limited period of time.
@@ -912,7 +980,7 @@ either the algorithm should compensate for random movements beyond what the FR
 algorithm does, or it should be translated to the center of the screen, or
 the screen to the center of the graph.
 - Edges are ugly and are 1 pixel-wide lines, making them difficult to select.
-- Self-edges aren't drawn well. A `a+a+` edge will appear as a line inside the node,
+- Self-edges aren't drawn well. An `a+a+` edge will appear as a line inside the node,
 and a `a+a-` edge will be a dot at the end of the node (in read direction).
 
 Less major bugs:
