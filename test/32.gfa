@@ -1,0 +1,5 @@
+S	s2	*	LN:i:16
+S	s3	ATTAT	LN:i:5	CL:Z:#B8F835	FC:i:1
+S	s4	TGCA	LN:i:4	CL:Z:#F8C805
+L	s2	-	s4	+	0M
+L	s3	+	s4	+	0M

@@ -1,0 +1,16 @@
+S	s1	CAT
+L	s1	+	s2	+	0M
+S	s2	*	LN:i:16
+L	s2	+	s3	+	0M	FC:i:1
+L	s2	-	s4	+	0M
+S	s3	ATTAT	LN:i:5	CL:Z:#B8F835	FC:i:1
+L	s3	+	s4	+	0M
+S	s4	TGCA	LN:i:4	CL:Z:#F8C805
+L	s4	-	s5	-	0M
+L	s4	-	s5	+	0M
+S	s5	*	LN:i:20
+L	s5	+	s6	+	0M
+L	s5	+	s7	+	0M
+S	s6	ATGGCGGCGA	CL:Z:#B51000
+L	s6	-	s7	+	0M
+S	s7	AA	CL:Z:#F51000

@@ -1,0 +1,3 @@
+S	s1	*	LN:i:16
+S	s2	ATTA	LN:i:5	CL:Z:#581845	FC:i:1
+L	s1	+	s2	+	0M	FC:i:1

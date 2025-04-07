@@ -989,6 +989,7 @@ yet to be hooked up to external memory.
 - The selection box is a kludge and is stupidly resource-heavy.
 - The selection box is currently not drawn and only works in one direction.
 - Only one node can be moved at a time.
+- 3d nodes and edges are not rotated correctly.
 - 3d navigation still suffers from some bugs (roll angle especially).
 - The renderer is fairly efficient, but it could be made an order of magnitude faster.
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to

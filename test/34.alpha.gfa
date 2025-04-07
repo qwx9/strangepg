@@ -1,0 +1,40 @@
+H	VN:Z:1.0
+S	1	*	CL:Z:#1f78b40f
+S	2	*	CL:Z:#1f78b41f
+S	3	*	CL:Z:#1f78b42f
+S	4	*	CL:Z:#1f78b43f
+S	5	*	CL:Z:#1f78b44f
+S	6	*	CL:Z:#1f78b45f
+S	7	*	CL:Z:#1f78b46f
+S	8	*	CL:Z:#1f78b47f
+S	9	*	CL:Z:#1f78b48f
+S	10	*	CL:Z:#1f78b49f
+S	11	*	CL:Z:#1f78b4af
+S	12	*	CL:Z:#1f78b4bf
+S	13	*	CL:Z:#1f78b4cf
+S	14	*	CL:Z:#1f78b4df
+S	15	*	CL:Z:#1f78b4ef
+S	16	*	CL:Z:#1f78b4ff
+S	17	*	CL:Z:blue
+S	18	*	CL:Z:0x1f78b4
+S	19	*	CL:Z:0x1f78b4ff
+S	20	*	CL:Z:0x1f78b400
+L	1	+	2	+	0M
+L	2	+	3	+	0M
+L	3	+	4	+	0M
+L	4	+	5	+	0M
+L	5	+	6	+	0M
+L	6	+	7	+	0M
+L	7	+	8	+	0M
+L	8	+	9	-	0M
+L	9	-	10	+	0M
+L	10	+	11	+	0M
+L	11	+	12	+	0M
+L	12	+	13	+	0M
+L	13	+	14	+	0M
+L	14	+	15	+	0M
+L	15	+	16	+	0M
+L	16	+	17	+	0M
+L	17	+	18	+	0M
+L	18	+	19	+	0M
+L	19	+	20	+	0M
