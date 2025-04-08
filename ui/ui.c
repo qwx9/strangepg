@@ -8,14 +8,11 @@
 
 int prompting;
 char hoverstr[256], selstr[512];
-REdge selbox[4];
 
 /* FIXME: horrible */
 KHASHL_SET_INIT(KH_LOCAL, sel, sel, ioff, kh_hash_uint32, kh_eq_generic)
 static sel *sels;
-
 static ioff selected = -1, shown = -1, focused = -1;
-static Rekt rsel;
 
 enum{
 	Mctrl = 1<<0,
@@ -29,11 +26,6 @@ enum{
 };
 static int mod;
 static Vertex center;
-
-#define scr2world(x,y)	do{ \
-	(x) = 2.0f * (((x) - view.w * 0.5f) / view.w) * view.Δeye.z * view.ar * view.tfov; \
-	(y) = 2.0f * ((-(y) + view.h * 0.5f) / view.h) * view.Δeye.z * view.tfov; \
-}while(0)
 
 static void
 pan(float Δx, float Δy)
@@ -111,86 +103,22 @@ keyevent(Rune r, int down)
 	case 'r': reqlayout(Lreset); break;
 	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
 	case 'a': reqdraw(Reqshape); break;
-	case 'l': drawing.flags ^= DFdrawlabels; reqdraw(Reqshallowdraw); break;
 	case '\n': prompt(r); break;
 	}
 	return 0;
 }
 
-/* FIXME: separate pipeline, quads? */
-/* FIXME: wrong viewpoint! */
-
 static void
-resetbox(void)
+resetselbox(int x, int y)
 {
-	REdge *r;
-
-	if(rsel.x1 < 0)
-		return;
-	if(sels != nil){
+	selbox.x1 = selbox.x2 = x;
+	selbox.y1 = selbox.y2 = y;
+	if(kh_size(sels) > 0){
 		pushcmd("showselected()");
 		flushcmd();
-		sel_destroy(sels);
-		sels = nil;
+		sel_clear(sels);	/* FIXME: shrink? */
 	}
-	rsel.x1 = -1;
-	r = selbox;
-	r->pos1[0] = r->pos2[0];
-	r->pos1[1] = r->pos2[1];
-	r->pos1[2] = r->pos2[2];
-	r++;
-	r->pos1[0] = r->pos2[0];
-	r->pos1[1] = r->pos2[1];
-	r->pos1[2] = r->pos2[2];
-	r++;
-	r->pos1[0] = r->pos2[0];
-	r->pos1[1] = r->pos2[1];
-	r->pos1[2] = r->pos2[2];
-	r++;
-	r->pos1[0] = r->pos2[0];
-	r->pos1[1] = r->pos2[1];
-	r->pos1[2] = r->pos2[2];
-	updateedges();
-}
-
-static inline void
-selectionbox(float x1, float y1, float x2, float y2)
-{
-	float z;
-	REdge *r;
-
-	scr2world(x1, y1);
-	scr2world(x2, y2);
-	x1 += view.eye.x;
-	y1 += view.eye.y;
-	x2 += view.eye.x;
-	y2 += view.eye.y;
-	z = view.center.z;
-	r = selbox;
-	r->pos1[0] = x1;
-	r->pos1[1] = y1;
-	r->pos2[0] = x2;
-	r->pos2[1] = y1;
-	r->pos1[2] = r->pos2[2] = z;
-	r++;
-	r->pos1[0] = x2;
-	r->pos1[1] = y1;
-	r->pos2[0] = x2;
-	r->pos2[1] = y2;
-	r->pos1[2] = r->pos2[2] = z;
-	r++;
-	r->pos1[0] = x1;
-	r->pos1[1] = y2;
-	r->pos2[0] = x2;
-	r->pos2[1] = y2;
-	r->pos1[2] = r->pos2[2] = z;
-	r++;
-	r->pos1[0] = x1;
-	r->pos1[1] = y1;
-	r->pos2[0] = x1;
-	r->pos2[1] = y2;
-	r->pos1[2] = r->pos2[2] = z;
-	updateedges();
+	reqdraw(Reqrefresh);
 }
 
 /* FIXME: this all SUCKS */
@@ -202,37 +130,36 @@ dragselect(int x, int y)
 {
 	int abs;
 	ioff idx, Δx, Δy, oid;
-	Rekt rx, ry;
+	struct {
+		int x1;
+		int x2;
+		int y1;
+		int y2;
+	} rx, ry;
 	union{
 		ioff i;
 		u32int u;
 	} u;
 
-	if(rsel.x1 < 0){
-		rsel.x1 = rsel.x2 = x;
-		rsel.y1 = rsel.y2 = y;
-	}
-	Δx = x - rsel.x1;
-	Δy = y - rsel.y1;
+	Δx = x - selbox.x1;
+	Δy = y - selbox.y1;
 	if(Δx <= 0 || Δy <= 0)
 		return 0;
-	x = rsel.x1 + Δx;
-	y = rsel.y1 + Δy;
-	if(rsel.x1 == x && rsel.y1 == y)
+	x = selbox.x1 + Δx;
+	y = selbox.y1 + Δy;
+	if(selbox.x1 == x && selbox.y1 == y)
 		return 0;
-	rx.x1 = rsel.x1;
+	rx.x1 = selbox.x1;
 	rx.x2 = x;
-	rx.y1 = rsel.y2;
+	rx.y1 = selbox.y2;
 	rx.y2 = y;
-	ry.x1 = rsel.x2;
+	ry.x1 = selbox.x2;
 	ry.x2 = x;
-	ry.y1 = rsel.y1;
-	ry.y2 = rsel.y2;
+	ry.y1 = selbox.y1;
+	ry.y2 = selbox.y2;
 	oid = -1;
-	rsel.x2 = x;
-	rsel.y2 = y;
-	if(sels == nil)
-		sels = sel_init();
+	selbox.x2 = x;
+	selbox.y2 = y;
 	for(x=rx.x1; x<rx.x2; x++)
 		for(y=rx.y1; y<rx.y2; y++){
 			u.u = mousepick(x, y);
@@ -263,7 +190,7 @@ dragselect(int x, int y)
 			}
 		}
 	flushcmd();
-	selectionbox(rsel.x1, rsel.y1, rsel.x2, rsel.y2);
+	reqdraw(Reqrefresh);
 	return 0;
 }
 
@@ -295,7 +222,6 @@ mousedrag(float Δx, float Δy)
 		r->pos[1] += Δx * view.right.y - Δy * view.up.y;
 		r->pos[2] += Δx * view.right.z - Δy * view.up.z;
 	}
-	updatenode(idx);
 	return 1;
 }
 
@@ -357,7 +283,6 @@ mouseselect(ioff idx, int multi)
 		flushcmd();
 		selstr[0] = 0;
 	}
-	resetbox();
 	return 0;
 }
 
@@ -376,6 +301,7 @@ focusobj(void)
 	r = rnodes + focused;
 	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
 	mouseselect(focused, 0);
+	resetselbox(0, 0);
 	focused = -1;
 }
 
@@ -404,18 +330,18 @@ mouseevent(Vertex v, Vertex Δ)
 	if(m == 0){
 		endmove();
 		if((omod & Mmask) == Mlmb)
-			resetbox();
+			resetselbox(0, 0);
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
-		resetbox();
+		resetselbox(0, 0);
 	if((omod & Mrmb) == 0)
 		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
 	if(Δ.x != 0.0f || Δ.y != 0.0f)
 		shown = mousehover(v.x, v.y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			if(!mouseselect(shown, mod & (Mshift|Mctrl)))
-				dragselect(v.x, v.y);
+			resetselbox(v.x, v.y);
+			mouseselect(shown, mod & (Mshift|Mctrl));
 		}else if(Δ.x != 0.0f || Δ.y != 0.0f){
 			/* FIXME: would be nice to just redraw the one node */
 			if(selected != -1)
@@ -462,4 +388,5 @@ initui(void)
 	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);
 	resetui();
+	sels = sel_init();
 }

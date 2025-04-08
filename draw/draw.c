@@ -21,9 +21,11 @@ Drawing drawing = {
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
 };
+Box selbox;
 Channel *rendc, *ctlc;
 
 static Channel *drawc;
+static RLine rselbox[4];
 
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
@@ -162,6 +164,77 @@ drawnodes(void)
 	return r - rnodes;
 }
 
+/* FIXME */
+#define scr2world(x,y)	do{ \
+	(x) = 2.0f * (((x) - view.w * 0.5f) / view.w) * view.Δeye.z * view.ar * view.tfov; \
+	(y) = 2.0f * ((-(y) + view.h * 0.5f) / view.h) * view.Δeye.z * view.tfov; \
+}while(0)
+
+/* FIXME: wrong orientation/rotation wrt roll, etc. */
+static int
+drawselbox(int rn)
+{
+	Box b;
+	RLine *r;
+
+	b = selbox;
+	r = rselbox;
+	/* FIXME: after a deselect, we just don't draw, but the renderer still
+	 * retains state up until the next re-render; if we just return, then
+	 * next time we draw the box we'll first get one frame with the last
+	 * one we drew */
+	/*
+	if((b.x1 == b.x2 || b.y1 == b.y2)
+		return 0;
+	*/
+	scr2world(b.x1, b.y1);
+	scr2world(b.x2, b.y2);
+	b.x1 += view.eye.x;
+	b.y1 += view.eye.y;
+	b.x2 += view.eye.x;
+	b.y2 += view.eye.y;
+	r->pos1[0] = b.x1;
+	r->pos1[1] = b.y1;
+	r->pos1[2] = view.center.z;
+	r->pos2[0] = b.x2;
+	r->pos2[1] = b.y1;
+	r->pos2[2] = view.center.z;
+	r++;
+	r->pos1[0] = b.x2;
+	r->pos1[1] = b.y1;
+	r->pos1[2] = view.center.z;
+	r->pos2[0] = b.x2;
+	r->pos2[1] = b.y2;
+	r->pos2[2] = view.center.z;
+	r++;
+	r->pos1[0] = b.x1;
+	r->pos1[1] = b.y2;
+	r->pos1[2] = view.center.z;
+	r->pos2[0] = b.x2;
+	r->pos2[1] = b.y2;
+	r->pos2[2] = view.center.z;
+	r++;
+	r->pos1[0] = b.x1;
+	r->pos1[1] = b.y1;
+	r->pos1[2] = view.center.z;
+	r->pos2[0] = b.x1;
+	r->pos2[1] = b.y2;
+	r->pos2[2] = view.center.z;
+	dygrow(rlines, rn + nelem(rselbox));
+	memcpy(rlines + rn, rselbox, sizeof rselbox);
+	return nelem(rselbox);
+}
+
+static int
+drawlines(void)
+{
+	int n;
+
+	n = debug & Debugdraw ? 3 : 0;	/* FIXME: fragile */
+	n += drawselbox(n);
+	return n;
+}
+
 static int
 drawworld(int go)
 {
@@ -176,19 +249,8 @@ drawworld(int go)
 		ndnodes = drawnodes();
 		ndedges = drawedges();
 	}
+	ndlines = drawlines();
 	return r;
-}
-
-/* FIXME: separate pipeline */
-static void
-drawui(void)
-{
-	return;
-	if(ndedges < 1 || selbox[0].pos2[0] - selbox[0].pos1[0] == 0.0f)
-		return;
-	assert(ndedges + nelem(selbox) <= dylen(redges));	/* realloc would race */
-	memcpy(redges + ndedges, selbox, sizeof selbox);
-	ndedges += nelem(selbox);
 }
 
 int
@@ -198,7 +260,6 @@ redraw(int go)
 
 	CLK0(clk);
 	go = drawworld(go);
-	drawui();
 	CLK1(clk);
 	return go;
 }
@@ -270,7 +331,6 @@ reqdraw(int r)
 	case Reqfreeze:
 	case Reqthaw:
 	case Reqstop:
-	case Reqshallowdraw:
 	case Reqrefresh:
 	case Reqredraw:
 		wakedrawup();
@@ -283,6 +343,7 @@ reqdraw(int r)
 	case Reqfocus:
 	case Reqpickbuf:
 	case Reqshape:
+	case Reqshallowdraw:
 	case Reqsleep:
 		rf |= r;
 		if(nbsendul(rendc, rf) == 1)
@@ -290,6 +351,19 @@ reqdraw(int r)
 		break;
 	default:
 		warn("reqdraw: unknown request %#x\n", r);
+	}
+}
+
+static void
+initselbox(void)
+{
+	RLine *r;
+
+	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
+		r->pos1[2] = r->pos2[2] = view.center.z;
+		r->pos1[3] = r->pos2[3] = 1.0f;
+		setcolor(r->col1, theme[Chigh]);
+		setcolor(r->col2, theme[Chigh]);
 	}
 }
 
@@ -306,4 +380,5 @@ initdrw(void)
 	|| (rendc = chancreate(sizeof(ulong), 1)) == nil
 	|| (ctlc = chancreate(sizeof(ulong), 2)) == nil)
 		sysfatal("initdrw: chancreate");
+	initselbox();
 }

@@ -5,7 +5,6 @@ typedef struct Quad Quad;
 typedef struct View View;
 typedef struct Color Color;
 typedef struct Box Box;
-typedef	struct Rekt Rekt;
 typedef struct Drawing Drawing;
 typedef struct Range Range;
 
@@ -65,7 +64,7 @@ struct RLine{
 	float col2[4];
 };
 extern RNode *rnodes;
-extern REdge *redges, selbox[4];	/* FIXME: selbox -> lines */
+extern REdge *redges;
 extern RLine *rlines;
 extern ssize ndnodes, ndedges, ndlines;
 
@@ -74,13 +73,6 @@ struct Quad{
 	Vertex tr;
 	Vertex br;
 	Vertex bl;
-};
-
-struct Rekt{
-	int x1;
-	int y1;
-	int x2;
-	int y2;
 };
 
 #define	V(x,y,z)	((Vertex){(x), (y), (z)})
@@ -106,6 +98,7 @@ struct Box{
 	float x2;
 	float y2;
 };
+extern Box selbox;
 
 struct View{
 	int w;
@@ -160,10 +153,10 @@ void	setcolor(float*, u32int);
 enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
 	Reqresetui = 1<<1,		/* reset view position, etc., redraw */
-	Reqrefresh = 1<<2,		/* render and redraw: while layouting */
+	Reqrefresh = 1<<2,		/* re-render + redraw if needed */
 	Reqshape = 1<<3,		/* change node shape */
-	Reqredraw = 1<<4,		/* paint and flush canvas */
-	Reqshallowdraw = 1<<5,	/* re-flush current canvas: for ui */
+	Reqredraw = 1<<4,		/* redraw current geometry */
+	Reqshallowdraw = 1<<5,	/* re-render w/o buffer updates (ui) */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
 	Reqthaw = 1<<28,		/* revert communication to standard */
@@ -172,7 +165,6 @@ enum{
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
-void	updateedges(void);
 void	updatenode(ioff);
 void	resizenodes(void);
 void	setnodeshape(int);
