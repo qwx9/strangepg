@@ -37,9 +37,6 @@ extern Channel *rendc, *ctlc;
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
 
-typedef struct GLNode GLNode;
-typedef struct GLEdge GLEdge;
-
 void
 setcolor(float *col, u32int v)
 {
@@ -242,11 +239,19 @@ renderoffscreen(void)
 }
 
 static void
-updatebuffers(void)
+updatebuffers(int reqs)
 {
 	int n;
 
 	if(dylen(rnodes) <= 0)
+		return;
+	if((n = ndlines) >= 1){
+		sg_update_buffer(render.linebind.vertex_buffers[0], &(sg_range){
+			.ptr = rlines,
+			.size = n * sizeof *rlines,
+		});
+	}
+	if((reqs & (Reqrefresh|Reqredraw|Reqpickbuf)) == 0)
 		return;
 	if((n = ndedges) >= 1){
 		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
@@ -258,12 +263,6 @@ updatebuffers(void)
 		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
 			.ptr = rnodes,
 			.size = n * sizeof *rnodes,
-		});
-	}
-	if((n = ndlines) >= 1){
-		sg_update_buffer(render.linebind.vertex_buffers[0], &(sg_range){
-			.ptr = rlines,
-			.size = n * sizeof *rlines,
 		});
 	}
 }
@@ -302,13 +301,6 @@ updatenode(ioff id)	/* FIXME: single update */
 {
 	render.stalepick = 1;
 	reqdraw(Reqredraw);
-}
-
-void
-updateedges(void)	/* FIXME */
-{
-	render.stalepick = 1;
-	reqdraw(Reqrefresh);
 }
 
 static void
@@ -376,22 +368,17 @@ frame(void)
 			drawing.flags ^= DFdrawarrows;
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
-		if(r & Reqpickbuf){
-			t = μsec();
-			if(t - t0 >= 100000){
-				r &= ~Reqpickbuf;
-				render.stalepick = 1;
-				render.caching = 1;
-				t0 = t;
-			}
+		if(r & Reqpickbuf && (t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
+			render.stalepick = 1;
+			render.caching = 1;
+			t0 = t;
 		}
-		if((drawing.flags & DFnorend) == 0 && r & (Reqrefresh | Reqredraw))
-			updatebuffers();
 		if(r & (Reqstop|Reqsleep))
 			sapp_input_wait(true);
 	}
 	if(drawing.flags & DFnorend)
 		return;
+	updatebuffers(r);
 	renderscene();
 	render.caching = 0;
 	if(graph.flags & GFdrawme)
