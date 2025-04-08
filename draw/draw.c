@@ -25,7 +25,42 @@ Box selbox;
 Channel *rendc, *ctlc;
 
 static Channel *drawc;
-static RLine rselbox[4];
+static RLine raxes[3], rselbox[4];
+
+static void
+initstatic(void)
+{
+	RLine *r, a = {.pos1 = {0.0f, 0.0f, 0.0f, 1.0f}};
+
+	r = raxes;
+	a.pos2[0] = 200.0f * view.up.x;
+	a.pos2[1] = 200.0f * view.up.y;
+	a.pos2[2] = 200.0f * view.up.z;
+	a.pos2[3] = 1.0f;
+	setcolor(a.col1, theme[Cxaxis]);
+	setcolor(a.col2, theme[Cxaxis]);
+	*r++ = a;
+	a.pos2[0] = 200.0f * view.right.x;
+	a.pos2[1] = 200.0f * view.right.y;
+	a.pos2[2] = 200.0f * view.right.z;
+	a.pos2[3] = 1.0f;
+	setcolor(a.col1, theme[Cyaxis]);
+	setcolor(a.col2, theme[Cyaxis]);
+	*r++ = a;
+	a.pos2[0] = 200.0f * view.front.x;
+	a.pos2[1] = 200.0f * view.front.y;
+	a.pos2[2] = 200.0f * view.front.z;
+	a.pos2[3] = 1.0f;
+	setcolor(a.col1, theme[Czaxis]);
+	setcolor(a.col2, theme[Czaxis]);
+	*r = a;
+	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
+		r->pos1[2] = r->pos2[2] = view.center.z;
+		r->pos1[3] = r->pos2[3] = 1.0f;
+		setcolor(r->col1, theme[Chigh]);
+		setcolor(r->col2, theme[Chigh]);
+	}
+}
 
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
@@ -54,6 +89,14 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 	r->pos2[0] = dv.x;
 	r->pos2[1] = dv.y;
 	r->pos2[2] = dv.z;
+}
+
+static int
+drawaxes(int n)
+{
+	dygrow(rlines, n + nelem(raxes));
+	memcpy(rlines + n, raxes, sizeof raxes);
+	return nelem(raxes);
 }
 
 static intptr
@@ -230,7 +273,9 @@ drawlines(void)
 {
 	int n;
 
-	n = debug & Debugdraw ? 3 : 0;	/* FIXME: fragile */
+	n = 0;
+	if(debug & Debugdraw)
+		n += drawaxes(n);
 	n += drawselbox(n);
 	return n;
 }
@@ -269,6 +314,7 @@ drawproc(void *)
 {
 	int r, go;
 
+	initstatic();
 	go = 1;
 	for(;;){
 		if((r = recvul(drawc)) == 0)
@@ -354,19 +400,6 @@ reqdraw(int r)
 	}
 }
 
-static void
-initselbox(void)
-{
-	RLine *r;
-
-	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
-		r->pos1[2] = r->pos2[2] = view.center.z;
-		r->pos1[3] = r->pos2[3] = 1.0f;
-		setcolor(r->col1, theme[Chigh]);
-		setcolor(r->col2, theme[Chigh]);
-	}
-}
-
 /* note: view screen dimensions are *not* necessarily set by the
  * end of all initialization */
 void
@@ -380,5 +413,4 @@ initdrw(void)
 	|| (rendc = chancreate(sizeof(ulong), 1)) == nil
 	|| (ctlc = chancreate(sizeof(ulong), 2)) == nil)
 		sysfatal("initdrw: chancreate");
-	initselbox();
 }

@@ -406,46 +406,11 @@ setupedges(void)
 }
 
 static void
-setupaxes(void)
-{
-	RLine r = {0};
-
-	if((debug & Debugdraw) == 0)
-		return;
-	r.pos1[0] = 0.0f;
-	r.pos1[1] = 0.0f;
-	r.pos1[2] = 0.0f;
-	r.pos1[3] = 1.0f;
-	r.pos2[0] = 200.0f * view.up.x;
-	r.pos2[1] = 200.0f * view.up.y;
-	r.pos2[2] = 200.0f * view.up.z;
-	r.pos2[3] = 1.0f;
-	setcolor(r.col1, theme[Cxaxis]);
-	setcolor(r.col2, theme[Cxaxis]);
-	dypush(rlines, r);
-	r.pos2[0] = 200.0f * view.right.x;
-	r.pos2[1] = 200.0f * view.right.y;
-	r.pos2[2] = 200.0f * view.right.z;
-	r.pos2[3] = 1.0f;
-	setcolor(r.col1, theme[Cyaxis]);
-	setcolor(r.col2, theme[Cyaxis]);
-	dypush(rlines, r);
-	r.pos2[0] = 200.0f * view.front.x;
-	r.pos2[1] = 200.0f * view.front.y;
-	r.pos2[2] = 200.0f * view.front.z;
-	r.pos2[3] = 1.0f;
-	setcolor(r.col1, theme[Czaxis]);
-	setcolor(r.col2, theme[Czaxis]);
-	dypush(rlines, r);
-}
-
-static void
 setuplines(void)
 {
 	int n;
 	sg_shader sh;
 
-	setupaxes();
 	n = dylen(rlines) + 4 + 7 & ~7;
 	dygrow(rlines, n);
 	render.linebind = (sg_bindings){
