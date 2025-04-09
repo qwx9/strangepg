@@ -100,7 +100,7 @@ static uint32_t _sgx_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
 
 static void _sgx_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
 #ifdef SOKOL_GLCORE
-	fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s\n",
+	fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s",
 		severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
 #endif
 }
