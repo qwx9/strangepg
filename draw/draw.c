@@ -62,33 +62,36 @@ initstatic(void)
 	}
 }
 
+/* FIXME: completely redundant with what the node pipeline is doing,
+ * we should either do everything cpu-side or in the shaders; can one
+ * shader use the results of another? a doesn't depend at all on b;
+ * we could pass the same input as the node pipeline maybe or reuse state? j*/
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 {
-	Vertex p1, p2, du, dv;
+	float l;
+	HMM_Vec3 g, a, b;
+	HMM_Quat q;
 
-	du.x = u->dir[0];
-	du.y = u->dir[1];
-	du.z = 0.0f;
-	p1.x = u->pos[0];
-	p1.y = u->pos[1];
-	p1.z = u->pos[2];
-	dv.x = v->dir[0];
-	dv.y = v->dir[1];
-	dv.z = 0.0f;
-	p2.x = v->pos[0];
-	p2.y = v->pos[1];
-	p2.z = v->pos[2];
-	du = mulv(du, u->len * drawing.nodesz / 2.0f);
-	du = urev ? addv(p1, du) : subv(p1, du);
-	dv = mulv(dv, v->len * drawing.nodesz / 2.0f);
-	dv = vrev ? subv(p2, dv) : addv(p2, dv);
-	r->pos1[0] = du.x;
-	r->pos1[1] = du.y;
-	r->pos1[2] = du.z;
-	r->pos2[0] = dv.x;
-	r->pos2[1] = dv.y;
-	r->pos2[2] = dv.z;
+	g = HMM_V3(1.0f, 0.0f, 0.0f);
+	a = HMM_V3(u->pos[0], u->pos[1], u->pos[2]);
+	l = u->len * drawing.nodesz * 0.5f;
+	if(!urev)
+		l = -l;
+	q = HMM_Q(u->dir[0], u->dir[1], u->dir[2], u->dir[3]);
+	a = HMM_AddV3(HMM_RotateV3Q(HMM_MulV3(g, HMM_V3(l, 1.0f, 1.0f)), q), a);
+	b = HMM_V3(v->pos[0], v->pos[1], v->pos[2]);
+	l = v->len * drawing.nodesz * 0.5f;
+	if(vrev)
+		l = -l;
+	q = HMM_Q(v->dir[0], v->dir[1], v->dir[2], v->dir[3]);
+	b = HMM_AddV3(HMM_RotateV3Q(HMM_MulV3(g, HMM_V3(l, 1.0f, 1.0f)), q), b);
+	r->pos1[0] = a.X;
+	r->pos1[1] = a.Y;
+	r->pos1[2] = a.Z;
+	r->pos2[0] = b.X;
+	r->pos2[1] = b.Y;
+	r->pos2[2] = b.Z;
 }
 
 static int
@@ -157,10 +160,12 @@ static inline void
 faceyourfears(RNode *ru, Node *u)
 {
 	float x, y, z, Δ, Δx, Δy, Δz;
-	float θ, c, s, t;
+	float c, s, t;
 	ioff *i, *ie;
 	u32int e;
 	RNode *rv;
+	HMM_Vec3 a = {{0.0f}}, b = {{0.0f}};
+	HMM_Quat q;
 
 	if(u->nedges == 0)
 		return;
@@ -186,14 +191,21 @@ faceyourfears(RNode *ru, Node *u)
 		c += Δx / Δ;
 		s += Δy / Δ;
 		t += Δz / Δ;
+		if((e & 1) == 0){
+			b.X += Δx / Δ;
+			b.Y += Δy / Δ;
+			b.Z += Δz / Δ;
+		}
 	}
-	θ = fmodf(atan2f(s, c), 2.0f * (float)PI);
-	ru->dir[0] = cosf(θ);
-	ru->dir[1] = sinf(θ);
-	θ = sqrtf(c * c + s * s);
-	θ = fmodf(atan2f(θ, t), 2.0f * (float)PI);
-	ru->dir[2] = cosf(θ);
-	ru->dir[3] = sinf(θ);
+	a = HMM_V3(1.0f, 0.0f, 0.0f);
+	if(c != 0.0f || s != 0.0f || t != 0.0f)	/* edge case: choose one side */
+		b = HMM_V3(c, s, t);
+	b = HMM_Norm(b);
+	q = HMM_QFromNormPair(a, b);
+	ru->dir[0] = q.X;
+	ru->dir[1] = q.Y;
+	ru->dir[2] = q.Z;
+	ru->dir[3] = q.W;
 }
 
 static intptr

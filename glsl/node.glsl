@@ -15,13 +15,18 @@ in vec4 col;
 in float len;
 out vec4 c;
 
-vec2 rotatez(vec2 v, float c, float s){
-	return mat2(c, s, -s, c) * v;
+vec3 rotate(vec3 v, vec4 q)
+{
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u
+		+ (s * s - dot(u, u)) * v
+		+ 2.0 * s * cross(u, v);
 }
 
 void main(){
-	vec2 g = geom * vec2(len, 1.0);
-	vec3 r = vec3(rotatez(g, dir.x, dir.y), 0.0);
+	vec3 g = vec3(geom * vec2(len, 1.0), 0.0);
+	vec3 r = rotate(g, dir);
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	c = col;
 }
@@ -52,13 +57,18 @@ in vec4 dir;
 in float len;
 flat out uint idx;
 
-vec2 rotatez(vec2 v, float c, float s){
-	return mat2(c, s, -s, c) * v;
+vec3 rotate(vec3 v, vec4 q)
+{
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u
+		+ (s * s - dot(u, u)) * v
+		+ 2.0 * s * cross(u, v);
 }
 
 void main(){
-	vec2 g = geom * vec2(len, 1.0);
-	vec3 r = vec3(rotatez(g, dir.x, dir.y), 0.0);
+	vec3 g = vec3(geom * vec2(len, 1.0), 0.0);
+	vec3 r = rotate(g, dir);
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	idx = gl_InstanceIndex + 1;
 }
@@ -91,17 +101,18 @@ in float len;
 out vec4 c;
 out flat uint ci;
 
-vec3 rotate(vec3 v, float c, float s, float t, float w){
-	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
-		* mat3(1, 0, 0, 0, t, w, 0, -w, t)
-		//* mat3(t, 0, -w, 0, 1, 0, w, 0, t)
-		* v;
+vec3 rotate(vec3 v, vec4 q)
+{
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u
+		+ (s * s - dot(u, u)) * v
+		+ 2.0 * s * cross(u, v);
 }
 
 void main(){
 	vec3 g = geom * vec3(len, 1.0, 1.0);
-	vec3 r0 = rotate(g, dir.x, dir.y, dir.z, dir.w);
-	vec3 r = r0;
+	vec3 r = rotate(g, dir);
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	c = col;
 	ci = gl_VertexIndex / 2;
@@ -135,17 +146,18 @@ in vec4 dir;
 in float len;
 flat out uint idx;
 
-vec3 rotate(vec3 v, float c, float s, float t, float w){
-	return mat3(c, s, 0, -s, c, 0, 0, 0, 1)
-		* mat3(1, 0, 0, 0, t, w, 0, -w, t)
-		//* mat3(t, 0, -w, 0, 1, 0, w, 0, t)
-		* v;
+vec3 rotate(vec3 v, vec4 q)
+{
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u
+		+ (s * s - dot(u, u)) * v
+		+ 2.0 * s * cross(u, v);
 }
 
 void main(){
 	vec3 g = geom * vec3(len, 1.0, 1.0);
-	vec3 r0 = rotate(g, dir.x, dir.y, dir.z, dir.w);
-	vec3 r = r0;
+	vec3 r = rotate(g, dir);
 	gl_Position = mvp * vec4(r + pos, 1.0);
 	idx = gl_InstanceIndex + 1;
 }

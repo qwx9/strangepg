@@ -783,6 +783,7 @@ const sg_shader_desc* edge_idx_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main";
             desc.fragment_func.source = (const char*)edge_fsoff_source_glsl430;
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].glsl_name = "pos";
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -803,6 +804,7 @@ const sg_shader_desc* edge_idx_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main";
             desc.fragment_func.source = (const char*)edge_fsoff_source_glsl300es;
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].glsl_name = "pos";
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -825,6 +827,7 @@ const sg_shader_desc* edge_idx_shader_desc(sg_backend backend) {
             desc.fragment_func.source = (const char*)edge_fsoff_source_hlsl5;
             desc.fragment_func.d3d11_target = "ps_5_0";
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].hlsl_sem_name = "TEXCOORD";
             desc.attrs[0].hlsl_sem_index = 0;
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
@@ -844,6 +847,7 @@ const sg_shader_desc* edge_idx_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main0";
             desc.fragment_func.source = (const char*)edge_fsoff_source_metal_macos;
             desc.fragment_func.entry = "main0";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
             desc.uniform_blocks[0].size = 64;
@@ -864,6 +868,7 @@ const sg_shader_desc* edge_s_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main";
             desc.fragment_func.source = (const char*)edge_fs_source_glsl430;
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].glsl_name = "pos";
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -890,6 +895,7 @@ const sg_shader_desc* edge_s_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main";
             desc.fragment_func.source = (const char*)edge_fs_source_glsl300es;
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].glsl_name = "pos";
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -918,6 +924,7 @@ const sg_shader_desc* edge_s_shader_desc(sg_backend backend) {
             desc.fragment_func.source = (const char*)edge_fs_source_hlsl5;
             desc.fragment_func.d3d11_target = "ps_5_0";
             desc.fragment_func.entry = "main";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.attrs[0].hlsl_sem_name = "TEXCOORD";
             desc.attrs[0].hlsl_sem_index = 0;
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
@@ -941,6 +948,7 @@ const sg_shader_desc* edge_s_shader_desc(sg_backend backend) {
             desc.vertex_func.entry = "main0";
             desc.fragment_func.source = (const char*)edge_fs_source_metal_macos;
             desc.fragment_func.entry = "main0";
+            desc.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
             desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
             desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
             desc.uniform_blocks[0].size = 64;
