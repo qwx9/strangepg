@@ -368,16 +368,16 @@ frame(void)
 			drawing.flags ^= DFdrawarrows;
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
-		if(r & Reqpickbuf && (t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
-			render.stalepick = 1;
-			render.caching = 1;
-			t0 = t;
-		}
 		if(r & (Reqstop|Reqsleep))
 			sapp_input_wait(true);
 	}
 	if(drawing.flags & DFnorend)
 		return;
+	if((t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
+		render.stalepick = 1;
+		render.caching = 1;
+		t0 = t;
+	}
 	updatebuffers(r);
 	renderscene();
 	render.caching = 0;
