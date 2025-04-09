@@ -222,6 +222,7 @@ mousedrag(float Δx, float Δy)
 		r->pos[1] += Δx * view.right.y - Δy * view.up.y;
 		r->pos[2] += Δx * view.right.z - Δy * view.up.z;
 	}
+	reqdraw(Reqredraw);
 	return 1;
 }
 
