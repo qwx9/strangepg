@@ -141,6 +141,8 @@ parseargs(int argc, char **argv)
 			debug |= Debugrender;
 		else if(strcmp(s, "strawk") == 0)
 			debug |= Debugstrawk;
+		else if(strcmp(s, "ui") == 0)
+			debug |= Debugui;
 		else{
 			warn("unknown debug component %s\n", s);
 			usage();
@@ -207,11 +209,14 @@ main(int argc, char **argv)
 	initcmd();	/* fork repl before starting other threads */
 	initlayout();
 	d = parseargs(argc, argv);
+	/* FIXME: shouldn't we hold off of loading any draw/render shit until
+	 * after we're done validating, configuring and loading? */
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
 	load();
 	if(drawing.flags & DFnope || debug & Debugload)
 		exportforever();
+	/* FIXME: view stuff doesn't belong in ui any more */
 	initui();
 	waitforit();
 	deferred(d);

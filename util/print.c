@@ -96,6 +96,7 @@ dprint(int flags, char *fmt, ...)
 	case Debugperf: type = "perf"; break;
 	case Debugrender: type = "render"; break;
 	case Debugstrawk: type = "strawk"; break;
+	case Debugui: type = "ui"; break;
 	default: type = "dafuq"; break;
 	}
 	va_start(arg, fmt);

@@ -35,7 +35,7 @@ pan(float Δx, float Δy)
 	v = addv(V(Δx, Δy, 0.0f), view.pan);
 	if(eqv(v, view.pan))
 		return;
-	DPRINT(Debugdraw, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
+	DPRINT(Debugui, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
 	view.pan = v;
 	pandraw(Δx, Δy);
 }
@@ -53,7 +53,7 @@ zoom(float Δx, float Δy)
 	if(view.zoom + Δ == view.zoom)
 		return;
 	view.zoom += Δ;
-	DPRINT(Debugdraw, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
+	DPRINT(Debugui, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
 	v = mulv(center, Δ);
 	zoomdraw(Δ, v.x, v.y);
 }
@@ -71,7 +71,7 @@ keyevent(Rune r, int down)
 {
 	int m;
 
-	DPRINT(Debugdraw, "keyevent %d", r);
+	DPRINT(Debugui, "keyevent %d", r);
 	if(prompting){
 		prompt(r);
 		return 0;
@@ -235,11 +235,11 @@ mousehover(int x, int y)
 		u32int u;
 	} u;
 
-	DPRINT(Debugdraw, "mousehover %d,%d win [%d,%d]", x, y, view.w, view.h);
+	DPRINT(Debugui, "mousehover %d,%d win [%d,%d]", x, y, view.w, view.h);
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
 		return -1;
 	u.u = mousepick(x, y);
-	DPRINT(Debugdraw, "mousehover %d,%d: %x", x, y, u.u);
+	DPRINT(Debugui, "mousehover %d,%d: %x", x, y, u.u);
 	if(u.i == -1){
 		hoverstr[0] = 0;
 		return -1;
@@ -319,7 +319,7 @@ mouseevent(Vertex v, Vertex Δ)
 	int m;
 	static int omod, inwin;
 
-	DPRINT(Debugdraw, "mouseevent %f,%f Δ %f,%f mod %d", v.x, v.y, Δ.x, Δ.y, mod);
+	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", v.x, v.y, Δ.x, Δ.y, mod);
 	m = mod & Mmask;
 	if(vinrect(v, view.prompt) || m != 0 && inwin){
 		inwin = 1;

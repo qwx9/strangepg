@@ -23,14 +23,14 @@ mousepick(int x, int y)
 	u32int i;
 
 	if(x < 0 || x >= view.w || y < 0 || y >= view.h){
-		DPRINT(Debugdraw, "mousepick %d,%d: out of bounds", x, y);
+		DPRINT(Debugui, "mousepick %d,%d: out of bounds", x, y);
 		return -1;
 	}
 	if(render.noframes < 1){
-		DPRINT(Debugdraw, "mousepick: no offscreen render yet");
+		DPRINT(Debugui, "mousepick: no offscreen render yet");
 		return -1;
 	}
-	DPRINT(Debugdraw, "mousepick %d,%d stale %d move %d",
+	DPRINT(Debugui, "mousepick %d,%d stale %d move %d",
 		x, y, render.stalepick, render.moving);
 	if(render.stalepick && !render.moving){
 		sgx_query_image_pixels(pickfb, render.pickfb);
@@ -39,7 +39,7 @@ mousepick(int x, int y)
 	if(render.pickflip)
 		y = view.h - y;
 	i = render.pickfb[(view.h - y - 1) * view.w + x];
-	DPRINT(Debugdraw, "mousepick: %x", i);
+	DPRINT(Debugui, "mousepick: %x", i);
 	if(i == 0)
 		return -1;
 	return i - 1;
