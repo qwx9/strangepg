@@ -185,7 +185,7 @@ can be downloaded from the Releases github page as well.
 strangepg requires a graphics card with certain capabilities depending
 on the backend which the system it will run on uses:
 
-- Linux: OpenGL 4.3+ (x86/amd64) or OpenGL ES 3.0+ (arm64)
+- Linux: OpenGL 4.3+ or OpenGL ES 3.0+
 - Windows: DirectX 11+ support
 - macOS: Metal support
 
@@ -216,7 +216,6 @@ Install conda, add the bioconda channel, then:
 conda install strangepg
 ```
 
-Currently Linux aarch64 builds use OpenGL ES and EGL instead of mainline OpenGL.
 macOS is supported for both Intel and Apple silicon; both should work in the same way,
 but the former has received much less testing.
 
@@ -258,10 +257,17 @@ To set the compiler, use the `CC` make variable:
 make CC=clang -j install
 ```
 
-Currently arm64 builds use OpenGL ES. They can be forced to use EGL as well:
+EGL can be enabled as well:
 
 ```bash
 make EGL=1 -j install
+```
+
+strangepg can be also be built with OpenGL ES
+(implies EGL):
+
+```bash
+make GLES=1 -j install
 ```
 
 Multiple make variables may be specified at the same time.
@@ -982,6 +988,8 @@ the screen to the center of the graph.
 - Edges are ugly and are 1 pixel-wide lines, making them difficult to select.
 - Self-edges aren't drawn well. An `a+a+` edge will appear as a line inside the node,
 and a `a+a-` edge will be a dot at the end of the node (in read direction).
+- OpenGL ES: mouse picking code doesn't work and crashes with an assertion failure;
+not sure what and how to fix.
 
 Less major bugs:
 - strawk could still use less memory and be faster; its language is very limited;
