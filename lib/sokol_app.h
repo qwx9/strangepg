@@ -12065,10 +12065,12 @@ SOKOL_API_IMPL void sapp_wakethefup(int fd) {
 }
 
 SOKOL_API_IMPL void sapp_input_wait(bool set, int fd) {
+    #if defined(_SAPP_LINUX)
     if(_sapp.input_wait = set)
         _sapp.x11.waitfd = fd;
     else
         _sapp.x11.waitfd = -1;
+    #endif
 }
 
 SOKOL_API_IMPL void sapp_consume_event(void) {
