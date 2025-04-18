@@ -59,6 +59,7 @@ HFILES=\
 	fns.h\
 	cmd/cmd.h\
 	draw/drw.h\
+	draw/view.h\
 	fs/em.h\
 	fs/fs.h\
 	graph/graph.h\

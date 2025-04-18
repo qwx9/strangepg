@@ -2,7 +2,6 @@ typedef struct RNode RNode;
 typedef struct REdge REdge;
 typedef struct RLine RLine;
 typedef struct Quad Quad;
-typedef struct View View;
 typedef struct Color Color;
 typedef struct Box Box;
 typedef struct Drawing Drawing;
@@ -75,56 +74,21 @@ struct Quad{
 	Vertex bl;
 };
 
-#define	V(x,y,z)	((Vertex){(x), (y), (z)})
-#define	addv(u,v)	((Vertex){(u).x+(v).x, (u).y+(v).y, (u).z+(v).z})
-#define	subv(u,v)	((Vertex){(u).x-(v).x, (u).y-(v).y, (u).z-(v).z})
-#define	mulv(u,s)	((Vertex){(u).x*(s), (u).y*(s), (u).z*(s)})
-#define	divv(u,s)	((Vertex){(u).x/(s), (u).y/(s), (u).z/(s)})
-#define	vinrect(u,r)	((u).x>=(r).x1 && (u).x<(r).x2 && (u).y>=(r).y1 && (u).y<(r).y2)
-#define	eqv(u,v)	((u).x==(v).x && (u).y==(v).y && (u).z==(v).z)
-#define Q(a,b,c,d)	((Quad){(a), (b), (c), (d)})
-#define qaddv(q,v)	Q(addv((q).tl,(v)), addv((q).tr,(v)), addv((q).bl,(v)), addv((q).br,(v)))
-#define qsubv(q,v)	Q(subv((q).tl,(v)), subv((q).tr,(v)), subv((q).bl,(v)), subv((q).br,(v)))
-#define	qinset(q,s)	Q(subv((q).tl,V((s),(s))), subv((q).tr,V((s),(s))), addv((q).bl,V((s),(s))), addv((q).br,V((s),(s))))
-
-#define zrotv(v,cosθ,sinθ)	V((v).x * (cosθ) - (v).y * (sinθ), (v).x * (sinθ) + (v).y * (cosθ), 0.0f)
-#define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.pan), view.center)
-
-#define	ZV	V(0.0f, 0.0f, 0.0f)
-
 struct Box{
 	float x1;
 	float y1;
 	float x2;
 	float y2;
 };
-extern Box selbox;
+extern Box selbox, promptbox;
 
-struct View{
-	int w;
-	int h;
-	float ar;
-	float fov;
-	float tfov;
-	float θ;
-	float φ;
-	Vertex eye;
-	Vertex center;
-	Vertex up;
-	Vertex right;
-	Vertex front;
-	Vertex Δeye;
-	Vertex pan;
-	double zoom;
-	Box prompt;
+enum{
+	DSstalepick = 1<<0,
+	DSmoving = 1<<1,
 };
-extern View view;
+extern int drawstate;
 
 void	endmove(void);
-void	zoomdraw(float, float, float);
-void	pandraw(float, float);
-void	rotdraw(float, float);
-void	worldview(Vertex);
 u32int	mousepick(int, int);
 int	redraw(int);
 
@@ -152,7 +116,7 @@ void	setcolor(float*, u32int);
 
 enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
-	Reqresetui = 1<<1,		/* reset view position, etc., redraw */
+	Reqresetview = 1<<1,		/* reset view position, etc., redraw */
 	Reqrefresh = 1<<2,		/* re-render + redraw if needed */
 	Reqshape = 1<<3,		/* change node shape */
 	Reqredraw = 1<<4,		/* redraw current geometry */
@@ -174,5 +138,6 @@ void	thawdraw(void);
 void	freezedraw(void);
 void	waitforit(void);
 void	reqdraw(int);
+void	initview(void);
 void	initcol(void);
 void	initdrw(void);

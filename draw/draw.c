@@ -1,13 +1,13 @@
 #include "strpg.h"
+#include "lib/HandmadeMath.h"
 #include "fs.h"
 #include "drw.h"
+#include "view.h"
 #include "ui.h"
 #include "threads.h"
 #include "cmd.h"
 #include "layout.h"
-#include "../lib/HandmadeMath.h"
 
-View view;
 RNode *rnodes;
 REdge *redges;
 RLine *rlines;
@@ -21,8 +21,9 @@ Drawing drawing = {
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
 };
-Box selbox;
+Box promptbox, selbox;
 Channel *rendc, *ctlc;
+int drawstate;
 
 static Channel *drawc;
 static RLine raxes[3], rselbox[4];
@@ -33,29 +34,29 @@ initstatic(void)
 	RLine *r, a = {.pos1 = {0.0f, 0.0f, 0.0f, 1.0f}};
 
 	r = raxes;
-	a.pos2[0] = 200.0f * view.up.x;
-	a.pos2[1] = 200.0f * view.up.y;
-	a.pos2[2] = 200.0f * view.up.z;
+	a.pos2[0] = 200.0f * view.up.X;
+	a.pos2[1] = 200.0f * view.up.Y;
+	a.pos2[2] = 200.0f * view.up.Z;
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Cxaxis]);
 	setcolor(a.col2, theme[Cxaxis]);
 	*r++ = a;
-	a.pos2[0] = 200.0f * view.right.x;
-	a.pos2[1] = 200.0f * view.right.y;
-	a.pos2[2] = 200.0f * view.right.z;
+	a.pos2[0] = 200.0f * view.right.X;
+	a.pos2[1] = 200.0f * view.right.Y;
+	a.pos2[2] = 200.0f * view.right.Z;
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Cyaxis]);
 	setcolor(a.col2, theme[Cyaxis]);
 	*r++ = a;
-	a.pos2[0] = 200.0f * view.front.x;
-	a.pos2[1] = 200.0f * view.front.y;
-	a.pos2[2] = 200.0f * view.front.z;
+	a.pos2[0] = 200.0f * view.front.X;
+	a.pos2[1] = 200.0f * view.front.Y;
+	a.pos2[2] = 200.0f * view.front.Z;
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Czaxis]);
 	setcolor(a.col2, theme[Czaxis]);
 	*r = a;
 	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
-		r->pos1[2] = r->pos2[2] = view.center.z;
+		r->pos1[2] = r->pos2[2] = view.center.Z;
 		r->pos1[3] = r->pos2[3] = 1.0f;
 		setcolor(r->col1, theme[Chigh]);
 		setcolor(r->col2, theme[Chigh]);
@@ -65,7 +66,7 @@ initstatic(void)
 /* FIXME: completely redundant with what the node pipeline is doing,
  * we should either do everything cpu-side or in the shaders; can one
  * shader use the results of another? a doesn't depend at all on b;
- * we could pass the same input as the node pipeline maybe or reuse state? j*/
+ * we could pass the same input as the node pipeline maybe or reuse state? */
 static inline void
 drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 {
@@ -219,18 +220,22 @@ drawnodes(void)
 	return r - rnodes;
 }
 
-/* FIXME */
-#define scr2world(x,y)	do{ \
-	(x) = 2.0f * (((x) - view.w * 0.5f) / view.w) * view.Δeye.z * view.ar * view.tfov; \
-	(y) = 2.0f * ((-(y) + view.h * 0.5f) / view.h) * view.Δeye.z * view.tfov; \
-}while(0)
+/* FIXME: clean up; note that view.zoom is NOT Δeye.Z, this problem is different */
+static inline HMM_Vec3
+scr2world(HMM_Vec3 v)
+{
+	v.X = 2.0f * ((v.X - view.w * 0.5f) / view.w) * view.zoom * view.ar * view.tfov;
+	v.Y = 2.0f * ((-v.Y + view.h * 0.5f) / view.h) * view.zoom * view.tfov;
+	return v;
+}
 
-/* FIXME: wrong orientation/rotation wrt roll, etc. */
 static int
 drawselbox(int rn)
 {
+	float fx, fy;
 	Box b;
 	RLine *r;
+	HMM_Vec3 v, p[4];
 
 	b = selbox;
 	r = rselbox;
@@ -242,39 +247,55 @@ drawselbox(int rn)
 	if((b.x1 == b.x2 || b.y1 == b.y2)
 		return 0;
 	*/
-	scr2world(b.x1, b.y1);
-	scr2world(b.x2, b.y2);
-	b.x1 += view.eye.x;
-	b.y1 += view.eye.y;
-	b.x2 += view.eye.x;
-	b.y2 += view.eye.y;
-	r->pos1[0] = b.x1;
-	r->pos1[1] = b.y1;
-	r->pos1[2] = view.center.z;
-	r->pos2[0] = b.x2;
-	r->pos2[1] = b.y1;
-	r->pos2[2] = view.center.z;
+	fx = 0.5f * (b.x2 - b.x1);
+	fy = 0.5f * (b.y2 - b.y1);
+	p[0] = HMM_V3(-fx, -fy, 0.0f);
+	p[1] = HMM_V3(-fx,  fy, 0.0f);
+	p[2] = HMM_V3( fx,  fy, 0.0f);
+	p[3] = HMM_V3( fx, -fy, 0.0f);
+	v = HMM_V3(b.x1, b.y1, 0.0f);
+	p[0] = scr2world(p[0]);
+	p[1] = scr2world(p[1]);
+	p[2] = scr2world(p[2]);
+	p[3] = scr2world(p[3]);
+	v = scr2world(v);
+	p[0] = HMM_RotateV3Q(p[0], view.rot);
+	p[1] = HMM_RotateV3Q(p[1], view.rot);
+	p[2] = HMM_RotateV3Q(p[2], view.rot);
+	p[3] = HMM_RotateV3Q(p[3], view.rot);
+	v = HMM_RotateV3Q(v, view.rot);
+	v = HMM_SubV3(v, p[0]);
+	p[0] = HMM_AddV3(p[0], v);
+	p[1] = HMM_AddV3(p[1], v);
+	p[2] = HMM_AddV3(p[2], v);
+	p[3] = HMM_AddV3(p[3], v);
+	r->pos1[0] = p[0].X;
+	r->pos1[1] = p[0].Y;
+	r->pos1[2] = p[0].Z;
+	r->pos2[0] = p[1].X;
+	r->pos2[1] = p[1].Y;
+	r->pos2[2] = p[1].Z;
 	r++;
-	r->pos1[0] = b.x2;
-	r->pos1[1] = b.y1;
-	r->pos1[2] = view.center.z;
-	r->pos2[0] = b.x2;
-	r->pos2[1] = b.y2;
-	r->pos2[2] = view.center.z;
+	r->pos1[0] = p[1].X;
+	r->pos1[1] = p[1].Y;
+	r->pos1[2] = p[1].Z;
+	r->pos2[0] = p[2].X;
+	r->pos2[1] = p[2].Y;
+	r->pos2[2] = p[2].Z;
 	r++;
-	r->pos1[0] = b.x1;
-	r->pos1[1] = b.y2;
-	r->pos1[2] = view.center.z;
-	r->pos2[0] = b.x2;
-	r->pos2[1] = b.y2;
-	r->pos2[2] = view.center.z;
+	r->pos1[0] = p[2].X;
+	r->pos1[1] = p[2].Y;
+	r->pos1[2] = p[2].Z;
+	r->pos2[0] = p[3].X;
+	r->pos2[1] = p[3].Y;
+	r->pos2[2] = p[3].Z;
 	r++;
-	r->pos1[0] = b.x1;
-	r->pos1[1] = b.y1;
-	r->pos1[2] = view.center.z;
-	r->pos2[0] = b.x1;
-	r->pos2[1] = b.y2;
-	r->pos2[2] = view.center.z;
+	r->pos1[0] = p[3].X;
+	r->pos1[1] = p[3].Y;
+	r->pos1[2] = p[3].Z;
+	r->pos2[0] = p[0].X;
+	r->pos2[1] = p[0].Y;
+	r->pos2[2] = p[0].Z;
 	dygrow(rlines, rn + nelem(rselbox));
 	memcpy(rlines + rn, rselbox, sizeof rselbox);
 	return nelem(rselbox);
@@ -306,6 +327,7 @@ drawworld(int go)
 		ndnodes = drawnodes();
 		ndedges = drawedges();
 	}
+	DPRINT(Debugdraw, "drawworld %d nodes %d edges", ndnodes, ndedges);
 	ndlines = drawlines();
 	return r;
 }
@@ -397,7 +419,7 @@ reqdraw(int r)
 			df = 0;
 		/* wet floor */
 	case Reqresetdraw:
-	case Reqresetui:
+	case Reqresetview:
 	case Reqfocus:
 	case Reqpickbuf:
 	case Reqshape:

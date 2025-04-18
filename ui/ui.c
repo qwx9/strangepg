@@ -1,7 +1,9 @@
 #include "strpg.h"
+#include "../lib/HandmadeMath.h"
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"
+#include "view.h"
 #include "graph.h"
 #include "layout.h"
 #include "ui.h"
@@ -25,18 +27,14 @@ enum{
 	Mmask = Mlmb | Mmmb | Mrmb,
 };
 static int mod;
-static Vertex center;
+static HMM_Vec3 center;
 
 static void
 pan(float Δx, float Δy)
 {
-	Vertex v;
-
-	v = addv(V(Δx, Δy, 0.0f), view.pan);
-	if(eqv(v, view.pan))
+	if(Δx == 0.0f && Δy == 0.0f)
 		return;
-	DPRINT(Debugui, "pan %.2f,%.2f → %.2f,%.2f", view.pan.x, view.pan.y, v.x, v.y);
-	view.pan = v;
+	DPRINT(Debugui, "pan %.2f,%.2f", Δx, Δy);
 	pandraw(Δx, Δy);
 }
 
@@ -44,26 +42,20 @@ static void
 zoom(float Δx, float Δy)
 {
 	float Δ;
-	Vertex v;
+	HMM_Vec3 v;
 
+	if(Δx == 0.0f && Δy == 0.0f)
+		return;
 	/* scalar projection of v onto (1,1) unit vector; this way,
 	 * zoom in when dragging ↘; also scale to reasonable
 	 * increment */
 	Δ = 0.01 * -(Δx + Δy) / 2;
 	if(view.zoom + Δ == view.zoom)
 		return;
-	view.zoom += Δ;
+	/* FIXME: not here */
 	DPRINT(Debugui, "zoom %.1f (%.1f,%.1f) → %.2f ", Δ, Δx, Δy, view.zoom);
-	v = mulv(center, Δ);
-	zoomdraw(Δ, v.x, v.y);
-}
-
-static void
-rotate(float Δx, float Δy)
-{
-	if(Δx == 0.0f && Δy == 0.0f)
-		return;
-	rotdraw(Δx, Δy);
+	v = HMM_MulV3F(center, Δ);
+	zoomdraw(Δ, v.X, v.Y);
 }
 
 int
@@ -99,7 +91,7 @@ keyevent(Rune r, int down)
 	case Kleft: pan(-view.w / 4.0f, 0.0f); break;
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
-	case Kesc: resetprompt(); reqdraw(Reqresetui); break;
+	case Kesc: resetprompt(); reqdraw(Reqresetview); break;
 	case 'r': reqlayout(Lreset); break;
 	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
 	case 'a': reqdraw(Reqshape); break;
@@ -200,27 +192,29 @@ mousedrag(float Δx, float Δy)
 	ioff idx;
 	float d;
 	RNode *r;
-	Vertex v;
+	HMM_Vec3 v;
 
 	if(((idx = selected) & 1UL<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
 	r = rnodes + idx;
+	/* FIXME: not here */
 	if((drawing.flags & DF3d) == 0){
-		Δx = 2 * Δx * view.Δeye.z * view.ar * view.tfov;
-		Δy = 2 * Δy * view.Δeye.z * view.tfov;
+		Δx = 2 * Δx * view.Δeye.Z * view.ar * view.tfov;
+		Δy = 2 * Δy * view.Δeye.Z * view.tfov;
 		r->pos[0] += Δx;
 		r->pos[1] -= Δy;
 	}else{
-		v = V(r->pos[0], r->pos[1], r->pos[2]);
-		v = subv(view.eye, v);
-		d = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+		v = HMM_V3(r->pos[0], r->pos[1], r->pos[2]);
+		v = HMM_SubV3(view.eye, v);
+		d = HMM_LenV3(v);
 		Δx *= d * view.ar * view.tfov;
 		Δy *= d * view.tfov;
-		r->pos[0] += Δx * view.right.x - Δy * view.up.x;
-		r->pos[1] += Δx * view.right.y - Δy * view.up.y;
-		r->pos[2] += Δx * view.right.z - Δy * view.up.z;
+		/* FIXME: mul + sub */
+		r->pos[0] += Δx * view.right.X - Δy * view.up.X;
+		r->pos[1] += Δx * view.right.Y - Δy * view.up.Y;
+		r->pos[2] += Δx * view.right.Z - Δy * view.up.Z;
 	}
 	reqdraw(Reqredraw);
 	return 1;
@@ -287,11 +281,6 @@ mouseselect(ioff idx, int multi)
 	return 0;
 }
 
-/* FIXME: naming and shit is stupid; view.pan/zoom are only for plan9
- *	should instead convert to world coordinates *here* and request an
- *	update, which *also* can be here, it just all updates view, and
- *	the mvp, so either in draw/world.c, or ui/view.c or something */
-/* called from render thread */
 void
 focusobj(void)
 {
@@ -300,7 +289,7 @@ focusobj(void)
 	if(focused == -1 || (focused & (1UL<<31)) != 0)	/* unimplemented */
 		return;
 	r = rnodes + focused;
-	worldview(V(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
+	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
 	mouseselect(focused, 0);
 	resetselbox(0, 0);
 	focused = -1;
@@ -315,14 +304,14 @@ focusnode(ioff id)
 }
 
 int
-mouseevent(Vertex v, Vertex Δ)
+mouseevent(float x, float y, float Δx, float Δy)
 {
 	int m;
 	static int omod, inwin;
 
-	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", v.x, v.y, Δ.x, Δ.y, mod);
+	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
 	m = mod & Mmask;
-	if(vinrect(v, view.prompt) || m != 0 && inwin){
+	if(x >= promptbox.x1 && x < promptbox.x2 && y >= promptbox.y1 && y < promptbox.y2 || m != 0 && inwin){
 		inwin = 1;
 		goto nope;
 	}else
@@ -332,52 +321,34 @@ mouseevent(Vertex v, Vertex Δ)
 		endmove();
 		if((omod & Mmask) == Mlmb)
 			resetselbox(0, 0);
-		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
+		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
 	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
 		resetselbox(0, 0);
 	if((omod & Mrmb) == 0)
-		center = V(v.x - view.w / 2, v.y - view.h / 2, 0);
-	if(Δ.x != 0.0f || Δ.y != 0.0f)
-		shown = mousehover(v.x, v.y);
+		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
+	if(Δx != 0.0f || Δy != 0.0f)
+		shown = mousehover(x, y);
 	if(m == Mlmb){
 		if((omod & Mlmb) == 0){
-			resetselbox(v.x, v.y);
+			resetselbox(x, y);
 			mouseselect(shown, mod & (Mshift|Mctrl));
-		}else if(Δ.x != 0.0f || Δ.y != 0.0f){
+		}else if(Δx != 0.0f || Δy != 0.0f){
 			/* FIXME: would be nice to just redraw the one node */
 			if(selected != -1)
-				mousedrag(Δ.x, Δ.y);
-			else
-				dragselect(v.x, v.y);
+				mousedrag(Δx, Δy);
+			else if(omod == Mlmb)
+				dragselect(x, y);
 		}
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)
-			zoom(-Δ.x, -Δ.y);
+			zoom(-Δx, -Δy);
 		else
-			pan(-Δ.x, -Δ.y);
-	/* FIXME: 2d mode rotation */
-	}else if(m == Mmmb)
-		rotate(-Δ.x, -Δ.y);
-	else if(m == (Mlmb | Mrmb))
-		zoom(-Δ.x, -Δ.y);
+			pan(-Δx, -Δy);
+	}else if(m == (Mlmb | Mrmb))
+		zoom(-Δx, -Δy);
 nope:
 	omod = m;
 	return 0;
-}
-
-void
-resetui(void)
-{
-	view.center = ZV;
-	view.θ = 0.0f;
-	view.φ = 0.0f;
-	view.eye = V(0.0f, 0.0f, 100.0f);
-	view.up = V(0.0f, 1.0f, 0.0f);
-	view.right = V(1.0f, 0.0f, 0.0f);
-	view.front = V(0.0f, 0.0f, 1.0f);
-	view.Δeye = subv(view.eye, view.center);
-	view.pan = ZV;
-	view.zoom = 1.0;
 }
 
 void
@@ -386,8 +357,5 @@ initui(void)
 	if(drawing.flags & DFnope)
 		return;
 	initsysui();
-	view.fov = 45.0f;
-	view.tfov = tanf(view.fov / 2);
-	resetui();
 	sels = sel_init();
 }

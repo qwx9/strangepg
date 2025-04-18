@@ -9,6 +9,7 @@
 #include "glsl/node.h"
 #include "glsl/line.h"
 #include "drw.h"
+#include "view.h"
 #include "ui.h"
 #include "threads.h"
 #include "cmd.h"
@@ -22,7 +23,7 @@ mousepick(int x, int y)
 {
 	u32int i;
 
-	if(x < 0 || x >= view.w || y < 0 || y >= view.h){
+	if(x < 0 || x >= sapp_width() || y < 0 || y >= sapp_height()){
 		DPRINT(Debugui, "mousepick %d,%d: out of bounds", x, y);
 		return -1;
 	}
@@ -31,14 +32,14 @@ mousepick(int x, int y)
 		return -1;
 	}
 	DPRINT(Debugui, "mousepick %d,%d stale %d move %d",
-		x, y, render.stalepick, render.moving);
-	if(render.stalepick && !render.moving){
+		x, y, drawstate & DSstalepick, drawstate & DSmoving);
+	if((drawstate & (DSstalepick | DSmoving)) == DSstalepick){
 		sgx_query_image_pixels(pickfb, render.pickfb);
-		render.stalepick = 0;
+		drawstate &= ~DSstalepick;
 	}
 	if(render.pickflip)
-		y = view.h - y;
-	i = render.pickfb[(view.h - y - 1) * view.w + x];
+		y = sapp_height() - y;
+	i = render.pickfb[(sapp_height() - y - 1) * sapp_width() + x];
 	DPRINT(Debugui, "mousepick: %x", i);
 	if(i == 0)
 		return -1;
@@ -168,8 +169,8 @@ setnodeshape(int arrow)
 static void
 initfb(int w, int h)
 {
-	view.w = w;
-	view.h = h;
+	view.w = sapp_width();
+	view.h = sapp_height();
 	pickfb = sg_make_image(&(sg_image_desc){
 		.render_target = true,
 		.width = w,
@@ -497,6 +498,6 @@ initgl(void)
 	initfb(sapp_width(), sapp_height());
 	b = sg_query_backend();
 	render.pickflip = b != SG_BACKEND_GLCORE && b != SG_BACKEND_GLES3;
-	render.stalepick = 1;
+	drawstate |= DSstalepick;
 	onscreen = 1;
 }

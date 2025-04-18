@@ -646,7 +646,6 @@ Click and hold to move a node around.
 or zoom out by pushing away (drag mouse toward upper left corner).
 - Scrollwheel: zoom in or out.
 - Control + right click (hold): zoom in or out.
-- Middle click (hold): rotate the view instead of the graph.
 
 Use `Esc` to reset the view.
 
@@ -995,10 +994,8 @@ Less major bugs:
 - strawk could still use less memory and be faster; its language is very limited;
 yet to be hooked up to external memory.
 - The selection box is a kludge and is stupidly resource-heavy.
-- The selection box is currently not drawn and only works in one direction.
+- The selection box currently only works in one direction.
 - Only one node can be moved at a time.
-- 3d nodes and edges are not rotated correctly.
-- 3d navigation still suffers from some bugs (roll angle especially).
 - The renderer is fairly efficient, but it could be made an order of magnitude faster.
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well.

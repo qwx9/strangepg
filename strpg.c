@@ -217,6 +217,7 @@ main(int argc, char **argv)
 	if(drawing.flags & DFnope || debug & Debugload)
 		exportforever();
 	/* FIXME: view stuff doesn't belong in ui any more */
+	initview();
 	initui();
 	waitforit();
 	deferred(d);

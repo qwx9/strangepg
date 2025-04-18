@@ -124,6 +124,7 @@ OBJ:=\
 	cmd/cmd.o\
 	draw/color.o\
 	draw/draw.o\
+	draw/view.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\

@@ -86,7 +86,7 @@ drawui(nk_context *ctx)
 	struct nk_panel *p;
 	struct nk_style_edit *s;
 
-	if(nk_begin(ctx, "Console", nk_rect(8, 8, view.w / 4.5, 16*Colh), NKwopt)){
+	if(nk_begin(ctx, "Console", nk_rect(8, 8, sapp_width() / 4.5, 16*Colh), NKwopt)){
 		s = &ctx->style.edit;
 		r = nk_window_get_bounds(ctx);
 		nk_layout_row_dynamic(ctx, 8, 1);
@@ -129,11 +129,11 @@ drawui(nk_context *ctx)
 			}
 			nk_tree_pop(ctx);
 		}
-		view.prompt = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
+		promptbox = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
 	}else{	/* minimized */
 		if((p = nk_window_get_panel(ctx)) != nil){
 			r = nk_window_get_bounds(ctx);
-			view.prompt = (Box){r.x, r.y, r.x + r.w, r.y + p->header_height};
+			promptbox = (Box){r.x, r.y, r.x + r.w, r.y + p->header_height};
 		}
 	}
 	nk_end(ctx);
@@ -142,7 +142,7 @@ drawui(nk_context *ctx)
 static void
 mouseposev(float x, float y, float Δx, float Δy)
 {
-	if(mouseevent(V(x, y, 0.0f), V(Δx, Δy, 0.0f)) < 0)
+	if(mouseevent(x, y, Δx, Δy) < 0)
 		warn("mouseevent: %s\n", error());
 }
 

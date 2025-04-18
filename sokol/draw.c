@@ -28,6 +28,7 @@
 #include "lib/HandmadeMath.h"
 #include "sokol.h"
 #include "drw.h"
+#include "view.h"
 #include "ui.h"
 #include "threads.h"
 #include "cmd.h"
@@ -64,113 +65,9 @@ newcolor(u32int v)
 void
 endmove(void)
 {
-	render.moving = 0;
-	if(render.stalepick)
+	drawstate &= ~DSmoving;
+	if(drawstate & DSstalepick)
 		reqdraw(Reqpickbuf);
-}
-
-/* FIXME: promote following functions to portable code; alias HMM types? */
-void
-updateview(void)
-{
-	HMM_Vec3 eye, center, up;
-	HMM_Mat4 vw, rot, proj;
-
-	view.Δeye = subv(view.eye, view.center);
-	view.ar = (float)view.w / view.h;
-	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 10000.0f);
-	rot = HMM_MulM4(
-		HMM_Rotate_RH(view.φ, HMM_V3(1.0f, 0.0f, 0.0f)),
-		HMM_Rotate_RH(view.θ, HMM_V3(0.0f, 1.0f, 0.0f))
-	),
-	proj = HMM_MulM4(proj, rot);
-	eye = HMM_V3(view.eye.x, view.eye.y, view.eye.z);
-	center = HMM_V3(view.center.x, view.center.y, view.center.z);
-	up = HMM_V3(view.up.x, view.up.y, view.up.z);
-	vw = HMM_LookAt_RH(eye, center, up);
-	render.cam.mvp = HMM_MulM4(proj, vw);
-	render.moving = 1;
-	render.stalepick = 1;
-	reqdraw(Reqrefresh);
-}
-
-/* FIXME: pan/zoom in world coordinates; standardize this, make mvp global */
-void
-worldview(Vertex v)
-{
-	view.eye.x = v.x;
-	view.eye.y = v.y;
-	view.eye.z = v.z;
-	if((drawing.flags & DF3d) == 0){
-		view.center.x = v.x;
-		view.center.y = v.y;
-	}
-	updateview();
-}
-
-void
-worldpandraw(float x, float y)
-{
-	updateview();
-}
-
-void
-pandraw(float Δx, float Δy)
-{
-	HMM_Vec4 vw;
-	HMM_Mat4 rot;
-
-	if((drawing.flags & DF3d) == 0){
-		Δx /= view.w;
-		Δy /= view.h;
-		Δx *= 2 * view.Δeye.z * view.ar * view.tfov;
-		Δy *= 2 * view.Δeye.z * view.tfov;
-		view.center.x += Δx;
-		view.center.y -= Δy;
-		view.eye.x += Δx;
-		view.eye.y -= Δy;
-		updateview();
-	}else{
-		Δx *= HMM_DegToRad * 0.2f;
-		Δy *= HMM_DegToRad * 0.2f;
-		rot = HMM_MulM4(
-			HMM_Rotate_RH(Δy, HMM_V3(view.right.x, view.right.y, view.right.z)),
-			HMM_Rotate_RH(Δx, HMM_V3(view.up.x, view.up.y, view.up.z))
-		);
-		vw = HMM_MulM4V4(rot, HMM_V4(view.eye.x, view.eye.y, view.eye.z, 1.0f));
-		view.eye = V(vw.X, vw.Y, vw.Z);
-		vw = HMM_MulM4V4(rot, HMM_V4(view.up.x, view.up.y, view.up.z, 1.0f));
-		view.up = V(vw.X, vw.Y, vw.Z);
-		vw = HMM_MulM4V4(rot, HMM_V4(view.right.x, view.right.y, view.right.z, 1.0f));
-		view.right = V(vw.X, vw.Y, vw.Z);
-		updateview();
-	}
-}
-
-void
-zoomdraw(float Δ, float Δx, float Δy)
-{
-	Vertex v;
-
-	if(drawing.flags & DF3d){
-		v = mulv(view.Δeye, Δ);
-		view.eye = subv(view.eye, v);
-		updateview();
-		return;
-	}
-	v = mulv(view.Δeye, Δ);
-	view.eye = subv(view.eye, v);
-	pandraw(Δx, Δy);
-}
-
-void
-rotdraw(float Δx, float Δy)
-{
-	Δx *= HMM_DegToRad * 0.2f;
-	Δy *= HMM_DegToRad * 0.2f;
-	view.θ += Δx;
-	view.φ += Δy;
-	updateview();
 }
 
 static void
@@ -204,7 +101,7 @@ renderdirect(void)
 		sg_draw(0, render.nlinev * n, 1);
 	}
 	drawui(snk_new_frame());
-	snk_render(view.w, view.h);
+	snk_render(sapp_width(), sapp_height());
 	sg_end_pass();
 	CLK1(clk);
 	render.nframes++;
@@ -276,7 +173,7 @@ resizebuf(void)
 	n = dylen(redges);
 	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
 	if(d.size / sizeof *redges != n){
-		warn("redges: %d → %zd\n", d.size/sizeof *redges, n);
+		DPRINT(Debugdraw, "redge bindings: resize %d → %zd", d.size/sizeof *redges, n);
 		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
 		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 			.size = dylen(redges) * sizeof *redges,
@@ -286,7 +183,7 @@ resizebuf(void)
 	n = dylen(rnodes);
 	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *rnodes != n){
-		warn("rnodes: %d → %zd\n", d.size/sizeof *rnodes, n);
+		DPRINT(Debugdraw, "rnode bindings: resize %d → %zd", d.size/sizeof *rnodes, n);
 		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
 		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
 			.size = n * sizeof *rnodes,
@@ -297,9 +194,8 @@ resizebuf(void)
 
 /* FIXME: individual nodes */
 void
-updatenode(ioff id)	/* FIXME: single update */
+updatenode(ioff id)
 {
-	render.stalepick = 1;
 	reqdraw(Reqredraw);
 }
 
@@ -311,7 +207,7 @@ clearscreen(void)
 		.action = render.clearscreen,
 		.swapchain = sglue_swapchain(),
 	});
-	snk_render(view.w, view.h);
+	snk_render(sapp_width(), sapp_height());
 	sg_end_pass();
 }
 
@@ -322,6 +218,7 @@ renderscene(void)
 		clearscreen();
 		return;
 	}
+	render.cam.mvp = view.mvp;
 	if(render.caching)
 		renderoffscreen();
 	renderdirect();
@@ -339,7 +236,7 @@ wakedrawup(void)
 void
 frame(void)
 {
-	int f, r;
+	int r, f;
 	vlong t;
 	static vlong t0;
 
@@ -347,19 +244,26 @@ frame(void)
 	while((f = nbrecvul(rendc)) != 0)
 		r |= f;
 	if(r != 0){
-		if(r & Reqthaw){
-			resizebuf();
-			drawing.flags &= ~DFnorend;
-		}else if(r & Reqfreeze){	/* FIXME: race */
+		if(r & Reqfreeze){
+			DPRINT(Debugcoarse, "render: freeze");
 			sendul(ctlc, DFnorend);
 			drawing.flags |= DFnorend;
+			r &= ~Reqfreeze;
 		}
+		if(r & Reqthaw){
+			DPRINT(Debugcoarse, "render: thaw");
+			resizebuf();
+			drawing.flags &= ~DFnorend;
+			r &= ~Reqthaw;
+		}
+		if(r & (Reqstop|Reqsleep))
+			sapp_input_wait(true);
 		if(r & Reqresetdraw){
 			resize();
 			updateview();
 		}
-		if(r & Reqresetui){
-			resetui();
+		if(r & Reqresetview){
+			resetview();
 			updateview();
 		}
 		if(r & Reqfocus)
@@ -368,13 +272,13 @@ frame(void)
 			drawing.flags ^= DFdrawarrows;
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
-		if(r & (Reqstop|Reqsleep))
-			sapp_input_wait(true);
-	}
+	}else
+		sapp_input_wait(true);
 	if(drawing.flags & DFnorend)
 		return;
+	/* FIXME: set time here? or in offscreen render */
 	if((t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
-		render.stalepick = 1;
+		drawstate |= DSstalepick;
 		render.caching = 1;
 		t0 = t;
 	}
@@ -397,7 +301,7 @@ init(void)
 		sgx_enable_debug_log();
 	initgl();
 	initnk();
-	resetui();
+	resetview();
 	updateview();
 }
 
