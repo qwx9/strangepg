@@ -291,7 +291,7 @@ focusobj(void)
 	r = rnodes + focused;
 	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
 	mouseselect(focused, 0);
-	resetselbox(0, 0);
+	resetselbox(view.w, view.h);
 	focused = -1;
 }
 
@@ -320,10 +320,10 @@ mouseevent(float x, float y, float Δx, float Δy)
 	if(m == 0){
 		endmove();
 		if((omod & Mmask) == Mlmb)
-			resetselbox(0, 0);
+			resetselbox(x, y);
 		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
 	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
-		resetselbox(0, 0);
+		resetselbox(x, y);
 	if((omod & Mrmb) == 0)
 		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
 	if(Δx != 0.0f || Δy != 0.0f)
@@ -336,7 +336,7 @@ mouseevent(float x, float y, float Δx, float Δy)
 			/* FIXME: would be nice to just redraw the one node */
 			if(selected != -1)
 				mousedrag(Δx, Δy);
-			else if(omod == Mlmb)
+			else
 				dragselect(x, y);
 		}
 	}else if(m == Mrmb){
