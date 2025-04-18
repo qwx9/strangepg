@@ -259,6 +259,7 @@ drawselbox(int rn)
 	p[2] = scr2world(p[2]);
 	p[3] = scr2world(p[3]);
 	v = scr2world(v);
+	v = HMM_AddV3(v, view.center);
 	p[0] = HMM_RotateV3Q(p[0], view.rot);
 	p[1] = HMM_RotateV3Q(p[1], view.rot);
 	p[2] = HMM_RotateV3Q(p[2], view.rot);

@@ -75,12 +75,15 @@ zoomdraw(float Δ, float Δx, float Δy)
 {
 	HMM_Vec3 v;
 
-	v = HMM_MulV3F(view.eye, Δ);
-	view.eye = HMM_SubV3(view.eye, v);
-	if((drawing.flags & DF3d) == 0)
+	if((drawing.flags & DF3d) == 0){
+		Δ *= view.eye.Z;
+		view.eye.Z -= Δ;
 		pandraw(Δx, Δy);
-	else
+	}else{
+		v = HMM_MulV3F(view.eye, Δ);
+		view.eye = HMM_SubV3(view.eye, v);
 		updateview();
+	}
 }
 
 void
