@@ -1936,10 +1936,10 @@ SOKOL_APP_API_DECL sapp_desc sapp_query_desc(void);
 SOKOL_APP_API_DECL void sapp_request_quit(void);
 /* cancel a pending quit (when SAPP_EVENTTYPE_QUIT_REQUESTED has been received) */
 SOKOL_APP_API_DECL void sapp_cancel_quit(void);
-/* interrupt waiting for event */
-SOKOL_APP_API_DECL void sapp_wakethefup(void);
+/* interrupt waiting for event, send signal on fd */
+SOKOL_APP_API_DECL void sapp_wakethefup(int fd);
 /* this causes the app to block until input is received. the flag will be cleared after that, so you will have to call it again if necessary. */
-SOKOL_APP_API_DECL void sapp_input_wait(bool set);
+SOKOL_APP_API_DECL void sapp_input_wait(bool set, int fd);
 /* initiate a "hard quit" (quit application without sending SAPP_EVENTTYPE_QUIT_REQUESTED) */
 SOKOL_APP_API_DECL void sapp_quit(void);
 /* call from inside event callback to consume the current event (don't forward to platform) */
@@ -2894,6 +2894,7 @@ typedef struct {
     // XLib manual says keycodes are in the range [8, 255] inclusive.
     // https://tronche.com/gui/x/xlib/input/keyboard-encoding.html
     bool key_repeat[_SAPP_X11_MAX_X11_KEYCODES];
+    int waitfd;
 } _sapp_x11_t;
 
 #if defined(_SAPP_GLX)
@@ -11707,26 +11708,31 @@ _SOKOL_PRIVATE void _sapp_x11_wait_event(void) {
     if (!_sapp.input_wait) {
         return;
     }
-    int cfd = ConnectionNumber(_sapp.x11.display);
+    int fd = ConnectionNumber(_sapp.x11.display);
+    int wfd = _sapp.x11.waitfd;
     fd_set fds;
     FD_ZERO(&fds);
-    FD_SET(cfd, &fds);
-    /* in the magical world of linux, select may return ready even
-     * though a read would block */
+    FD_SET(wfd, &fds);
+    FD_SET(fd, &fds);
+    int nfds = fd > wfd ? fd : wfd;
     while(!XPending(_sapp.x11.display)){
-        if (select(cfd+1, &fds, NULL, NULL, NULL) < 0) {
-            break;
+        if (select(nfds+1, &fds, NULL, NULL, NULL) != 0) {
+        	if (!_sapp.input_wait){
+        	    if(read(wfd, &fd, 0) < 0)
+        	    	perror("_sapp_x11_wait_event");
+                break;
+            }
         }
     };
 }
 
-_SOKOL_PRIVATE void _sapp_x11_wakethefup(void) {
-    if (!_sapp.x11.display) {
+_SOKOL_PRIVATE void _sapp_x11_wakethefup(int fd) {
+    if (!_sapp.x11.display || !_sapp.input_wait || _sapp.x11.waitfd < 0) {
         return;
     }
     _sapp.input_wait = false;
-    int cfd = ConnectionNumber(_sapp.x11.display);
-    write(cfd, &cfd, 0);
+    if(write(fd, &_sapp.input_wait, 0) < 0)
+        perror("write: ");
 }
 
 _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
@@ -11757,6 +11763,7 @@ _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
     _sapp_x11_init_keytable();
 #if defined(_SAPP_GLX)
     _sapp_glx_init();
+    _sapp.x11.waitfd = -1;
     Visual* visual = 0;
     int depth = 0;
     _sapp_glx_choose_visual(&visual, &depth);
@@ -12051,14 +12058,17 @@ SOKOL_API_IMPL void sapp_quit(void) {
     _sapp.quit_ordered = true;
 }
 
-SOKOL_API_IMPL void sapp_wakethefup(void) {
+SOKOL_API_IMPL void sapp_wakethefup(int fd) {
     #if defined(_SAPP_LINUX)
-        _sapp_x11_wakethefup();
+        _sapp_x11_wakethefup(fd);
     #endif
 }
 
-SOKOL_API_IMPL void sapp_input_wait(bool set) {
-    _sapp.input_wait = set;
+SOKOL_API_IMPL void sapp_input_wait(bool set, int fd) {
+    if(_sapp.input_wait = set)
+        _sapp.x11.waitfd = fd;
+    else
+        _sapp.x11.waitfd = -1;
 }
 
 SOKOL_API_IMPL void sapp_consume_event(void) {

@@ -38,6 +38,8 @@ extern Channel *rendc, *ctlc;
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
 
+static int waitp[2];
+
 void
 setcolor(float *col, u32int v)
 {
@@ -229,7 +231,7 @@ void
 wakedrawup(void)
 {
 	/* FIXME: yes, but there are no events pending */
-	sapp_wakethefup();
+	sapp_wakethefup(waitp[1]);
 }
 
 /* FIXME: promote to global code */
@@ -257,7 +259,7 @@ frame(void)
 			r &= ~Reqthaw;
 		}
 		if(r & (Reqstop|Reqsleep))
-			sapp_input_wait(true);
+			sapp_input_wait(true, waitp[0]);
 		if(r & Reqresetdraw){
 			resize();
 			updateview();
@@ -273,7 +275,7 @@ frame(void)
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
 	}else
-		sapp_input_wait(true);
+		sapp_input_wait(true, waitp[0]);
 	if(drawing.flags & DFnorend)
 		return;
 	/* FIXME: set time here? or in offscreen render */
@@ -292,6 +294,8 @@ frame(void)
 static void
 init(void)
 {
+	if(pipe(waitp) < 0)
+		sysfatal("pipe: %s", error());
 	sg_setup(&(sg_desc){
 		.environment = sglue_environment(),
 		.logger.func = slog_func,
