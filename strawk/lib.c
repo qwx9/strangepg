@@ -655,7 +655,7 @@ void FATAL(const char *fmt, ...)
 	vfprintf(awkstderr, fmt, varg);
 	va_end(varg);
 	ERROR();
-	if(runnerup != NULL){
+	if(evalstr != NULL){
 		fflush(awkstderr);
 		longjmp(evalenv, -1);
 	}
