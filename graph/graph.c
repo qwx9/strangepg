@@ -42,7 +42,8 @@ explode(ioff idx)
 	r = rnodes + idx;
 	r->pos[0] += 32.0f * (0.5f - xfrand());
 	r->pos[1] += 32.0f * (0.5f - xfrand());
-	r->pos[2] += 32.0f * (0.5f - xfrand());
+	if(drawing.flags & DF3d)
+		r->pos[2] += 32.0f * (0.5f - xfrand());
 }
 
 /* FIXME: this is a problem; we're also reencoding and decoding in
