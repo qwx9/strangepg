@@ -127,7 +127,7 @@ in flat uint ci;
 out vec4 fc;
 
 void main(){
-	vec4 m = vec4(0.02, 0.02, 0.02, 0.0) * ci;
+	vec4 m = vec4(0.0115, 0.0115, 0.0115, 0.0) * ci;
 	fc = c - m;
 }
 @end
