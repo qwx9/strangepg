@@ -27,6 +27,15 @@ sysopen(File *f, char *path, int mode)
 	return sysfdopen(f, fd, mode);
 }
 
+int
+sysfd(int which)
+{
+	switch(which){
+	case 0 ... 2: return which;
+	default: werrstr("invalid fd"); return -1;
+	}
+}
+
 void
 sysclose(File *f)
 {

@@ -52,6 +52,7 @@ void	killcmd(void);
 void	flushcmd(void);
 void	pushcmd(char*, ...);
 int	sysinitcmd(void);
+void	initstdin(void);
 int	initrepl(void);
 int	initcmd(void);
 

@@ -50,6 +50,17 @@ sysfdopen(File *f, int fd, int omode)
 	return 0;
 }
 
+int
+sysfd(int which)
+{
+	switch(which){
+	case 0: return STDIN_FILENO;
+	case 1: return STDOUT_FILENO;
+	case 2: return STDERR_FILENO;
+	default: werrstr("invalid fd"); return -1;
+	}
+}
+
 void
 sysflush(File *f)
 {

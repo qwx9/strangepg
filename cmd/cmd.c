@@ -21,6 +21,7 @@ killcmd(void)
 	outfd[1] = -1;
 	close(infd[1]);
 	infd[1] = -1;
+	close(sysfd(0));
 	qunlock(&cmdlock);
 }
 
@@ -305,6 +306,30 @@ readcproc(void *)
 		readcmd(s);
 	}
 	freefs(f);
+}
+
+static void
+readstdin(void *)
+{
+	int fd, n;
+	char buf[4096];
+
+	if((fd = sysfd(0)) < 0)
+		sysfatal("readstdin: %s", error());
+	while((n = read(fd, buf, sizeof buf - 1)) > 0){
+		if(n < sizeof buf - 1)
+			buf[n++] = '\n';
+		buf[n] = 0;
+		sendcmd(buf);
+		if(n < sizeof buf)
+			flushcmd();
+	}
+}
+
+void
+initstdin(void)
+{
+	newthread(readstdin, nil, nil, nil, "stdin", mainstacksize);
 }
 
 int

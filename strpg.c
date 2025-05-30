@@ -221,6 +221,7 @@ main(int argc, char **argv)
 	initui();
 	waitforit();
 	deferred(d);
+	initstdin();
 	evloop();
 	quit();
 	return 0;
