@@ -50,6 +50,7 @@ int	exportlayout(char*);
 
 int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);
+int	sysfd(int);
 int	syswrite(File*, void*, int);
 int	sysread(File*, void*, int);
 int	syswstatlen(File*, vlong);
