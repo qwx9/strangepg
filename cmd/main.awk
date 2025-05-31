@@ -60,24 +60,21 @@ function cmd(code){
 			print deferred[fnr]
 			loadbatch()
 		}
-	}else if(code == "FGD135"){	# wing attack plan R
-		if(fnr < nd + 1)
-			return
-		crm114 = 1
-		loadall()
-		if(die)
-			quit()
-		if(noreset)
-			print "r"
-		else
-			print "R"
-		noreset = 0
 	}else if(code == "FJJ142"){	# mission completed, returning
 		die = 1
 		cmd("FHJ142")
 	}else if(code == "OPL753"){	# wing to contact base immediately
 		loadall()
 		print "R"
+		crm114 = 1
+	}else if(code == "FGD135"){	# wing attack plan R
+		if(crm114 || fnr < nd + 1)
+			return
+		crm114 = 1
+		loadall()
+		if(die)
+			quit()
+		print (noreset ? "r" : "R")
 	}
 }
 function exportlayout(f){
