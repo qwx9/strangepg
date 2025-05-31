@@ -38,8 +38,6 @@ extern Channel *rendc, *ctlc;
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
 
-static int waitp[2];
-
 void
 setcolor(float *col, u32int v)
 {
@@ -230,8 +228,7 @@ renderscene(void)
 void
 wakedrawup(void)
 {
-	/* FIXME: yes, but there are no events pending */
-	sapp_wakethefup(waitp[1]);
+    sapp_input_wait(false);
 }
 
 /* FIXME: promote to global code */
@@ -247,19 +244,16 @@ frame(void)
 		r |= f;
 	if(r != 0){
 		if(r & Reqfreeze){
-			DPRINT(Debugcoarse, "render: freeze");
-			sendul(ctlc, DFnorend);
 			drawing.flags |= DFnorend;
-			r &= ~Reqfreeze;
+			sendul(ctlc, 2);
 		}
 		if(r & Reqthaw){
-			DPRINT(Debugcoarse, "render: thaw");
 			resizebuf();
 			drawing.flags &= ~DFnorend;
-			r &= ~Reqthaw;
+			sendul(ctlc, 2);
 		}
-		if(r & (Reqstop|Reqsleep))
-			sapp_input_wait(true, waitp[0]);
+		if(r & Reqsleep)
+			sapp_input_wait(true);
 		if(r & Reqresetdraw){
 			resize();
 			updateview();
@@ -275,7 +269,7 @@ frame(void)
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
 	}else
-		sapp_input_wait(true, waitp[0]);
+		sapp_input_wait(true);
 	if(drawing.flags & DFnorend)
 		return;
 	/* FIXME: set time here? or in offscreen render */
@@ -294,8 +288,6 @@ frame(void)
 static void
 init(void)
 {
-	if(pipe(waitp) < 0)
-		sysfatal("pipe: %s", error());
 	sg_setup(&(sg_desc){
 		.environment = sglue_environment(),
 		.logger.func = slog_func,

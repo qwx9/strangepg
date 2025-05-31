@@ -5,6 +5,8 @@
 #include "cmd.h"
 #include "fs.h"
 
+extern Channel *ctlc;	/* FIXME: sucks */
+
 int nlaythreads = 4;
 int deflayout = -1;
 
@@ -50,11 +52,11 @@ static void
 sac(void *)
 {
 	ulong x;
-	int nidle;
+	int freeze, nidle;
 	Layout *l;
 	Channel **cp, **ce;
 
-	nidle = 0;
+	nidle = freeze = 0;
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
@@ -75,6 +77,15 @@ sac(void *)
 				graph.flags |= GFlayme;
 			}
 			break;
+		case Lfreeze:
+			DPRINT(Debuglayout, "sac: freeze");
+			if(nidle == nlaythreads){
+				sendul(ctlc, 3);
+				freeze = 0;
+				continue;
+			}
+			freeze = 1;
+			/* wet floor */
 		case Lstop:
 			DPRINT(Debuglayout, "sac: stop");
 			if(l != nil){
@@ -92,6 +103,11 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
+				if(freeze){
+					sendul(ctlc, 3);
+					freeze = 0;
+					continue;
+				}
 				if((graph.flags & GFdrawme) == 0)
 					break;
 				logmsg("layout: done.\n");
@@ -164,6 +180,7 @@ int
 reqlayout(int type)
 {
 	switch(type){
+	case Lfreeze:
 	case Lexport:
 	case Lstop:
 		break;

@@ -1696,6 +1696,7 @@ typedef struct sapp_allocator {
     _SAPP_LOGITEM_XMACRO(LINUX_GLX_CREATE_CONTEXT_FAILED, "Failed to create GL context via glXCreateContextAttribsARB") \
     _SAPP_LOGITEM_XMACRO(LINUX_GLX_CREATE_WINDOW_FAILED, "glXCreateWindow() failed") \
     _SAPP_LOGITEM_XMACRO(LINUX_X11_CREATE_WINDOW_FAILED, "XCreateWindow() failed") \
+    _SAPP_LOGITEM_XMACRO(LINUX_X11_CREATE_WAIT_PIPE_FAILED, "failed to create wait pipe") \
     _SAPP_LOGITEM_XMACRO(LINUX_EGL_BIND_OPENGL_API_FAILED, "eglBindAPI(EGL_OPENGL_API) failed") \
     _SAPP_LOGITEM_XMACRO(LINUX_EGL_BIND_OPENGL_ES_API_FAILED, "eglBindAPI(EGL_OPENGL_ES_API) failed") \
     _SAPP_LOGITEM_XMACRO(LINUX_EGL_GET_DISPLAY_FAILED, "eglGetDisplay() failed") \
@@ -1936,10 +1937,8 @@ SOKOL_APP_API_DECL sapp_desc sapp_query_desc(void);
 SOKOL_APP_API_DECL void sapp_request_quit(void);
 /* cancel a pending quit (when SAPP_EVENTTYPE_QUIT_REQUESTED has been received) */
 SOKOL_APP_API_DECL void sapp_cancel_quit(void);
-/* interrupt waiting for event, send signal on fd */
-SOKOL_APP_API_DECL void sapp_wakethefup(int fd);
-/* this causes the app to block until input is received. the flag will be cleared after that, so you will have to call it again if necessary. */
-SOKOL_APP_API_DECL void sapp_input_wait(bool set, int fd);
+/* this causes the app to block until input is received or waiting disabled. */
+SOKOL_APP_API_DECL void sapp_input_wait(bool set);
 /* initiate a "hard quit" (quit application without sending SAPP_EVENTTYPE_QUIT_REQUESTED) */
 SOKOL_APP_API_DECL void sapp_quit(void);
 /* call from inside event callback to consume the current event (don't forward to platform) */
@@ -2894,7 +2893,7 @@ typedef struct {
     // XLib manual says keycodes are in the range [8, 255] inclusive.
     // https://tronche.com/gui/x/xlib/input/keyboard-encoding.html
     bool key_repeat[_SAPP_X11_MAX_X11_KEYCODES];
-    int waitfd;
+    int waitfd[2];
 } _sapp_x11_t;
 
 #if defined(_SAPP_GLX)
@@ -11708,31 +11707,36 @@ _SOKOL_PRIVATE void _sapp_x11_wait_event(void) {
     if (!_sapp.input_wait) {
         return;
     }
-    int fd = ConnectionNumber(_sapp.x11.display);
-    int wfd = _sapp.x11.waitfd;
+    int cfd = ConnectionNumber(_sapp.x11.display);
+    int wfd = _sapp.x11.waitfd[0];
     fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(wfd, &fds);
-    FD_SET(fd, &fds);
-    int nfds = fd > wfd ? fd : wfd;
-    while(!XPending(_sapp.x11.display)){
+    while(!XPending(_sapp.x11.display)) {
+        FD_ZERO(&fds);
+        FD_SET(wfd, &fds);
+        FD_SET(cfd, &fds);
+        int nfds = cfd > wfd ? cfd : wfd;
         if (select(nfds+1, &fds, NULL, NULL, NULL) != 0) {
-        	if (!_sapp.input_wait){
-        	    if(read(wfd, &fd, 0) < 0)
-        	    	perror("_sapp_x11_wait_event");
+            if (FD_ISSET(wfd, &fds)) {
+                bool tmp;
+                if (read(wfd, &tmp, sizeof tmp) < 0) {
+                    perror("_sapp_x11_wait_event");
+                }
                 break;
-            }
+            } else if (!_sapp.input_wait)
+               break;
         }
-    };
+    }
 }
 
-_SOKOL_PRIVATE void _sapp_x11_wakethefup(int fd) {
-    if (!_sapp.x11.display || !_sapp.input_wait || _sapp.x11.waitfd < 0) {
+_SOKOL_PRIVATE void _sapp_x11_input_wait(bool set) {
+    if (set == _sapp.input_wait) {
         return;
+    } else if (!(_sapp.input_wait = set)) {
+        bool tmp;
+        if (write(_sapp.x11.waitfd[1], &tmp, sizeof tmp) != sizeof tmp) {
+            perror("_sapp_x11_input_wait");
+        }
     }
-    _sapp.input_wait = false;
-    if(write(fd, &_sapp.input_wait, 0) < 0)
-        perror("write: ");
 }
 
 _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
@@ -11763,7 +11767,9 @@ _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
     _sapp_x11_init_keytable();
 #if defined(_SAPP_GLX)
     _sapp_glx_init();
-    _sapp.x11.waitfd = -1;
+    if (pipe(_sapp.x11.waitfd) < 0) {
+        _SAPP_PANIC(LINUX_X11_CREATE_WAIT_PIPE_FAILED);
+    }
     Visual* visual = 0;
     int depth = 0;
     _sapp_glx_choose_visual(&visual, &depth);
@@ -12058,18 +12064,9 @@ SOKOL_API_IMPL void sapp_quit(void) {
     _sapp.quit_ordered = true;
 }
 
-SOKOL_API_IMPL void sapp_wakethefup(int fd) {
+SOKOL_API_IMPL void sapp_input_wait(bool set) {
     #if defined(_SAPP_LINUX)
-        _sapp_x11_wakethefup(fd);
-    #endif
-}
-
-SOKOL_API_IMPL void sapp_input_wait(bool set, int fd) {
-    #if defined(_SAPP_LINUX)
-    if(_sapp.input_wait = set)
-        _sapp.x11.waitfd = fd;
-    else
-        _sapp.x11.waitfd = -1;
+        _sapp_x11_input_wait(set);
     #endif
 }
 

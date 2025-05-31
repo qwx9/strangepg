@@ -354,19 +354,19 @@ drawproc(void *)
 	for(;;){
 		if((r = recvul(drawc)) == 0)
 			break;
+		if(r & Reqfreeze){
+			ndnodes = ndedges = 0;
+			sendul(ctlc, 1);
+			drawing.flags |= DFnodraw;
+		}
 		if(r & Reqthaw){
 			drawing.flags &= ~DFnodraw;
+			sendul(ctlc, 1);
 			reqdraw(Reqrefresh);
-		}else if(r & Reqfreeze){
-			sendul(ctlc, DFnodraw);
-			drawing.flags |= DFnodraw;
 		}
 		if(drawing.flags & DFnodraw)
 			continue;
-		if(r & Reqstop){
-			go = 0;
-			continue;
-		}else if(r & Reqredraw)
+		if(r & Reqredraw)
 			go = 1;
 		if(!(go = redraw(go)))
 			reqdraw(Reqsleep);
@@ -378,8 +378,9 @@ drawproc(void *)
 void
 freezedraw(void)
 {
+	reqlayout(Lfreeze);
 	reqdraw(Reqfreeze);
-	reqlayout(Lstop);
+	recvul(ctlc);	/* draw, render and layout */
 	recvul(ctlc);
 	recvul(ctlc);
 }
@@ -387,8 +388,9 @@ freezedraw(void)
 void
 thawdraw(void)
 {
-	reqdraw(Reqrefresh);
 	reqdraw(Reqthaw);
+	recvul(ctlc);	/* only draw and render */
+	recvul(ctlc);
 	reqlayout(Lstart);
 }
 
@@ -411,7 +413,6 @@ reqdraw(int r)
 	switch(r){
 	case Reqfreeze:
 	case Reqthaw:
-	case Reqstop:
 	case Reqrefresh:
 	case Reqredraw:
 		wakedrawup();
@@ -446,6 +447,6 @@ initdrw(void)
 	/* FIXME: this chan implementation SUCKS */
 	if((drawc = chancreate(sizeof(ulong), 8)) == nil
 	|| (rendc = chancreate(sizeof(ulong), 8)) == nil
-	|| (ctlc = chancreate(sizeof(ulong), 2)) == nil)
+	|| (ctlc = chancreate(sizeof(ulong), 1)) == nil)
 		sysfatal("initdrw: chancreate");
 }
