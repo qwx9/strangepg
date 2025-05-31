@@ -6,6 +6,8 @@
 #include "fs.h"
 #include "ui.h"
 
+extern int dbg;	/* FIXME: arg parsing happens after strawk is launched */
+
 int gottagofast = 0;
 
 /* FIXME: doesn't need to be a global */
@@ -139,9 +141,10 @@ parseargs(int argc, char **argv)
 			debug |= Debugperf;
 		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
-		else if(strcmp(s, "strawk") == 0)
+		else if(strcmp(s, "strawk") == 0){
 			debug |= Debugstrawk;
-		else if(strcmp(s, "ui") == 0)
+			dbg = 1;
+		}else if(strcmp(s, "ui") == 0)
 			debug |= Debugui;
 		else{
 			warn("unknown debug component %s\n", s);
