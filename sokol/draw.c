@@ -170,7 +170,7 @@ resizebuf(void)
 	ssize n;
 	sg_buffer_desc d;
 
-	n = dylen(redges);
+	n = MAX(1, dylen(redges));
 	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
 	if(d.size / sizeof *redges != n){
 		DPRINT(Debugdraw, "redge bindings: resize %d → %zd", d.size/sizeof *redges, n);
@@ -180,7 +180,7 @@ resizebuf(void)
 			.usage = SG_USAGE_STREAM,
 		});
 	}
-	n = dylen(rnodes);
+	n = MAX(1, dylen(rnodes));
 	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *rnodes != n){
 		DPRINT(Debugdraw, "rnode bindings: resize %d → %zd", d.size/sizeof *rnodes, n);
