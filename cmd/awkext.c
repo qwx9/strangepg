@@ -312,6 +312,18 @@ set(int i, int type, ioff id, V val)
 			c->nval = lab;
 		}
 		break;
+	case Tdegree:
+		if(type != Tuint && type != Tint){
+			DPRINT(Debuginfo, "not assigning string value %s to degree[%d]", val.s, id);
+			return;
+		}
+		lab = getnodelabel(id);
+		c = setint(lab, val.u, a, &new);
+		if(new){
+			free(c->nval);
+			c->nval = lab;
+		}
+		break;
 	case Tfx:
 	case Tfy:
 	case Tfz:
@@ -688,6 +700,7 @@ initext(void)
 		[Tedge] = {"edge", nil, 0},
 		[Tlabel] = {"label", nil, 0},
 		[TCL] = {"CL", "nodecolor", 1},
+		[Tdegree] = {"degree", nil, 1},
 	}, *pp;
 
 	initqlock(&buflock);

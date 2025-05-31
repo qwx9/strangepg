@@ -19,6 +19,7 @@ enum{
 	Tedge,
 	Tlabel,
 	TCL,
+	Tdegree,
 	Tnil,
 
 	Tlayout = Tnode,	/* end of tags affecting layout */

@@ -143,7 +143,7 @@ static void
 initnodes(Aux *a)
 {
 	int i, *l;
-	ushort *d;
+	ushort d, *dp;
 	ioff off;
 	vlong nn;
 	Node *n, *ne;
@@ -158,13 +158,16 @@ initnodes(Aux *a)
 	dyresize(nodes, (nn + a->nnodes));
 	dyresize(rnodes, (nn + a->nnodes));
 	l = a->length;
-	d = a->degree;
+	dp = a->degree;
 	for(i=nn, n=nodes+nn, ne=n+a->nnodes; n<ne; n++, i++){
 		n->id = i;
 		n->eoff = off;
-		off += *d++;
 		v.i = *l++;
 		setspectag(TLN, i, v);
+		d = *dp++;
+		off += d;
+		v.i = d;
+		setspectag(Tdegree, i, v);
 	}
 }
 
