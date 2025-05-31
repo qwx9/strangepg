@@ -19,6 +19,7 @@ BEGIN{
 	graygreen = 0xccebc500
 	grayred = 0xc7675800
 	grey = gray
+	greyblue = grayblue
 	greybrown = graybrown
 	greygreen = graygreen
 	greyred = grayred
