@@ -305,8 +305,6 @@ set(int i, int type, ioff id, V val)
 			return;
 		}
 		lab = getnodelabel(id);
-		if(type == Tfloat)	/* FIXME */
-			val.u = val.f;
 		setattr(i, id, val);
 		c = setint(lab, val.u, a, &new);
 		if(new){
