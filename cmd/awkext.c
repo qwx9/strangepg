@@ -13,6 +13,9 @@
 
 QLock symlock;	/* shared with awk process to not outrun compilation */
 
+/* NOTE: pushcmd here is asking for trouble. fs/gfa and others
+ * may be saturating the cmd buffer and we're the only reader. */
+
 /* FIXME: additional functions:
  * - Tab → extant tables → extra info to nodeinfo;
  * - multigraph: query graph node ranges or whatever */
@@ -555,6 +558,7 @@ fnnodecolor(Cell *x, TNode *next)
 	Array *a;
 	V v;
 
+	/* FIXME: more input validation */
 	lab = getsval(x);
 	y = execute(next);
 	next = next->nnext;
@@ -574,6 +578,8 @@ fnnodecolor(Cell *x, TNode *next)
 static void
 fninfo(Cell *x)
 {
+	/* FIXME: more input validation; disable two-way comms, ie. don't
+	 * allow interactive usage of internals; private functions? */
 	strecpy(hoverstr, hoverstr+sizeof hoverstr, getsval(x));
 	reqdraw(Reqshallowdraw);
 }
@@ -586,11 +592,12 @@ fnunshow(Cell *x, TNode *next)
 	RNode *r;
 	Cell *y;
 
-	if((idx = getnodeidx(getival(x))) < 0)
-		FATAL("not a visible node: %d", idx);
-	r = rnodes + idx;
+	/* FIXME: more input validation, also which next is next */
 	y = execute(next);
 	next = next->nnext;
+	if((idx = getnodeidx(getival(x))) < 0)
+		return next;
+	r = rnodes + idx;
 	col = setalpha(getival(y));
 	setcolor(r->col, col);
 	tempfree(y);
@@ -641,6 +648,7 @@ fnexpand(Cell *)
 {
 }
 
+/* NOTE: careful with FATAL in functions that may be part of scripts */
 /* FIXME: stricter error checking and recovery */
 Cell *
 addon(TNode **a, int)
