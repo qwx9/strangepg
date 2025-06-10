@@ -11732,7 +11732,7 @@ _SOKOL_PRIVATE void _sapp_x11_input_wait(bool set) {
     if (set == _sapp.input_wait) {
         return;
     } else if (!(_sapp.input_wait = set)) {
-        bool tmp;
+        bool tmp = 0;
         if (write(_sapp.x11.waitfd[1], &tmp, sizeof tmp) != sizeof tmp) {
             perror("_sapp_x11_input_wait");
         }
