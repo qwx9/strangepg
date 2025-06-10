@@ -15,7 +15,7 @@ killcmd(void)
 	if(cmdfs == nil)
 		return;
 	qlock(&cmdlock);
-	freefs(cmdfs);
+	closefs(cmdfs);
 	cmdfs = nil;
 	close(outfd[1]);
 	outfd[1] = -1;
