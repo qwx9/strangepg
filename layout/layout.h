@@ -32,6 +32,7 @@ enum{
 	Lreset,
 	Lexport,
 	Lfreeze,
+	Lthaw,
 };
 void	initlayout(void);
 int	newlayout(int);

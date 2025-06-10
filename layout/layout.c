@@ -5,8 +5,6 @@
 #include "cmd.h"
 #include "fs.h"
 
-extern Channel *ctlc;	/* FIXME: sucks */
-
 int nlaythreads = 4;
 int deflayout = -1;
 
@@ -52,15 +50,17 @@ static void
 sac(void *)
 {
 	ulong x;
-	int freeze, nidle;
+	int nidle;
 	Layout *l;
 	Channel **cp, **ce;
 
-	nidle = freeze = 0;
+	nidle = 0;
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
 		x--;
+		/* FIXME: too convoluted, too many assumptions; make the
+		 * state machine more explicit -- make it an actual fsm */
 		l = graph.layout;
 		switch(x){
 		case Lexport:
@@ -79,12 +79,9 @@ sac(void *)
 			break;
 		case Lfreeze:
 			DPRINT(Debuglayout, "sac: freeze");
-			if(nidle == nlaythreads){
-				sendul(ctlc, 3);
-				freeze = 0;
+			graph.flags |= GFfrozen;
+			if(nidle == nlaythreads)
 				continue;
-			}
-			freeze = 1;
 			/* wet floor */
 		case Lstop:
 			DPRINT(Debuglayout, "sac: stop");
@@ -93,6 +90,12 @@ sac(void *)
 				graph.flags &= ~GFlayme;
 			}
 			break;
+		case Lthaw:
+			DPRINT(Debuglayout, "sac: thaw");
+			graph.flags &= ~GFfrozen;
+			if(graph.flags & (GFlayme | GFdrawme) == 0)
+				break;
+			/* wet floor */
 		case Lstart:
 			DPRINT(Debuglayout, "sac: start");
 			graph.flags |= GFlayme;
@@ -103,11 +106,8 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if(freeze){
-					sendul(ctlc, 3);
-					freeze = 0;
+				if(graph.flags & GFfrozen)
 					continue;
-				}
 				if((graph.flags & GFdrawme) == 0)
 					break;
 				logmsg("layout: done.\n");
@@ -122,7 +122,7 @@ sac(void *)
 			}
 			break;
 		}
-		if(l == nil || nidle != nlaythreads)
+		if(l == nil || nidle != nlaythreads || (graph.flags & GFfrozen))
 			continue;
 		if(l->flags & LFnuke && l->target->cleanup != nil && l->scratch != nil){
 			l->target->cleanup(l->scratch);
@@ -181,6 +181,7 @@ reqlayout(int type)
 {
 	switch(type){
 	case Lfreeze:
+	case Lthaw:
 	case Lexport:
 	case Lstop:
 		break;

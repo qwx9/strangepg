@@ -33,7 +33,7 @@
 #include "threads.h"
 #include "cmd.h"
 
-extern Channel *rendc, *ctlc;
+extern Channel *rendc;
 
 void	drawui(struct nk_context*);
 void	event(const sapp_event*);
@@ -140,6 +140,7 @@ updatebuffers(int reqs)
 {
 	int n;
 
+	DPRINT(Debugrender, "updatebuffers l=%d e=%d n=%d", ndlines, ndedges, ndnodes);
 	if(dylen(rnodes) <= 0)
 		return;
 	if((n = ndlines) >= 1){
@@ -173,7 +174,7 @@ resizebuf(void)
 	n = MAX(1, dylen(redges));
 	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
 	if(d.size / sizeof *redges != n){
-		DPRINT(Debugdraw, "redge bindings: resize %d → %zd", d.size/sizeof *redges, n);
+		DPRINT(Debugrender, "redge bindings: resize %d → %zd", d.size/sizeof *redges, n);
 		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
 		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 			.size = dylen(redges) * sizeof *redges,
@@ -183,7 +184,7 @@ resizebuf(void)
 	n = MAX(1, dylen(rnodes));
 	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *rnodes != n){
-		DPRINT(Debugdraw, "rnode bindings: resize %d → %zd", d.size/sizeof *rnodes, n);
+		DPRINT(Debugrender, "rnode bindings: resize %d → %zd", d.size/sizeof *rnodes, n);
 		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
 		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
 			.size = n * sizeof *rnodes,
@@ -228,6 +229,7 @@ renderscene(void)
 void
 wakedrawup(void)
 {
+	DPRINT(Debugdraw, "wake up the fup");
     sapp_input_wait(false);
 }
 
@@ -235,25 +237,17 @@ wakedrawup(void)
 void
 frame(void)
 {
-	int r, f;
+	int snooze, r, f;
 	vlong t;
 	static vlong t0;
 
-	r = 0;
+	r = snooze = 0;
 	while((f = nbrecvul(rendc)) != 0)
 		r |= f;
+	DPRINT(Debugdraw, "frame: %#x", r);
 	if(r != 0){
-		if(r & Reqfreeze){
-			drawing.flags |= DFnorend;
-			sendul(ctlc, 2);
-		}
-		if(r & Reqthaw){
-			resizebuf();
-			drawing.flags &= ~DFnorend;
-			sendul(ctlc, 2);
-		}
 		if(r & Reqsleep)
-			sapp_input_wait(true);
+			snooze = 1;
 		if(r & Reqresetdraw){
 			resize();
 			updateview();
@@ -269,9 +263,19 @@ frame(void)
 			setnodeshape(drawing.flags & DFdrawarrows);
 		}
 	}else
-		sapp_input_wait(true);
-	if(drawing.flags & DFnorend)
+		snooze = 1;
+	switch(drawing.flags & (DFfreeze | DFnorend)){
+	case DFfreeze:
+		drawing.flags |= DFnorend;
+		/* wet floor */
+	case DFfreeze | DFnorend:
+		/* FIXME: maybe have an alt render function for eg. resizes? */
 		return;
+	case DFnorend:
+		resizebuf();
+		drawing.flags &= ~DFnorend;
+		break;
+	}
 	/* FIXME: set time here? or in offscreen render */
 	if((t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
 		drawstate |= DSstalepick;
@@ -283,6 +287,10 @@ frame(void)
 	render.caching = 0;
 	if(graph.flags & GFdrawme)
 		reqdraw(Reqrefresh);
+	if(snooze){
+		drawing.flags |= DFnorend;	/* for coarsening */
+		sapp_input_wait(true);
+	}
 }
 
 static void
@@ -293,7 +301,7 @@ init(void)
 		.logger.func = slog_func,
 	});
 	assert(sg_isvalid());
-	if(debug & Debugdraw)
+	if(debug & Debugrender)
 		sgx_enable_debug_log();
 	initgl();
 	initnk();

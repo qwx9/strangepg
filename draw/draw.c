@@ -347,25 +347,30 @@ redraw(int go)
 static void
 drawproc(void *)
 {
-	int r, go;
+	int f, r, go;
 
 	initstatic();
 	go = 1;
 	for(;;){
 		if((r = recvul(drawc)) == 0)
 			break;
-		if(r & Reqfreeze){
-			ndnodes = ndedges = 0;
-			sendul(ctlc, 1);
+		while((f = nbrecvul(drawc)) != 0)
+			r |= f;
+		DPRINT(Debugdraw, "drawproc: %#x", r);
+		switch(drawing.flags & (DFfreeze | DFnodraw)){
+		case DFfreeze:
 			drawing.flags |= DFnodraw;
-		}
-		if(r & Reqthaw){
-			drawing.flags &= ~DFnodraw;
-			sendul(ctlc, 1);
-			reqdraw(Reqrefresh);
-		}
-		if(drawing.flags & DFnodraw)
+			go = 0;
+			/* wet floor */
+		case DFfreeze | DFnodraw:
+			DPRINT(Debugdraw, "can\'t draw, i was frozen today");
+			ndnodes = ndedges = 0;
 			continue;
+		case DFnodraw:
+			drawing.flags &= ~DFnodraw;
+			go = 1;
+			break;
+		}
 		if(r & Reqredraw)
 			go = 1;
 		if(!(go = redraw(go)))
@@ -376,22 +381,19 @@ drawproc(void *)
 }
 
 void
-freezedraw(void)
+freezeworld(void)
 {
+	drawing.flags |= DFfreeze;
 	reqlayout(Lfreeze);
 	reqdraw(Reqfreeze);
-	recvul(ctlc);	/* draw, render and layout */
-	recvul(ctlc);
-	recvul(ctlc);
 }
 
 void
-thawdraw(void)
+thawworld(void)
 {
+	drawing.flags &= ~DFfreeze;
 	reqdraw(Reqthaw);
-	recvul(ctlc);	/* only draw and render */
-	recvul(ctlc);
-	reqlayout(Lstart);
+	reqlayout(Lthaw);	/* FIXME: really, just unpause */
 }
 
 void

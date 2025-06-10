@@ -31,6 +31,7 @@ enum{
 	DFnoalpha = 1<<9,
 	DFnodraw = 1<<10,
 	DFnorend = 1<<11,
+	DFfreeze = 1<<12,
 };
 struct Drawing{
 	int flags;
@@ -134,8 +135,8 @@ void	resizenodes(void);
 void	setnodeshape(int);
 void	updatedraw(void);
 void	wakedrawup(void);
-void	thawdraw(void);
-void	freezedraw(void);
+void	thawworld(void);
+void	freezeworld(void);
 void	waitforit(void);
 void	reqdraw(int);
 void	initview(void);
