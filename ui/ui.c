@@ -121,7 +121,7 @@ static int
 dragselect(int x, int y)
 {
 	int abs;
-	ioff idx, Δx, Δy, oid;
+	ioff id, idx, Δx, Δy, oid;
 	struct {
 		int x1;
 		int x2;
@@ -161,7 +161,11 @@ dragselect(int x, int y)
 				sel_put(sels, idx, &abs);
 				if(!abs)
 					continue;
-				pushcmd("selectnodebyid(%d,1)", getrealid(idx));
+				if((id = getrealid(idx)) < 0){
+					warn("dragselect: %s\n", error());
+					continue;
+				}
+				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(idx);
 				oid = idx;
 			}
@@ -176,7 +180,11 @@ dragselect(int x, int y)
 				sel_put(sels, idx, &abs);
 				if(!abs)
 					continue;
-				pushcmd("selectnodebyid(%d,1)", getrealid(idx));
+				if((id = getrealid(idx)) < 0){
+					warn("dragselect: %s\n", error());
+					continue;
+				}
+				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(idx);
 				oid = idx;
 			}
@@ -223,7 +231,7 @@ mousedrag(float Δx, float Δy)
 static ioff
 mousehover(int x, int y)
 {
-	ioff idx;
+	ioff id, idx;
 	int isedge;
 	union{
 		ioff i;
@@ -245,8 +253,15 @@ mousehover(int x, int y)
 	idx = u.u & ~(1UL<<31);
 	if(isedge)
 		pushcmd("edgeinfo(%d)", idx);	/* untranslated to avoid lookup lag */
-	else
-		pushcmd("nodeinfo(%d)", getrealid(idx));
+	else{
+		/* FIXME: race between coarsening and ui mouse hover/select;
+		 * box sel could add shit that is no longer there, etc. */
+		if((id = getrealid(idx)) < 0){
+			warn("mousehover: %s\n", error());
+			return -1;
+		}
+		pushcmd("nodeinfo(%d)", id);
+	}
 	flushcmd();
 	return u.i;
 }
@@ -258,9 +273,13 @@ mouseselect(ioff idx, int multi)
 
 	if(selected >= 0 && selected == idx && !multi || prompting)
 		return 0;
-	if((selected = idx) != -1){
+	if(idx != -1){
 		if((idx & 1UL<<31) == 0){
-			id = getrealid(idx);
+			if((id = getrealid(idx)) < 0){
+				warn("mouseselect: %s\n", error());
+				return 0;
+			}
+			selected = idx;
 			if(multi)
 				pushcmd("toggleselect(%d)", id);
 			else
@@ -269,7 +288,7 @@ mouseselect(ioff idx, int multi)
 			highlightnode(idx);
 			updatenode(idx);
 		}else{	/* FIXME: edges: not implemented */
-			;
+			selected = idx;
 		}
 		return 1;
 	}

@@ -73,8 +73,10 @@ getrealedge(ioff idx)
 ioff
 getrealid(ioff idx)
 {
-	if(idx < 0 || idx >= dylen(nodes))
-		sysfatal("getrealid: %d out of bounds %d", idx, dylen(nodes));
+	if(idx < 0 || idx >= dylen(nodes)){
+		werrstr("getrealid: %d out of bounds %d", idx, dylen(nodes));
+		return -1;
+	}
 	return nodes[idx].id;
 }
 
