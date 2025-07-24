@@ -101,16 +101,25 @@ keyevent(Rune r, int down)
 }
 
 static void
+clearsel(void)
+{
+	sel_clear(sels);	/* FIXME: shrink? */
+}
+
+static void
+commitsel(void)
+{
+	if(kh_size(sels) > 0){
+		pushcmd("showselected()");
+		flushcmd();
+	}
+}
+
+static void
 resetselbox(int x, int y)
 {
 	selbox.x1 = selbox.x2 = x;
 	selbox.y1 = selbox.y2 = y;
-	if(kh_size(sels) > 0){
-		pushcmd("showselected()");
-		flushcmd();
-		sel_clear(sels);	/* FIXME: shrink? */
-	}
-	reqdraw(Reqrefresh);
 }
 
 /* FIXME: this all SUCKS */
@@ -309,8 +318,10 @@ focusobj(void)
 		return;
 	r = rnodes + focused;
 	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
+	clearsel();
 	mouseselect(focused, 0);
 	resetselbox(view.w, view.h);
+	reqdraw(Reqrefresh);
 	focused = -1;
 }
 
@@ -322,36 +333,53 @@ focusnode(ioff id)
 	reqdraw(Reqfocus);
 }
 
+/* FIXME: rotate with Mmmb */
 int
 mouseevent(float x, float y, float Δx, float Δy)
 {
 	int m;
 	static int omod, inwin;
+	khint_t k;
 
 	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
 	m = mod & Mmask;
-	if(x >= promptbox.x1 && x < promptbox.x2 && y >= promptbox.y1 && y < promptbox.y2 || m != 0 && inwin){
+	/* FIXME: clean up */
+	if(x >= promptbox.x1 && x < promptbox.x2
+	&& y >= promptbox.y1 && y < promptbox.y2 || m != 0 && inwin){
 		inwin = 1;
 		goto nope;
 	}else
 		inwin = 0;
-	/* FIXME: clean up */
-	if(m == 0){
-		endmove();
-		if((omod & Mmask) == Mlmb)
-			resetselbox(x, y);
-		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
-	}else if((omod & Mmask) == Mlmb && (m & Mmask) != Mlmb)
-		resetselbox(x, y);
 	if((omod & Mrmb) == 0)
 		center = HMM_V3(x - view.w / 2, y - view.h / 2, 0);
+	if(m == 0){
+		endmove();	/* FIXME: doesn't really belong here? */
+		if(omod == Mlmb){
+			commitsel();
+			resetselbox(x, y);
+			reqdraw(Reqrefresh);
+		}
+		omod = 0;
+	}else if(m != Mlmb && omod == Mlmb){
+		resetselbox(x, y);
+		reqdraw(Reqrefresh);
+		omod = 0;
+	}
 	if(Δx != 0.0f || Δy != 0.0f)
 		shown = mousehover(x, y);
+	/* FIXME: maybe if clicking on empty space, check if there's a node
+	 * very nearby first */
+	/* FIXME: hold shift while dragselect -> super slow down on vnc */
 	if(m == Mlmb){
-		if((omod & Mlmb) == 0){
+		if(omod == 0){
+			/* FIXME: multisel: we'd need to intersect two sets, a new
+			 * sel and the old ones */
+			k = sel_get(sels, shown);
+			if(k == kh_end(sels) && (mod & (Mshift | Mctrl)) == 0)
+				clearsel();
 			resetselbox(x, y);
 			mouseselect(shown, mod & (Mshift|Mctrl));
-		}else if(Δx != 0.0f || Δy != 0.0f){
+		}else if(omod == Mlmb && (Δx != 0.0f || Δy != 0.0f)){
 			/* FIXME: would be nice to just redraw the one node */
 			if(selected != -1)
 				mousedrag(Δx, Δy);
@@ -366,7 +394,7 @@ mouseevent(float x, float y, float Δx, float Δy)
 	}else if(m == (Mlmb | Mrmb))
 		zoom(-Δx, -Δy);
 nope:
-	omod = m;
+	omod |= m;
 	return 0;
 }
 
