@@ -1,48 +1,59 @@
 #include "strpg.h"
 #include "fs.h"
+#include "graph.h"
 #include "cmd.h"
 #include "drw.h"
 #include "layout.h"
 #include "threads.h"
 
+/* FIXME: versioning + backwards compat? */
+
 enum{
-	Recsz = 3 * sizeof(float),
+	Recsz = sizeof(ioff) + 3 * sizeof(float),
 };
 
 int
 importlayout(char *path)
 {
-	union { u32int u; float f; } u;
-	int x;
+	union { u32int u; float f; ioff i; } u;
+	int x, nr, ns;
+	ioff id, idx;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r;
 
-	/* FIXME: needs to be coarsen-aware, or just index into cnodes
-	 * instead of nodes, but then we have to walk nodes[] as well */
+	/* FIXME: mt-safety */
 	reqlayout(Lstop);
 	if((fs = openfs(path, OREAD)) == nil)
 		return -1;
-	for(r=rnodes;; r++){
+	for(ns=nr=0;; nr++){
 		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
 			break;
-		if(r >= rnodes + dylen(rnodes)){
-			werrstr("more records than there are rnodes");
-			x = -1;
-			break;
-		}
 		p = buf;
 		u.u = GBIT32(p);
-		r->pos[0] = u.f;
 		p += sizeof u.u;
+		id = u.i;
+		if((idx = getnodeidx(u.i)) < 0){
+			DPRINT(Debugfs, "importlayout: skipping hidden node %d", u.i);
+			continue;
+		}
+		if((r = rnodes + idx) >= rnodes + dylen(rnodes)){
+			DPRINT(Debugfs, "importlayout: skipping out of bounds node %d", idx);
+			continue;
+		}
 		u.u = GBIT32(p);
-		r->pos[1] = u.f;
 		p += sizeof u.u;
+		r->pos[0] = u.f;
+		u.u = GBIT32(p);
+		p += sizeof u.u;
+		r->pos[1] = u.f;
 		u.u = GBIT32(p);
 		r->pos[2] = u.f;
+		DPRINT(Debugfs, "importlayout: %d %d %f,%f,%f",
+			idx, id, r->pos[0], r->pos[1], r->pos[2]);
+		ns++;
 	}
-	if(r < rnodes + dylen(rnodes))
-		warn("fewer records than expected\n");
+	DPRINT(Debugfs, "importlayout: imported %d/%d positions", ns, nr);
 	if(debug & Debugload)
 		pushcmd("cmd(\"FJJ142\")");
 	else
@@ -62,17 +73,21 @@ importlayout(char *path)
 int
 exportlayout(char *path)
 {
-	union { u32int u; float f; } u;
+	union { u32int u; float f; ioff i; } u;
 	int x;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r, *re;
+	Node *n;
 
 	if((fs = openfs(path, OWRITE)) == nil)
 		return -1;
 	x = 0;
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
+	for(n=nodes, r=rnodes, re=r+dylen(r); r<re; r++, n++){
 		p = buf;
+		u.i = n->id;
+		PBIT32(p, u.u);
+		p += sizeof u.u;
 		u.f = r->pos[0];
 		PBIT32(p, u.u);
 		p += sizeof u.u;
@@ -81,6 +96,8 @@ exportlayout(char *path)
 		p += sizeof u.u;
 		u.f = r->pos[2];
 		PBIT32(p, u.u);
+		DPRINT(Debugfs, "exportlayout: %zd %d %f,%f,%f",
+			r-rnodes, n->id, r->pos[0], r->pos[1], r->pos[2]);
 		if((x = writefs(fs, buf, sizeof buf)) < 0)
 			break;
 	}
