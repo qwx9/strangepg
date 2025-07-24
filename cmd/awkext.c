@@ -267,6 +267,7 @@ set(int i, int type, ioff id, V val)
 
 	new = 0;
 	a = mkarray(i);
+	DPRINT(Debugawk, "set %s type %d id %d", tabs[i].name, type, id);
 	/* FIXME: better type checking; merge with generic tag code */
 	switch(i){
 	case Tnode:
@@ -290,12 +291,11 @@ set(int i, int type, ioff id, V val)
 	case TCL:
 		lab = getnodelabel(id);
 		if(type != Tint && type != Tuint){
-			logerr(va("set CL[%s]: invalid non-integer color", lab));
+			logerr(va("set CL[%s]: invalid non-integer color: %s\n", lab, type == Tstring ? val.s : ""));
 			break;
 		}
-		if(type == Tfloat)	/* FIXME */
-			val.u = val.f;
-		setattr(i, id, val);
+		if(setattr(i, id, val) < 0)
+			DPRINT(Debugawk, "set CL: %s", error());
 		c = setint(lab, val.u, a, &new);
 		if(new){
 			free(c->nval);
@@ -308,7 +308,8 @@ set(int i, int type, ioff id, V val)
 			return;
 		}
 		lab = getnodelabel(id);
-		setattr(i, id, val);
+		if(setattr(i, id, val) < 0)
+			DPRINT(Debugawk, "set LN: %s", error());
 		c = setint(lab, val.u, a, &new);
 		if(new){
 			free(c->nval);
@@ -336,7 +337,8 @@ set(int i, int type, ioff id, V val)
 		lab = getnodelabel(id);
 		if(type != Tfloat)	/* FIXME */
 			val.f = val.i;
-		setattr(i, id, val);
+		if(setattr(i, id, val) < 0)
+			DPRINT(Debugawk, "set fx/f0: %s", error());
 		c = setfloat(lab, val.f, a, &new);
 		if(new){
 			free(c->nval);
@@ -344,7 +346,8 @@ set(int i, int type, ioff id, V val)
 		}
 		break;
 	default:
-		setattr(i, id, val);
+		if(setattr(i, id, val) < 0)
+			DPRINT(Debugawk, "set: %s", error());
 		rlock(&tablock);
 		intidx = tabs[i].intidx;
 		runlock(&tablock);
@@ -504,7 +507,7 @@ fnloadall(void)
 	for(id=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
 		if(r->col[3] == 0.0f){
 			vv.u = somecolor(id, nil);
-			set(TCL, NUM, id, vv);
+			set(TCL, Tuint, id, vv);
 		}
 		/* FIXME: edges */
 	}
