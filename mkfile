@@ -21,6 +21,7 @@ OFILES=\
 	fs/layout.$O\
 	fs/load.$O\
 	fs/metacsv.$O\
+	fs/svg.$O\
 	graph/graph.$O\
 	layout/layout.$O\
 	layout/pfr.$O\

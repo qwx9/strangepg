@@ -31,6 +31,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "exp",	FEXP,		BLTIN },
 	{ "expand",	AEXPAND,		ADDON },
 	{ "explode",	AEXPLODE,		ADDON },
+	{ "exportsvg",	AEXPORTSVG,		ADDON },
 	{ "float",	FFLOAT,		BLTIN },
 	{ "for",	FOR,		FOR },
 	{ "func",	FUNC,		FUNC },

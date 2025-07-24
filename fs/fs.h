@@ -47,6 +47,7 @@ void	regfs(Filefmt*);
 
 int	importlayout(char*);
 int	exportlayout(char*);
+int	exportsvg(char*);
 
 int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);

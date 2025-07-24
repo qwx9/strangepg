@@ -648,6 +648,18 @@ fnexpand(Cell *)
 {
 }
 
+static void
+fnexportsvg(Cell *x)
+{
+	char *s;
+
+	s = getsval(x);
+	if(strlen(s) < 1)
+		FATAL("invalid file path: %s", s);
+	if(exportsvg(s) < 0)
+		FATAL("%s", error());
+}
+
 /* NOTE: careful with FATAL in functions that may be part of scripts */
 /* FIXME: stricter error checking and recovery */
 Cell *
@@ -670,6 +682,7 @@ addon(TNode **a, int)
 	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	case AREFRESH: fnrefresh(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
+	case AEXPORTSVG: fnexportsvg(x); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	case ACOLLAPSE: fncollapse(x); break;
 	case AEXPAND: fnexpand(x); break;
