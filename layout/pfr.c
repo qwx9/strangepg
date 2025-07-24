@@ -80,7 +80,8 @@ new_(int nuke, int is3d)
 			if((u->flags & (FNfixed | FNinitpos)) == 0){
 				r->pos[0] = var[0] - xfrand() * (2 * var[0]);
 				r->pos[1] = var[1] - xfrand() * (2 * var[1]);
-				r->pos[2] = var[2] - xfrand() * (2 * var[2]);
+				if(is3d)
+					r->pos[2] = var[2] - xfrand() * (2 * var[2]);
 				continue;
 			}
 		}
