@@ -29,11 +29,11 @@ init(void)
 	Aux *aux;
 
 	if(drawing.xbound.min < drawing.xbound.max)
-		dim[0] = (drawing.xbound.max - drawing.xbound.min) / 2;
+		dim[0] = (drawing.xbound.max - drawing.xbound.min) / 2.0f;
 	else
 		dim[0] = W;
 	if(drawing.ybound.min < drawing.ybound.max)
-		dim[1] = (drawing.ybound.max - drawing.ybound.min) / 2;
+		dim[1] = (drawing.ybound.max - drawing.ybound.min) / 2.0f;
 	else
 		dim[1] = H;
 	aux = emalloc(sizeof *aux);
@@ -45,7 +45,7 @@ static void *
 new_(int nuke, int is3d)
 {
 	int orphans;
-	double z, f, var[3], mid[3];
+	float z, f, var[3], mid[3];
 	Node *u, *ue;
 	RNode *r;
 
@@ -53,55 +53,55 @@ new_(int nuke, int is3d)
 		return init();
 	orphans = 0;
 	if(drawing.xbound.min < drawing.xbound.max){
-		var[0] = (drawing.xbound.max - drawing.xbound.min) / 2;
+		var[0] = (drawing.xbound.max - drawing.xbound.min) / 2.0f;
 		mid[0] = drawing.xbound.min + var[0];
 	}else{
 		var[0] = W;
 		mid[0] = 0;
 	}
 	if(drawing.ybound.min < drawing.ybound.max){
-		var[1] = (drawing.ybound.max - drawing.ybound.min) / 2;
+		var[1] = (drawing.ybound.max - drawing.ybound.min) / 2.0f;
 		mid[1] = drawing.ybound.min + var[1];
 	}else{
 		var[1] = H;
 		mid[1] = 0;
 	}
 	if(drawing.zbound.min < drawing.zbound.max){
-		var[2] = (drawing.zbound.max - drawing.zbound.min) / 2;
+		var[2] = (drawing.zbound.max - drawing.zbound.min) / 2.0f;
 		mid[2] = drawing.zbound.min + var[2];
 	}else{
 		var[2] = W;
 		mid[2] = 0;
 	}
-	f = drawing.nodesz * 2.0;
+	f = drawing.nodesz * 2.0f;
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->nedges == 0){
 			orphans++;
 			if((u->flags & (FNfixed | FNinitpos)) == 0){
-				r->pos[0] = var[0] - xfrand() * (2 * var[0]);
-				r->pos[1] = var[1] - xfrand() * (2 * var[1]);
+				r->pos[0] = var[0] - xfrand() * (2.0f * var[0]);
+				r->pos[1] = var[1] - xfrand() * (2.0f * var[1]);
 				if(is3d)
-					r->pos[2] = var[2] - xfrand() * (2 * var[2]);
+					r->pos[2] = var[2] - xfrand() * (2.0f * var[2]);
 				continue;
 			}
 		}
 		if((u->flags & FNinitx) != 0)
 			r->pos[0] = (u->pos0.x - mid[0]) * W / var[0];
 		else
-			r->pos[0] = (float)(var[0] - xfrand() * (2 * var[0])) / (var[0] / f);
+			r->pos[0] = (float)(var[0] - xfrand() * (2.0f * var[0])) / (var[0] / f);
 		if((u->flags & FNinity) != 0)
 			r->pos[1] = (u->pos0.y - mid[1]) * H / var[1];
 		else
-			r->pos[1] = (float)(var[1] - xfrand() * (2 * var[1])) / (var[1] / f);
+			r->pos[1] = (float)(var[1] - xfrand() * (2.0f * var[1])) / (var[1] / f);
 		if((u->flags & FNinitz) != 0)
 			r->pos[2] = (u->pos0.z - mid[2]) * W / var[2];
 		else if(!is3d){
 			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 			r->pos[2] = (drawing.flags & DFnodepth) == 0
-				? 0.8 * (0.5 - z)
-				: 0.00001 * z;
+				? 0.8f * (0.5f - z)
+				: 0.00001f * z;
 		}else
-			r->pos[2] = (float)(var[2] - xfrand() * (2 * var[2])) / (var[2] / f);
+			r->pos[2] = (float)(var[2] - xfrand() * (2.0f * var[2])) / (var[2] / f);
 	}
 	if(orphans > 1)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));
