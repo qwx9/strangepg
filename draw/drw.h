@@ -13,6 +13,7 @@ typedef struct Range Range;
 #define	Ptsz	1.0f
 #define	Minsz	0.5f
 #define	Maxsz	40.0f
+#define	Maxthic	128.0f
 
 struct Range{
 	float min;

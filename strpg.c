@@ -82,7 +82,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
-		"-s LEN WIDE    Set node length and width (max: 40, default: 1.0 1.0)\n"
+		"-s LEN WIDE    Set node length and width (max: %.1f %.1f, default: %.1f %.1f)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
@@ -93,7 +93,8 @@ help(void)
 		"-W             Do not suppress warning messages\n"
 		"ALG may be one of:\n"
 		" fr            Parallelized variant of Fruchterman-Reingold (default)\n"
-		" 3d            Experimental 3d version of the above\n"
+		" 3d            Experimental 3d version of the above\n",
+			Maxsz, Maxthic, Nodesz, Ptsz
 	);
 	quit();
 }
@@ -176,7 +177,7 @@ parseargs(int argc, char **argv)
 		drawing.nodesz = atof(EARGF(usage()));
 		drawing.fatness = atof(EARGF(usage()));
 		if(drawing.nodesz <= 0.0f || drawing.nodesz >= Maxsz
-		|| drawing.fatness <= 0.0f || drawing.fatness >= Maxsz){
+		|| drawing.fatness <= 0.0f || drawing.fatness > Maxthic){
 			warn("invalid node dimensions\n");
 			usage();
 		}
