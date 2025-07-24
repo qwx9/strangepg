@@ -12,10 +12,13 @@ static QLock cmdlock;
 void
 killcmd(void)
 {
-	if(cmdfs == nil)
+	/* FIXME: potential deadlock on exit from the other functions? */
+	qlock(&cmdlock);	/* completely prevent acquisition of dead cmdfs */
+	if(cmdfs == nil){
+		qunlock(&cmdlock);
 		return;
-	qlock(&cmdlock);
-	closefs(cmdfs);
+	}
+	freefs(cmdfs);
 	cmdfs = nil;
 	close(outfd[1]);
 	outfd[1] = -1;
@@ -28,10 +31,9 @@ killcmd(void)
 void
 flushcmd(void)
 {
-	if(cmdfs == nil)
-		return;
 	qlock(&cmdlock);
-	flushfs(cmdfs);
+	if(cmdfs != nil)
+		flushfs(cmdfs);
 	qunlock(&cmdlock);
 }
 
@@ -40,12 +42,12 @@ sendcmd(char *cmd)
 {
 	int n;
 
-	if(cmdfs == nil)
-		return;
 	qlock(&cmdlock);
-	n = strlen(cmd);
-	DPRINT(Debugcmd, "> [%d][%s]", n, cmd);
-	writefs(cmdfs, cmd, n);
+	if(cmdfs != nil){
+		n = strlen(cmd);
+		DPRINT(Debugcmd, "> [%d][%s]", n, cmd);
+		writefs(cmdfs, cmd, n);
+	}
 	qunlock(&cmdlock);
 }
 
