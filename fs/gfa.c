@@ -169,7 +169,8 @@ initnodes(Aux *a)
 	for(i=nn, n=nodes+nn, ne=n+a->nnodes; n<ne; n++, i++){
 		n->id = i;
 		n->eoff = off;
-		v.i = *l++;
+		n->length = *l++;
+		v.i = n->length;
 		setspectag(TLN, i, v);
 		d = *dp++;
 		off += d;

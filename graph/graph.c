@@ -93,13 +93,16 @@ setattr(int type, ioff id, V val)
 	r = rnodes + idx;
 	switch(type){
 	case TLN:
+		/* FIXME: see usage in graph/coarse.c, we have to reset this
+		 * manually */
 		if(r->len > 0.0f || val.i == 0)
 			break;
 		if(val.i < 0){
-			logerr(va("setattr: nonsense segment length %d\n", val.i));
+			werrstr("nonsense segment length %d, node %d", val.i, idx);
 			return -1;
 		}
 		r->len = val.i;
+		setclength(n, val.i);	/* FIXME: temporary */
 		if(drawing.length.min == 0.0f || drawing.length.min > val.i){
 			drawing.length.min = val.i;
 			drawing.flags |= DFstalelen;
@@ -146,5 +149,21 @@ setattr(int type, ioff id, V val)
 			drawing.zbound.max = val.f;
 		break;
 	}
+	return 0;
+}
+
+int
+setnodelength(ioff i)
+{
+	V val;
+	Node *u;
+
+	u = nodes + i;
+	val.u = u->length;	/* FIXME: .u vs .i above */
+	if(val.u == 0)	/* FIXME */
+		val.u = 1;
+	rnodes[i].len = 0.0f;
+	if(setattr(TLN, u->id, val) < 0)
+		return -1;
 	return 0;
 }

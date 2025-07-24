@@ -260,13 +260,31 @@ function reselectnode(id){
 	deselect()
 	selectnodebyid(id)
 }
-function collapse(id){
+# FIXME: can't be variadic, unless in C
+#function collapse(id){
+#	if(id != ""){
+#		if(!checknodeid(id))
+#			return
+#		collapse1(id)
+#	}else{
+#		for(id in selected)
+#			collapse1(id)
+#	}
+#	commit()
+#	deselect()
+#}
+function expand(id){
 	if(id != ""){
 		if(!checknodeid(id))
 			return
-		collapse1(id)
+		expand1(id)
+	}else if(length(selected) > 0){
+		for(id in selected)
+			expand1(id)
 	}else
-		collapse1()
+		expandall()
+	commit()
+	deselect()
 }
 # FIXME: randomize
 function mkcolormap(	i, colors){

@@ -20,6 +20,7 @@ Drawing drawing = {
 	.zbound = {0.0f, 0.0f},
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
+	.fcoarse = 1.0f,
 };
 Box promptbox, selbox;
 Channel *rendc, *ctlc;
@@ -134,11 +135,10 @@ resizenodes(void)
 {
 	double l, k, Δ, min, max;
 	RNode *r, *re;
+	Node *u;
 
 	if((drawing.flags & DFstalelen) == 0)
 		return;
-	min = Minsz;
-	max = Maxsz;
 	drawing.flags &= ~DFstalelen;
 	if(drawing.length.min < 1.0)
 		drawing.length.min = 1.0;
@@ -147,10 +147,13 @@ resizenodes(void)
 	if((Δ = drawing.length.max - drawing.length.min) < 1.0){
 		Δ = 1.0;
 		min = max = drawing.nodesz;
+	}else{
+		min = Minsz;
+		max = Maxsz;
 	}
 	k = Minsz * log(2) / Δ;
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
-		l = r->len - drawing.length.min;
+	for(u=nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
+		l = u->length - drawing.length.min;
 		if(l < 1.0)
 			l = 1.0;
 		r->len = min + (max - min) * ((exp(k * l) - 1) / (exp(k * Δ) - 1));

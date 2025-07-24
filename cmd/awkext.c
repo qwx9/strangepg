@@ -514,6 +514,8 @@ fnloadall(void)
 	resizenodes();
 }
 
+/* FIXME: make variadic funs work in strawk itself,
+ * then we won't need this shit; also for coarsening */
 static TNode *
 fnexplode(Cell *x, TNode *nextarg)
 {
@@ -634,27 +636,99 @@ fnrealedge(Cell *x, Cell *ret)
 }
 
 static void
-fncollapse(Cell *x)
+fnexpand1(Cell *x)
 {
-	ioff i;
-	char *s;
+	double t;
+	ioff id;
 
-	s = getsval(x);
-	if((i = getnodeid(s)) < 0)
-		FATAL("%s", error());
-	if(collapse(i) < 0 || coarsen() < 0)
-		FATAL("%s: %s", s, error());
+	id = getival(x);	/* cnode id */
+	t = μsec();
+	if(expand(id) < 0)
+		logerr(va("expand %d: %s\n", id, error()));
+	warn("expandone: %.2f ms\n", (μsec() - t) / 1000.0f);
 }
 
+/* erst die falafel, dann der wein */
 static void
-fnexpand(Cell *)
+fncommit(void)
 {
+	if(commit() < 0)
+		FATAL("%s", error());
 }
+
+/* FIXME: just always work on selection or everything, have a selectnodes()
+ * that is the variadic function, or automatically select from results of
+ * a calculation or expression, like CL[i] == red => select matching in
+ * main.awk */
+static TNode *
+fncollapse(Cell *x, TNode *nextarg)
+{
+	int i, r, all;
+	double t;
+	ioff id, *ops;
+	Cell *c;
+	Array *a;
+
+	t = μsec();
+	if(buildct() < 0)	/* FIXME: do this asynchronously after mkgraph or import? */
+		FATAL("collapse: %s", error());
+	warn("collapsefn: buildct: %.2f ms\n", (μsec() - t) / 1000.0f);
+	t = μsec();
+	all = 0;
+	ops = nil;
+	/* FIXME: most of this doesn't need to be C */
+	if(nextarg != nil){
+		if((id = getnodeid(getsval(x))) < 0)
+			FATAL("%s", error());
+		ops = pushcollapseop(id, ops);
+		for(;nextarg!=nil; nextarg=nextarg->nnext){
+			tempfree(x);
+			x = execute(nextarg);
+			if((id = getnodeid(getsval(x))) < 0)
+				FATAL("%s", error());
+			ops = pushcollapseop(id, ops);
+		}
+	}else{
+		a = getarray("selected");	/* sucks */
+		qlock(&symlock);
+		for(i=0; i<a->size; i++){
+			for(c=a->tab[i]; c!=nil; c=c->cnext){
+				qunlock(&symlock);
+				id = atoi(c->nval);
+				ops = pushcollapseop(id, ops);
+				qlock(&symlock);
+			}
+		}
+		qunlock(&symlock);
+		if(ops == nil){
+			all = 1;
+			ops = collapseall();
+		}
+	}
+	warn("collapsefn: collect: %.2f ms\n", (μsec() - t) / 1000.0f);
+	t = μsec();
+	r = all ? collapseup(ops) : collapsedown(ops);
+	dyfree(ops);
+	if(r < 0)
+		FATAL("collapse: %s", error());
+	warn("collapsefn: collapse: %.2f ms\n", (μsec() - t) / 1000.0f);
+	t = μsec();
+	if(coarsen() < 0)
+		FATAL("collapse: %s", error());
+	warn("collapsefn: coarsen: %.2f ms\n", (μsec() - t) / 1000.0f);
+	/* strawk thread should not push commands -- but this should
+	 * be awk code anyway */
+	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
+	return nil;
+}
+
+/* FIXME: stdin commands only get sent/updated on an event like mouse
+ * move in window */
 
 /* FIXME: fs: fsprint()/fseprint() functions or sth */
 /* FIXME: should be in gfa.c or in awk */
 static int
-printgfa(char *path)
+printgfa(char *path)	/* FIXME */
 {
 	char buf[2048], *p, *l, *vl;
 	ioff x, *e, *ee;
@@ -729,18 +803,20 @@ addon(TNode **a, int)
 	ret = gettemp();
 	setival(ret, 0);
 	switch(t){
-	case ALOAD: fnloadall(); break;
-	case ALOADBATCH: fnloadbatch(); break;
-	case ANODECOLOR: nextarg = fnnodecolor(x, nextarg); break;
-	case AINFO: fninfo(x); break;
-	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
-	case AREFRESH: fnrefresh(); break;
+	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
+	case ACOMMIT: fncommit(); break;
+	case AEXPAND1: fnexpand1(x); break;
+	case AEXPANDALL: expandall(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
 	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;
+	case AINFO: fninfo(x); break;
+	case ALOAD: fnloadall(); break;
+	case ALOADBATCH: fnloadbatch(); break;
+	case ANODECOLOR: nextarg = fnnodecolor(x, nextarg); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
-	case ACOLLAPSE: fncollapse(x); break;
-	case AEXPAND: fnexpand(x); break;
+	case AREFRESH: fnrefresh(); break;
+	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;

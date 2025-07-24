@@ -26,18 +26,20 @@ enum{
 };
 
 enum{
-	ALOAD,
-	ALOADBATCH,
-	ANODECOLOR,
-	AUNSHOW,
-	AINFO,
-	AREFRESH,
+	ACOLLAPSE,
+	ACOMMIT,
+	AEXPAND1,
+	AEXPANDALL,
 	AEXPLODE,
 	AEXPORTGFA,
 	AEXPORTSVG,
+	AINFO,
+	ALOAD,
+	ALOADBATCH,
+	ANODECOLOR,
 	AREALEDGE,
-	ACOLLAPSE,
-	AEXPAND,
+	AREFRESH,
+	AUNSHOW,
 };
 
 extern int noreset;	// FIXME: flag
@@ -60,3 +62,4 @@ int	initrepl(void);
 int	initcmd(void);
 
 int	setattr(int, ioff, V);
+int	setnodelength(ioff);
