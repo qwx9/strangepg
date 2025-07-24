@@ -38,8 +38,15 @@ readnodetags(Aux *a, File *f)
 	vlong off, *o, *oe;
 
 	for(nerr=0, id=0, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++){
-		if((off = *o) < 0)
+		if((off = *o) < 0){
+			DPRINT(Debugmeta, "readnodetags: [%d] off=%lld, skipping", id, off);
 			continue;
+		/* missing S records will have uninitialized offsets and parsing
+		 * will fail since offset 0 won't correspond to a tag */
+		}else if(off == 0){
+			werrstr("readnodetags: missing node indexed at %d\n", id);
+			return -1;
+		}
 		if(seekfs(f, off) < 0)
 			warn("readnodetags: %s\n", error());
 		if(readline(f) == nil)
@@ -216,7 +223,7 @@ static inline int
 readnode(Aux *a, File *f)
 {
 	int id, r, w, abs;
-	ioff off;
+	vlong off;
 	char *s;
 
 	r = 0;
@@ -244,7 +251,7 @@ readnode(Aux *a, File *f)
 	if(nextfield(f) != nil)
 		off = f->foff;
 	else
-		off = -1;
+		off = -1LL;
 	dypushat(a->nodeoff, id, off);
 	dypushat(a->length, id, w);
 	return r;
@@ -280,7 +287,7 @@ readedge(Aux *a, File *f)
 	if(nextfield(f) != nil)
 		off = f->foff;
 	else
-		off = -1;
+		off = -1LL;
 	/* precedence rule: always flip edge st. u < v or u is forward if self edge */
 	if(u > v || u == v && i == 1)
 		id = (u64int)v << 32 | u << 2 | (i << 1 | j) ^ 3;
