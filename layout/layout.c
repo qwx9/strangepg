@@ -40,7 +40,7 @@ wing(void *arg)
 		if(--l->ref == 0){
 			if(t->cleanup != nil)
 				t->cleanup(l->scratch);
-			free(l);
+			free(l);	/* FIXME: Layout* is never actually reallocated? */
 		}
 	}
 }
@@ -80,8 +80,10 @@ sac(void *)
 		case Lfreeze:
 			DPRINT(Debuglayout, "sac: freeze");
 			graph.flags |= GFfrozen;
-			if(nidle == nlaythreads)
+			if(nidle == nlaythreads){
+				drawing.flags |= DFnolayout;
 				continue;
+			}
 			/* wet floor */
 		case Lstop:
 			DPRINT(Debuglayout, "sac: stop");
@@ -93,8 +95,14 @@ sac(void *)
 		case Lthaw:
 			DPRINT(Debuglayout, "sac: thaw");
 			graph.flags &= ~GFfrozen;
+			/* FIXME: thread unsafe non-atomic accesses; should be channel
+			 * messages or just private state changes, or individual bitflags
+			 * no one else writes to */
+			drawing.flags &= ~DFnolayout;
 			if(graph.flags & (GFlayme | GFdrawme) == 0)
 				break;
+			if(l != nil)
+				l->flags |= LFclean;
 			/* wet floor */
 		case Lstart:
 			DPRINT(Debuglayout, "sac: start");
@@ -106,8 +114,11 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if(graph.flags & GFfrozen)
+				if(graph.flags & GFfrozen){
+					drawing.flags |= DFnolayout;
 					continue;
+				}else
+					drawing.flags &= ~DFnolayout;
 				if((graph.flags & GFdrawme) == 0)
 					break;
 				logmsg("layout: done.\n");
@@ -124,7 +135,7 @@ sac(void *)
 		}
 		if(l == nil || nidle != nlaythreads || (graph.flags & GFfrozen))
 			continue;
-		if(l->flags & LFnuke && l->target->cleanup != nil && l->scratch != nil){
+		if(l->flags & (LFnuke | LFclean) && l->target->cleanup != nil && l->scratch != nil){
 			l->target->cleanup(l->scratch);
 			l->scratch = nil;
 		}
@@ -151,6 +162,8 @@ sac(void *)
 	}
 }
 
+/* FIXME: unbuffered channels are necessary to avoid races but may also
+ * induce a lot of waiting, resulting in a freeze (sendp in sac) */
 static void
 opencomms(void)
 {
@@ -233,6 +246,6 @@ initlayout(void)
 {
 	ttab[LLpfr] = regpfr();
 	ttab[LLpfr3d] = regpfr3d();
-	if((rxc = chancreate(sizeof(ulong), 1)) == nil)
+	if((rxc = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %s", error());
 }

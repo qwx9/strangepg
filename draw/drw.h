@@ -32,7 +32,9 @@ enum{
 	DFnoalpha = 1<<9,
 	DFnodraw = 1<<10,
 	DFnorend = 1<<11,
-	DFfreeze = 1<<12,
+	DFnolayout = 1<<12,
+	DFfreeze = 1<<13,
+	DFiwasfrozentoday = DFnodraw | DFnorend | DFnolayout,
 };
 struct Drawing{
 	int flags;

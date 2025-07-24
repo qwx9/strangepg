@@ -1,6 +1,7 @@
 enum{
 	LFstop = 1<<0,
-	LFnuke = 1<<1,
+	LFclean = 1<<1,
+	LFnuke = 1<<2,
 };
 
 typedef struct Target Target;
