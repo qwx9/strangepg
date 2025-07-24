@@ -302,7 +302,8 @@ mouseselect(ioff idx, int multi)
 			selected = idx;
 		}
 		return 1;
-	}
+	}else
+		selected = -1;
 	if(!multi){
 		clearsel();
 		pushcmd("deselect()");
