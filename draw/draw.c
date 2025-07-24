@@ -392,6 +392,8 @@ freezeworld(void)
 void
 thawworld(void)
 {
+	if((drawing.flags & DFnorend) == 0)
+		drawing.flags |= DFnorend;	/* FIXME: or we might miss resizebuf() */
 	drawing.flags &= ~DFfreeze;
 	reqdraw(Reqthaw);
 	reqlayout(Lthaw);	/* FIXME: really, just unpause */
