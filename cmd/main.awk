@@ -53,6 +53,40 @@ BEGIN{
 	violet = purple
 	white = 0xffffff00
 	yellow = 0xffed6f00
+	translucent = 0xeeeeee30
+	cmap[n++] = blue
+	cmap[n++] = green
+	cmap[n++] = red
+	cmap[n++] = purple
+	cmap[n++] = brown
+	cmap[n++] = orange
+	cmap[n++] = bluegreen
+	cmap[n++] = yellow
+	cmap[n++] = purpleblue
+	cmap[n++] = greyred
+	cmap[n++] = lightbrown
+	cmap[n++] = palepurple
+	cmap[n++] = greybrown
+	cmap[n++] = darkpink
+	cmap[n++] = darkgreen
+	cmap[n++] = darkpurple
+	cmap[n++] = lightteal
+	cmap[n++] = paleyellow
+	cmap[n++] = greyblue
+	cmap[n++] = lightred
+	cmap[n++] = lightblue
+	cmap[n++] = lightorange
+	cmap[n++] = lightgreen
+	cmap[n++] = lightpink
+	cmap[n++] = lightgrey
+	cmap[n++] = lightpurple
+	cmap[n++] = greygreen
+	cmap[n++] = paleblue
+	cmap[n++] = palegreen
+	cmap[n++] = palered
+	cmap[n++] = paleorange
+	cmap[n++] = paleviolet
+	cmap[n] = cyan
 	OFS = "\t"
 }
 function cmd(code){
@@ -233,6 +267,34 @@ function collapse(id){
 		collapse1(id)
 	}else
 		collapse1()
+}
+# FIXME: randomize
+function mkcolormap(	i, colors){
+	for(i in CL){
+		c = CL[i]
+		if(!(c in colors)){
+			colors[c] = ""
+			cmap[n++] = c
+		}
+	}
+	delete colors
+}
+function groupby(tag, incl, 	acc, n, m){
+	if(length(cmap) == 0)
+		mkcolormap()
+	if((n = length(cmap)) <= 0){
+		print "E", "no colors to hand"
+		return
+	}
+	delete acc
+	m = 0
+	# FIXME: error handling in nested evals?
+	if(incl == "")
+		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; nodecolor(i, cmap[acc[c] % n]) } }")
+	else
+		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = cmap[acc[c] % n] }}; nodecolor(i, c)}}")
+	if(m > n)
+		print "E", "more categories than colors"
 }
 function initx(name, x){
 	if(!checknodename(name))
