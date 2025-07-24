@@ -83,6 +83,7 @@ extern Awknum *RSTART;
 extern Awknum *RLENGTH;
 
 extern FILE *awkstdin, *awkstdout, *awkstderr;
+void	awkprint(char*, ...);
 
 extern char	*record;	/* points to $0 */
 extern int	lineno;		/* line number in awk program */

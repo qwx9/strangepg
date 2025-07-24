@@ -71,6 +71,16 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 };
 const size_t nkeywords = nelem(keywords);
 
+void
+awkprint(char *fmt, ...)
+{
+	va_list arg;
+
+	va_start(arg, fmt);
+	vfprintf(awkstdout, fmt, arg);
+	va_end(arg);
+}
+
 static void
 awk(void *)
 {

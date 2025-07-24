@@ -200,6 +200,10 @@ readcmd(char *s)
 			}else
 				req |= Reqredraw;
 			continue;
+		case 'U':	/* FIXME: kludge (see awkext) */
+			pushcmd("deselect()");
+			flushcmd();
+			continue;
 		case 'N':
 		case 'X':
 		case 'Y':
