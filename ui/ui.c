@@ -278,12 +278,14 @@ mousehover(int x, int y)
 static int
 mouseselect(ioff idx, int multi)
 {
+	int abs;
 	ioff id;
 
 	if(selected >= 0 && selected == idx && !multi || prompting)
 		return 0;
 	if(idx != -1){
 		if((idx & 1UL<<31) == 0){
+			sel_put(sels, idx, &abs);
 			if((id = getrealid(idx)) < 0){
 				warn("mouseselect: %s\n", error());
 				return 0;
