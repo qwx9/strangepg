@@ -124,7 +124,8 @@ fnsetpos(char *label, char *pos, int tag)
 	if((id = str2id(label)) < 0)
 		return -1;
 	v.f = atof(pos);
-	setattr(tag, id, v);
+	if(setattr(tag, id, v) < 0)
+		warn("fnsetpos: %s\n", error());
 	return 0;
 }
 
@@ -200,11 +201,13 @@ readcmd(char *s)
 		case 'N':
 		case 'X':
 		case 'Y':
+		case 'Z':
 		case 'f':
 		case 'i':
 		case 'o':
 		case 'x':
 		case 'y':
+		case 'z':
 			break;
 		default:
 			logmsg(va("%s\n", s));

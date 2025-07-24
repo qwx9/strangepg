@@ -246,6 +246,12 @@ function inity(name, y){
 	y0[name] = y
 	print "y", node[name], y
 }
+function initz(name, z){
+	if(!checknodename(name))
+		return
+	z0[name] = z
+	print "z", node[name], z
+}
 function fixx(name, x){
 	if(!checknodename(name))
 		return
@@ -257,6 +263,12 @@ function fixy(name, y){
 		return
 	fy[name] = y
 	print "Y", node[name], y
+}
+function fixz(name, z){
+	if(!checknodename(name))
+		return
+	fz[name] = z
+	print "Z", node[name], z
 }
 function quit(){
 	print "!"
