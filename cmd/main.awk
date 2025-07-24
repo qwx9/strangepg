@@ -9,10 +9,13 @@ BEGIN{
 	brightyellow = 0xffff0000
 	brown = 0xb1592800
 	cyan = 0x7acdcd00
+	darkblue = 0x03328500
 	darkgray = 0x3f3f3f00
+	darkgrey = darkgray
 	darkgreen = 0x33a02c00
 	darkpink = 0xc9608800
 	darkpurple = 0x6a3d9a00
+	darksalmon = 0xe9967a00
 	gray = 0x77777700
 	grayblue = 0xbebada00
 	graybrown = 0x7f5f6700
@@ -26,9 +29,9 @@ BEGIN{
 	green = 0x8ec65e00
 	lightblue = 0x80b1d300
 	lightbrown = 0xca956000
-	lightgray = 0xc0c0c000
+	lightgray = 0xd9d9d900
 	lightgreen = 0xd5f65f00
-	lightgrey = 0xd9d9d900
+	lightgrey = lightgray
 	lightorange = 0xfdb46200
 	lightpink = 0xfccde500
 	lightpurple = 0xbc80bd00
