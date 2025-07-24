@@ -44,6 +44,7 @@ struct Drawing{
 	Range zbound;
 	float nodesz;
 	float fatness;
+	uvlong frames;	/* FIXME: remove after fixing scheduling */
 };
 extern Drawing drawing;
 

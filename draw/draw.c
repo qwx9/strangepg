@@ -327,6 +327,7 @@ drawworld(int go)
 	}else{
 		ndnodes = drawnodes();
 		ndedges = drawedges();
+		drawing.frames++;	/* FIXME: remove */
 	}
 	DPRINT(Debugdraw, "drawworld %d nodes %d edges", ndnodes, ndedges);
 	ndlines = drawlines();
