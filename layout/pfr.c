@@ -41,6 +41,17 @@ init(void)
 	return aux;
 }
 
+static inline int
+hasadjacencies(Node *u)
+{
+	ioff i, *e, *ee;
+
+	for(i=u-nodes, e=edges+u->eoff, ee=e+u->nedges; e<ee; e++)
+		if((*e >> 2 & 0x3fffffff) != i)
+			return 1;
+	return 0;
+}
+
 static void *
 new_(int nuke, int is3d)
 {
@@ -75,13 +86,14 @@ new_(int nuke, int is3d)
 	}
 	f = drawing.nodesz * 2.0f;
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
-		if(u->nedges == 0){
+		if(!hasadjacencies(u)){
 			orphans++;
 			if((u->flags & (FNfixed | FNinitpos)) == 0){
 				r->pos[0] = var[0] - xfrand() * (2.0f * var[0]);
 				r->pos[1] = var[1] - xfrand() * (2.0f * var[1]);
 				if(is3d)
 					r->pos[2] = var[2] - xfrand() * (2.0f * var[2]);
+				u->flags |= FNorphan;
 				continue;
 			}
 		}
@@ -103,7 +115,7 @@ new_(int nuke, int is3d)
 		}else
 			r->pos[2] = (float)(var[2] - xfrand() * (2.0f * var[2])) / (var[2] / f);
 	}
-	if(orphans > 1)
+	if(orphans > 0)
 		logmsg(va("layout: ignoring %d nodes with no adjacencies\n", orphans));
 	return init();
 }

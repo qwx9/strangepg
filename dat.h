@@ -16,17 +16,20 @@ struct Vertex{
 	float z;
 };
 
+/* FIXME: FNinit* and pos0 are only used in new() for layouting,
+ * they shouldn't be here; length is also only rarely used; have
+ * a 3rd ds for this */
 enum{
 	FNfixedx = 1<<0,
 	FNfixedy = 1<<1,
 	FNfixedz = 1<<2,
-	FNfixed = FNfixedx | FNfixedy | FNfixedz,
 	FNinitx = 1<<3,
 	FNinity = 1<<4,
 	FNinitz = 1<<5,
+	FNorphan = 1<<6,	/* FIXME: get rid of these */
 	FNinitpos = FNinitx | FNinity | FNinitz,
-	FNalias = 1<<6,
-	FNglotzenuff = 1<<7,
+	FNfixed = FNfixedx | FNfixedy | FNfixedz | FNorphan,
+	FNalias = 1<<7,	/* FIXME: privatize */
 };
 struct Node{
 	ioff id;
