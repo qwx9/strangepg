@@ -86,15 +86,15 @@ new_(int nuke, int is3d)
 			}
 		}
 		if((u->flags & FNinitx) != 0)
-			r->pos[0] = (u->pos0.x - mid[0]) * W / var[0];
+			r->pos[0] = u->pos0.x - mid[0];
 		else
 			r->pos[0] = (float)(var[0] - xfrand() * (2.0f * var[0])) / (var[0] / f);
 		if((u->flags & FNinity) != 0)
-			r->pos[1] = (u->pos0.y - mid[1]) * H / var[1];
+			r->pos[1] = u->pos0.y - mid[1];
 		else
 			r->pos[1] = (float)(var[1] - xfrand() * (2.0f * var[1])) / (var[1] / f);
 		if((u->flags & FNinitz) != 0)
-			r->pos[2] = (u->pos0.z - mid[2]) * W / var[2];
+			r->pos[2] = u->pos0.z - mid[2];
 		else if(!is3d){
 			z = (double)(dylen(rnodes) - (r - rnodes)) / dylen(rnodes);
 			r->pos[2] = (drawing.flags & DFnodepth) == 0
