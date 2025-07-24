@@ -648,6 +648,57 @@ fnexpand(Cell *)
 {
 }
 
+/* FIXME: fs: fsprint()/fseprint() functions or sth */
+/* FIXME: should be in gfa.c or in awk */
+static int
+printgfa(char *path)
+{
+	char buf[2048], *p, *l, *vl;
+	ioff x, *e, *ee;
+	Node *u, *ue, *v;
+	File *fs;
+
+	if((fs = openfs(path, OWRITE)) == nil)
+		return -1;
+	p = seprint(buf, buf + sizeof buf, "H\tVN:Z:1.0\n");
+	if(writefs(fs, buf, p - buf) < 0){
+		freefs(fs);
+		return -1;
+	}
+	for(u=nodes, ue=u+dylen(u); u<ue; u++){
+		l = getnodelabel(u->id);
+		p = seprint(buf, buf + sizeof buf, "S\t%s\t*\tLN:i:%d\n",
+			l, u->length);
+		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
+			x = *e;
+			v = nodes + (x >> 2);
+			vl = getnodelabel(v->id);
+			p = seprint(p, buf + sizeof buf, "L\t%s\t%c\t%s\t%c\t*\n",
+				l, x&1?'-':'+', vl, x&2?'-':'+');
+		}
+		/* FIXME: detect trunctation or avoid it */
+		if(writefs(fs, buf, p - buf) < 0){
+			freefs(fs);
+			return -1;
+		}
+	}
+	freefs(fs);
+	return 0;
+}
+
+static void
+fnexportgfa(Cell *x)
+{
+	char *s;
+
+	s = getsval(x);
+	if(strlen(s) < 1)
+		FATAL("invalid file path: %s", s);
+	if(printgfa(s) < 0)
+		FATAL("%s", error());
+	logmsg("exportgfa: done\n");
+}
+
 static void
 fnexportsvg(Cell *x)
 {
@@ -682,6 +733,7 @@ addon(TNode **a, int)
 	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	case AREFRESH: fnrefresh(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
+	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	case ACOLLAPSE: fncollapse(x); break;
