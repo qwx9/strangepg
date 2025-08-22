@@ -356,7 +356,7 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
  * eg. cnode length or w/e should be the reference we use here */
 /* FIXME: maybe we just need to re-fetch this data in the gfa...? */
 int
-setclength(Node *u, int len)
+setclength(Node *u, uvlong len)
 {
 	CNode *U;
 
@@ -374,10 +374,10 @@ setclength(Node *u, int len)
 }
 
 /* FIXME: too much recursive shit */
-static inline int
+static inline vlong
 sublength(CNode *U)
 {
-	int n;
+	vlong n;
 	ioff i;
 
 	n = U->length;
@@ -1189,6 +1189,10 @@ init(void)
 	CNode *U, *E;
 	Node *u;
 
+	if(cnodes != nil){
+		werrstr("coarsening already initialized");
+		return -1;
+	}
 	nnodes = dylen(nodes);
 	n = nnodes;
 	cnodes = emalloc(n * sizeof *cnodes);
@@ -1198,8 +1202,8 @@ init(void)
 		U->nedges = u->nedges;
 		U->parent = U->child = U->sibling = -1;
 		/* FIXME: can get out of sync if loaded from setattr */
-		if((U->length = u->length) == 0.0f)	/* FIXME */
-			U->length = 1.0f;
+		if((U->length = u->length) == 0)	/* FIXME */
+			U->length = 1;
 	}
 	nedges = dylen(edges);
 	n = nedges * sizeof *edges;

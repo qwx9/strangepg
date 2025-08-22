@@ -34,7 +34,7 @@ enum{
 struct Node{
 	ioff id;
 	uchar flags;
-	uint length;	/* FIXME */
+	uvlong length;	/* FIXME */
 	Vertex pos0;	/* FIXME: shouldn't be here, only query */
 	ioff eoff;
 	ioff nedges;
