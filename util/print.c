@@ -46,14 +46,16 @@ writelog(char *s, int iserr)
 	nlog++;
 }
 
+/* FIXME: va()-less: most of these will only write up to one line of text;
+ * doesn't make sense to do more, survey usage */
 void
 logmsg(char *s)
 {
 	qlock(&llock);
 	writelog(s, 0);
-	qunlock(&llock);
 	if(!onscreen)
 		warn("%s", s);
+	qunlock(&llock);
 }
 
 void
@@ -61,8 +63,8 @@ logerr(char *s)
 {
 	qlock(&llock);
 	writelog(s, 1);
-	qunlock(&llock);
 	warn("%s", s);
+	qunlock(&llock);
 }
 
 void
