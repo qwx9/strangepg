@@ -26,7 +26,7 @@
 #ifndef __AC_KHASHL_H
 #define __AC_KHASHL_H
 
-#define AC_VERSION_KHASHL_H "r30"
+#define AC_VERSION_KHASHL_H "r36"
 
 #include <stdlib.h>
 #include <string.h>
@@ -182,17 +182,14 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 			 return 0; /* requested size is too small */ \
 		} \
 		new_used = Kmalloc(h->km, khint32_t, __kh_fsize(new_n_buckets)); \
+		if (!new_used) { wunlock(&h->l); return -1; } /* not enough memory */ \
 		memset(new_used, 0, __kh_fsize(new_n_buckets) * sizeof(khint32_t)); \
-		if (!new_used) { \
-			wunlock(&h->l); \
-			return -1; /* not enough memory */ \
-		} \
 		n_buckets = h->keys? (khint_t)1U<<h->bits : 0U; \
 		if (n_buckets < new_n_buckets) { /* expand */ \
 			khkey_t *new_keys = Krealloc(h->km, khkey_t, h->keys, new_n_buckets); \
 			if (!new_keys) { Kfree(h->km, new_used); wunlock(&h->l); return -1; } \
 			h->keys = new_keys; \
-		} /* otherwise shrink */ \
+		} \
 		new_mask = new_n_buckets - 1; \
 		for (j = 0; j != n_buckets; ++j) { \
 			khkey_t key; \
@@ -213,8 +210,11 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 				} \
 			} \
 		} \
-		if (n_buckets > new_n_buckets) /* shrink the hash table */ \
-			h->keys = Krealloc(h->km, khkey_t, (void*)h->keys, new_n_buckets); \
+		if (n_buckets > new_n_buckets) { /* shrink the hash table */ \
+			khkey_t *new_keys = Krealloc(h->km, khkey_t, h->keys, new_n_buckets); \
+			if (!new_keys) { Kfree(h->km, new_used); wunlock(&h->l); return -1; } \
+			h->keys = new_keys; \
+		} \
 		Kfree(h->km, h->used); /* free the working space */ \
 		h->used = new_used, h->bits = new_bits; \
 		wunlock(&h->l); \
@@ -304,6 +304,7 @@ typedef struct {
 	SCOPE HType *prefix##_init2(void *km, int bits) { \
 		HType *g; \
 		g = Kcalloc(km, HType, 1); \
+		if (!g) return 0; \
 		g->bits = bits, g->km = km; \
 		g->sub = Kcalloc(km, HType##_sub, 1U<<bits); \
 		return g; \
