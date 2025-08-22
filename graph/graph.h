@@ -1,3 +1,4 @@
+int	exportct(char*);
 void	printgraph(void);
 void	explode(ioff);
 

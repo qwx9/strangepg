@@ -66,6 +66,39 @@ getnodeidx(ioff id)
 	return idx;
 }
 
+int
+exportct(char *path)
+{
+	int r;
+	ioff i;
+	char buf[1024], *p;
+	File *fs;
+	CNode *U, *UE;
+
+	if(cnodes == nil){	/* FIXME: build it? */
+		werrstr("no tree yet");
+		return -1;
+	}
+	if((fs = openfs(path, OWRITE)) == nil)
+		return -1;
+	r = -1;
+	p = seprint(buf, buf + sizeof buf, "digraph {\n");
+	if(writefs(fs, buf, p - buf) < 0)
+		goto end;
+	for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
+		if(U->parent != -1){
+			p = seprint(buf, buf + sizeof buf, "\t%d -> %d\n", U->parent, i);
+			if(writefs(fs, buf, p - buf) < 0)
+				goto end;
+		}
+	}
+	p = seprint(buf, buf + sizeof buf, "}\n");
+	r = writefs(fs, buf, p - buf);
+end:
+	freefs(fs);
+	return r;
+}
+
 static void
 printcbranch(ioff i, ioff p)
 {

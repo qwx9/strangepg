@@ -647,7 +647,7 @@ fnexpand1(Cell *x)
 	t = μsec();
 	if(expand(id) < 0)
 		logerr(va("expand %d: %s\n", id, error()));
-	warn("expandone: %.2f ms\n", (μsec() - t) / 1000.0f);
+	warn("expand1: %.2f ms\n", (μsec() - t) / 1000.0f);
 }
 
 /* erst die falafel, dann der wein */
@@ -726,6 +726,18 @@ fncollapse(Cell *x, TNode *nextarg)
 
 /* FIXME: stdin commands only get sent/updated on an event like mouse
  * move in window */
+
+static void
+fnexportct(Cell *x)
+{
+	char *s;
+
+	s = getsval(x);
+	if(strlen(s) < 1)
+		FATAL("invalid file path: %s", s);
+	if(exportct(s) < 0)
+		FATAL("%s", error());
+}
 
 /* FIXME: fs: fsprint()/fseprint() functions or sth */
 /* FIXME: should be in gfa.c or in awk */
@@ -810,6 +822,7 @@ addon(TNode **a, int)
 	case AEXPAND1: fnexpand1(x); break;
 	case AEXPANDALL: expandall(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
+	case AEXPORTCOARSE: fnexportct(x); break;
 	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;
 	case AINFO: fninfo(x); break;

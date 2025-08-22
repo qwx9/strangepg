@@ -33,6 +33,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "expand1",	AEXPAND1,		ADDON },
 	{ "expandall",	AEXPANDALL,		ADDON },
 	{ "explode",	AEXPLODE,		ADDON },
+	{ "exportcoarse",	AEXPORTCOARSE,		ADDON },
 	{ "exportgfa",	AEXPORTGFA,		ADDON },
 	{ "exportsvg",	AEXPORTSVG,		ADDON },
 	{ "float",	FFLOAT,		BLTIN },
