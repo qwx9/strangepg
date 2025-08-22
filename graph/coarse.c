@@ -5,32 +5,25 @@
 #include "graph.h"
 #include "layout.h"
 #include "drw.h"
+#include "fs.h"
+#include "coarse.h"
+
+CNode *cnodes;
+ioff *cedges;
+ioff nnodes, nedges;
+
+typedef struct Adj Adj;
+struct Adj{
+	ioff u;
+	uint deg;
+	ioff adj[];
+};
 
 KHASHL_SET_INIT(KH_LOCAL, edgeset, es, u64int, kh_hash_uint64, kh_eq_generic)
+KHASHL_MAP_INIT(KH_LOCAL, degmap, dg, ioff, uint, kh_hash_uint32, kh_eq_generic)
 
-enum{
-	FCNvisited = 1<<0,
-};
-/* FIXME: some of the properties of the nodes would be nice to keep as read-
- * only for recovery or undoing changes; but a lot of those could just be
- * kept in the gfa and re-read as well, that's relatively cheap and can be
- * done asynchronously already */
-typedef struct CNode CNode;
-struct CNode{
-	ioff idx;		/* correspondence in visible nodes[] */
-	ioff eoff;
-	ioff nedges;
-	ioff parent;
-	ioff child;
-	ioff sibling;
-	uchar flags;	/* FIXME */
-	int length;		/* LN[id] value before coarsening */	/* FIXME: uint? */
-};
-static CNode *cnodes;	/* immutable */
-static ioff *cedges;	/* immutable */
-static ioff nnodes, nedges, ncoarsed;
+static int ncoarsed;
 static ioff *expnodes;
-static u64int *crapges;
 
 enum{
 	Srandom,
@@ -44,6 +37,8 @@ enum{
  * draw lengths probably have to be recomputed;
  * color, length, number of nodes, etc. (but should still be able to dig up
  * a collapsed node) */
+/* FIXME: does logerr even work from within awk? shouldn't we FATAL? this
+ * should be elsewhere also */
 
 /* FIXME */
 /* not thread-safe */
@@ -150,7 +145,7 @@ checkcnode(CNode *U)
 	DPRINT(Debugcoarse, "checkcnode: id=%zd %d %d %d idx=%d",
 		U - cnodes, U->parent, U->child, U->sibling, U->idx);
 	if(U->flags & FCNvisited){
-		DPRINT(Debugcoarse, "check: cycle detected or flags dirty id=%zd idx=%d",
+		warn("check: cycle detected or flags dirty id=%zd idx=%d",
 			U - cnodes, U->idx);
 		abort();
 	}
@@ -194,7 +189,6 @@ checkctree(void)
 	}
 	for(i=0, U=cnodes; U<UE; U++, i++){
 		if((U->flags & FCNvisited) == 0){
-			/* FIXME: warn + abort wrapper (not fatal? debug!=0 only?) */
 			warn("check: unvisited cnode %zd %d %d %d idx=%d\n",
 				i, U->parent, U->child, U->sibling, U->idx);
 			abort();
@@ -278,6 +272,7 @@ newedge(ioff i, ioff j, ioff e, edgeset *eset)
 	 * self-loops at either end of the node; at the top we won't be
 	 * restoring all edges though, maybe have a flag or check if it's
 	 * fully expanded now */
+	e &= 3;
 	if(i == j && (e == 2 || e == 1))
 		return 0;
 	if(i > j || i == j && e & 1)	/* see fs/gfa.c:/^readedge */
@@ -323,21 +318,19 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 		v = nodes + (uint)(uv >> 2 & 0x3fffffff);
 		DPRINT(Debugcoarse, "> edge[%d/%d]: %d%c,%d%c → %zd,%zd [%#08x]", n, m, u->id, x&1?'-':'+', v->id, x&2?'-':'+', u-nodes, v-nodes, uv);
 		if(u < nodes || u >= nodes+dylen(nodes)){
-			warn("oob: u %#p %d/%d\n", u, u-nodes, dylen(nodes));
+			warn("oob: u %#p %d/%d id %llx\n", u, u-nodes, dylen(nodes), uv);
 			abort();
 		}
 		assert((u->flags & FNalias) == 0);
-		u->flags &= ~FNalias;
 		edges[u->eoff+u->nedges++] = x;
 		if(u == v)	/* the mirror is what we just added */
 			continue;
 		n++;
 		if(v < nodes || v >= nodes+dylen(nodes)){
-			warn("oob: v %#p %d/%d\n", v, v-nodes, dylen(nodes));
+			warn("oob: v %#p %d/%d id %llx\n", v, v-nodes, dylen(nodes), uv);
 			abort();
 		}
 		assert((v->flags & FNalias) == 0);
-		v->flags &= ~FNalias;
 		x = uv >> 30 & 0xfffffffcULL | (uv >> 1 & 1 | uv << 1 & 2) ^ 3;
 		edges[v->eoff+v->nedges++] = x;
 	}
@@ -345,12 +338,6 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 	printgraph();
 	assert(n == nadj && m == nedge);
 }
-
-#define	TIME(lab)	if(debug & Debugperf) do{ \
-	t = μsec(); \
-	warn("uncoarsen: " lab ": %.2f ms\n", (t - t0)/1000); \
-	t0 = t; \
-}while(0)
 
 /* FIXME: we should just change how this is handled to begin with,
  * eg. cnode length or w/e should be the reference we use here */
@@ -408,46 +395,59 @@ sublength(CNode *U)
 	*/
 }
 
+static inline int
+pushedge(ioff i, ioff j, int dir, edgeset *eset, short *deg)
+{
+	if(!newedge(i, j, dir, eset)){
+		DPRINT(Debugcoarse, "> reject edge %d%c,%d%c",
+			i, dir&1?'-':'+', j, dir&2?'-':'+');
+		return 0;
+	}
+	DPRINT(Debugcoarse, "> save edge %d%c,%d%c",
+		i, dir&1?'-':'+', j, dir&2?'-':'+');
+	deg[i]++;
+	if(j != i)
+		deg[j]++;
+	return 1;
+}
+
+#define	TIME(lab)	if(debug & Debugperf) do{ \
+	t = μsec(); \
+	warn("uncoarsen: " lab ": %.2f ms\n", (t - t0)/1000); \
+	t0 = t; \
+}while(0)
+
 /* note: only resize global arrays at the very end to avoid racing given
  * our very loose safeguards */
-/* FIXME: split into smaller functions (separate commit?) */
-/* FIXME: use of crapges sucks, and we're still missing (or inventing) some edges;
- * makes sense given the assymetry between coarsen and uncoarsen; also
- * extra nodes? check */
+/* FIXME: split into smaller functions (separate commit?); separate files? */
 int
 uncoarsen(void)
 {
 	short *deg, *d;
-	u64int *vp, *pp, *ve;
 	ioff off, i, j, x, nn, nnew, *e, *ee, *ip, *ie;
 	double t, t0;
-	Node *u, *ue, *v, *unew;
-	CNode *U, *V;
+	Node *u, *ue, *unew;
+	CNode *U, *V, *UE;
 	edgeset *eset;
 
 	if(expnodes == nil){
 		werrstr("nothing to do");
 		return -2;
 	}
-	/* FIXME: count is right, but there are duplicates and missing redges
-	 * in render; also labels seem wrong */
 	if(cnodes == nil){
 		werrstr("no coarsening tree");
 		return -1;
 	}
 	DPRINT(Debugcoarse, "uncoarsen: freezing draw and render...");
-	freezeworld();
+	freezeworld();	/* FIXME: maybe just check for flag in draw/w/e loops */
 	DPRINT(Debugcoarse, "current graph: %d (%d) nodes, %d (%d) edges",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
 	t0 = μsec();
 	nnew = dylen(expnodes);
 	nn = dylen(nodes);
-	unew = emalloc(nnew * sizeof *unew);	/* FIXME: bleh */
+	unew = emalloc(nnew * sizeof *unew);
 	TIME("alloc");
-	DPRINT(Debugcoarse, "resetting node lengths...");
 	drawing.length = (Range){9999.0f, 0.0f};	/* FIXME: necessary else skipped */
-	/* new nodes only */
-	DPRINT(Debugcoarse, "colleting new inner node and frontier edges...");
 	for(u=unew, ip=expnodes, ie=ip+nnew; ip<ie; ip++, u++){
 		i = *ip;
 		U = cnodes + i;
@@ -455,102 +455,29 @@ uncoarsen(void)
 		assert(U->idx == nn + ip - expnodes);
 		V = cnodes + U->parent;
 		assert(V->idx != -1);
-		//spawn(V->idx);	/* FIXME: rnode realloc racing against layout */
 	}
 	dyfree(expnodes);
-	TIME("recompute edge set");
+	TIME("collecting new inner nodes");
 	eset = es_init();
 	deg = emalloc((nn + nnew) * sizeof *deg);
-	for(d=deg, u=nodes, i=0; i<nn+nnew; i++, u++, d++){
-		if(i == nn)
-			u = unew;
-		U = cnodes + u->id;
-		assert(U->idx == i);
+	/* FIXME: good enough for now (1e7 edges: 500ms on p14s), correct
+	 * shortcuts are hard to find; fix it later */
+	for(U=cnodes, UE=U+nnodes; U<UE; U++){
+		if((i = U->idx) == -1)
+			i = activetop(U)->idx;
 		for(e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
 			x = *e;
-			j = x >> 2;
-			V = cnodes + j;
-			/* FIXME: problem is here, we just put everything to hidden
-			 * nodes as self-edges */
-			if(V->idx == -1){
-				for(j=V->parent; j!=-1; j=V->parent){
-					V = cnodes + j;
-					if(V->idx != -1)
-						break;
-				}
-				//if(V == U || V->idx == -1)
-				// FIXME: hidden top node? does that even make sense?
-				if(V->idx == -1){
-					abort();
-					continue;
-				}
-			}
-			if(V == U && i != j)	/* skip artificial self-edges in supernodes */
+			V = cnodes + (x >> 2);
+			if(V == U)
 				continue;
-			/* can't rely on order of u and v since we're looking at cedges */
-			if(newedge(i, V->idx, x & 3, eset)){
-				(*d)++;
-				v = V->idx < nn ? nodes + V->idx : unew + V->idx - nn;
-				DPRINT(Debugcoarse, "> save edge %d%c,%d%c →%d,%d (%d,%d)",
-					i, x&1?'-':'+', V->idx, x&2?'-':'+',
-					u->id, v->id, i, j);
-				/* if it's a new edge, we must be the first to have seen it */
-				if(U == V)
-					continue;
-				deg[V->idx]++;
-			}else
-				DPRINT(Debugcoarse, "> reject edge %d%c,%d%c →%d,%d (%d,%d)",
-					i, x&1?'-':'+', V->idx, x&2?'-':'+',
-					u->id, V->idx < nn ? nodes[V->idx].id : unew[V->idx-nn].id, U->idx, V->idx);
+			if((j = V->idx) == -1)
+				j = activetop(V)->idx;
+			if(j == i && (U->idx == -1 || V->idx == -1))
+				continue;
+			pushedge(i, j, x, eset, deg);
 		}
 	}
-	TIME("collect frontier edges");
-	/* FIXME: doesn't work across multiple rounds of collapse or expand;
-	 * we're missing edges that were cut for redundancy and we don't have
-	 * anything to find out what they were afterwards; we don't want to
-	 * work backwards here because there isn't a direct correspondence
-	 * between collapse and expand; instead we need a way to find all edges
-	 *	keys:
-	 *	- new edges will only be because of newly expanded nodes and their
-	 *		parents
-	 *	- direct adjacencies to new nodes are not a problem; intermediate
-	 *		ones that would be renamed are
-	 */
-	warn("uncoarsen: FIXME ignoring crapges or missing edges\n");
-	for(vp=pp=crapges, ve=vp+dylen(vp); vp<ve; vp++){
-		break;	// FIXME
-		U = cnodes + (*vp >> 32 & 0x3fffffffULL);
-		V = cnodes + ((*vp & 0xfffffffcUL) >> 2);
-		x = *vp & 3;
-		DPRINT(Debugcoarse, "crapedge %zd(%d),%zd(%d)", U-cnodes, U->idx, V-cnodes, V->idx);
-		do{
-			//assert(U->parent != -1);
-			if(U->parent == -1)
-				break;
-			U = cnodes + U->parent;
-		}while(U->idx == -1);
-		do{
-			//assert(V->parent != -1);
-			if(V->parent == -1)
-				break;
-			V = cnodes + V->parent;
-		}while(V->idx == -1);
-		if(U->idx == -1 || V->idx == -1)
-			continue;
-		DPRINT(Debugcoarse, " → %d%c,%d%c", U->idx, x&1?'-':'+', V->idx, x&2?'-':'+');
-		if(newedge(U->idx, V->idx, x, eset)){
-			DPRINT(Debugcoarse, "added.");
-			deg[U->idx]++;
-			if(U != V)
-				deg[V->idx]++;
-			*pp++ = *vp;
-		}else
-			DPRINT(Debugcoarse, "skipped.");
-	}
-	x = pp - crapges;
-	dyresize(crapges, x);
-	DPRINT(Debugcoarse, "kept %d/%d crap edges", x, dylen(crapges));
-	TIME("check crap edges");
+	TIME("collecting inner edges");
 	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
 		lsleep(1000);
 	TIME("wait for green light");
@@ -585,12 +512,8 @@ uncoarsen(void)
 	resizenodes();
 	TIME("reset node lengths");
 	thawworld();
-	/* FIXME: logmsg */
-	DPRINT(Debugcoarse, "uncoarsen: done.");
-	//DPRINT(Debugcoarse, "current graph: %d (%d) nodes, %d (%d) edges",
-	//	dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
-	warn("graph after expansion: %d (%d) nodes, %d (%d) edges\n",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
+	logmsg(va("graph after expansion: %d (%d) nodes, %d (%d) edges\n",
+		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
 	printgraph();
 	checktree();
 	return 0;
@@ -695,7 +618,7 @@ expandall(void)
 int
 coarsen(void)
 {
-	ioff x, c, j, off, ne, ne2, *e, *ee, *deg, *d;
+	ioff x, j, off, ne, ne2, *e, *ee, *deg, *d;
 	double t, t0;
 	edgeset *eset;
 	Node *u, *ue, *v, *up;
@@ -738,22 +661,18 @@ coarsen(void)
 		rp++;
 	}
 	TIME("assign slot");
-	//deg = emalloc((dylen(nodes) - ncoarsed) * sizeof *deg);
 	deg = emalloc(dylen(nodes) * sizeof *deg);
 	DPRINT(Debugcoarse, "storing frontier edgeset...");
 	for(ne=ne2=0, u=nodes; u<ue; u++){
 		U = cnodes + u->id;
-		c = 0;
 		if(U->idx == -1){
 			DPRINT(Debugcoarse, "inactive node %d: try to get parent", u->id);
 			if((V = activetop(U)) == U || V->idx == -1)
 				continue;
 			DPRINT(Debugcoarse, "looking at %zd instead", V - cnodes);
 			U = V;
-			c |= 1;
 		}
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
-			c &= ~2;
 			x = *e;
 			j = x >> 2;
 			v = nodes + j;
@@ -764,7 +683,6 @@ coarsen(void)
 				continue;
 			}
 			if(V->idx == -1){
-				c |= 2;
 				V = activetop(V);
 				if(V != U && V->idx == -1){
 					warn("edge %d%c,%d%c (%zd,%zd): V %d %d/%d/%d can't be inactive and an orphan\n",
@@ -775,10 +693,7 @@ coarsen(void)
 				DPRINT(Debugcoarse, "> external edge to collapsed node %d%c,%d%c (%zd,%zd)",
 					u-nodes, x&1?'-':'+', j, x&2?'-':'+', u->id, v->id);
 			}
-			/* FIXME */
-			if(c == 3)
-				dypush(crapges, (uvlong)u->id << 32 | v->id << 2 | x & 3);
-			if(newedge(U->idx, V->idx, x & 3, eset)){
+			if(newedge(U->idx, V->idx, x, eset)){
 				deg[U->idx]++;
 				ne2++;
 				DPRINT(Debugcoarse, "> keep edge %d%c,%d%c; du=%d, dv=%d",
@@ -788,7 +703,6 @@ coarsen(void)
 					deg[V->idx]++;
 					ne2++;
 				}
-				//dypush(crapges, (uvlong)u->id << 32 | v->id << 2 | x & 3);
 				ne++;
 			}else
 				DPRINT(Debugcoarse, "> discard redundant edge %d%c,%d%c (%zd,%zd)",
@@ -813,10 +727,9 @@ coarsen(void)
 	free(deg);
 	x = up - nodes;
 	assert(x == dylen(nodes) - ncoarsed);
-	t0 = μsec();
+	TIME("recompute offsets");
 	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
 		lsleep(1000);
-	/* FIXME: still racing, can still get stuck */
 	TIME("wait for green light");
 	x = rp - rnodes;
 	assert(x == dylen(nodes) - ncoarsed);
@@ -832,11 +745,8 @@ coarsen(void)
 	TIME("restore edges");
 	thawworld();
 	es_destroy(eset);
-	DPRINT(Debugcoarse, "coarsen: done.");
-//	DPRINT(Debugcoarse, "current graph: %d (%d) nodes, %d (%d) edges",
-//		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
-	warn("graph after coarsening: %d (%d) nodes, %d (%d) edges\n",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
+	logmsg(va("graph after coarsening: %d (%d) nodes, %d (%d) edges\n",
+		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
 	ncoarsed = 0;
 	printgraph();
 	checktree();
@@ -845,15 +755,34 @@ coarsen(void)
 
 #undef TIME
 
-/* FIXME: yuck */
+/* FIXME: logmsg or just print? */
 int
 commit(void)
 {
 	int r;
+	double t;
+	char *name;
+	int (*fn)(void);
 
-	if((r = uncoarsen()) < -1 && (r = coarsen()) < -1)
+	t = μsec();
+	if(ncoarsed > 0){
+		fn = coarsen;
+		name = "collapse";
+	}else if(expnodes != nil){
+		fn = uncoarsen;
+		name = "expand";
+	}else{
+		logmsg("collapse/expand: no effect.\n");
 		return 0;
-	return r;
+	}
+	switch(r = fn()){
+	case -1: return -1;
+	case -2: DPRINT(Debuginfo, "%s: %s", name, error()); /* wet floor */
+	default: r = 0;
+	}
+	t = (μsec() - t) / 1000.0;
+	logmsg(va("%s: done (%.2f ms).\n", name, t));
+	return 0;
 }
 
 static inline CNode *
@@ -1181,8 +1110,8 @@ sort(ioff *buf, vlong n, int type)
 }
 
 /* FIXME: avoid the duplication of these buffers from fs */
-static void
-init(void)
+int
+initcoarse(void)
 {
 	ioff i;
 	ssize n;
@@ -1209,98 +1138,248 @@ init(void)
 	n = nedges * sizeof *edges;
 	cedges = emalloc(n);
 	memcpy(cedges, edges, n);
+	return 0;
 }
 
-/* FIXME: seems to me it would be better to push neighbors than ourselves,
- *  to a new array; we're doing a lot of extra redundant work otherwise; the
- *  problem then is that we won't merge top nodes: maybe merge down first then
- *  merge tops after? but that's equivalent to what we're doing here */
+#define	TIME(lab)	if(debug & Debugperf) do{ \
+	t1 = μsec(); \
+	warn("sortedges: " lab ": %.2f ms\n", (t1 - t0)/1000); \
+	t0 = t1; \
+}while(0)
+
+/* FIXME: split up + benchmark vs. qsort */
+static Adj *
+sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
+{
+	uint d;
+	ioff i, j, nn, n, m, w, o, *op, *off, *offof, *e, *ee, *ep, *t, *te, *totals;
+	ssize sz;
+	u64int uv;
+	double t1, t0;
+	Adj *adj, *adje, *a;
+	CNode *U, *UE;
+	khint_t k, kk;
+
+	USED(type);
+	nn = 0;
+	totals = nil;	/* degree d frequency count */
+	t0 = μsec();
+	if(deg == nil){
+		for(U=cnodes, UE=U+nnodes; U<UE; U++){
+			d = U->nedges;
+			dygrow(totals, d);
+			totals[d]++;
+		}
+		nn = nnodes;
+	}else{
+		kh_foreach(deg, k){
+			U = cnodes + kh_key(deg, k);
+			U->flags &= ~FCNvisited;
+			d = kh_val(deg, k);
+			dygrow(totals, d);
+			totals[d]++;
+			nn++;
+		}
+	}
+	TIME("occurrence counting");
+	if(nn == 0){
+		*adjp = nil;
+		return nil;
+	}
+	w = dylen(totals);
+	off = emalloc(w * sizeof *off);
+	for(n=m=0, d=0, op=off, t=totals, te=t+w; t<te; t++, d++, op++){
+		w = *t;
+		*t = n;		/* now cumulative number of nodes up to degree d */
+		n += w;
+		if(d > 0){
+			*op = m;
+			m += w * d;	/* total number of edges in bucket */
+		}
+		//warn("totals[%zd] %d, sum %d (%d)\n", t-totals, w, n, m);
+	}
+	TIME("offset computation");
+	sz = nn * sizeof *adj + m * sizeof adj->u;
+	adj = emalloc(sz);
+	adje = (Adj *)((uchar *)adj + sz);
+	if(eset == nil){
+		for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
+			d = U->nedges;
+			a = (Adj *)((ioff *)(adj + totals[d]) + off[d]);
+			//warn("d=%d id=%d total %d off %d p %zd ", d, i, totals[d], off[d], (uchar*)a-(uchar*)adj);
+			off[d] += d;
+			totals[d]++;
+			a->u = i;
+			a->deg = d;
+			for(ep=a->adj, e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
+				//warn(" → [%zd] %zd", (uchar *)ep-(uchar *)adj, e-cedges+U->eoff);
+				*ep++ = *e >> 2;
+			}
+			//warn("\n");
+		}
+		//for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
+		//	warn("adj[%d] off=%zd id=%d d=%d\n",
+		//		i, (uchar*)a-(uchar*)adj, a->u, a->deg);
+		//	e = a->adj + a->deg;
+		//}
+	}else{
+		/* FIXME: SLOW */
+		offof = emalloc(nnodes * sizeof *offof);
+		kh_foreach(eset, kk){
+			uv = kh_key(eset, kk);
+			i = uv >> 32;
+			j = uv & 0x7fffffff;
+			i = top(cnodes + i) - cnodes;	/* FIXME: should be always the same */
+			j = top(cnodes + j) - cnodes;
+			if(i == j)
+				continue;
+			//warn("uv %d,%d: i=%d", i, j, i);
+			k = dg_get(deg, i);
+			assert(k != kh_end(deg));
+			d = kh_val(deg, k);
+			o = off[d];
+			//warn(" d=%d off[d]=%d", d, o);
+			if(offof[i] == 0){	/* avoid preinitializing by incrementing... */
+				a = (Adj *)((ioff *)(adj + totals[d]) + o);
+				off[d] += d;
+				totals[d]++;
+				offof[i] = (uchar *)a - (uchar *)adj + 1;
+				a->u = i;
+			}else
+				a = (Adj *)((uchar *)adj + offof[i] - 1);
+			a->adj[a->deg++] = j;
+			//warn(" :: j=%d", j);
+			k = dg_get(deg, j);
+			assert(k != kh_end(deg));
+			d = kh_val(deg, k);
+			o = off[d];
+			//warn(" d=%d off[d]=%d\n", d, o);
+			if(offof[j] == 0){
+				a = (Adj *)((ioff *)(adj + totals[d]) + o);
+				off[d] += d;
+				totals[d]++;
+				offof[j] = (uchar *)a - (uchar *)adj + 1;
+				a->u = j;
+			}else
+				a = (Adj *)((uchar *)adj + offof[j] - 1);
+		}
+		free(offof);
+		//for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
+		//	warn("adj[%d] off=%zd id=%d d=%d\n",
+		//		i, (uchar*)a-(uchar*)adj, a->u, a->deg);
+		//	e = a->adj + a->deg;
+		//}
+	}
+	TIME("edge placement");
+	dyfree(totals);
+	free(off);
+	*adjp = adj;
+	return adje;
+}
+
+#undef TIME
+#define	TIME(lab)	if(debug & Debugperf) do{ \
+	t = μsec(); \
+	warn("buildct: " lab ": %.2f ms\n", (t - t0)/1000); \
+	t0 = t; \
+}while(0)
+
 int
 buildct(void)
 {
-	int n, r;
-	ioff i, j, m, *e, *ee, *p, *pe, *pp, *ids;
-	CNode *U, *UE, *V, *W, *T;
+	int abs;
+	uint d;
+	u64int uv;
+	double t, t0;
+	ioff i, j, *e, *ee;
+	edgeset *eset;
+	degmap *deg;
+	Adj *adj, *adje, *a;
+	CNode *U, *UE, *V, *C;
+	khint_t k;
 
-	if(cnodes != nil)
-		return 0;
-	init();
-	m = nnodes;
-	ids = emalloc(m * sizeof *ids);
-	for(i=0, p=ids, pe=p+m; p<pe; p++)	/* FIXME */
-		*p = i++;
-	sort(ids, m, Sascdeg);
-	for(r=0; m>0; r++){
-		DPRINT(Debugcoarse, "buildct round %d: %d/%d remaining",
-			r+1, m, nnodes);
-		for(p=pp=ids, pe=p+m; p<pe; p++){
-			i = *p;
-			U = cnodes + i;
-			DPRINT(Debugcoarse, "buildct: node %d idx=%d %d %d %d f=%x",
-				i, U->idx, U->parent, U->child, U->sibling, U->flags);
-			assert((U->flags & FCNvisited) == 0);
-			U->flags |= FCNvisited;
-			T = nil;
-			for(n=0, e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
-				j = (*e >> 2);
-				V = cnodes + j;
-				DPRINT(Debugcoarse, "buildct: adj %d idx=%d %d %d %d",
-					j, V->idx, V->parent, V->child, V->sibling);
-				if(V == U){
-					DPRINT(Debugcoarse, "buildct: %d: V is U, skipping", i);
-					continue;
-				}
-				if(V->flags & FCNvisited){
-					DPRINT(Debugcoarse, "buildct: skip top node");
-					continue;
-				}
-				if(j == U->parent){
-					DPRINT(Debugcoarse, "buildct: skip our parent");
-					continue;
-				}
-				/* two nodes within the same component won't have the same
-				 * top until the appropriate parent links are established */
-				if(V->parent != -1){
-					if(T == nil)
-						T = top(U);
-					if((V = top(V)) == T){
-						DPRINT(Debugcoarse, "buildct: %d: top(V) is top(U), skipping", i);
-						continue;
-					}
-					j = V - cnodes;
-					assert(V->parent == -1);
-					DPRINT(Debugcoarse, "buildct: grabbing subtree up to %d", j);
-				}
-				DPRINT(Debugcoarse, "buildct: %d has new child %d", i, j);
-				V->parent = i;
-				if(n == 0)
-					W = lastchild(U);
-				if(W == nil)
-					U->child = j;
-				else
-					W->sibling = j;
-				W = V;
-				n++;
-			}
-			if(n > 0)
-				*pp++ = i;
+	if(status & FSlockedctab){
+		if(cnodes != nil)
+			return 0;
+		warn("FIXME buildct: collapse request before ctab loaded\n");
+		werrstr("ctab not yet ready");
+		return -1;
+	}else
+		status |= FSlockedctab;
+	t0 = μsec();
+	if(initcoarse() < 0)
+		return -1;
+	TIME("initcoarse");
+	adje = sortedges(&adj, nil, nil, Sascdeg);	/* FIXME: weird api */
+	TIME("sortedges");
+	deg = nil;
+	eset = nil;
+	while(adje > adj){
+		if(deg != nil){
+			dg_clear(deg);
+			es_clear(eset);
+		}else{
+			deg = dg_init();
+			eset = es_init();
 		}
-		m = pp - ids;
-		for(p=ids, pe=p+m; p<pe; p++)	/* FIXME */
-			cnodes[*p].flags &= ~FCNvisited;
-		/* FIXME: are we computing degree correctly? ← no. after first
-		 * round we no longer have a good degree count; also we go through
-		 * all nodes, then reevaluate those that successfully nabbed a
-		 * neighbor, is that what we want? */
-		/* FIXME: what is even degree in this context anymore? define it
-		 * first */
-		if(m > 1)
-			sort(ids, m, Sascdeg);
+		for(a=adj; a<adje; a=(Adj*)e){
+			i = a->u;
+			U = cnodes + i;
+			//warn("node %d d=%d %d %d %d ", i, a->deg, U->parent, U->child, U->sibling);
+			U = top(U);
+			i = U - cnodes;
+			//warn("⇒ [%zd] %d %d %d\n", i, U->parent, U->child, U->sibling);
+			C = nil;
+			for(e=a->adj, ee=e+a->deg; e<ee; e++){
+				j = *e;
+				V = cnodes + j;
+				//warn("adj %d %d %d %d ", j, V->parent, V->child, V->sibling);
+				if((V = top(V)) == U){
+					//warn("⇒ %zd %d %d %d = U\n", V-cnodes, V->parent, V->child, V->sibling);
+					continue;
+				}
+				j = V - cnodes;
+				//warn("⇒ %d %d %d %d visited %d\n", j, V->parent, V->child, V->sibling, V->flags & FCNvisited);
+				if((V->flags & FCNvisited) == 0){
+					V->flags |= FCNvisited;	/* don't reassign this turn */
+					V->parent = i;
+					if(U->child == -1)
+						U->child = j;
+					else{
+						if(C == nil)
+							C = lastchild(U);
+						C->sibling = j;
+					}
+					C = V;
+				}
+				uv = (uvlong)i << 32 | j;
+				es_put(eset, uv, &abs);
+				/* FIXME: not the actual degree count */
+				if(abs && V->parent != i){
+					k = dg_get(deg, i);
+					if(k == kh_end(deg)){
+						d = 1;
+						k = dg_put(deg, i, &abs);
+					}else
+						d = kh_val(deg, k) + 1;
+					//warn("\tadd %d,%d d=%d\n", i, j, d);
+					kh_val(deg, k) = d;
+				}
+			}
+			U->flags |= FCNvisited;	/* leave alone until next iteration */
+		}
+		TIME("round");
+		free(adj);
+		adje = sortedges(&adj, eset, deg, Sascdeg);
+		TIME("sortedges");
 	}
-	free(ids);
+	es_destroy(eset);
+	dg_destroy(deg);
+	free(adj);
 	for(U=cnodes, UE=U+nnodes; U<UE; U++)	/* FIXME */
 		U->flags &= ~FCNvisited;
-	checkctree();
-	printctree();
+	TIME("cleanup");
 	return 0;
 }
+
+#undef TIME
