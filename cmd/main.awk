@@ -250,7 +250,7 @@ function selectnode(name, id){
 	if(!checknodename(name))
 		return
 	id = node[name]
-	selectnodebyid(id)
+	selectnodebyid(id, 1)	# FIXME
 }
 function toggleselect(id){
 	if(!checknodeid(id))
