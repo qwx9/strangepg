@@ -371,6 +371,8 @@ fnloadbatch(void)
 {
 	Val *v, *vs, *ve;
 
+	if(valbuf == nil)	/* because clang is stupid */
+		return;
 	qlock(&buflock);
 	vs = valbuf;
 	valbuf = nil;
