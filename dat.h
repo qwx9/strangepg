@@ -84,6 +84,11 @@ struct Clk{
 	vlong n;
 };
 
+enum{
+	FSlockedctab = 1<<0,
+};
+extern int status;
+
 extern int debug;
 extern int gottagofast;	/* FIXME: state flag */
 extern char logbuf[], lastmsg[3][64], iserrmsg[3];

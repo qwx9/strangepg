@@ -125,6 +125,7 @@ OBJ:=\
 	draw/color.o\
 	draw/draw.o\
 	draw/view.o\
+	fs/ctab.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\

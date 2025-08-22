@@ -8,7 +8,8 @@
 
 extern int dbg;	/* FIXME: arg parsing happens after strawk is launched */
 
-int gottagofast = 0;
+int status;
+int gottagofast = 0;	/* FIXME: turn into flag, etc. */
 
 /* FIXME: doesn't need to be a global */
 typedef struct Input Input;
@@ -32,11 +33,14 @@ load(void)
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
 		/* defer anything that must be loaded after the graph(s) */
+		case FFcsv:
+			pushcmd("readcsv(\"%s\")", in->path);
+			break;
 		case FFlayout:
 			pushcmd("importlayout(\"%s\")", in->path);
 			break;
-		case FFcsv:
-			pushcmd("readcsv(\"%s\")", in->path);
+		case FFctab:
+			pushcmd("readctab(\"%s\")", in->path);
 			break;
 		default:
 			if(loadfs(in->path, in->type) < 0)
@@ -74,7 +78,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
+	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -82,6 +86,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
+		"-r FILE        Read coarsening table from FILE\n"
 		"-s LEN WIDE    Set node length and width (max: %.1f %.1f, default: %.1f %.1f)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
@@ -172,6 +177,10 @@ parseargs(int argc, char **argv)
 	case 'n':
 		pushcmd("layfile=\"%s\"", EARGF(usage()));
 		drawing.flags |= DFnope;
+		break;
+	case 'r':
+		pushfile(EARGF(usage()), FFctab);
+		status |= FSlockedctab;	/* prevent rebuilding it */
 		break;
 	case 's':
 		drawing.nodesz = atof(EARGF(usage()));

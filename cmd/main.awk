@@ -125,6 +125,12 @@ function importlayout(f){
 		noreset = 1
 	}
 }
+function readctab(f){
+	if(crm114 == 1)
+		print "t", f
+	else
+		deferred[++nd] = "t\t" f "\n"
+}
 function readcsv(f){
 	if(crm114 == 1)
 		print "f", f

@@ -211,6 +211,7 @@ readcmd(char *s)
 		case 'f':
 		case 'i':
 		case 'o':
+		case 't':
 		case 'x':
 		case 'y':
 		case 'z':
@@ -273,6 +274,12 @@ readcmd(char *s)
 				goto invalid;
 			if(exportlayout(fld[0]) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
+			break;
+		case 't':
+			if(m != 1)
+				goto invalid;
+			if(loadfs(fld[0], FFctab) < 0)
+				warn("readcmd: readctab %s: %s\n", fld[0], error());
 			break;
 		case 'x':
 			if(m != 2)

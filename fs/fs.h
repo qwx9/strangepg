@@ -33,11 +33,13 @@ enum{
 	FFgfa,
 	FFcsv,
 	FFlayout,
+	FFctab,
 	FFnil,
 };
 
 Filefmt*	reggfa(void);
 Filefmt*	regcsv(void);
+Filefmt*	regctab(void);
 int	readchar(File*);
 char*	nextfield(File*);
 char*	readfrag(File*);

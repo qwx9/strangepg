@@ -15,6 +15,7 @@ OFILES=\
 	cmd/cmd.$O\
 	draw/color.$O\
 	draw/draw.$O\
+	fs/ctab.$O\
 	fs/em.$O\
 	fs/fs.$O\
 	fs/gfa.$O\

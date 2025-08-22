@@ -29,4 +29,5 @@ initfs(void)
 {
 	fftab[FFgfa] = reggfa();
 	fftab[FFcsv] = regcsv();
+	fftab[FFctab] = regctab();
 }
