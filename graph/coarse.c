@@ -909,13 +909,13 @@ hideall(CNode *U, CNode *P, int nlevels)
 	if((n = hide(U, P)) == 0)
 		return 0;
 	if((j = U->child) != -1)
-		n += hideall(cnodes + j, U, nlevels);
+		n += hideall(cnodes + j, P, nlevels);
 	for(j=U->sibling; j!=-1; j=U->sibling){
 		U = cnodes + j;
 		if(hide(U, P)){
 			n++;
 			if(U->child != -1)
-				n += hideall(cnodes + U->child, U, nlevels);
+				n += hideall(cnodes + U->child, P, nlevels);
 		}
 	}
 	return n;
