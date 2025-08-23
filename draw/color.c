@@ -272,5 +272,6 @@ settheme(void)
 void
 initcol(void)
 {
-	cmap = cmap_init();
+	if((cmap = cmap_init()) == nil)
+		sysfatal("initcol: %s", error());
 }

@@ -458,7 +458,8 @@ uncoarsen(void)
 	}
 	dyfree(expnodes);
 	TIME("collecting new inner nodes");
-	eset = es_init();
+	if((eset = es_init()) == nil)
+		sysfatal("uncoarsen: %s", error());
 	deg = emalloc((nn + nnew) * sizeof *deg);
 	/* FIXME: good enough for now (1e7 edges: 500ms on p14s), correct
 	 * shortcuts are hard to find; fix it later */
@@ -643,7 +644,8 @@ coarsen(void)
 			dylen(rnodes), nnodes, dylen(nodes), dylen(redges), dylen(edges), nedges);
 	}
 	t0 = μsec();
-	eset = es_init();
+	if((eset = es_init()) == nil)
+		sysfatal("coarsen: %s", error());
 	DPRINT(Debugcoarse, "resetting node lengths...");
 	drawing.length = (Range){9999.0f, 0.0f};	/* FIXME: necessary else skipped */
 	DPRINT(Debugcoarse, "assigning new top node slots...");
@@ -1319,8 +1321,9 @@ buildct(void)
 			dg_clear(deg);
 			es_clear(eset);
 		}else{
-			deg = dg_init();
-			eset = es_init();
+			if((deg = dg_init()) == nil
+			|| (eset = es_init()) == nil)
+				sysfatal("buildct: %s", error());
 		}
 		for(a=adj; a<adje; a=(Adj*)e){
 			i = a->u;

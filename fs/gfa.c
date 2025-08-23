@@ -389,8 +389,9 @@ opengfa(Aux *a, char *path)
 		return nil;
 	logmsg(va("loadgfa: processing file: %s...\n", path));
 	free(path);
-	a->names = names_init();
-	a->edges = edges_init();
+	if((a->names = names_init()) == nil
+	|| (a->edges = edges_init()) == nil)
+		sysfatal("opengfa: %s", error());
 	return f;
 }
 
@@ -419,6 +420,8 @@ loadgfa1(void *arg)
 	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
 	TIME("mkgraph");
 	printgraph();
+	/* FIXME: always send two signals, one after topo is loaded and one
+	 * after everything is done, and let strawk decide what to do */
 	if(gottagofast){	/* FIXME: very much unsafe, won't work with csv, etc. */
 		pushcmd("cmd(\"OPL753\")");	/* load what we have and start layouting */
 		flushcmd();					/* awk must be in on it or it won't work */

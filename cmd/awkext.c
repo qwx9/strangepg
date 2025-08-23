@@ -873,7 +873,8 @@ initext(void)
 	initqlock(&buflock);
 	initqlock(&symlock);
 	initrwlock(&tablock);
-	map = tab_init();
+	if((map = tab_init()) == nil)
+		sysfatal("initext: %s", error());
 	for(pp=sptags; pp<sptags+nelem(sptags); pp++){
 		i = mktab(pp->name, pp->nodeidx);
 		tabs[i].fn = pp->fn;

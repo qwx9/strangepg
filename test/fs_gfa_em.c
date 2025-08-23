@@ -293,8 +293,9 @@ opengfa(Aux *a, char *path)
 
 	if((f = openfs(path, OREAD)) == nil)
 		return nil;
-	a->names = names_init();
-	a->edges = edges_init();
+	if((a->names = names_init()) == nil
+	|| (a->edges = edges_init()) == nil)
+		sysfatal("opengfa: %s", error());
 	a->degree = emopen(nil);
 	return f;
 }
