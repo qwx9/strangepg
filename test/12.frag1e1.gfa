@@ -1,32 +1,32 @@
 H	VN:Z:1.0
-S	1	*	fx:f:24
+S	1	*	fx:f:1
 S	2	*
 S	3	*
-S	4	*	fx:f:96
+S	4	*	fx:f:4
 S	5	*
 S	6	*
-S	7	*	fx:f:168
+S	7	*	fx:f:7
 S	8	*
 S	9	*
-S	10	*	fx:f:240
+S	10	*	fx:f:10
 S	11	*
 S	12	*
-S	13	*	fx:f:312
+S	13	*	fx:f:13
 S	14	*
 S	15	*
-S	16	*	fx:f:384
+S	16	*	fx:f:16
 S	17	*
 S	18	*
-S	19	*	fx:f:456
+S	19	*	fx:f:19
 S	20	*
 S	21	*
-S	22	*	fx:f:528
+S	22	*	fx:f:22
 S	23	*
 S	24	*
-S	25	*	fx:f:600
+S	25	*	fx:f:25
 S	26	*
 S	27	*
-S	28	*	fx:f:672
+S	28	*	fx:f:28
 S	29	*
 S	30	*
 L	1	+	2	+	0M
