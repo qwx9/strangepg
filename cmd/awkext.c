@@ -640,14 +640,11 @@ fnrealedge(Cell *x, Cell *ret)
 static void
 fnexpand1(Cell *x)
 {
-	double t;
 	ioff id;
 
 	id = getival(x);	/* cnode id */
-	t = μsec();
 	if(expand(id) < 0)
 		logerr(va("expand %d: %s\n", id, error()));
-	warn("expand1: %.2f ms\n", (μsec() - t) / 1000.0f);
 }
 
 /* erst die falafel, dann der wein */
@@ -666,7 +663,7 @@ static TNode *
 fncollapse(Cell *x, TNode *nextarg)
 {
 	int i, r, all;
-	double t;
+	vlong t;
 	ioff id, *ops;
 	Cell *c;
 	Array *a;
@@ -674,8 +671,7 @@ fncollapse(Cell *x, TNode *nextarg)
 	t = μsec();
 	if(buildct() < 0)	/* FIXME: do this asynchronously after mkgraph or import? */
 		FATAL("collapse: %s", error());
-	warn("collapsefn: buildct: %.2f ms\n", (μsec() - t) / 1000.0f);
-	t = μsec();
+	TIME("collapse", "buildct", t);
 	all = 0;
 	ops = nil;
 	/* FIXME: most of this doesn't need to be C */
@@ -707,17 +703,15 @@ fncollapse(Cell *x, TNode *nextarg)
 			ops = collapseall();
 		}
 	}
-	warn("collapsefn: collect: %.2f ms\n", (μsec() - t) / 1000.0f);
-	t = μsec();
+	TIME("collapse", "collect", t);
 	r = all ? collapseup(ops) : collapsedown(ops);
 	dyfree(ops);
 	if(r < 0)
 		FATAL("collapse: %s", error());
-	warn("collapsefn: collapse: %.2f ms\n", (μsec() - t) / 1000.0f);
-	t = μsec();
+	TIME("collapse", "collapseop", t);
 	if(coarsen() < 0)
 		FATAL("collapse: %s", error());
-	warn("collapsefn: coarsen: %.2f ms\n", (μsec() - t) / 1000.0f);
+	TIME("collapse", "coarsen", t);
 	/* strawk thread should not push commands -- but this should
 	 * be awk code anyway */
 	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */

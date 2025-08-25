@@ -395,30 +395,24 @@ opengfa(Aux *a, char *path)
 	return f;
 }
 
-#define	TIME(lab)	if(d) do{ \
-	t = μsec(); \
-	warn("readgfa: " lab ": %.2f ms\n", (t - t0)/1000); \
-	t0 = t; \
-}while(0)
-
 static void
 loadgfa1(void *arg)
 {
 	int d;
-	double t, t0;
+	vlong t;
 	File *f;
 	Aux a = {0};
 
 	d = debug & Debugperf;
-	t0 = μsec();
+	t = μsec();
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
 	pushcmd("loadbatch()");
 	flushcmd();
-	TIME("readgfa");
+	TIME("loadgfa1", "readgfa", t);
 	logmsg("loadgfa: initializing graph...\n");
 	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
-	TIME("mkgraph");
+	TIME("loadgfa1", "mkgraph", t);
 	printgraph();
 	/* FIXME: always send two signals, one after topo is loaded and one
 	 * after everything is done, and let strawk decide what to do */
@@ -428,10 +422,10 @@ loadgfa1(void *arg)
 	}
 	logmsg("loadgfa: reading node tags...\n");
 	if(d)
-		t0 = μsec();
+		t = μsec();
 	if(readnodetags(&a, f) < 0)
 		sysfatal("loadgfa: readnodetags: %s", error());
-	TIME("readnodetags");
+	TIME("loadgfa1", "readnodetags", t);
 	dyfree(a.nodeoff);
 	if(!gottagofast && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
@@ -439,11 +433,11 @@ loadgfa1(void *arg)
 	}
 	logmsg("loadgfa: reading edge tags...\n");
 	if(d)
-		t0 = μsec();
+		t = μsec();
 	/* FIXME: nothing is loaded besides overlap */
 	if(readedgetags(&a, f) < 0)
 		sysfatal("loadgfa: readedgetags: %s", error());
-	TIME("readedgetags");
+	TIME("loadgfa1", "readedgetags", t);
 	pushcmd("loadbatch()");
 	if(debug & Debugload)
 		pushcmd("cmd(\"FJJ142\")");
@@ -451,7 +445,6 @@ loadgfa1(void *arg)
 	logmsg("loadgfa: done\n");
 	dyfree(a.edgeoff);
 	freefs(f);
-	USED(t0);
 }
 
 static Filefmt ff = {

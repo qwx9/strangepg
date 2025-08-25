@@ -77,6 +77,17 @@ warn(char *fmt, ...)
 }
 
 void
+panic(char *fmt, ...)
+{
+	va_list arg;
+
+	va_start(arg, fmt);
+	vawarn(fmt, arg);
+	fprintf(stderr, "\n");
+	abort();
+}
+
+void
 dprint(int flags, char *fmt, ...)
 {
 	char *type;

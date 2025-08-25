@@ -10,7 +10,7 @@ char*	error(void);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
-#define panic(x) {warn((x)); abort();}
+void	panic(char*, ...);
 void	errmsg(char*, ...);
 int	errstr(char*, uint);
 vlong	μsec(void);
@@ -53,4 +53,11 @@ void*	threadstore(void*);
 		warn("[perf] %s: avg %lld μs over %lld samples\n", \
 			(c).lab, _t, (c).n); \
 	} \
+}
+
+#define TIME(fn,lab,t)	if(debug & Debugperf){ \
+	vlong __t; \
+	__t = μsec(); \
+	warn("[perf] " fn ": " lab ": %.2f ms\n", (__t - (t)) / 1000.0); \
+	(t) = __t; \
 }
