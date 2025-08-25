@@ -349,6 +349,8 @@ mouseevent(float x, float y, float Δx, float Δy)
 	static int omod, inwin;
 	khint_t k;
 
+	if(Δx == 0.0f && Δy == 0.0f && mod == omod)	/* first event */
+		return 0;
 	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
 	m = mod & Mmask;
 	/* FIXME: clean up */
