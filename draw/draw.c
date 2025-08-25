@@ -172,7 +172,7 @@ resizenodes(void)
 }
 
 static inline void
-faceyourfears(RNode *ru, Node *u)
+faceyourfearsin3d(RNode *ru, Node *u)
 {
 	float x, y, z, Δ, Δx, Δy, Δz;
 	float c, s, t;
@@ -203,18 +203,70 @@ faceyourfears(RNode *ru, Node *u)
 			Δz = z - rv->pos[2];
 		}
 		Δ = sqrtf(Δx * Δx + Δy * Δy + Δz * Δz);
-		c += Δx / Δ;
-		s += Δy / Δ;
-		t += Δz / Δ;
+		Δx /= Δ;
+		Δy /= Δ;
+		Δz /= Δ;
+		c += Δx;
+		s += Δy;
+		t += Δz;
 		if((e & 1) == 0){
-			b.X += Δx / Δ;
-			b.Y += Δy / Δ;
-			b.Z += Δz / Δ;
+			b.X += Δx;
+			b.Y += Δy;
+			b.Z += Δz;
 		}
 	}
 	a = HMM_V3(1.0f, 0.0f, 0.0f);
 	if(c != 0.0f || s != 0.0f || t != 0.0f)	/* edge case: choose one side */
 		b = HMM_V3(c, s, t);
+	b = HMM_NormV3(b);
+	q = HMM_QFromNormPair(a, b);
+	ru->dir[0] = q.X;
+	ru->dir[1] = q.Y;
+	ru->dir[2] = q.Z;
+	ru->dir[3] = q.W;
+}
+
+static inline void
+faceyourfears(RNode *ru, Node *u)
+{
+	float x, y, Δ, Δx, Δy;
+	float c, s;
+	ioff *i, *ie;
+	u32int e;
+	RNode *rv;
+	HMM_Vec3 a = {{0.0f}}, b = {{0.0f}};
+	HMM_Quat q;
+
+	if(u->nedges == 0)
+		return;
+	x = ru->pos[0];
+	y = ru->pos[1];
+	c = s = 0.0f;
+	for(i=edges+u->eoff, ie=i+u->nedges; i<ie; i++){
+		e = *i;
+		rv = rnodes + (e >> 2);
+		if(rv == ru)
+			continue;
+		if((e & 1) != 0){
+			Δx = rv->pos[0] - x;
+			Δy = rv->pos[1] - y;
+		}else{
+			Δx = x - rv->pos[0];
+			Δy = y - rv->pos[1];
+		}
+		Δ = sqrtf(Δx * Δx + Δy * Δy);
+		Δx /= Δ;
+		Δy /= Δ;
+		c += Δx;
+		s += Δy;
+		if((e & 1) == 0){
+			b.X += Δx;
+			b.Y += Δy;
+		}
+	}
+	a = HMM_V3(1.0f, 0.0f, 0.0f);
+	if(c != 0.0f || s != 0.0f)	/* edge case: choose one side */
+		b = HMM_V3(c, s, 0.0f);
 	b = HMM_NormV3(b);
 	q = HMM_QFromNormPair(a, b);
 	ru->dir[0] = q.X;
@@ -229,8 +281,12 @@ drawnodes(void)
 	Node *n, *e;
 	RNode *r;
 
-	for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
-		faceyourfears(r, n);
+	if(drawing.flags & DF3d)
+		for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
+			faceyourfearsin3d(r, n);
+	else
+		for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
+			faceyourfears(r, n);
 	return r - rnodes;
 }
 
