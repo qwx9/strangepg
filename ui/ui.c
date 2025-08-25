@@ -211,10 +211,13 @@ mousedrag(float Δx, float Δy)
 	RNode *r;
 	HMM_Vec3 v;
 
-	if(((idx = selected) & 1UL<<31) != 0)
+	if((selected & 1UL<<31) != 0)
 		return 0;
 	Δx /= view.w;
 	Δy /= view.h;
+	//kh_foreach(sels, k){
+	//	idx = kh_key(sels, k);
+	idx = selected;
 	r = rnodes + idx;
 	/* FIXME: not here */
 	if((drawing.flags & DF3d) == 0){
@@ -408,5 +411,6 @@ initui(void)
 	if(drawing.flags & DFnope)
 		return;
 	initsysui();
-	sels = sel_init();
+	if((sels = sel_init()) == nil)
+		sysfatal("initui: %s", error());
 }
