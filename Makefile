@@ -111,7 +111,6 @@ OBJ:=\
 	sokol/impl_sokol_nuklear.o\
 	lib/chan.o\
 	lib/queue.o\
-	lib/HandmadeMath.o\
 	lib/plan9/getfields.o\
 	lib/plan9/seprint.o\
 	lib/plan9/strecpy.o\
