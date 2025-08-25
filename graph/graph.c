@@ -5,6 +5,7 @@
 #include "drw.h"
 #include "fs.h"
 #include "layout.h"
+#include "coarse.h"
 
 Graph graph;
 Node *nodes;
@@ -84,65 +85,70 @@ int
 setattr(int type, ioff id, V val)
 {
 	ioff idx;
-	Node *n;
+	Node *u;
+	CNode *U;
 	RNode *r;
 
 	if((idx = getnodeidx(id)) < 0)
 		return - 1;
-	n = nodes + idx;
+	u = nodes + idx;
 	r = rnodes + idx;
 	switch(type){
 	case TLN:
-		/* FIXME: see usage in graph/coarse.c, we have to reset this
-		 * manually */
-		if(r->len > 0.0f || val.i == 0)
-			break;
-		if(val.i < 0){
-			werrstr("nonsense segment length %d, node %d", val.i, idx);
+		if(val.i <= 0){
+			werrstr("nonsense segment length %lld, node %d", val.i, idx);
 			return -1;
 		}
-		r->len = val.i;
-		setclength(n, val.i);	/* FIXME: temporary */
 		if(drawing.length.min == 0.0f || drawing.length.min > val.i){
 			drawing.length.min = val.i;
 			drawing.flags |= DFstalelen;
-		}
+		}else if(drawing.length.min == u->length)
+			drawing.flags |= DFstalelen | DFrecalclen;
 		if(drawing.length.max < val.i){
 			drawing.length.max = val.i;
 			drawing.flags |= DFstalelen;
+		}else if(drawing.length.max == u->length)
+			drawing.flags |= DFstalelen | DFrecalclen;
+		u->length = val.i;
+		/* only set cnode length if it wasn't before */
+		if(cnodes != nil){	/* FIXME: can be abused */
+			assert(u->id >= 0 && u->id < nnodes);
+			U = cnodes + u->id;
+			if(U->length == 0)
+				U->length = val.i;
 		}
 		break;
 	case TCL:
 		setcolor(r->col, setalpha(val.u));
 		break;
 	case Tfx:
-		n->flags |= FNfixedx;
+		u->flags |= FNfixedx;
 		/* wet floor */
 	case Tx0:
-		n->pos0.x = val.f;
-		n->flags |= FNinitx;
+		u->pos0.x = val.f;
+		u->flags |= FNinitx;
 		if(val.f < drawing.xbound.min)
 			drawing.xbound.min = val.f;
 		if(val.f > drawing.xbound.max)
 			drawing.xbound.max = val.f;
 		break;
 	case Tfy:
-		n->flags |= FNfixedy;
+		u->flags |= FNfixedy;
 		/* wet floor */
 	case Ty0:
-		n->pos0.y = val.f;
-		n->flags |= FNinity;
+		u->pos0.y = val.f;
+		u->flags |= FNinity;
 		if(val.f < drawing.ybound.min)
 			drawing.ybound.min = val.f;
 		if(val.f > drawing.ybound.max)
 			drawing.ybound.max = val.f;
 		break;
 	case Tfz:
-		n->flags |= FNfixedz;
+		u->flags |= FNfixedz;
 		/* wet floor */
 	case Tz0:
-		n->pos0.z = val.f;
-		n->flags |= FNinitz;
+		u->pos0.z = val.f;
+		u->flags |= FNinitz;
 		if(val.f < drawing.zbound.min)
 			drawing.zbound.min = val.f;
 		if(val.f > drawing.zbound.max)
@@ -152,18 +158,12 @@ setattr(int type, ioff id, V val)
 	return 0;
 }
 
-int
-setnodelength(ioff i)
+void
+setnodelength(Node *u, vlong n)
 {
 	V val;
-	Node *u;
 
-	u = nodes + i;
-	val.u = u->length;	/* FIXME: .u vs .i above */
-	if(val.u == 0)	/* FIXME */
-		val.u = 1;
-	rnodes[i].len = 0.0f;
+	val.i = n;
 	if(setattr(TLN, u->id, val) < 0)
-		return -1;
-	return 0;
+		warn("setnodelength %zd: %s\n", u - nodes, error());
 }

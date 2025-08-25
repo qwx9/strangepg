@@ -34,6 +34,7 @@ enum{
 	DFnorend = 1<<11,
 	DFnolayout = 1<<12,
 	DFfreeze = 1<<13,
+	DFrecalclen = 1<<14,
 	DFiwasfrozentoday = DFnodraw | DFnorend | DFnolayout,
 };
 struct Drawing{
@@ -44,7 +45,6 @@ struct Drawing{
 	Range zbound;
 	float nodesz;
 	float fatness;
-	float fcoarse;
 	uvlong frames;	/* FIXME: remove after fixing scheduling */
 };
 extern Drawing drawing;

@@ -2,7 +2,6 @@ int	exportct(char*);
 void	printgraph(void);
 void	explode(ioff);
 
-int	setclength(Node*, uvlong);
 void	expandall(void);
 int	coarsen(void);
 int	uncoarsen(void);

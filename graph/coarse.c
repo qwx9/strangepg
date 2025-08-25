@@ -31,15 +31,6 @@ enum{
 	Sdscdeg,
 };
 
-/* FIXME: length, color (still in awk), number of nodes, etc. */
-/* FIXME: have to clear and/or fetch attributes and other struct fields,
- * and simultaneously update rnodes (also, parents: length, etc.);
- * draw lengths probably have to be recomputed;
- * color, length, number of nodes, etc. (but should still be able to dig up
- * a collapsed node) */
-/* FIXME: does logerr even work from within awk? shouldn't we FATAL? this
- * should be elsewhere also */
-
 /* FIXME */
 /* not thread-safe */
 ioff
@@ -339,27 +330,6 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 	assert(n == nadj && m == nedge);
 }
 
-/* FIXME: we should just change how this is handled to begin with,
- * eg. cnode length or w/e should be the reference we use here */
-/* FIXME: maybe we just need to re-fetch this data in the gfa...? */
-int
-setclength(Node *u, uvlong len)
-{
-	CNode *U;
-
-	if(len <= 0){
-		werrstr("setclength: invalid length");
-		return -1;
-	}
-	u->length = len;	/* FIXME: what if coarsened? only if equal to 0? */
-	if(cnodes == nil)
-		return 0;
-	U = cnodes + u->id;
-	assert(U->idx != -1 && U->idx == u - nodes);
-	U->length = len;
-	return 0;
-}
-
 /* FIXME: too much recursive shit */
 static inline vlong
 sublength(CNode *U)
@@ -368,31 +338,12 @@ sublength(CNode *U)
 	ioff i;
 
 	n = U->length;
-	//if(U->idx != -1)
-	//	return 0;
-
 	for(i=U->child; i!=-1; i=U->sibling){
 		U = cnodes + i;
 		if(U->idx == -1)
 			n += sublength(U);
 	}
 	return n;
-
-	/*
-	if(U->child != -1)
-		n -= sublength(cnodes + U->child);
-	for(i=U->sibling; i!=-1; i=U->sibling){
-		U = cnodes + i;
-		if(U->idx != -1)
-			continue;
-		n -= U->length;
-		if(U->child != -1){
-			V = cnodes + U->child;
-			if(V->idx == -1)
-				n -= sublength(V);
-		}
-	}
-	*/
 }
 
 static inline int
@@ -447,7 +398,6 @@ uncoarsen(void)
 	nn = dylen(nodes);
 	unew = emalloc(nnew * sizeof *unew);
 	TIME("alloc");
-	drawing.length = (Range){9999.0f, 0.0f};	/* FIXME: necessary else skipped */
 	for(u=unew, ip=expnodes, ie=ip+nnew; ip<ie; ip++, u++){
 		i = *ip;
 		U = cnodes + i;
@@ -489,15 +439,11 @@ uncoarsen(void)
 		u->eoff = off;
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
-		u->length = sublength(cnodes + u->id);	/* FIXME */
-		if(u->length <= 0){
-			warn("uncoarsen: %d idx=%zd length %d <= 0\n", u->id, u-nodes, u->length);
-			abort();
-		}
+		U = cnodes + u->id;
+		if(U->length > 0)
+			setnodelength(u, sublength(U));
 		if(u >= nodes + nn)
-			spawn(cnodes[cnodes[u->id].parent].idx);
-		if(setnodelength(u - nodes) < 0)
-			warn("uncoarsen: setnodelength %zd: %s\n", u - nodes, error());
+			spawn(cnodes[U->parent].idx);
 	}
 	assert(dylen(nodes) == dylen(rnodes));
 	free(deg);
@@ -509,9 +455,6 @@ uncoarsen(void)
 	regenedges(eset, x, off);
 	es_destroy(eset);
 	TIME("regenerating edges");
-	drawing.fcoarse = (float)nnodes / dylen(nodes);
-	resizenodes();
-	TIME("reset node lengths");
 	thawworld();
 	logmsg(va("graph after expansion: %d (%d) nodes, %d (%d) edges\n",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
@@ -562,7 +505,7 @@ expand(ioff i)
 		V = cnodes + j;
 		if(V->idx != -1)
 			continue;
-		V->idx = nid + n++;	/* FIXME: thread safety? (for which other thread?) */
+		V->idx = nid + n++;
 		DPRINT(Debugcoarse, "expand: %d: push child %d idx=%d", i, j, V->idx);
 		dypush(expnodes, j);
 	}
@@ -606,16 +549,8 @@ expandall(void)
 	t0 = t; \
 }while(0)
 
-/* FIXME: same approach as above, just memcpy edges for nodes that aren't
- * affected and only store the diff of edges; then there's stuff we don't
- * need to keep track of anymore and can modify edges[] in place */
-
-/* FIXME: perhaps we could merge coarsen and uncoarsen?
- * - we have a targets[] or whatever array
- * - each target can either be a node to add, or an aliased node
- */
-/* this should be generic enough to allow the use of any coarsening method but just
- * update the internal data structures */
+/* this should be generic enough to allow the use of any coarsening
+ * method but just update the internal data structures */
 int
 coarsen(void)
 {
@@ -646,8 +581,6 @@ coarsen(void)
 	t0 = μsec();
 	if((eset = es_init()) == nil)
 		sysfatal("coarsen: %s", error());
-	DPRINT(Debugcoarse, "resetting node lengths...");
-	drawing.length = (Range){9999.0f, 0.0f};	/* FIXME: necessary else skipped */
 	DPRINT(Debugcoarse, "assigning new top node slots...");
 	for(off=0, r=rp=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(u->flags & FNalias){
@@ -656,8 +589,6 @@ coarsen(void)
 		}
 		DPRINT(Debugcoarse, "> store node[%03d] = %d", off, u->id);
 		U = cnodes + u->id;
-		if(setnodelength(U->idx) < 0)	/* order is important */
-			warn("coarsen: setnodelength %d: %s\n", U->idx, error());
 		U->idx = off++;
 		*rp = *r;
 		rp++;
@@ -740,9 +671,6 @@ coarsen(void)
 	dyresize(edges, ne2);
 	dyresize(redges, ne);
 	TIME("shrink arrays");
-	drawing.fcoarse = (float)nnodes / dylen(nodes);
-	resizenodes();
-	TIME("reset node lengths");
 	regenedges(eset, ne, ne2);
 	TIME("restore edges");
 	thawworld();
@@ -810,7 +738,7 @@ lastchild(CNode *U)
 static inline int
 hide(CNode *U, CNode *P)
 {
-	Node *u;
+	Node *u, *p;
 
 	if(U->idx == -1)
 		return 0;
@@ -820,7 +748,8 @@ hide(CNode *U, CNode *P)
 	u->flags |= FNalias;
 	assert(U != P);
 	assert(P->idx != -1);
-	nodes[P->idx].length += u->length;
+	p = nodes + P->idx;
+	setnodelength(p, p->length + u->length);
 	U->idx = -1;
 	u->id = P - cnodes;
 	ncoarsed++;
@@ -1132,9 +1061,7 @@ initcoarse(void)
 		U->eoff = u->eoff;
 		U->nedges = u->nedges;
 		U->parent = U->child = U->sibling = -1;
-		/* FIXME: can get out of sync if loaded from setattr */
-		if((U->length = u->length) == 0)	/* FIXME */
-			U->length = 1;
+		U->length = u->length;	/* can be 0 if unset */
 	}
 	nedges = dylen(edges);
 	n = nedges * sizeof *edges;

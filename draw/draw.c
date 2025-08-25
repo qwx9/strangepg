@@ -20,7 +20,6 @@ Drawing drawing = {
 	.zbound = {0.0f, 0.0f},
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
-	.fcoarse = 1.0f,
 };
 Box promptbox, selbox;
 Channel *rendc, *ctlc;
@@ -133,13 +132,25 @@ drawedges(void)
 void
 resizenodes(void)
 {
+	vlong n;
 	double l, k, Δ, min, max;
 	RNode *r, *re;
-	Node *u;
+	Node *u, *ue;
 
 	if((drawing.flags & DFstalelen) == 0)
 		return;
-	drawing.flags &= ~DFstalelen;
+	if(drawing.flags & DFrecalclen){
+		min = max = 0.0;
+		for(u=nodes, ue=u+dylen(u); u<ue; u++){
+			n = u->length;
+			if(min == 0.0 || min > n)
+				min = n;
+			if(max < n)
+				max = n;
+		}
+		drawing.length = (Range){min, max};
+	}
+	drawing.flags &= ~(DFstalelen | DFrecalclen);
 	if(drawing.length.min < 1.0)
 		drawing.length.min = 1.0;
 	if(drawing.length.max < drawing.length.min)
@@ -398,6 +409,7 @@ thawworld(void)
 	if((drawing.flags & DFnorend) == 0)
 		drawing.flags |= DFnorend;	/* FIXME: or we might miss resizebuf() */
 	drawing.flags &= ~DFfreeze;
+	resizenodes();	/* layout depends on lengths */
 	reqdraw(Reqthaw);
 	reqlayout(Lthaw);	/* FIXME: really, just unpause */
 }

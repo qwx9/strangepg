@@ -63,4 +63,4 @@ int	initrepl(void);
 int	initcmd(void);
 
 int	setattr(int, ioff, V);
-int	setnodelength(ioff);
+void	setnodelength(Node*, vlong);
