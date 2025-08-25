@@ -297,5 +297,7 @@ typedef struct fa {
 #undef	AWKTAB
 #define	AWKTAB	"awkgram.plan9.h"
 #include "plan9.h"
+#else
+extern int	runetochar(char *str, unsigned int *c);
 #endif
 #include "proto.h"

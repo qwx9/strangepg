@@ -19,7 +19,7 @@ printgraph(void)
 
 	if((debug & Debuggraph) == 0)
 		return;
-	DPRINT(Debuggraph, "current graph: %d (%d) nodes, %d (%d) edges",
+	DPRINT(Debuggraph, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
 	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
 		DPRINT(Debuggraph, "[%d] id=%d off=%d ne=%d",
@@ -27,7 +27,7 @@ printgraph(void)
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;
 			j = x >> 2;
-			DPRINT(Debuggraph, "  <%zd> %08x %zd%c%d%c",
+			DPRINT(Debuggraph, "  <%zd> %08x %d%c%d%c",
 				e-edges, x, i, x&1?'-':'+', j, x&2?'-':'+');
 		}
 	}
@@ -39,7 +39,7 @@ explode(ioff idx)
 	RNode *r;
 
 	if(idx < 0 || idx >= dylen(rnodes))
-		sysfatal("explode: out of bounds index: %d > %d", idx, dylen(rnodes)-1);
+		sysfatal("explode: out of bounds index: %d > %zd", idx, dylen(rnodes)-1);
 	r = rnodes + idx;
 	r->pos[0] += 32.0f * (0.5f - xfrand());
 	r->pos[1] += 32.0f * (0.5f - xfrand());
@@ -75,7 +75,7 @@ ioff
 getrealid(ioff idx)
 {
 	if(idx < 0 || idx >= dylen(nodes)){
-		werrstr("getrealid: %d out of bounds %d", idx, dylen(nodes));
+		werrstr("getrealid: %d out of bounds %zd", idx, dylen(nodes));
 		return -1;
 	}
 	return nodes[idx].id;
@@ -119,7 +119,7 @@ setattr(int type, ioff id, V val)
 		}
 		break;
 	case TCL:
-		setcolor(r->col, setalpha(val.u));
+		setcolor(r->col, setdefalpha(val.u));
 		break;
 	case Tfx:
 		u->flags |= FNfixedx;

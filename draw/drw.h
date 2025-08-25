@@ -73,13 +73,6 @@ extern REdge *redges;
 extern RLine *rlines;
 extern ssize ndnodes, ndedges, ndlines;
 
-struct Quad{
-	Vertex tl;
-	Vertex tr;
-	Vertex br;
-	Vertex bl;
-};
-
 struct Box{
 	float x1;
 	float y1;
@@ -114,7 +107,7 @@ extern u32int *theme;
 void	highlightnode(ioff);
 Color*	newcolor(u32int);
 Color*	color(u32int);
-u32int	setalpha(u32int);
+u32int	setdefalpha(u32int);
 u32int	somecolor(ioff, char**);
 void	settheme(void);
 u32int	getcolor(float*);

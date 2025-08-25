@@ -86,6 +86,7 @@ new_(int nuke, int is3d)
 	}
 	f = 2.0f * drawing.nodesz;
 	θ = 0.0f;
+	z = 0.0f;	/* shut compiler up */
 	nosphere = var[0] > W || var[1] > H || var[2] > W;
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		if(!hasadjacencies(u)){

@@ -1,5 +1,6 @@
 #include "strpg.h"
-#include "../lib/HandmadeMath.h"
+#include "lib/khashl.h"
+#include "lib/HandmadeMath.h"
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"

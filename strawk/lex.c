@@ -343,11 +343,10 @@ int yylex(void)
 	}
 }
 
-extern int runetochar(char *str, int c);
-
 int string(void)
 {
-	int c, n;
+	int c;
+	unsigned int n;
 	char *s, *p, *bp;
 	Value v;
 	static char *buf = NULL;
@@ -440,7 +439,7 @@ int string(void)
 						n += 10 + (c - 'a');
 				}
 				unput(c);
-				bp += runetochar(bp, n);
+				bp += runetochar(bp, &n);
 				break;
 			    }
 

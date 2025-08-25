@@ -605,7 +605,7 @@ fnunshow(Cell *x, TNode *next)
 	if((idx = getnodeidx(getival(x))) < 0)
 		return next;
 	r = rnodes + idx;
-	col = setalpha(getival(y));
+	col = setdefalpha(getival(y));
 	setcolor(r->col, col);
 	tempfree(y);
 	if((y = getcell("selinfo", symtab)) == nil)
@@ -715,6 +715,8 @@ fncollapse(Cell *x, TNode *nextarg)
 	/* strawk thread should not push commands -- but this should
 	 * be awk code anyway */
 	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
+	USED(ops);
+	USED(t);
 	return nil;
 }
 
@@ -752,7 +754,7 @@ printgfa(char *path)	/* FIXME */
 	}
 	for(u=nodes, ue=u+dylen(u); u<ue; u++){
 		l = getnodelabel(u->id);
-		p = seprint(buf, buf + sizeof buf, "S\t%s\t*\tLN:i:%d\n",
+		p = seprint(buf, buf + sizeof buf, "S\t%s\t*\tLN:i:%lld\n",
 			l, u->length);
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;

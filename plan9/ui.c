@@ -153,7 +153,7 @@ evloop(void)
 			if(mold.xy.x < 0 || mold.xy.y < 0)
 				mold = mc->Mouse;
 			Δ = subpt(mc->xy, mold.xy);
-			mouseevent(V(mc->xy.x - screen->r.min.x, mc->xy.y - screen->r.min.y, 0.0f), V(Δ.x, Δ.y, 0.0f));
+			mouseevent(mc->xy.x - screen->r.min.x, mc->xy.y - screen->r.min.y, Δ.x, Δ.y);
 			mold = mc->Mouse;
 			break;
 		case Akbd:

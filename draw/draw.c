@@ -215,7 +215,7 @@ faceyourfears(RNode *ru, Node *u)
 	a = HMM_V3(1.0f, 0.0f, 0.0f);
 	if(c != 0.0f || s != 0.0f || t != 0.0f)	/* edge case: choose one side */
 		b = HMM_V3(c, s, t);
-	b = HMM_Norm(b);
+	b = HMM_NormV3(b);
 	q = HMM_QFromNormPair(a, b);
 	ru->dir[0] = q.X;
 	ru->dir[1] = q.Y;
@@ -343,7 +343,7 @@ drawworld(int go)
 		ndedges = drawedges();
 		drawing.frames++;	/* FIXME: remove */
 	}
-	DPRINT(Debugdraw, "drawworld %d nodes %d edges", ndnodes, ndedges);
+	DPRINT(Debugdraw, "drawworld %zd nodes %zd edges", ndnodes, ndedges);
 	ndlines = drawlines();
 	return r;
 }
@@ -429,7 +429,7 @@ reqdraw(int r)
 {
 	static ulong df, rf;
 
-	DPRINT(Debugdraw, "reqdraw %#x df %#x rf %#x ", r, df, rf);
+	DPRINT(Debugdraw, "reqdraw %#x df %#lx rf %#lx ", r, df, rf);
 	switch(r){
 	case Reqfreeze:
 	case Reqthaw:

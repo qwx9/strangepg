@@ -1,8 +1,26 @@
 #include "strpg.h"
+#include "lib/HandmadeMath.h"
 #include "drw.h"
+#include "view.h"
 #include "ui.h"
 #include "threads.h"
 #include <draw.h>
+
+typedef struct FVertex FVertex;	/* FIXME: temp, interop with hmm */
+struct FVertex{
+	float X;
+	float Y;
+	float Z;
+};
+
+#define	V(x,y,z)	((FVertex){(x), (y), (z)})
+#define	addv(u,v)	((FVertex){(u).X+(v).X, (u).Y+(v).Y, (u).Z+(v).Z})
+#define	subv(u,v)	((FVertex){(u).X-(v).X, (u).Y-(v).Y, (u).Z-(v).Z})
+#define	mulv(u,s)	((FVertex){(u).X*(s), (u).Y*(s), (u).Z*(s)})
+#define zrotv(v,cosθ,sinθ)	V((v).X * (cosθ) - (v).Y * (sinθ), (v).X * (sinθ) + (v).Y * (cosθ), 0.0f)
+#define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.Δeye), view.center)
+
+extern Channel *rendc;
 
 struct Color{
 	u32int col;
@@ -17,7 +35,7 @@ static Channel *ticc, *framec;
 static QLock ticker;
 static ioff selected;	/* FIXME */
 
-#define v2p(v)	Pt((v).x, (v).y)
+#define v2p(v)	Pt((v).X, (v).Y)
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -79,11 +97,11 @@ endmove(void)
 {
 }
 
-ioff
+u32int
 mousepick(int x, int y)
 {
 	Rectangle r;
-	union { uchar u[8]; ioff v; } u;	/* libdraw bug */
+	union { uchar u[8]; u32int v; } u;	/* libdraw bug */
 
 	if(selfb == nil)
 		return 0;
@@ -146,26 +164,21 @@ rotdraw(Vertex)
 {
 }
 
-void
-worldview(Vertex)
-{
-}
-
 static void
 drawlabels(void)
 {
 	Point p;
 	char lab[128];
 	Color *c;
-	Vertex v;
+	FVertex v;
 	RNode *r, *e;
 
 	c = color(theme[Ctext]);
 	for(r=rnodes, e=r+dylen(r); r<e; r++){
-		v.x = r->pos[0];
-		v.y = r->pos[1];
+		v.X = r->pos[0];
+		v.Y = r->pos[1];
 		v = centerscalev(v);
-		p = Pt(v.x + Ptsz, v.y + Ptsz);
+		p = Pt(v.X + drawing.fatness, v.Y + drawing.fatness);
 		snprint(lab, sizeof lab, "%zx", r - rnodes);
 		string(viewfb, p, c->i, ZP, font, lab);
 	}
@@ -178,21 +191,21 @@ drawquad(ioff i)
 	float cθ, sθ;
 	Point p[5];
 	Color *c;
-	Vertex pos, dir;
+	FVertex pos, dir;
 	RNode *v;
 
 	v = rnodes + i;
-	pos.x = v->pos[0];
-	pos.y = v->pos[1];
-	dir.x = v->dir[0];
-	dir.y = v->dir[1];
+	pos.X = v->pos[0];
+	pos.Y = v->pos[1];
+	dir.X = v->dir[0];
+	dir.Y = v->dir[1];
 	c = v2col(v->col);
-	cθ = dir.x;
-	sθ = dir.y;
-	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, -Nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[3] = v2p(centerscalev(addv(pos, zrotv(V(-Nodesz/2.0f, +Nodesz/4.0f, 0.0f), cθ, sθ))));
+	cθ = dir.X;
+	sθ = dir.Y;
+	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, -drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+drawing.nodesz/2.0f, -drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
+	p[3] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[4] = p[0];
 	polyop(viewfb, p, nelem(p), 0, 0, 1, c->shad, ZP, SatopD);
 	fillpoly(viewfb, p, nelem(p), ~0, c->i, ZP);
@@ -212,31 +225,31 @@ drawbezier(ioff i)
 	float Δx, Δy;
 	double θ;
 	Point p[4];
-	Vertex a, b;
+	FVertex a, b;
 	Color *c;
 	REdge *r;
 
 	r = redges + i;
-	a.x = r->pos1[0];
-	a.y = r->pos1[1];
-	b.x = r->pos2[0];
-	b.y = r->pos2[1];
-	Δx = b.x - a.x;
-	Δy = b.y - a.y;
-	//θ = atan2(a.x - b.x, a.y - b.y);
-	c = v2col(r->col);
+	a.X = r->pos1[0];
+	a.Y = r->pos1[1];
+	b.X = r->pos2[0];
+	b.Y = r->pos2[1];
+	Δx = b.X - a.X;
+	Δy = b.Y - a.Y;
+	//θ = atan2(a.x - b.X, a.Y - b.Y);
+	c = color(theme[Cedge]);
 	θ = atan2(Δy, Δx);
 	p[0] = v2p(centerscalev(a));
 	p[3] = v2p(centerscalev(b));
 	/* FIXME: doesn't take into account opposite direction */
 	if(Δx > 0.f)
-		p[1] = addpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
+		p[1] = addpt(p[0], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
 	else
-		p[1] = subpt(p[0], mulpt(Pt(Nodesz,Nodesz), θ));
+		p[1] = subpt(p[0], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
 	if(Δy > 0.f)
-		p[2] = addpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
+		p[2] = addpt(p[3], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
 	else
-		p[2] = subpt(p[3], mulpt(Pt(Nodesz,Nodesz), θ));
+		p[2] = subpt(p[3], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
 	//w = MAX(0., view.zoom/5);
 	w = 0;
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
@@ -345,19 +358,21 @@ ticproc(void *)
 	}
 }
 
+/* FIXME */
 static void
-drawproc(void *)
+rendproc(void *)
 {
 	int req, stop;
 
-	while(recvul(drawc) != Reqredraw)
+	/* FIXME */
+	while(recvul(rendc) != Reqredraw)
 		;
 	resetdraw();
 	newthread(rendproc, nil, nil, nil, "render", mainstacksize);
 	sendul(ticc, 0);
 	stop = 0;
 	for(;;){
-		if((req = recvul(drawc)) == 0)
+		if((req = recvul(rendc)) == 0)
 			break;
 		if((req & Reqredraw) != 0)
 			sendul(ticc, 0);
@@ -366,8 +381,8 @@ drawproc(void *)
 			resetdraw();
 			unlockdisplay(display);
 		}
-		if((req & Reqresetui) != 0)
-			resetui();
+		if((req & Reqresetview) != 0)
+			resetview();
 		if(req != Reqshallowdraw && (stop = !redraw(stop)))
 			sendul(ticc, 1);
 		nbsendul(framec, Reqrefresh);
@@ -383,10 +398,9 @@ initp9draw(void)
 	unlockdisplay(display);
 	view.w = Dx(screen->r);
 	view.h = Dy(screen->r);
-	if((drawc = chancreate(sizeof(ulong), 0)) == nil
-	|| (ticc = chancreate(sizeof(ulong), 0)) == nil
+	if((ticc = chancreate(sizeof(ulong), 0)) == nil
 	|| (framec = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");
 	newthread(ticproc, nil, nil, nil, "tic", mainstacksize);
-	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
+	newthread(rendproc, nil, nil, nil, "draw", mainstacksize);
 }

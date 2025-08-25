@@ -30,6 +30,7 @@ THIS SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include "awk.h"
+#include "ctypefn.h"
 #include AWKTAB
 
 #define MAXLIN 22
@@ -1094,22 +1095,22 @@ static const struct charclass {
 	int cc_namelen;
 	int (*cc_func)(int);
 } charclasses[] = {
-	{ "alnum",	5,	isalnum },
-	{ "alpha",	5,	isalpha },
+	{ "alnum",	5,	xisalnum },
+	{ "alpha",	5,	xisalpha },
 #ifndef HAS_ISBLANK
 	{ "blank",	5,	xisblank },
 #else
 	{ "blank",	5,	isblank },
 #endif
-	{ "cntrl",	5,	iscntrl },
-	{ "digit",	5,	isdigit },
-	{ "graph",	5,	isgraph },
-	{ "lower",	5,	islower },
-	{ "print",	5,	isprint },
-	{ "punct",	5,	ispunct },
-	{ "space",	5,	isspace },
-	{ "upper",	5,	isupper },
-	{ "xdigit",	6,	isxdigit },
+	{ "cntrl",	5,	xiscntrl },
+	{ "digit",	5,	xisdigit },
+	{ "graph",	5,	xisgraph },
+	{ "lower",	5,	xislower },
+	{ "print",	5,	xisprint },
+	{ "punct",	5,	xispunct },
+	{ "space",	5,	xisspace },
+	{ "upper",	5,	xisupper },
+	{ "xdigit",	6,	xisxdigit },
 	{ NULL,		0,	NULL },
 };
 

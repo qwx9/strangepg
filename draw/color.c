@@ -241,7 +241,7 @@ color(u32int v)
 }
 
 u32int
-setalpha(u32int c)
+setdefalpha(u32int c)
 {
 	if((c & 0xff) == 0){
 		c &= ~0xff;

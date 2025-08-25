@@ -64,11 +64,15 @@ HFILES=\
 	draw/view.h\
 	fs/em.h\
 	fs/fs.h\
+	graph/coarse.h\
 	graph/graph.h\
 	layout/layout.h\
 	lib/khashl.h\
 	plan9/strpg.h\
 	plan9/threads.h\
+	strawk/awk.h\
+	strawk/ctypefn.h\
+	strawk/proto.h\
 	ui/ui.h\
 	util/dynar.h\
 
