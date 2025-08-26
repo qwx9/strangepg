@@ -725,8 +725,7 @@ hideall(CNode *U, CNode *P, int nlevels)
 	if(nlevels-- == 0)	/* negative = no limit */
 		return 0;
 	DPRINT(Debugcoarse, "hideall %zd idx %d pid %zd", U - cnodes, U->idx, P - cnodes);
-	if((n = hide(U, P)) == 0)
-		return 0;
+	n = hide(U, P);
 	if((j = U->child) != -1)
 		n += hideall(cnodes + j, P, nlevels);
 	for(j=U->sibling; j!=-1; j=U->sibling){
@@ -783,8 +782,7 @@ collapsedown(ioff *ids)
 			warn("FIXME collapsedown: %zd idx=%d not part of coarsening tree\n", i, U->idx);
 			continue;
 		}
-		hidedescendants(U, -1);	/* FIXME: use threshold? argument? */
-		//hidedescendants(U, 1);
+		hidedescendants(U, -1);
 	}
 	return 0;
 }
@@ -802,7 +800,6 @@ collapseup(ioff *ids)
 	l = 0.5 * n;
 	m = dylen(ids);
 	//l = 0.5 * m;
-	/* FIXME: ids size can be 1 even on a large graph??? */
 	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %d nodes", m, dylen(nodes), l);
 	r = 1;
 	while(n > l && m > 0){	/* seems ok to only check once per round */
@@ -869,13 +866,8 @@ collapseall(void)
 
 	ids = nil;
 	assert(cnodes != nil);
-	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
-		U = cnodes + u->id;
-		if(U->parent != -1)
-			continue;
-		DPRINT(Debugcoarse, "collapseall: pulling from %zd, %d so far", U - cnodes, dylen(ids));
-		ids = getleaves(U, ids);
-	}
+	for(u=nodes, ue=u+dylen(nodes); u<ue; u++)
+		dypush(ids, u->id);
 	DPRINT(Debugcoarse, "collapseall: pulled %d leaves out of %d nodes", dylen(ids), dylen(nodes));
 	return ids;
 }
