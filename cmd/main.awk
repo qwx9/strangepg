@@ -246,6 +246,10 @@ function selectnodebyid(id, noshow){
 	if(!noshow)
 		showselected()
 }
+function selectall(id){
+	for(id in label)
+		selectnodebyid(id, 1)
+}
 function selectnode(name, id){
 	if(!checknodename(name))
 		return
@@ -290,6 +294,7 @@ function expand(id){
 	}else
 		expandall()
 	commit()
+	selectall()
 	deselect()
 }
 # FIXME: randomize
