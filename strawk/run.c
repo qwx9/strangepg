@@ -798,16 +798,12 @@ Cell *indirect(TNode **a, int n)	/* $( a[0] ) */
 	Awknum val;
 	Cell *x;
 	int m;
-	char *s;
 
 	x = execute(a[0]);
 	val = getival(x);	/* freebsd: defend against super large field numbers */
 	if ((Awknum)INT_MAX < val)
 		FATAL("trying to access out of range field %s", x->nval);
 	m = val;
-	if (m == 0 && !is_number(s = getsval(x), NULL))	/* suspicion! */
-		FATAL("illegal field $(%s), name \"%s\"", s, x->nval);
-		/* BUG: can x->nval ever be null??? */
 	tempfree(x);
 	x = fieldadr(m);
 	x->ctype = OCELL;	/* BUG?  why are these needed? */
@@ -1469,6 +1465,8 @@ Cell *fassign(Cell *x, Cell *y, int n)
 		i *= j;
 		break;
 	case DIVEQ:
+		if ((x->tval & CON) != 0)
+			FATAL("non-constant required for left side of /=");
 		if (j == 0)
 			FATAL("division by zero in /=");
 		i /= j;
@@ -1546,6 +1544,8 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 		i *= j;
 		break;
 	case DIVEQ:
+		if ((x->tval & CON) != 0)
+			FATAL("non-constant required for left side of /=");
 		if (j == 0)
 			FATAL("division by zero in /=");
 		i /= j;

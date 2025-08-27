@@ -31,7 +31,7 @@ THIS SOFTWARE.
 #include "awk.h"
 #include AWKTAB
 
-const char	*version = "version 20240731";
+const char	*version = "version 20250804";
 
 #define	FULLTAB	2	/* rehash when table gets this x full */
 #define	GROWTAB 4	/* grow table by this factor */
@@ -767,7 +767,7 @@ int awkmain(int argc, char **argv)
 	symtab = makesymtab(NSYMTAB/NSYMTAB);
 	while (argc > 1 && argv[1][0] == '-' && argv[1][1] != '\0') {
 		if (strcmp(argv[1], "-version") == 0 || strcmp(argv[1], "--version") == 0) {
-			printf("awk %s\n", version);
+			printf("strawk %s\n", version);
 			return 0;
 		}
 		if (strcmp(argv[1], "--") == 0) {	/* explicit end of args */
@@ -794,7 +794,7 @@ int awkmain(int argc, char **argv)
 			dbg = atoi(&argv[1][2]);
 			if (dbg == 0)
 				dbg = 1;
-			printf("awk %s\n", version);
+			printf("strawk %s\n", version);
 			break;
 		default:
 			WARNING("unknown option %s ignored", argv[1]);
