@@ -396,8 +396,9 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		t = s ? tostring(s) : EMPTY;	/* in case it's self-assign */
 		if (freeable(vp))
 			xfree(vp->sval);
-	}
-	vp->tval &= ~(NUM|DONTFREE|CONVC|CONVO);
+		vp->tval &= ~(NUM|DONTFREE|CONVC|CONVO);
+	}else
+		vp->tval &= ~(NUM|CONVC|CONVO);
 	vp->tval |= STR;
 	vp->fmt = NULL;
 	DPRINTF("setsval %p: %s = \"%s (%p) \", t=%o r,f=%d,%d\n",
