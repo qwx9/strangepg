@@ -98,7 +98,7 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
 		if (rminlen)
 			minlen += quantum - rminlen;
 		tbuf = (char *) REALLOC(*pbuf, old, minlen);
-		DPRINTF("adjbuf %p %zu -> %d -> %p\n", *pbuf, old, minlen, tbuf);
+		DPRINTF("adjbuf %p %zu -> %d -> %p\n", (void *)*pbuf, old, minlen, (void *)tbuf);
 		*pbuf = tbuf;
 		*psiz = minlen;
 		if (pbptr)
@@ -1095,21 +1095,17 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 			if (ljust) { // print prec chars from t, then pad blanks
 				n = u8_char2byte(t, prec);
 				for (k = 0; k < n; k++) {
-					//putchar(t[k]);
 					*p++ = t[k];
 				}
 				for (i = 0; i < pad; i++) {
-					//printf(" ");
 					*p++ = ' ';
 				}
 			} else { // print pad blanks, then prec chars from t
 				for (i = 0; i < pad; i++) {
-					//printf(" ");
 					*p++ = ' ';
 				}
 				n = u8_char2byte(t, prec);
 				for (k = 0; k < n; k++) {
-					//putchar(t[k]);
 					*p++ = t[k];
 				}
 			}
@@ -1198,12 +1194,10 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 				for (i = 0; i < n; i++)
 					*p++ = t[i];
 				for (i = 0; i < pad; i++) {
-					//printf(" ");
 					*p++ = ' ';
 				}
 			} else { // print pad blanks, then prec chars from t
 				for (i = 0; i < pad; i++) {
-					//printf(" ");
 					*p++ = ' ';
 				}
 				for (i = 0; i < n; i++)

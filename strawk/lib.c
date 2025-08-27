@@ -438,7 +438,7 @@ void fldbld(void)	/* create fields from current record */
 	if (dbg) {
 		for (j = 0; j <= lastfld; j++) {
 			p = fldtab[j];
-			printf("field %d (%s): |%s|\n", j, p->nval, p->sval);
+			DPRINTF("field %d (%s): |%s|\n", j, p->nval, p->sval);
 		}
 	}
 }

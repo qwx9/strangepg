@@ -173,18 +173,18 @@ void dgrow(void **buf, int *size, void **pos, int want, int blocksz, const char 
 	p = *buf;
 	off = pos != NULL ? *(uschar**)pos - p : 0;
 	p = drealloc(p, off > 0 ? off : sz, want, fn);
-	DPRINTF("%p %zu -> %zu\n", p, sz, n);
+	DPRINTF("%p %zu -> %zu\n", (void *)p, sz, n);
 	*buf = p;
 	if (pos)
 		*pos = p + off;
 }
 
-void *drealloc(const void *s, size_t old, size_t new, const char *fn)
+void *drealloc(void *s, size_t old, size_t new, const char *fn)
 {
 	void *p;
 
 	DPRINTF("drealloc %p %zu to %zu in %s ", s, old, new, fn);
-	if((p = realloc((void *)s, new)) == NULL)
+	if((p = realloc(s, new)) == NULL)
 		FATAL("realloc: out of memory");
 	if(new > old)
 		memset((uschar *)p + old, 0, new - old);

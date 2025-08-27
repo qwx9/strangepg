@@ -44,7 +44,7 @@ int	bracecnt = 0;
 int	brackcnt  = 0;
 int	parencnt = 0;
 
-#define	RET(x)	{ if(dbg)printf("lex %s\n", tokname(x)); return(x); }
+#define	RET(x)	{ DPRINTF("lex %s\n", tokname(x)); return(x); }
 
 static int peek(void)
 {

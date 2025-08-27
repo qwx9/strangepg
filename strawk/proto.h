@@ -75,7 +75,7 @@ extern	void	*palloc(size_t);
 extern	char	*defstrdup(const char *);
 extern	void	*defrealloc(const void *, size_t, size_t);
 extern	void	*defalloc(size_t);
-extern	void	*drealloc(const void *, size_t, size_t, const char *);
+extern	void	*drealloc(void *, size_t, size_t, const char *);
 extern	void	dgrow(void **, int *, void **, int , int, const char *);
 extern	char	*dstrdup(const char *, const char *);
 extern	void	*dmalloc(size_t, const char *);
@@ -88,7 +88,7 @@ extern	void	dfree(void *, const char *);
 #define	STRDUP(a)	dstrdup((a), __func__)
 #define	FREE(a)	dfree((a), __func__)
 #define	xfree(a)	{ \
-	if((char*)(a) != EMPTY){ \
+	if((const char*)(a) != EMPTY){ \
 		FREE((void *)(intptr_t)(a)); \
 		(a) = NULL; \
 	} \

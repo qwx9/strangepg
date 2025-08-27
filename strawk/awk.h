@@ -56,7 +56,7 @@ typedef	unsigned char uschar;
 
 #define	NN(p)	((p) ? (p) : "(null)")	/* guaranteed non-null for DPRINTF
 */
-#define	DPRINTF(...)	if (dbg) printf(__VA_ARGS__)
+#define	DPRINTF(...)	if (dbg) fprintf(awkstderr, __VA_ARGS__)
 
 extern enum compile_states {
 	RUNNING,
