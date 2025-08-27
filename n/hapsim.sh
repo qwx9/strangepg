@@ -25,7 +25,7 @@ awk \
 	-v "pi=$pi" \
 	-v "frag=$frag" \
 '
-function nrand(n){
+function xnrand(n){
 	return n < 1 ? 0 : int((n-1) * rand() + 0.5)
 }
 function wrhdr(){
@@ -53,14 +53,14 @@ BEGIN{
 	wrsegs()
 	frag--
 	if(frag >= 1)
-		k = N / 2 + nrand(N / 2 - frag)
+		k = N / 2 + xnrand(N / 2 - frag)
 	else
 		k = N
 	left = 1
 	ldir = "+"
 	for(n=2; n<=k; n++){
 		while(rand() < pd)
-			newlink(1 + nrand(N))
+			newlink(1 + xnrand(N))
 		newlink(n)
 	}
 	if(k == N)
@@ -68,8 +68,8 @@ BEGIN{
 	# FIXME: not quite
 	ldir = "+"
 	for(n=k; n<=N-1;){
-		l = left = 1 + nrand(k)
-		c = 1 + nrand(N - n)
+		l = left = 1 + xnrand(k)
+		c = 1 + xnrand(N - n)
 		m = n + c - 1
 		while(n <= m)
 			newlink(n++)
