@@ -87,12 +87,12 @@ extern	void	dfree(void *, const char *);
 #define	REALLOC(a, b, c)	drealloc((a), (b), (c), __func__)
 #define	STRDUP(a)	dstrdup((a), __func__)
 #define	FREE(a)	dfree((a), __func__)
-#define	xfree(a)	{ \
+#define	xfree(a)	do{ \
 	if((const char*)(a) != EMPTY){ \
 		FREE((void *)(intptr_t)(a)); \
 		(a) = NULL; \
 	} \
-}
+}while(0)
 #define tempfree(x)	do { if (istemp(x)) tfree(x); } while (0)
 
 extern	TNode	*exptostat(TNode *);
