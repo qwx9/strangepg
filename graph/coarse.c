@@ -83,51 +83,6 @@ end:
 	return r;
 }
 
-static void
-printcbranch(ioff i, ioff p)
-{
-	ioff j;
-	CNode *U;
-
-	for(j=i; j!=-1; j=U->sibling){
-		U = cnodes + j;
-		if(j == i)
-			warn("%d→%d", p, j);
-		else
-			warn(":%d", j);
-	}
-	if(j == i)
-		return;
-	warn(" ");
-	for(j=i; j!=-1; j=U->sibling){
-		U = cnodes + j;
-		printcbranch(U->child, j);
-	}
-}
-
-static void
-printctree(void)
-{
-	ioff id;
-	Node *u, *ue;
-	CNode *U;
-
-	if((debug & Debugcoarse) == 0)
-		return;
-	warn("corresponding tree:\n");
-	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
-		id = u->id;
-		if(u->flags & FNalias)
-			continue;
-		U = cnodes + id;
-		if(U->parent == -1 && U->idx != -1){
-			warn("[%d> ", id);
-			printcbranch(U->child, id);
-			warn("\n");
-		}
-	}
-}
-
 static inline void
 checkcnode(CNode *U)
 {
@@ -835,34 +790,11 @@ collapseup(ioff *ids)
 	return 0;
 }
 
-/* FIXME: hashset vs. flags: can we modify a khashl set while iterating
- * through it? */
-static inline ioff *
-getleaves(CNode *U, ioff *ids)
-{
-	ioff n, j;
-	CNode *V;
-
-	if(U->idx == -1)
-		return ids;
-	for(n=dylen(ids), j=U->child; j!=-1; j=V->sibling){
-		V = cnodes + j;
-		ids = getleaves(V, ids);
-	}
-	if(dylen(ids) == n){
-		j = U - cnodes;
-		DPRINT(Debugcoarse, "getleaves: adding leaf %zd", j);
-		dypush(ids, j);
-	}
-	return ids;
-}
-
 ioff *
 collapseall(void)
 {
 	ioff *ids;
 	Node *u, *ue;
-	CNode *U;
 
 	ids = nil;
 	assert(cnodes != nil);
