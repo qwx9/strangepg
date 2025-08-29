@@ -56,22 +56,21 @@ TNode	*winner = NULL;	/* root of parse tree */
 TNode	*runnerup;
 Cell	*tmps;		/* free temporary cells for execution */
 
-static Cell	truecell	={ OBOOL, BTRUE, NUM, 0, 0, {.i=1}, NULL, NULL };
+static Cell	truecell	={ OBOOL, BTRUE, NUM, 0, 0, {.i=1}, NULL };
 Cell	*True	= &truecell;
-static Cell	falsecell	={ OBOOL, BFALSE, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	falsecell	={ OBOOL, BFALSE, NUM, 0, 0, {.i=0}, NULL };
 Cell	*False	= &falsecell;
-static Cell	breakcell	={ OJUMP, JBREAK, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	breakcell	={ OJUMP, JBREAK, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jbreak	= &breakcell;
-static Cell	contcell	={ OJUMP, JCONT, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	contcell	={ OJUMP, JCONT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jcont	= &contcell;
-static Cell	nextcell	={ OJUMP, JNEXT, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	nextcell	={ OJUMP, JNEXT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jnext	= &nextcell;
-static Cell	exitcell	={ OJUMP, JEXIT, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	exitcell	={ OJUMP, JEXIT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jexit	= &exitcell;
-static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL, NULL };
+static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jret	= &retcell;
-static Cell	tempcell	={ OCELL, CTEMP, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
-//static Cell	tempcell	={ OCELL, CTEMP, STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
+static Cell	tempcell	={ OCELL, CTEMP, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL };
 
 TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
@@ -204,7 +203,7 @@ static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
 Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
-	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
+	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
 	TNode *x;

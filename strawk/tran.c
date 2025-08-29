@@ -45,7 +45,6 @@ char	**RS;		/* initial record sep */
 char	**OFS;		/* output field sep */
 char	**ORS;		/* output record sep */
 char	**OFMT;		/* output format for numbers */
-char	**CONVFMT;	/* format for conversions in getsval */
 Awknum *NF;		/* number of fields in current record */
 Awknum *NR;		/* number of current record */
 Awknum *FNR;		/* number of current record in current file */
@@ -93,7 +92,6 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	orsloc = setsymtab("ORS", "\n", ZV, STR|DONTFREE, symtab);
 	ORS = &orsloc->sval;
 	OFMT = &setsymtab("OFMT", "%.6g", ZV, STR|DONTFREE, symtab)->sval;
-	CONVFMT = &setsymtab("CONVFMT", "%.6g", ZV, STR|DONTFREE, symtab)->sval;
 	FILENAME = &setsymtab("FILENAME", NULL, ZV, STR|DONTFREE, symtab)->sval;
 	nfloc = setsymtab("NF", NULL, ZV, NUM, symtab);
 	NF = &nfloc->val.i;
@@ -304,8 +302,7 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	}
 	if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
-	vp->tval &= ~(STR|CONVC|CONVO); /* mark string invalid */
-	vp->fmt = NULL;
+	vp->tval &= ~STR; /* mark string invalid */
 	vp->tval |= NUM | FLT;	/* mark number ok */
 	if (f == -0)  /* who would have thought this possible? */
 		f = 0;
@@ -339,8 +336,7 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	}
 	if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
-	vp->tval &= ~(STR|CONVC|CONVO|FLT); /* mark string invalid; force int */
-	vp->fmt = NULL;
+	vp->tval &= ~(STR|FLT); /* mark string invalid; force int */
 	vp->tval |= NUM;	/* mark number ok */
 	DPRINTF("setival %p: %s = %lld, t=%o\n", (void*)vp, NN(vp->nval), f, vp->tval);
 	return vp->val.i = f;
@@ -394,11 +390,10 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		t = s ? tostring(s) : EMPTY;	/* in case it's self-assign */
 		if (freeable(vp))
 			xfree(vp->sval);
-		vp->tval &= ~(NUM|DONTFREE|CONVC|CONVO);
+		vp->tval &= ~(NUM|DONTFREE);
 	}else
-		vp->tval &= ~(NUM|CONVC|CONVO);
+		vp->tval &= ~NUM;
 	vp->tval |= STR;
-	vp->fmt = NULL;
 	DPRINTF("setsval %p: %s = \"%s (%p) \", t=%o r,f=%d,%d\n",
 		(void*)vp, NN(vp->nval), t, (void*)t, vp->tval, donerec, donefld);
 	vp->sval = t;
@@ -468,7 +463,7 @@ static const char *get_inf_nan(Awkfloat d)
 		return NULL;
 }
 
-static inline void update_str_val(Cell *vp, char **fmt)
+static inline void update_str_val(Cell *vp)
 {
 	const char *p;
 	char s[256];
@@ -480,13 +475,14 @@ static inline void update_str_val(Cell *vp, char **fmt)
 	else if((vp->tval & FLT) == 0)
 		snprintf(s, sizeof(s), "%lld", vp->val.i);
 	else
-		snprintf(s, sizeof(s), *fmt, vp->val.f);
+		snprintf(s, sizeof(s), *OFMT, vp->val.f);
 	vp->sval = tostring(s);
 	vp->tval &= ~DONTFREE;
 	vp->tval |= STR;
 }
 
-static char *get_str_val(Cell *vp, char **fmt)        /* get string val of a Cell */
+/* not updating string automatically if OFMT changed. use printf. */
+static char *get_str_val(Cell *vp)        /* get string val of a Cell */
 {
 	if ((vp->tval & (NUM | STR)) == 0)
 		funnyvar(vp, "read value of");
@@ -494,64 +490,8 @@ static char *get_str_val(Cell *vp, char **fmt)        /* get string val of a Cel
 		fldbld();
 	else if (isrec(vp) && ! donerec)
 		recbld();
-
-	/*
-	 * ADR: This is complicated and more fragile than is desirable.
-	 * Retrieving a string value for a number associates the string
-	 * value with the scalar.  Previously, the string value was
-	 * sticky, meaning if converted via OFMT that became the value
-	 * (even though POSIX wants it to be via CONVFMT). Or if CONVFMT
-	 * changed after a string value was retrieved, the original value
-	 * was maintained and used.  Also not per POSIX.
-	 *
-	 * We work around this design by adding two additional flags,
-	 * CONVC and CONVO, indicating how the string value was
-	 * obtained (via CONVFMT or OFMT) and _also_ maintaining a copy
-	 * of the pointer to the xFMT format string used for the
-	 * conversion.  This pointer is only read, **never** dereferenced.
-	 * The next time we do a conversion, if it's coming from the same
-	 * xFMT as last time, and the pointer value is different, we
-	 * know that the xFMT format string changed, and we need to
-	 * redo the conversion. If it's the same, we don't have to.
-	 *
-	 * There are also several cases where we don't do a conversion,
-	 * such as for a field (see the checks below).
-	 */
-
-	if (isstr(vp) == 0) {
-		update_str_val(vp, fmt);
-		if (fmt == OFMT) {
-			vp->tval &= ~CONVC;
-			vp->tval |= CONVO;
-		} else {
-			/* CONVFMT */
-			vp->tval &= ~CONVO;
-			vp->tval |= CONVC;
-		}
-		vp->fmt = *fmt;
-	} else if ((vp->tval & DONTFREE) != 0 || ! isnum(vp) || isfld(vp)) {
-		goto done;
-	} else if (isstr(vp)) {
-		if (fmt == OFMT) {
-			if ((vp->tval & CONVC) != 0
-			    || ((vp->tval & CONVO) != 0 && vp->fmt != *fmt)) {
-				update_str_val(vp, fmt);
-				vp->tval &= ~CONVC;
-				vp->tval |= CONVO;
-				vp->fmt = *fmt;
-			}
-		} else {
-			/* CONVFMT */
-			if ((vp->tval & CONVO) != 0
-			    || ((vp->tval & CONVC) != 0 && vp->fmt != *fmt)) {
-				update_str_val(vp, fmt);
-				vp->tval &= ~CONVO;
-				vp->tval |= CONVC;
-				vp->fmt = *fmt;
-			}
-		}
-	}
-done:
+	if (isstr(vp) == 0)
+		update_str_val(vp);
 	DPRINTF("getsval %p: %s = \"%s (%p)\", t=%o\n",
 		(void*)vp, NN(vp->nval), vp->sval, (void*)vp->sval, vp->tval);
 	return(vp->sval);
@@ -559,12 +499,12 @@ done:
 
 char *getsval(Cell *vp)       /* get string val of a Cell */
 {
-      return get_str_val(vp, CONVFMT);
+      return get_str_val(vp);
 }
 
 char *getpssval(Cell *vp)     /* get string val of a Cell for print */
 {
-      return get_str_val(vp, OFMT);
+      return get_str_val(vp);
 }
 
 
@@ -658,40 +598,6 @@ char *qstring(const char *is, int delim)	/* collect string up to next delim */
 	}
 	*bp++ = 0;
 	return (char *) buf;
-}
-
-const char *flags2str(int flags)
-{
-	static const struct ftab {
-		const char *name;
-		int value;
-	} flagtab[] = {
-		{ "NUM", NUM },
-		{ "STR", STR },
-		{ "DONTFREE", DONTFREE },
-		{ "CON", CON },
-		{ "ARR", ARR },
-		{ "FCN", FCN },
-		{ "FLD", FLD },
-		{ "REC", REC },
-		{ "CONVC", CONVC },
-		{ "CONVO", CONVO },
-		{ NULL, 0 }
-	};
-	static char buf[100];
-	int i;
-	char *cp = buf;
-
-	for (i = 0; flagtab[i].name != NULL; i++) {
-		if ((flags & flagtab[i].value) != 0) {
-			if (cp > buf)
-				*cp++ = '|';
-			strcpy(cp, flagtab[i].name);
-			cp += strlen(cp);
-		}
-	}
-
-	return buf;
 }
 
 static const char *

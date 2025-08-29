@@ -104,11 +104,10 @@ extern	int	patlen;		/* length of pattern matched.  set in b.c */
 typedef struct Cell {
 	uschar	ctype;		/* OCELL, OBOOL, OJUMP, etc. */
 	uschar	csub;		/* CCON, CTEMP, CFLD, etc. */
-	short	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|CONVC|CONVO|FLT */
+	short	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|FLT */
 	char	*nval;		/* name, for variables only */
 	char	*sval;		/* string value */
-	Value val;
-	char	*fmt;		/* CONVFMT/OFMT value used to convert from number */
+	Value	val;
 	struct Cell *cnext;	/* ptr to next if chained */
 } Cell;
 
@@ -143,9 +142,7 @@ extern Cell	*symtabloc;	/* SYMTAB */
 #define	FCN	040	/* this is a function name */
 #define FLD	0100	/* this is a field $1, $2, ... */
 #define	REC	0200	/* this is $0 */
-#define CONVC	0400	/* string was converted from number via CONVFMT */
-#define CONVO	01000	/* string was converted from number via OFMT */
-#define	FLT		02000	/* if valid, number is floating point */
+#define	FLT	0400	/* if valid, number is floating point */
 
 
 /* function types */

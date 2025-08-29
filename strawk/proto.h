@@ -226,5 +226,3 @@ extern	Cell	*addon(TNode **, int);
 extern	Cell	*printstat(TNode **, int);
 extern	Cell	*nullproc(TNode **, int);
 extern	Cell	*dosub(TNode **, int);
-
-extern  const char	*flags2str(int flags);

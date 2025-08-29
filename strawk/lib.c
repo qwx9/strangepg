@@ -65,8 +65,8 @@ extern	Awknum *ARGC;
 
 extern jmp_buf evalenv;
 
-static Cell dollar0 = { OCELL, CFLD, REC|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL, NULL };
-static Cell dollar1 = { OCELL, CFLD, FLD|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL, NULL };
+static Cell dollar0 = { OCELL, CFLD, REC|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL };
+static Cell dollar1 = { OCELL, CFLD, FLD|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL };
 
 void recinit(unsigned int n)
 {
