@@ -36,6 +36,8 @@ const char	*version = "version 20250804";
 #define	FULLTAB	2	/* rehash when table gets this x full */
 #define	GROWTAB 4	/* grow table by this factor */
 
+Value	ZV = {.i = 0};	/* convenience */
+
 Array	*symtab;	/* main symbol table */
 
 char	**FS;		/* initial field sep */

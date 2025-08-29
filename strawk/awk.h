@@ -44,6 +44,8 @@ union Value{
 };
 typedef union Value Value;
 
+extern Value ZV;
+
 /* unsigned char is more trouble than it's worth */
 
 typedef	unsigned char uschar;
