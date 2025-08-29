@@ -65,8 +65,8 @@ extern	Awknum *ARGC;
 
 extern jmp_buf evalenv;
 
-static Cell dollar0 = { OCELL, CFLD, NULL, EMPTY, {0}, REC|STR|DONTFREE, NULL, NULL };
-static Cell dollar1 = { OCELL, CFLD, NULL, EMPTY, {0}, FLD|STR|DONTFREE, NULL, NULL };
+static Cell dollar0 = { OCELL, CFLD, REC|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL, NULL };
+static Cell dollar1 = { OCELL, CFLD, FLD|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL, NULL };
 
 void recinit(unsigned int n)
 {
@@ -278,15 +278,13 @@ char *getargv(int n)	/* get ARGV[n] */
 	Array *ap;
 	Cell *x;
 	char *s, temp[50];
-	Value v;
 	extern Cell *ARGVcell;
 
 	ap = (Array *)ARGVcell->sval;
 	snprintf(temp, sizeof(temp), "%d", n);
 	if (lookup(temp, ap) == NULL)
 		return NULL;
-	v.i = 0;
-	x = setsymtab(temp, NULL, v, STR, ap);
+	x = setsymtab(temp, NULL, ZV, STR, ap);
 	s = getsval(x);
 	DPRINTF("getargv(%d) returns |%s|\n", n, s);
 	return s;

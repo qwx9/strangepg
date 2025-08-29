@@ -56,22 +56,22 @@ TNode	*winner = NULL;	/* root of parse tree */
 TNode	*runnerup;
 Cell	*tmps;		/* free temporary cells for execution */
 
-static Cell	truecell	={ OBOOL, BTRUE, 0, 0, {1}, NUM, NULL, NULL };
+static Cell	truecell	={ OBOOL, BTRUE, NUM, 0, 0, {.i=1}, NULL, NULL };
 Cell	*True	= &truecell;
-static Cell	falsecell	={ OBOOL, BFALSE, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	falsecell	={ OBOOL, BFALSE, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*False	= &falsecell;
-static Cell	breakcell	={ OJUMP, JBREAK, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	breakcell	={ OJUMP, JBREAK, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*jbreak	= &breakcell;
-static Cell	contcell	={ OJUMP, JCONT, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	contcell	={ OJUMP, JCONT, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*jcont	= &contcell;
-static Cell	nextcell	={ OJUMP, JNEXT, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	nextcell	={ OJUMP, JNEXT, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*jnext	= &nextcell;
-static Cell	exitcell	={ OJUMP, JEXIT, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	exitcell	={ OJUMP, JEXIT, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*jexit	= &exitcell;
-static Cell	retcell		={ OJUMP, JRET, 0, 0, {0}, NUM, NULL, NULL };
+static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL, NULL };
 Cell	*jret	= &retcell;
-static Cell	tempcell	={ OCELL, CTEMP, 0, EMPTY, {0}, NUM|STR|DONTFREE, NULL, NULL };
-//static Cell	tempcell	={ OCELL, CTEMP, 0, EMPTY, {0}, STR|DONTFREE, NULL, NULL };
+static Cell	tempcell	={ OCELL, CTEMP, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
+//static Cell	tempcell	={ OCELL, CTEMP, STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
 
 TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
@@ -204,7 +204,7 @@ static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
 Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
-	static const Cell newcopycell = { OCELL, CCOPY, 0, EMPTY, {0}, NUM|STR|DONTFREE, NULL, NULL };
+	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
 	TNode *x;
@@ -419,7 +419,6 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
 	Cell *x, *z;
 	char *buf;
-	Value v;
 
 	x = execute(a[0]);	/* Cell* for symbol table */
 	buf = makearraystring(a[1], __func__);
@@ -431,8 +430,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		x->tval |= ARR;
 		x->sval = (char *) makesymtab(NSYMTAB);
 	}
-	v.i = 0;
-	z = setsymtab(buf, NULL, v, STR|NUM, (Array *) x->sval);
+	z = setsymtab(buf, NULL, ZV, STR|NUM, (Array *) x->sval);
 	z->ctype = OCELL;
 	z->csub = CVAR;
 	tempfree(x);
@@ -1665,7 +1663,6 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	char temp, num[50];
 	int n, tempstat, arg3type;
 	int j;
-	Value v;
 
 	y = execute(a[0]);	/* source string */
 	origs = s = STRDUP(getsval(y));
@@ -1719,8 +1716,7 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 				if (*(patbeg+patlen-1) == '\0' || *s == '\0') {
 					n++;
 					snprintf(num, sizeof(num), "%d", n);
-					v.i = 0;
-					setsymtab(num, NULL, v, STR, (Array *) ap->sval);
+					setsymtab(num, NULL, ZV, STR, (Array *) ap->sval);
 					pfa->initstat = tempstat;
 					goto spdone;
 				}

@@ -104,10 +104,10 @@ extern	int	patlen;		/* length of pattern matched.  set in b.c */
 typedef struct Cell {
 	uschar	ctype;		/* OCELL, OBOOL, OJUMP, etc. */
 	uschar	csub;		/* CCON, CTEMP, CFLD, etc. */
+	short	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|CONVC|CONVO|FLT */
 	char	*nval;		/* name, for variables only */
 	char	*sval;		/* string value */
 	Value val;
-	int	 tval;		/* type info: STR|NUM|ARR|FCN|FLD|CON|DONTFREE|CONVC|CONVO|FLT */
 	char	*fmt;		/* CONVFMT/OFMT value used to convert from number */
 	struct Cell *cnext;	/* ptr to next if chained */
 } Cell;

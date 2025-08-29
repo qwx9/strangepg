@@ -78,39 +78,36 @@ extern	size_t	npfile;
 
 void syminit(void)	/* initialize symbol table with builtin vars */
 {
-	Value v;
-
-	v.i = 0;
-	literal0 = setsymtab("0", "0", v, NUM|STR|CON|DONTFREE, symtab);
+	literal0 = setsymtab("0", "0", ZV, NUM|STR|CON|DONTFREE, symtab);
 	/* this is used for if(x)... tests: */
-	nullloc = setsymtab("$zero&null", NULL, v, NUM|STR|CON|DONTFREE, symtab);
+	nullloc = setsymtab("$zero&null", NULL, ZV, NUM|STR|CON|DONTFREE, symtab);
 	nullnode = celltonode(nullloc, CCON);
 
 	/* default FS and OFS assumed 0x20 in tests */
-	fsloc = setsymtab("FS", " ", v, STR|DONTFREE, symtab);
+	fsloc = setsymtab("FS", " ", ZV, STR|DONTFREE, symtab);
 	FS = &fsloc->sval;
-	rsloc = setsymtab("RS", "\n", v, STR|DONTFREE, symtab);
+	rsloc = setsymtab("RS", "\n", ZV, STR|DONTFREE, symtab);
 	RS = &rsloc->sval;
-	ofsloc = setsymtab("OFS", " ", v, STR|DONTFREE, symtab);
+	ofsloc = setsymtab("OFS", " ", ZV, STR|DONTFREE, symtab);
 	OFS = &ofsloc->sval;
-	orsloc = setsymtab("ORS", "\n", v, STR|DONTFREE, symtab);
+	orsloc = setsymtab("ORS", "\n", ZV, STR|DONTFREE, symtab);
 	ORS = &orsloc->sval;
-	OFMT = &setsymtab("OFMT", "%.6g", v, STR|DONTFREE, symtab)->sval;
-	CONVFMT = &setsymtab("CONVFMT", "%.6g", v, STR|DONTFREE, symtab)->sval;
-	FILENAME = &setsymtab("FILENAME", NULL, v, STR|DONTFREE, symtab)->sval;
-	nfloc = setsymtab("NF", NULL, v, NUM, symtab);
+	OFMT = &setsymtab("OFMT", "%.6g", ZV, STR|DONTFREE, symtab)->sval;
+	CONVFMT = &setsymtab("CONVFMT", "%.6g", ZV, STR|DONTFREE, symtab)->sval;
+	FILENAME = &setsymtab("FILENAME", NULL, ZV, STR|DONTFREE, symtab)->sval;
+	nfloc = setsymtab("NF", NULL, ZV, NUM, symtab);
 	NF = &nfloc->val.i;
-	nrloc = setsymtab("NR", NULL, v, NUM, symtab);
+	nrloc = setsymtab("NR", NULL, ZV, NUM, symtab);
 	NR = &nrloc->val.i;
-	fnrloc = setsymtab("FNR", NULL, v, NUM, symtab);
+	fnrloc = setsymtab("FNR", NULL, ZV, NUM, symtab);
 	FNR = &fnrloc->val.i;
-	subseploc = setsymtab("SUBSEP", "\034", v, STR|DONTFREE, symtab);
+	subseploc = setsymtab("SUBSEP", "\034", ZV, STR|DONTFREE, symtab);
 	SUBSEP = &subseploc->sval;
-	rstartloc = setsymtab("RSTART", NULL, v, NUM, symtab);
+	rstartloc = setsymtab("RSTART", NULL, ZV, NUM, symtab);
 	RSTART = &rstartloc->val.i;
-	rlengthloc = setsymtab("RLENGTH", NULL, v, NUM, symtab);
+	rlengthloc = setsymtab("RLENGTH", NULL, ZV, NUM, symtab);
 	RLENGTH = &rlengthloc->val.i;
-	symtabloc = setsymtab("SYMTAB", NULL, v, ARR, symtab);
+	symtabloc = setsymtab("SYMTAB", NULL, ZV, ARR, symtab);
 	symtabloc->sval = (char *) symtab;
 }
 
@@ -124,8 +121,7 @@ void arginit(int ac, char **av)	/* set up ARGV and ARGC */
 
 	v.i = (Awknum)ac;
 	ARGC = &setsymtab("ARGC", NULL, v, NUM, symtab)->val.i;
-	v.i = 0;
-	cp = setsymtab("ARGV", NULL, v, ARR, symtab);
+	cp = setsymtab("ARGV", NULL, ZV, ARR, symtab);
 	ap = makesymtab(NSYMTAB);	/* could be (int) ARGC as well */
 	cp->sval = (char *) ap;
 	for (i = 0; i < ac; i++) {
@@ -591,7 +587,6 @@ char *tostringN(const char *s, size_t n)	/* make a copy of string s */
 Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 {
 	Cell *c;
-	Value v;
 	char *sa = getsval(a);
 	char *sb = getsval(b);
 	size_t l = strlen(sa) + strlen(sb) + 1;
@@ -612,8 +607,7 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 	// See string() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
 	//snprintf(buf, l, "%s ", p);
-	v.i = 0;
-	c = setsymtab(buf, NULL, v, CON|STR|DONTFREE, symtab);
+	c = setsymtab(buf, NULL, ZV, CON|STR|DONTFREE, symtab);
 	buf[l-2] = '\0';
 	c->sval = STRDUP(buf);
 	return c;

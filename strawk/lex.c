@@ -134,7 +134,6 @@ bool	reg	= false;	/* true => return a REGEXPR now */
 int yylex(void)
 {
 	int c;
-	Value v;
 	static char *buf = NULL;
 	static int bufsize = 5; /* BUG: setting this small causes core dump! */
 
@@ -295,8 +294,7 @@ int yylex(void)
 					unputstr(buf);
 					RET(INDIRECT);
 				}
-				v.i = 0;
-				yylval.cp = setsymtab(buf, NULL, v, STR|NUM, symtab);
+				yylval.cp = setsymtab(buf, NULL, ZV, STR|NUM, symtab);
 				RET(IVAR);
 			} else if (c == 0) {	/*  */
 				SYNTAX( "unexpected end of input after $" );
@@ -343,7 +341,6 @@ int string(void)
 	int c;
 	unsigned int n;
 	char *s, *p, *bp;
-	Value v;
 	static char *buf = NULL;
 	static int bufsz = 64;
 
@@ -450,12 +447,11 @@ int string(void)
 	}
 	*bp++ = ' ';
 	*bp++ = '\0';
-	v.i = 0;
 	s = defalloc(bp - buf);
 	p = defalloc(bp - buf - 1);
 	memcpy(s, buf, bp-buf - 1);
 	memcpy(p, buf, bp-buf - 2);
-	yylval.cp = setsymtab(s, p, v, CON|STR|DONTFREE, symtab);
+	yylval.cp = setsymtab(s, p, ZV, CON|STR|DONTFREE, symtab);
 	RET(STRING);
 }
 
@@ -481,9 +477,7 @@ int word(char *w)
 {
 	const Keyword *kp;
 	int c, n;
-	Value v;
 
-	v.i = 0;
 	n = binsearch(w, keywords, nkeywords);
 	if (n != -1) {	/* found in table */
 		kp = keywords + n;
@@ -498,7 +492,7 @@ int word(char *w)
 				SYNTAX( "return not in function" );
 			RET(kp->type);
 		case VARNF:
-			yylval.cp = setsymtab("NF", NULL, v, NUM, symtab);
+			yylval.cp = setsymtab("NF", NULL, ZV, NUM, symtab);
 			RET(VARNF);
 		case BLTIN:
 		case ADDON:
@@ -511,7 +505,7 @@ int word(char *w)
 		yylval.i = n;
 		RET(ARG);
 	} else {
-		yylval.cp = setsymtab(w, NULL, v, STR|NUM|DONTFREE, symtab);
+		yylval.cp = setsymtab(w, NULL, ZV, STR|NUM|DONTFREE, symtab);
 		if (c == '(') {
 			RET(CALL);
 		} else {
