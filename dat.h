@@ -9,6 +9,7 @@ typedef struct Thread Thread;
 #pragma incomplete Thread
 
 typedef	s32int	ioff;
+typedef s64int	voff;
 
 struct Vertex{
 	float x;

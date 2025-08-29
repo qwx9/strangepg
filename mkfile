@@ -13,6 +13,7 @@ OFILES=\
 	cmd/awk.$O\
 	cmd/awkext.$O\
 	cmd/cmd.$O\
+	cmd/var.$O\
 	draw/color.$O\
 	draw/draw.$O\
 	fs/ctab.$O\

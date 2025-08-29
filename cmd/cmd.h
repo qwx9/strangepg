@@ -15,14 +15,11 @@ enum{
 	Ty0,
 	Tz0,
 
-	Tnode,
-	Tedge,
-	Tlabel,
-	TCL,
 	Tdegree,
+	TCL,
 	Tnil,
 
-	Tlayout = Tnode,	/* end of tags affecting layout */
+	Tlayout = Tdegree,	/* end of tags affecting layout */
 };
 
 enum{
@@ -48,6 +45,11 @@ extern int noreset;	// FIXME: flag
 extern char *awkprog;
 extern int infd[2], outfd[2];
 
+char*	getname(voff);
+voff	getid(char*);
+voff	pushname(char*);
+void	setcoretag(int, voff, V);
+void	initvars(void);
 int	gettab(char*);
 void	settag(char*, ioff, char*, int);
 void	setspectag(int, ioff, V);

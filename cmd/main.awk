@@ -145,7 +145,7 @@ function checknodeid(id){
 	return 1
 }
 function checknodename(name){
-	if(!(name in node)){
+	if(!(name in id)){
 		print "E\tno such node: " name
 		return 0
 	}
@@ -172,7 +172,7 @@ function edgeinfo(i, s){
 function findnode(name,	id){
 	if(!checknodename(name))
 		return
-	id = node[name]
+	id = id[name]
 	selectnodebyid(id)
 	print "N", id
 }
@@ -233,7 +233,7 @@ function deselectnodebyid(id,	col){
 function deselectnode(name,	id){
 	if(!checknodename(name))
 		return
-	deselectnodebyid(node[name])
+	deselectnodebyid(id[name])
 }
 function showselected(){
 	selinfo = selinfostr()
@@ -253,7 +253,7 @@ function selectall(id){
 function selectnode(name, id){
 	if(!checknodename(name))
 		return
-	id = node[name]
+	id = id[name]
 	selectnodebyid(id, 1)	# FIXME
 }
 function toggleselect(id){
@@ -329,37 +329,37 @@ function initx(name, x){
 	if(!checknodename(name))
 		return
 	x0[name] = x
-	print "x", node[name], x
+	print "x", id[name], x
 }
 function inity(name, y){
 	if(!checknodename(name))
 		return
 	y0[name] = y
-	print "y", node[name], y
+	print "y", id[name], y
 }
 function initz(name, z){
 	if(!checknodename(name))
 		return
 	z0[name] = z
-	print "z", node[name], z
+	print "z", id[name], z
 }
 function fixx(name, x){
 	if(!checknodename(name))
 		return
 	fx[name] = x
-	print "X", node[name], x
+	print "X", id[name], x
 }
 function fixy(name, y){
 	if(!checknodename(name))
 		return
 	fy[name] = y
-	print "Y", node[name], y
+	print "Y", id[name], y
 }
 function fixz(name, z){
 	if(!checknodename(name))
 		return
 	fz[name] = z
-	print "Z", node[name], z
+	print "Z", id[name], z
 }
 function quit(){
 	print "!"

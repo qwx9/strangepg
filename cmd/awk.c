@@ -8,7 +8,7 @@
 #include "strawk/awk.h"
 #include "strawk/awkgram.tab.h"
 
-extern QLock symlock;
+QLock symlock;	/* shared with awk process to not outrun compilation */
 
 /* [0] is read, [1] is write to cater to windows' _pipe */
 int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
@@ -96,8 +96,8 @@ awk(void *)
 	dbg = (debug & Debugstrawk) != 0;
 	/* note: srand has already been called, so awk's srand_seed
 	 * has a wrong value of 1; we don't care. */
-	qlock(&symlock);
 	compileawk(nelem(args), args);
+	initvars();
 	qunlock(&symlock);
 	runawk();
 }
@@ -109,6 +109,8 @@ initrepl(void)
 	if(pipe(infd) < 0 || pipe(outfd) < 0)
 		return -1;
 	initext();
+	initqlock(&symlock);
+	qlock(&symlock);
 	newthread(awk, nil, nil, nil, "strawk", mainstacksize);
 	return 0;
 }

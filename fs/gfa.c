@@ -14,12 +14,10 @@
  * - no empty fields
  */
 
-KHASHL_MAP_INIT(KH_LOCAL, namemap, names, char*, ioff, kh_hash_str, kh_eq_str)
 KHASHL_SET_INIT(KH_LOCAL, edgeset, edges, u64int, kh_hash_uint64, kh_eq_generic)
 
 typedef struct Aux Aux;
 struct Aux{
-	namemap *names;
 	edgeset *edges;
 	int *length;
 	ushort *degree;
@@ -171,11 +169,11 @@ initnodes(Aux *a)
 		n->eoff = off;
 		n->length = *l++;
 		v.i = n->length;
-		setspectag(TLN, i, v);
+		setcoretag(TLN, i, v);
 		d = *dp++;
 		off += d;
 		v.i = d;
-		setspectag(Tdegree, i, v);
+		setcoretag(Tdegree, i, v);
 	}
 }
 
@@ -189,7 +187,6 @@ mkgraph(Aux *a)
 	initnodes(a);
 	dyfree(a->length);
 	dyfree(a->degree);
-	names_destroy(a->names);
 	initedges(a);
 	edges_destroy(a->edges);
 	if(newlayout(-1) < 0)
@@ -197,25 +194,14 @@ mkgraph(Aux *a)
 }
 
 static ioff
-pushnode(Aux *a, char *s, int *abs)
+pushnode(Aux *a, char *s)
 {
 	ioff id;
-	khint_t k;
-	namemap *h;
-	V v;
 
-	h = a->names;
-	k = names_put(h, s, abs);
-	if(*abs){
-		id = a->nnodes++;
-		s = estrdup(s);
-		kh_key(h, k) = s;
-		kh_val(h, k) = id;
-		v.s = s;
-		setspectag(Tnode, id, v);
+	if((id = pushname(s)) == a->nnodes){
+		a->nnodes++;
 		DPRINT(Debugfs, "node \"%s\" → %d", s, id);
-	}else
-		id = kh_val(h, k);
+	}
 	return id;
 }
 
@@ -223,14 +209,14 @@ pushnode(Aux *a, char *s, int *abs)
 static inline int
 readnode(Aux *a, File *f)
 {
-	int id, r, w, abs;
+	int id, r, w;
 	vlong off;
 	char *s;
 
 	r = 0;
 	s = nextfield(f);
-	id = pushnode(a, s, &abs);
-	if(!abs && id < dylen(a->nodeoff) && a->nodeoff[id] != 0){
+	id = pushnode(a, s);
+	if(id < a->nnodes-1 && id < dylen(a->nodeoff) && a->nodeoff[id] != 0){
 		werrstr("duplicate S record");
 		return -2;
 	}
@@ -281,8 +267,8 @@ readedge(Aux *a, File *f)
 		}
 		*fp = s;
 	}
-	u = pushnode(a, fld[0], &abs);
-	v = pushnode(a, fld[2], &abs);
+	u = pushnode(a, fld[0]);
+	v = pushnode(a, fld[2]);
 	i = *fld[1] == '+' ? 0 : 1;
 	j = *fld[3] == '+' ? 0 : 1;
 	if(nextfield(f) != nil)
@@ -389,8 +375,7 @@ opengfa(Aux *a, char *path)
 		return nil;
 	logmsg(va("loadgfa: processing file: %s...\n", path));
 	free(path);
-	if((a->names = names_init()) == nil
-	|| (a->edges = edges_init()) == nil)
+	if((a->edges = edges_init()) == nil)
 		sysfatal("opengfa: %s", error());
 	return f;
 }

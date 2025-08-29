@@ -121,6 +121,7 @@ OBJ:=\
 	cmd/awkext.o\
 	cmd/awkprog.o\
 	cmd/cmd.o\
+	cmd/var.o\
 	draw/color.o\
 	draw/draw.o\
 	draw/view.o\

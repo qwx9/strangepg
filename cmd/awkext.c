@@ -11,7 +11,7 @@
 #include "lib/khashl.h"
 #include "strawk/awk.h"
 
-QLock symlock;	/* shared with awk process to not outrun compilation */
+extern QLock symlock;
 
 /* NOTE: pushcmd here is asking for trouble. fs/gfa and others
  * may be saturating the cmd buffer and we're the only reader. */
@@ -118,7 +118,6 @@ getarray(char *arr)
 		a = (Array *)c->sval;
 		qunlock(&symlock);
 	}
-	assert(a != nil);
 	return a;
 }
 
@@ -160,43 +159,6 @@ getcell(char *lab, Array *a)
 	c = lookup(lab, a);
 	qunlock(&symlock);
 	return c;
-}
-
-static inline ioff
-getnodeid(char *lab)
-{
-	ioff id;
-	Cell *c;
-	Array *a;
-
-	if((a = gettabarray(Tnode)) == nil){
-		werrstr("uninitialized table %s", lab);
-		return -1;
-	}
-	if((c = getcell(lab, a)) == nil){
-		werrstr("no such node %s", lab);
-		return -1;
-	}
-	if((id = getival(c)) < 0){
-		werrstr("invalid node %s", lab);
-		return -1;
-	}
-	return id;
-}
-
-static inline char *
-getnodelabel(ioff id)
-{
-	char lab[24];
-	Cell *c;
-	Array *a;
-
-	if((a = gettabarray(Tlabel)) == nil)
-		sysfatal("getnodelabel %d: uninitialized label table", id);
-	snprint(lab, sizeof lab, "%d", id);
-	if((c = getcell(lab, a)) == nil)
-		sysfatal("getnodelabel %d: no such id", id);
-	return c->sval;
 }
 
 static inline Cell *
@@ -270,26 +232,8 @@ set(int i, int type, ioff id, V val)
 	DPRINT(Debugawk, "set %s type %d id %d", tabs[i].name, type, id);
 	/* FIXME: better type checking; merge with generic tag code */
 	switch(i){
-	case Tnode:
-		c = setint(val.s, id, a, &new);
-		if(new){	/* kludge to reuse buffers */
-			free(c->nval);
-			c->nval = val.s;
-		}
-		i = Tlabel;
-		a = mkarray(i);
-		/* wet floor */
-	case Tlabel:
-		snprint(l, sizeof l, "%d", id);
-		setstr(l, val.s, a, nil);	/* alloced key to transient node hashmap */
-		break;
-	case Tedge:
-		/* FIXME: prevent direct access to this and other protected tabs: if
-		 * not new, prevent write access */
-		setint(val.s, id, a, nil);
-		break;
 	case TCL:
-		lab = getnodelabel(id);
+		lab = getname(id);
 		if(type != Tint && type != Tuint){
 			logerr(va("set CL[%s]: invalid non-integer color: %s\n", lab, type == Tstring ? val.s : ""));
 			break;
@@ -307,7 +251,7 @@ set(int i, int type, ioff id, V val)
 			DPRINT(Debuginfo, "not assigning string value %s to LN[%d]", val.s, id);
 			return;
 		}
-		lab = getnodelabel(id);
+		lab = getname(id);
 		if(setattr(i, id, val) < 0)
 			DPRINT(Debugawk, "set LN: %s", error());
 		c = setint(lab, val.u, a, &new);
@@ -321,7 +265,7 @@ set(int i, int type, ioff id, V val)
 			DPRINT(Debuginfo, "not assigning string value %s to degree[%d]", val.s, id);
 			return;
 		}
-		lab = getnodelabel(id);
+		lab = getname(id);
 		c = setint(lab, val.u, a, &new);
 		if(new){
 			free(c->nval);
@@ -334,7 +278,7 @@ set(int i, int type, ioff id, V val)
 	case Tx0:
 	case Ty0:
 	case Tz0:
-		lab = getnodelabel(id);
+		lab = getname(id);
 		if(type != Tfloat)	/* FIXME */
 			val.f = val.i;
 		if(setattr(i, id, val) < 0)
@@ -355,7 +299,7 @@ set(int i, int type, ioff id, V val)
 			snprint(l, sizeof l, "%d", id);
 			lab = l;
 		}else
-			lab = getnodelabel(id);
+			lab = getname(id);
 		switch(type){
 		case Tint: setint(lab, val.i, a, nil); break;
 		case Tuint: setint(lab, val.u, a, nil); break;
@@ -479,7 +423,7 @@ setnamedtag(char *tag, char *name, char *val)
 	V v;
 
 	i = mktab(tag, 1);	/* assuming index by node */
-	if((id = getnodeid(name)) < 0)
+	if((id = getid(name)) < 0)
 		FATAL("%s", error());
 	type = vartype(val, &v, i == TCL);
 	if(debug & Debugawk){
@@ -545,7 +489,7 @@ fnexplode(Cell *x, TNode *nextarg)
 	for(;nextarg!=nil; nextarg=nextarg->nnext){
 		tempfree(x);
 		x = execute(nextarg);
-		if((id = getnodeid(getsval(x))) < 0)
+		if((id = getid(getsval(x))) < 0)
 			FATAL("%s", error());
 		if((idx = getnodeidx(id)) < 0){
 			DPRINT(Debuggraph, "explode: ignoring inactive node %d", id);
@@ -572,7 +516,7 @@ fnnodecolor(Cell *x, TNode *next)
 	v.u = getival(y);
 	if((a = gettabarray(TCL)) == nil)
 		 sysfatal("awk/nodecolor: uninitialized table");
-	if((id = getnodeid(lab)) < 0)
+	if((id = getid(lab)) < 0)
 		FATAL("%s", error());
 	setint(lab, v.u, a, nil);
 	if(setattr(TCL, id, v) < 0)
@@ -676,13 +620,13 @@ fncollapse(Cell *x, TNode *nextarg)
 	ops = nil;
 	/* FIXME: most of this doesn't need to be C */
 	if(nextarg != nil){
-		if((id = getnodeid(getsval(x))) < 0)
+		if((id = getid(getsval(x))) < 0)
 			FATAL("%s", error());
 		ops = pushcollapseop(id, ops);
 		for(;nextarg!=nil; nextarg=nextarg->nnext){
 			tempfree(x);
 			x = execute(nextarg);
-			if((id = getnodeid(getsval(x))) < 0)
+			if((id = getid(getsval(x))) < 0)
 				FATAL("%s", error());
 			ops = pushcollapseop(id, ops);
 		}
@@ -753,13 +697,13 @@ printgfa(char *path)	/* FIXME */
 		return -1;
 	}
 	for(u=nodes, ue=u+dylen(u); u<ue; u++){
-		l = getnodelabel(u->id);
+		l = getname(u->id);
 		p = seprint(buf, buf + sizeof buf, "S\t%s\t*\tLN:i:%lld\n",
 			l, u->length);
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;
 			v = nodes + (x >> 2);
-			vl = getnodelabel(v->id);
+			vl = getname(v->id);
 			p = seprint(p, buf + sizeof buf, "L\t%s\t%c\t%s\t%c\t*\n",
 				l, x&1?'-':'+', vl, x&2?'-':'+');
 		}
@@ -851,23 +795,20 @@ initext(void)
 		char *name;
 		char *fn;
 		int nodeidx;
+		short type;
 	} sptags[] = {
-		[TLN] = {"LN", nil, 1},
-		[Tfx] = {"fx", "fixx", 1},
-		[Tfy] = {"fy", "fixy", 1},
-		[Tfz] = {"fz", "fixz", 1},
-		[Tx0] = {"x0", "initx", 1},
-		[Ty0] = {"y0", "inity", 1},
-		[Tz0] = {"z0", "initz", 1},
-		[Tnode] = {"node", nil, 1},
-		[Tedge] = {"edge", nil, 0},
-		[Tlabel] = {"label", nil, 0},
-		[TCL] = {"CL", "nodecolor", 1},
-		[Tdegree] = {"degree", nil, 1},
+		[TLN] = {"LN", nil, 1, Tint},
+		[Tfx] = {"fx", "fixx", 1, Tfloat},
+		[Tfy] = {"fy", "fixy", 1, Tfloat},
+		[Tfz] = {"fz", "fixz", 1, Tfloat},
+		[Tx0] = {"x0", "initx", 1, Tfloat},
+		[Ty0] = {"y0", "inity", 1, Tfloat},
+		[Tz0] = {"z0", "initz", 1, Tfloat},
+		[Tdegree] = {"degree", nil, 1, Tint},
+		[TCL] = {"CL", "nodecolor", 1, Tint},
 	}, *pp;
 
 	initqlock(&buflock);
-	initqlock(&symlock);
 	initrwlock(&tablock);
 	if((map = tab_init()) == nil)
 		sysfatal("initext: %s", error());
