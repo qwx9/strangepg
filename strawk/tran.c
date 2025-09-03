@@ -77,7 +77,7 @@ extern	size_t	npfile;
 
 void syminit(void)	/* initialize symbol table with builtin vars */
 {
-	literal0 = setsymtab("0", "0", ZV, NUM|STR|CON|DONTFREE, symtab);
+	literal0 = setsymtab("$0", "0", ZV, NUM|STR|CON|DONTFREE, symtab);
 	/* this is used for if(x)... tests: */
 	nullloc = setsymtab("$zero&null", NULL, ZV, NUM|STR|CON|DONTFREE, symtab);
 	nullnode = celltonode(nullloc, CCON);
@@ -167,8 +167,8 @@ void freesymtab(Cell *ap)	/* free a symbol table */
 	}
 	if (tp->nelem != 0)
 		WARNING("can't happen: inconsistent element count freeing %s", ap->nval);
-	free(tp->tab);
-	free(tp);
+	FREE(tp->tab);
+	FREE(tp);
 }
 
 void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
@@ -218,9 +218,11 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	}
 	p = (Cell *) MALLOC(sizeof(*p));
 	p->nval = tostring(n);
-	p->sval = s ? tostring(s) : EMPTY;
+	p->sval = s && s != EMPTY && *s != 0 ? tostring(s) : EMPTY;
 	p->val = v;
 	p->tval = t;
+	if(p->sval == EMPTY)
+		p->tval |= DONTFREE;
 	p->csub = CUNK;
 	p->ctype = OCELL;
 	tp->nelem++;
@@ -342,13 +344,16 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	return vp->val.i = f;
 }
 
-void setval(Cell *vp, Cell *v)
+void setval(Cell *vp, Cell *x)
 {
-	getval(v);
-	if(v->tval & FLT)
-		setfval(vp, v->val.f);
+	short t;
+	Value v;
+
+	v = getval(x, &t);
+	if(t & FLT)
+		setfval(vp, v.f);
 	else
-		setival(vp, v->val.i);
+		setival(vp, v.i);
 }
 
 void funnyvar(Cell *vp, const char *rw)
@@ -387,29 +392,32 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 	}
 	t = vp->sval;
 	if(s != t || s == NULL){
-		t = s ? tostring(s) : EMPTY;	/* in case it's self-assign */
+		t = s && s != EMPTY && *s != 0 ? tostring(s) : EMPTY;
 		if (freeable(vp))
 			xfree(vp->sval);
-		vp->tval &= ~(NUM|DONTFREE);
-	}else
-		vp->tval &= ~NUM;
+		if(t == EMPTY)
+			vp->tval |= DONTFREE;
+		else
+			vp->tval &= ~DONTFREE;
+	}
 	vp->tval |= STR;
+	vp->tval &= ~(FLT|NUM);	/* no longer a number */
+	vp->sval = t;
 	DPRINTF("setsval %p: %s = \"%s (%p) \", t=%o r,f=%d,%d\n",
 		(void*)vp, NN(vp->nval), t, (void*)t, vp->tval, donerec, donefld);
-	vp->sval = t;
 	if (&vp->val.i == NF) {
 		donerec = false;	/* mark $0 invalid */
 		f = getival(vp);
 		setlastfld(f);
 		DPRINTF("setsval: setting NF to %lld\n", f);
 	}
-
-	return(vp->sval);
+	return t;
 }
 
-Value getval(Cell *vp)
+Value getval(Cell *vp, short *type)
 {
-	int r;
+	int r, t;
+	char *s;
 	Value v;
 	bool no_trailing;
 
@@ -420,37 +428,48 @@ Value getval(Cell *vp)
 	else if (isrec(vp) && !donerec)
 		recbld();
 	r = 0;
+	t = vp->tval;
 	if(!isnum(vp)){
-		if(r = is_valid_number(vp->sval, true, &no_trailing, NULL, &v)){
-			if (no_trailing && (vp->tval & CON) == 0)
-				vp->tval |= r;	/* make NUM only sparingly */
+		s = vp->sval;
+		if(r = is_valid_number(s, true, &no_trailing, NULL, &v)){
+			if (no_trailing && (t & CON) == 0)
+				t |= r;	/* make NUM only sparingly */
 			if(r & FLT)
-				vp->tval |= FLT;
+				t |= FLT;
 			else
-				vp->tval &= ~FLT;
-		} else {
+				t &= ~FLT;
+		}else{
 			v.i = 0;
-			vp->tval &= ~FLT;
+			t &= ~FLT;
 		}
+		vp->tval = t;
 		vp->val = v;
-	}
-	return vp->val;
+	}else
+		v = vp->val;
+	*type = t;
+	return v;
 }
 
 Awknum getival(Cell *vp)	/* get int val of a Cell */
 {
-	getval(vp);
+	short t;
+	Value v;
+
+	v = getval(vp, &t);
 	DPRINTF("getival %p: %s = %lld,%g, t=%o\n",
-		(void*)vp, NN(vp->nval), vp->val.i, vp->val.f, vp->tval);
-	return (vp->tval & FLT) == 0 ? vp->val.i : vp->val.f;
+		(void*)vp, NN(vp->nval), v.i, v.f, t);
+	return (t & FLT) == 0 ? v.i : v.f;
 }
 
 Awkfloat getfval(Cell *vp)	/* get float val of a Cell */
 {
-	getval(vp);
+	short t;
+	Value v;
+
+	v = getval(vp, &t);
 	DPRINTF("getfval %p: %s = %lld,%g, t=%o\n",
-		(void*)vp, NN(vp->nval), vp->val.i, vp->val.f, vp->tval);
-	return (vp->tval & FLT) == 0 ? vp->val.i : vp->val.f;
+		(void*)vp, NN(vp->nval), v.i, v.f, t);
+	return (t & FLT) == 0 ? v.i : v.f;
 }
 
 static const char *get_inf_nan(Awkfloat d)
@@ -463,6 +482,8 @@ static const char *get_inf_nan(Awkfloat d)
 		return NULL;
 }
 
+/* FIXME: tostring usage: detect if this is a throwaway value,
+ * only do it if we plan to keep the string around */
 static inline void update_str_val(Cell *vp)
 {
 	const char *p;

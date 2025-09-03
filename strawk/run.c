@@ -70,7 +70,7 @@ static Cell	exitcell	={ OJUMP, JEXIT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jexit	= &exitcell;
 static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jret	= &retcell;
-static Cell	tempcell	={ OCELL, CTEMP, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL };
+static Cell	tempcell	={ OCELL, CTEMP, DONTFREE, 0, EMPTY, {.i=0}, NULL };
 
 TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
@@ -203,7 +203,7 @@ static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
 Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
-	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, 0, EMPTY, {.i=0}, NULL };
+	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
 	TNode *x;
@@ -242,7 +242,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		tempfree(y);
 	}
 	for ( ; i < ndef; i++) {	/* add null args for ones not provided */
-		args[i] = gettemp();
+		args[i] = gettemp(0);
 		*args[i] = newcopycell;
 	}
 	frp++;	/* now ok to up frame */
@@ -255,7 +255,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 	frp->fcncell = fcn;
 	frp->args = args;
 	frp->nargs = ndef;	/* number defined with (excess are locals) */
-	frp->retval = gettemp();
+	frp->retval = gettemp(STR);
 
 	DPRINTF("start exec of %s, frp=%d\n", s, (int) (frp-awkframe));
 	y = execute((TNode *)(fcn->sval));	/* execute body */
@@ -286,7 +286,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		}
 	}
 	tempfree(fcn);
-	if (isexit(y) || isnext(y))
+	if (isexit(y) || isnext(y))	/* FIXME: use after free */
 		return y;
 	if (freed == 0) {
 		tempfree(y);	/* don't free twice! */
@@ -303,8 +303,7 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 
 	/* copy is not constant or field */
 
-	y = gettemp();
-	y->tval = x->tval & ~(CON|FLD|REC);
+	y = gettemp(x->tval & ~(CON|FLD|REC));
 	y->csub = CCOPY;	/* prevents freeing until call is over */
 	y->nval = x->nval;	/* BUG? */
 	if (isstr(x) /* || x->ctype == OCELL */) {
@@ -329,6 +328,7 @@ Cell *arg(TNode **a, int n)	/* nth argument of a function */
 
 Cell *jump(TNode **a, int n)	/* break, continue, next, nextfile, return */
 {
+	short t;
 	Cell *y;
 
 	switch (n) {
@@ -342,16 +342,15 @@ Cell *jump(TNode **a, int n)	/* break, continue, next, nextfile, return */
 	case RETURN:
 		if (a[0] != NULL) {
 			y = execute(a[0]);
-			if ((y->tval & (STR|NUM)) == (STR|NUM)) {
-				setsval(frp->retval, getsval(y));
-				frp->retval->val = getval(y);
-				frp->retval->tval &= ~FLT;
-				frp->retval->tval |= y->tval & (NUM | FLT);
-			}
-			else if (y->tval & STR)
-				setsval(frp->retval, getsval(y));
-			else if (y->tval & NUM)
+			if(y->tval & NUM){
 				setval(frp->retval, y);
+				if(y->tval & STR){
+					t = frp->retval->tval;
+					setsval(frp->retval, getsval(y));
+					frp->retval->tval |= t;
+				}
+			}else if(y->tval & STR)
+				setsval(frp->retval, getsval(y));
 			else		/* can't happen */
 				FATAL("bad type variable %d", y->tval);
 			tempfree(y);
@@ -425,7 +424,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		DPRINTF("making %s into an array\n", NN(x->nval));
 		if (freeable(x))
 			xfree(x->sval);
-		x->tval &= ~(STR|NUM|DONTFREE);
+		x->tval &= ~(STR|NUM|FLT|DONTFREE);
 		x->tval |= ARR;
 		x->sval = (char *) makesymtab(NSYMTAB);
 	}
@@ -674,9 +673,7 @@ Cell *matchop(TNode **a, int n)	/* ~ and match() */
 
 		setival(rstartloc, start);
 		setival(rlengthloc, patlen);
-		x = gettemp();
-		x->tval &= ~STR;
-		x->tval |= NUM;
+		x = gettemp(NUM);
 		x->val.i = start;
 	} else if ((n == MATCH && i == 1) || (n == NOTMATCH && i == 0))
 		x = True;
@@ -774,7 +771,7 @@ void tfree(Cell *a)	/* free a tempcell */
 	tmps = a;
 }
 
-Cell *gettemp(void)	/* get a tempcell */
+Cell *gettemp(int type)	/* get a tempcell */
 {	int i;
 	Cell *x;
 
@@ -787,6 +784,7 @@ Cell *gettemp(void)	/* get a tempcell */
 	x = tmps;
 	tmps = x->cnext;
 	*x = tempcell;
+	x->tval |= type;
 	return(x);
 }
 
@@ -828,7 +826,7 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 		if (a[2] != NULL) {
 			tempfree(z);
 		}
-		x = gettemp();
+		x = gettemp(STR);
 		setsval(x, NULL);
 		return(x);
 	}
@@ -849,7 +847,7 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 		n = k - m;
 	/* m is start, n is length from there */
 	DPRINTF("substr: m=%d, n=%d, s=%s\n", m, n, s);
-	y = gettemp();
+	y = gettemp(STR);
 	mb = u8_char2byte(s, m-1); /* byte offset of start char in s */
 	nb = u8_char2byte(s, m-1+n);  /* byte offset of end+1 char in s */
 
@@ -872,7 +870,7 @@ Cell *sindex(TNode **a, int nnn)		/* index(a[0], a[1]) */
 	y = execute(a[1]);
 	s2 = getsval(y);
 
-	z = gettemp();
+	z = gettemp(NUM);
 	for (p1 = s1; *p1 != '\0'; p1++) {
 		for (q = p1, p2 = s2; *p2 != '\0' && *q == *p2; q++, p2++)
 			continue;
@@ -912,6 +910,7 @@ int has_utf8(char *s)	/* return 1 if s contains any utf-8 (2 bytes or more) char
 int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like conversions */
 {
 	static char *fmt;
+	short type;
 	char *p, *t;
 	const char *os;
 	Cell *x;
@@ -1015,8 +1014,8 @@ int format(char **pbuf, int *pbufsize, const char *s, TNode *a)	/* printf-like c
 		if (fmtwd > n)
 			n = fmtwd;
 		adjbuf(&buf, &bufsize, 1+n+p-buf, recsize, &p, "format5");
-		v = getval(x);
-		if(x->tval & FLT){
+		v = getval(x, &type);
+		if(type & FLT){
 			if(flag == 'd' || flag == 'u')
 				v.i = (Awknum) v.f;
 		}else{
@@ -1233,9 +1232,8 @@ Cell *awksprintf(TNode **a, int n)		/* sprintf(a[0]) */
 	if (format(&buf, &bufsz, getsval(x), y) == -1)
 		FATAL("sprintf string %.30s... too long.  can't happen.", buf);
 	tempfree(x);
-	x = gettemp();
+	x = gettemp(STR);
 	x->sval = buf;
-	x->tval &= ~NUM;
 	return(x);
 }
 
@@ -1276,7 +1274,7 @@ Cell *farith(Cell *x, Cell *y, int n)
 		j = getfval(y);
 		tempfree(y);
 	}
-	z = gettemp();
+	z = gettemp(NUM|FLT);
 	switch (n) {
 	case ADD:
 		i += j;
@@ -1326,18 +1324,19 @@ Cell *arith(TNode **a, int n)	/* a[0] + a[1], etc.  also -a[0], `a[0] */
 	Awknum i, j;
 	Value u, v;
 	int uf, vf;
+	short tx, ty;
 	Cell *x, *y, *z;
 
 	vf = 0;
 	j = 0;
 	y = NULL;
 	x = execute(a[0]);
-	u = getval(x);
-	uf = x->tval & FLT;
+	u = getval(x, &tx);
+	uf = tx & FLT;
 	if (n != UMINUS && n != UPLUS && n != CMPL) {
 		y = execute(a[1]);
-		v = getval(y);
-		vf = y->tval & FLT;
+		v = getval(y, &ty);
+		vf = ty & FLT;
 		if(!vf){
 			if(n == POWER && j < 0)	/* negative exponents */
 				vf |= FLT;
@@ -1351,7 +1350,7 @@ Cell *arith(TNode **a, int n)	/* a[0] + a[1], etc.  also -a[0], `a[0] */
 		j = v.i;
 		tempfree(y);
 	}
-	z = gettemp();
+	z = gettemp(NUM);
 	switch (n) {
 	case ADD:
 		i += j;
@@ -1421,25 +1420,27 @@ Awknum ipow(Awknum x, int n)	/* x**n.  ought to be done by pow, but isn't always
 Cell *incrdecr(TNode **a, int n)		/* a[0]++, etc.; allowed for floats */
 {
 	Cell *x, *z;
+	short t;
 	int k;
+	Value v;
 
 	x = execute(a[0]);
-	getval(x);
+	v = getval(x, &t);
 	k = (n == PREINCR || n == POSTINCR) ? 1 : -1;
 	if (n == PREINCR || n == PREDECR) {
-		if((x->tval & FLT) == 0)
-			setival(x, x->val.i + k);
+		if((t & FLT) == 0)
+			setival(x, v.i + k);
 		else
-			setfval(x, x->val.f + k);
+			setfval(x, v.f + k);
 		return(x);
 	}
-	z = gettemp();
-	if((x->tval & FLT) == 0){
-		setival(z, x->val.i);
-		setival(x, x->val.i + k);
+	z = gettemp(t & (STR|NUM|FLT));
+	if((t & FLT) == 0){
+		setival(z, v.i);
+		setival(x, v.i + k);
 	}else{
-		setfval(z, x->val.f);
-		setfval(x, x->val.f + k);
+		setfval(z, v.f);
+		setfval(x, v.f + k);
 	}
 	tempfree(x);
 	return(z);
@@ -1497,33 +1498,33 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 {		/* this is subtle; don't muck with it. */
 	Cell *x, *y;
 	int xf, yf;
+	short tx, ty;
 	Awknum i, j;
 	Value u, v;
 
 	y = execute(a[1]);
 	x = execute(a[0]);
-	u = getval(x);
-	v = getval(y);
+	u = getval(x, &tx);
+	v = getval(y, &ty);
 	if (n == ASSIGN) {	/* ordinary assignment */
-		if (x == y && !(x->tval & (FLD|REC)) && x != nfloc)
+		if (x == y && !(tx & (FLD|REC)) && x != nfloc)
 			;	/* self-assignment: leave alone unless it's a field or NF */
-		else if ((y->tval & (STR|NUM)) == (STR|NUM)) {
-			setsval(x, getsval(y));
-			x->val = v;
-			x->tval &= ~FLT;
-			x->tval |= y->tval & (NUM | FLT);
-		}
-		else if (isstr(y))
-			setsval(x, getsval(y));
-		else if (isnum(y))
+		if(ty & NUM){
 			setval(x, y);
+			if(y->tval & STR){
+				tx = x->tval;
+				setsval(x, getsval(y));
+				x->tval |= tx;
+			}
+		}else if(y->tval & STR)
+			setsval(x, getsval(y));
 		else
 			funnyvar(y, "read value of");
 		tempfree(y);
 		return(x);
 	}
-	xf = x->tval & FLT;
-	yf = y->tval & FLT;
+	xf = tx & FLT;
+	yf = ty & FLT;
 	if(xf || yf)
 		return fassign(x, y, n);
 	j = v.i;
@@ -1541,7 +1542,7 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 		i *= j;
 		break;
 	case DIVEQ:
-		if ((x->tval & CON) != 0)
+		if ((tx & CON) != 0)
 			FATAL("non-constant required for left side of /=");
 		if (j == 0)
 			FATAL("division by zero in /=");
@@ -1607,9 +1608,8 @@ Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
 	p[n2] = '\0';
 	tempfree(x);
 	tempfree(y);
-	z = gettemp();
+	z = gettemp(STR);
 	z->sval = tempstrdup(s);
-	z->tval &= ~NUM;
 	return(z);
 }
 
@@ -1781,9 +1781,7 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	tempfree(ap);
 	xfree(origs);
 	xfree(origfs);
-	x = gettemp();
-	x->tval &= ~STR;
-	x->tval |= NUM;
+	x = gettemp(NUM);
 	x->val.i = n;
 	return(x);
 }
@@ -2041,7 +2039,7 @@ static Cell *fbltin(TNode **a, int n, int t)
 		break;
 	}
 	tempfree(x);
-	x = gettemp();
+	x = gettemp(NUM|FLT);
 	setfval(x, u);
 	if (nextarg != NULL) {
 		WARNING("warning: function has too many arguments");
@@ -2108,7 +2106,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		else
 			buf = nawk_tolower(getsval(x));
 		tempfree(x);
-		x = gettemp();
+		x = gettemp(STR);
 		setsval(x, buf);
 		return x;
 	/* FIXME: this can accept an argument, use it; not very useful
@@ -2137,7 +2135,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		break;
 	}
 	tempfree(x);
-	x = gettemp();
+	x = gettemp(NUM);
 	setival(x, u);
 	if (nextarg != NULL) {
 		WARNING("warning: function has too many arguments");
@@ -2311,9 +2309,7 @@ next_search:
 	}
 
 	tempfree(x);
-	x = gettemp();
-	x->tval &= ~STR;
-	x->tval |= NUM;
+	x = gettemp(NUM);
 	x->val.i = m;
 	return x;
 }
