@@ -1938,7 +1938,7 @@ static Cell *ptrinstat(Array *ap, Cell *vp, TNode *expr)
 	buf = (uschar *)ap->tab;
 	n = ap->nelem;
 	w = ap->size;
-	for(s=buf, e=s+n*w, n=1; s<e; s+=w, n++){
+	for(s=buf, e=s+n*w, n=0; s<e; s+=w, n++){
 		setival(vp, n);
 		x = execute(expr);
 		if (isbreak(x)) {

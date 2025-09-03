@@ -273,7 +273,6 @@ Cell *setptrtab(Awknum i, Array *a)
 	Cell *p;
 
 	DPRINTF("setptrtab %p[%lld]\n", (void*)a, i);
-	i--;	/* 0-index */
 	if(i < 0 || i >= a->nelem)
 		FATAL("index out of bounds %lld", i);
 	p = gettemp(a->type & (PTR|P32|P16|P08|STR|FLT|NUM));
