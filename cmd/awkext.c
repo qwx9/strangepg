@@ -754,7 +754,7 @@ addon(TNode **a, int)
 	t = ptoi(a[0]);
 	x = execute(a[1]);
 	nextarg = a[1]->nnext;
-	ret = gettemp();
+	ret = gettemp(NUM);
 	setival(ret, 0);
 	switch(t){
 	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
