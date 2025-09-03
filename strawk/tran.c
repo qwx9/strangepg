@@ -241,10 +241,10 @@ static inline int updateptr(Cell *vp)
 	case STR|NUM:
 	case NUM:
 		switch(vp->tval & (P32|P16|P08)){
-		case 0: v.i = *(long long int *)vp->cnext; break;
-		case P32: v.i = *(int *)vp->cnext; break;
-		case P16: v.i = *(short *)vp->cnext; break;
-		case P08: v.i = *(char *)vp->cnext; break;
+		case 0: v.u = *(unsigned long long int *)vp->cnext; break;
+		case P32: v.u = *(unsigned int *)vp->cnext; break;
+		case P16: v.u = *(unsigned short *)vp->cnext; break;
+		case P08: v.u = *(unsigned char *)vp->cnext; break;
 		default: FATAL("invalid int size flag %o", vp->tval & (P32|P16|P08));
 		}
 		if((n = vp->val.i) != v.i && vp->tval & STR){
@@ -405,13 +405,13 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 				*(double *)(vp->cnext) = f;
 		}else{
 			if(vp->tval & P32)
-				*(int *)(vp->cnext) = f;
+				*(unsigned int *)(vp->cnext) = f;
 			else if(vp->tval & P16)
-				*(short *)(vp->cnext) = f;
+				*(unsigned short *)(vp->cnext) = f;
 			else if(vp->tval & P08)
-				*(char *)(vp->cnext) = f;
+				*(unsigned char *)(vp->cnext) = f;
 			else
-				*(long long int *)(vp->cnext) = f;
+				*(unsigned long long int *)(vp->cnext) = f;
 		}
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
@@ -454,13 +454,13 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 				*(double *)(vp->cnext) = f;
 		}else{
 			if(vp->tval & P32)
-				*(int *)(vp->cnext) = f;
+				*(unsigned int *)(vp->cnext) = f;
 			else if(vp->tval & P16)
-				*(short *)(vp->cnext) = f;
+				*(unsigned short *)(vp->cnext) = f;
 			else if(vp->tval & P08)
-				*(char *)(vp->cnext) = f;
+				*(unsigned char *)(vp->cnext) = f;
 			else
-				*(long long int *)(vp->cnext) = f;
+				*(unsigned long long int *)(vp->cnext) = f;
 		}
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
