@@ -49,6 +49,7 @@ char*	getname(voff);
 voff	getid(char*);
 voff	pushname(char*);
 void	setcoretag(int, voff, V);
+void	fixtabs(voff, int*, ushort*);
 void	initvars(void);
 int	gettab(char*);
 void	settag(char*, ioff, char*, int);

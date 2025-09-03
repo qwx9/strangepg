@@ -148,11 +148,10 @@ static void
 initnodes(Aux *a)
 {
 	int i, *l;
-	ushort d, *dp;
+	ushort *dp;
 	ioff off;
 	vlong nn;
 	Node *n, *ne;
-	V v;
 
 	nn = dylen(nodes);	/* for mooltigraph */
 	if(nn > 0){
@@ -168,12 +167,7 @@ initnodes(Aux *a)
 		n->id = i;
 		n->eoff = off;
 		n->length = *l++;
-		v.i = n->length;
-		setcoretag(TLN, i, v);
-		d = *dp++;
-		off += d;
-		v.i = d;
-		setcoretag(Tdegree, i, v);
+		off += *dp++;
 	}
 }
 
@@ -184,9 +178,8 @@ initnodes(Aux *a)
 static void
 mkgraph(Aux *a)
 {
+	fixtabs(a->nnodes, a->length, a->degree);
 	initnodes(a);
-	dyfree(a->length);
-	dyfree(a->degree);
 	initedges(a);
 	edges_destroy(a->edges);
 	if(newlayout(-1) < 0)

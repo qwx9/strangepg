@@ -11,19 +11,21 @@ extern QLock symlock;
 typedef struct Core Core;
 
 struct Core{
-	char **label;
-	int *degree;
-	int *length;
-	u32int *color;
+	char **labels;
+	u32int *colors;
+	Array *ids;
+	Array *label;
+	Array *length;
+	Array *degree;
+	Array *color;
 };
 static Core core;
-static Array *idtab;
 
 char *
 getname(voff id)
 {
-	assert(id >= 0 && id < dylen(core.label));
-	return core.label[id];
+	assert(id >= 0 && id < dylen(core.labels));
+	return core.labels[id];
 }
 
 voff
@@ -32,7 +34,7 @@ getid(char *s)
 	Cell *c;
 
 	qlock(&symlock);
-	c = lookup(s, idtab);
+	c = lookup(s, core.ids);
 	qunlock(&symlock);
 	if(c == nil)
 		return -1;
@@ -49,24 +51,38 @@ pushname(char *s)
 
 	if((id = getid(s)) != -1)
 		return id;
-	id = dylen(core.label);
+	id = dylen(core.labels);
 	v.i = id;
 	qlock(&symlock);
-	c = setsymtab(s, nil, v, NUM, idtab);
+	c = setsymtab(s, nil, v, NUM, core.ids);
 	qunlock(&symlock);
-	dypush(core.label, c->nval);
+	dypush(core.labels, c->nval);
 	return id;
 }
 
 void
-setcoretag(int type, voff id, V v)
+setcoretag(int type, voff id, V val)
 {
+	assert(id >= 0 && id < dylen(core.labels));
 	switch(type){
-	//case TLN: dygrow(core.length, id); core.length[id] = v.i; break;
-	//case Tdegree: dygrow(core.degree, id); core.degree[id] = v.i; break;
-	default: setspectag(type, id, v);	/* FIXME */
-	//default: panic("setcoretag: unknown core tag type %d", type);
+	case TCL: core.colors[id] = val.u; break;
+	default: panic("setcoretag: unknown type %d", type);
 	}
+}
+
+void
+fixtabs(voff nnodes, int *lenp, ushort *degp)
+{
+	/* FIXME: resizable for mooltigraph? */
+	assert(core.length == nil && core.degree == nil);
+	dyresize(lenp, nnodes);
+	dyresize(degp, nnodes);
+	dyresize(core.labels, nnodes);
+	dyresize(core.colors, nnodes);
+	core.length = attach("LN", core.ids, lenp, nnodes, sizeof *lenp, NUM|P32);
+	core.degree = attach("degree", core.ids, degp, nnodes, sizeof *degp, NUM|P16);
+	core.label = attach("node", core.ids, core.labels, nnodes, sizeof *core.labels, STR);
+	core.color = attach("CL", core.ids, core.colors, nnodes, sizeof *core.colors, NUM|P32);
 }
 
 void
@@ -74,7 +90,7 @@ initvars(void)
 {
 	Cell *c;
 
-	idtab = makesymtab(NSYMTAB);
+	core.ids = makesymtab(NSYMTAB);
 	c = setsymtab("id", NULL, ZV, ARR, symtab);
-	c->sval = (char *)idtab;
+	c->sval = (char *)core.ids;
 }

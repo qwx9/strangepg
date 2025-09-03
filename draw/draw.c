@@ -420,6 +420,7 @@ drawproc(void *)
 {
 	int f, r, go;
 
+	resizenodes();
 	initstatic();
 	go = 1;
 	for(;;){
@@ -517,7 +518,7 @@ reqdraw(int r)
 void
 initdrw(void)
 {
-	drawing.flags |= DFstalelen;
+	drawing.flags |= DFstalelen | DFrecalclen;
 	settheme();
 	initcol();
 	/* FIXME: this chan implementation SUCKS */

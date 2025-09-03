@@ -53,7 +53,6 @@ static Tab *tabs;
 static RWLock tablock;
 static QLock buflock;
 
-/* FIXME: can replace with awk array and lookup */
 int
 gettab(char *s)
 {
@@ -233,20 +232,18 @@ set(int i, int type, ioff id, V val)
 	/* FIXME: better type checking; merge with generic tag code */
 	switch(i){
 	case TCL:
-		lab = getname(id);
 		if(type != Tint && type != Tuint){
+			lab = getname(id);
 			logerr(va("set CL[%s]: invalid non-integer color: %s\n", lab, type == Tstring ? val.s : ""));
 			break;
 		}
+		setcoretag(TCL, id, val);
 		if(setattr(i, id, val) < 0)
 			DPRINT(Debugawk, "set CL: %s", error());
-		c = setint(lab, val.u, a, &new);
-		if(new){
-			free(c->nval);
-			c->nval = lab;
-		}
 		break;
 	case TLN:
+		/* FIXME */
+		break;
 		if(type != Tuint && type != Tint){
 			DPRINT(Debuginfo, "not assigning string value %s to LN[%d]", val.s, id);
 			return;
@@ -261,6 +258,8 @@ set(int i, int type, ioff id, V val)
 		}
 		break;
 	case Tdegree:
+		/* FIXME: should exist just to disallow writes */
+		break;
 		if(type != Tuint && type != Tint){
 			DPRINT(Debuginfo, "not assigning string value %s to degree[%d]", val.s, id);
 			return;
@@ -457,7 +456,6 @@ fnloadall(void)
 		}
 		/* FIXME: edges */
 	}
-	resizenodes();
 }
 
 /* FIXME: make variadic funs work in strawk itself,

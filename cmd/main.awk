@@ -137,11 +137,8 @@ function readcsv(f){
 	else
 		deferred[++nd] = "f\t" f "\n"
 }
-function checknodeid(id){
-	if(!(id in label)){
-		print "E\tno such nodeid: " id
-		return 0
-	}
+function checknodeid(i){
+	# FIXME: test id in node
 	return 1
 }
 function checknodename(name){
@@ -159,7 +156,7 @@ function edgeinfostr(i,	e, u, v, a, b, s){
 	b = e & 2 ? "-" : "+"
 	if(!checknodeid(u) || !checknodeid(v))
 		return
-	s = label[u] a label[v] b
+	s = node[u] a node[v] b
 	if(i in cigar)
 		s = s ", CIGAR=" cigar[i]
 	return s
@@ -169,26 +166,24 @@ function edgeinfo(i, s){
 		return
 	info("Edge: " s)
 }
-function findnode(name,	id){
+function findnode(name,	i){
 	if(!checknodename(name))
 		return
-	id = id[name]
-	selectnodebyid(id)
-	print "N", id
+	i = id[name]
+	selectnodebyid(i)
+	print "N", i
 }
-function selinfostr(	id, name, l, n, m, s){
+function selinfostr(	i, l, n, m, s){
 	if(length(selected) == 0)
 		return ""
 	l = 0
 	s = ""
 	n = m = 0
-	for(id in selected){
-		name = label[id]
-		if(name in LN)
-			l += LN[name]
-		if(m < 28){
+	for(i in selected){
+		l += LN[i]
+		if(m < 5){
 			m = length(s)
-			s = s (m == 0 ? "" : ",") name
+			s = s (m == 0 ? "" : ",") node[i]
 		}else if(n == 0){
 			n++
 			s = s ",..."
@@ -199,38 +194,35 @@ function selinfostr(	id, name, l, n, m, s){
 		return s ", length=" l
 	return s "; total length=" l " in " length(selected) " nodes"
 }
-function nodeinfo(id,	name, s){
-	if(!checknodeid(id))
+function nodeinfo(i,	name, s){
+	if(!checknodeid(i))
 		return
-	name = label[id]
-	s = "Node: " name
-	if(name in LN)
-		s = s ", length=" LN[name]
+	s = "Node: " node[i] ", length=" LN[i]
 	info(s)
 }
-function deselect(	id){
+function deselect(	i){
 	selinfo = ""
-	for(id in selected)
-		unshow(id, selected[id])
+	for(i in selected)
+		unshow(i, selected[i])
 	delete selected
 }
-function deselectnodebyid(id,	col){
-	if(!checknodeid(id))
+function deselectnodebyid(i,	col){
+	if(!checknodeid(i))
 		return
-	if(!(id in selected)){
-		print "E\tdeselect: not selected: " id
+	if(!(i in selected)){
+		print "E\tdeselect: not selected: " i
 		return
 	}
 	if(length(selected) == 1){
 		deselect()
 		return
 	}
-	col = selected[id]
-	delete selected[id]
+	col = selected[i]
+	delete selected[i]
 	selinfo = selinfostr()
-	unshow(id, col)
+	unshow(i, col)
 }
-function deselectnode(name,	id){
+function deselectnode(name,	i){
 	if(!checknodename(name))
 		return
 	deselectnodebyid(id[name])
@@ -239,58 +231,57 @@ function showselected(){
 	selinfo = selinfostr()
 	refresh()
 }
-function selectnodebyid(id, noshow){
-	if(!checknodeid(id) || id in selected)
+function selectnodebyid(i, noshow){
+	if(!checknodeid(i) || i in selected)
 		return
-	selected[id] = CL[label[id]]
+	selected[i] = CL[i]
 	if(!noshow)
 		showselected()
 }
-function selectall(id){
-	for(id in label)
-		selectnodebyid(id, 1)
+function selectall(i){
+	for(i in LN)
+		selectnodebyid(i, 1)
 }
-function selectnode(name, id){
+function selectnode(name){
 	if(!checknodename(name))
 		return
-	id = id[name]
-	selectnodebyid(id, 1)	# FIXME
+	selectnodebyid(id[name], 1)	# FIXME
 }
-function toggleselect(id){
-	if(!checknodeid(id))
+function toggleselect(i){
+	if(!checknodeid(i))
 		return
-	if(id in selected)
-		deselectnodebyid(id)
+	if(i in selected)
+		deselectnodebyid(i)
 	else
-		selectnodebyid(id)
+		selectnodebyid(i)
 }
-function reselectnode(id){
-	if(!checknodeid(id))
+function reselectnode(i){
+	if(!checknodeid(i))
 		return
 	deselect()
-	selectnodebyid(id)
+	selectnodebyid(i)
 }
 # FIXME: can't be variadic, unless in C
-#function collapse(id){
-#	if(id != ""){
-#		if(!checknodeid(id))
+#function collapse(i){
+#	if(i != ""){
+#		if(!checknodeid(i))
 #			return
-#		collapse1(id)
+#		collapse1(i)
 #	}else{
-#		for(id in selected)
-#			collapse1(id)
+#		for(i in selected)
+#			collapse1(i)
 #	}
 #	commit()
 #	deselect()
 #}
-function expand(id){
-	if(id != ""){
-		if(!checknodeid(id))
+function expand(i){
+	if(i != ""){
+		if(!checknodeid(i))
 			return
-		expand1(id)
+		expand1(i)
 	}else if(length(selected) > 0){
-		for(id in selected)
-			expand1(id)
+		for(i in selected)
+			expand1(i)
 	}else
 		expandall()
 	commit()
@@ -395,6 +386,5 @@ crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 		subexpr(s, v, "fixy")
 }
 {
-	i = ""
 	eval("{" $0 "}")
 }
