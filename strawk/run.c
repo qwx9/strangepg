@@ -453,14 +453,21 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	return(z);
 }
 
-Array *attach(Cell *cp, Array *ids, void *buf, size_t nel, size_t sz, int type)
+Array *attach(char *name, Array *ids, void *buf, size_t nel, size_t sz, int type)
 {
+	Cell *cp;
 	Array *ap;
 
-	if(!isarr(cp) || !isptr(cp))
-		SYNTAX("can only attach to pointer variables");
-	if(freeable(cp))
-		xfree(cp->sval);
+	cp = setsymtab(name, NULL, ZV, PTR|ARR|type, symtab);
+	if((cp->tval & ~DONTFREE) != (PTR|ARR|type) || cp->sval != EMPTY){
+		fprintf(awkstderr, "tval %s: %o not %o or %p not %p\n",
+			name, cp->tval&~DONTFREE, PTR|ARR|type, cp->sval, EMPTY);
+		if(isarr(cp))
+			freesymtab(cp);
+		else if(freeable(cp))
+			xfree(cp->sval);
+		cp->tval = PTR|ARR|type;
+	}
 	ap = MALLOC(sizeof *ap);
 	ap->ids = ids;
 	ap->type = type | PTR;
