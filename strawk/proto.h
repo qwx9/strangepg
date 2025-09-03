@@ -95,6 +95,9 @@ extern	void	dfree(void *, const char *);
 }while(0)
 #define tempfree(x)	do { if (istemp(x)) tfree(x); } while (0)
 
+extern	Array	*attach(Cell *, Array *, void *, size_t, size_t, int);
+extern	void	reattach(Array *, void *, size_t, size_t);
+
 extern	TNode	*exptostat(TNode *);
 extern	TNode	*node1(int, TNode *);
 extern	TNode	*node2(int, TNode *, TNode *);
@@ -126,6 +129,7 @@ extern	Array	*makesymtab(int);
 extern	void	freesymtab(Cell *);
 extern	void	freeelem(Cell *, const char *);
 extern	Cell	*setsym(const char *, const char *, Array *);
+extern	Cell	*setptrtab(Awknum, Array *);
 extern	Cell	*setsymtab(const char *, const char *, Value, unsigned int, Array *);
 extern	int	hash(const char *, int);
 extern	void	rehash(Array *);

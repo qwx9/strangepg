@@ -137,6 +137,7 @@ Array *makesymtab(int n)	/* make a new symbol table */
 
 	ap = (Array *) MALLOC(sizeof(*ap));
 	tp = (Cell **) CALLOC(n, sizeof(*tp));
+	ap->type = 0;
 	ap->nelem = 0;
 	ap->size = n;
 	ap->tab = tp;
@@ -151,6 +152,10 @@ void freesymtab(Cell *ap)	/* free a symbol table */
 
 	if (!isarr(ap))
 		return;
+	else if (isptr(ap)){	/* FIXME: shouldn't happen */
+		FREE(ap->sval);
+		return;
+	}
 	tp = (Array *) ap->sval;
 	if (tp == NULL)
 		return;
@@ -177,6 +182,8 @@ void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
 	Cell *p, *prev = NULL;
 	int h;
 
+	if (isptr(ap))	/* FIXME: shouldn't happen */
+		return;
 	tp = (Array *) ap->sval;
 	h = hash(s, tp->size);
 	for (p = tp->tab[h]; p != NULL; prev = p, p = p->cnext)
@@ -206,11 +213,93 @@ Cell *setsym(const char *n, const char *s, Array *tp)
 		return setsymtab(n, s, v, STR, tp);
 }
 
+static inline int updateptr(Cell *vp)
+{
+	int n;
+	Value v;
+
+	if(vp->tval & CON)
+		return 0;
+	n = 0;
+	switch(vp->tval & (FLT|NUM|STR)){
+	case STR|FLT|NUM:
+	case FLT|NUM:
+		if(vp->tval & P32)
+			v.f = *(float *)vp->cnext;
+		else
+			v.f = *(double *)vp->cnext;
+		if(v.f == -0)
+			v.f = 0;
+		if((n = vp->val.f) != v.f && vp->tval & STR){
+			if(freeable(vp))		/* invalidate string */
+				xfree(vp->sval);
+			vp->tval &= ~STR;
+		}
+		vp->val = v;
+		DPRINTF("updateptr %p: %f\n", (void *)vp, v.f);
+		break;
+	case STR|NUM:
+	case NUM:
+		switch(vp->tval & (P32|P16|P08)){
+		case 0: v.i = *(long long int *)vp->cnext; break;
+		case P32: v.i = *(int *)vp->cnext; break;
+		case P16: v.i = *(short *)vp->cnext; break;
+		case P08: v.i = *(char *)vp->cnext; break;
+		default: FATAL("invalid int size flag %o", vp->tval & (P32|P16|P08));
+		}
+		if((n = vp->val.i) != v.i && vp->tval & STR){
+			if(freeable(vp))		/* invalidate string */
+				xfree(vp->sval);
+			vp->tval &= ~STR;
+		}
+		vp->val = v;
+		DPRINTF("updateptr %p: %lld\n", (void *)vp, v.i);
+		break;
+	case STR:
+		if(freeable(vp))
+			xfree(vp->sval);
+		vp->sval = *(char **)vp->cnext;
+		vp->tval |= DONTFREE;
+		DPRINTF("updateptr %p: %s\n", (void *)vp, vp->sval);
+		break;
+	default: FATAL("invalid pointer type %o", vp->tval);
+	}
+	return n;
+}
+
+/* FIXME: use CON to flag constant values */
+Cell *setptrtab(Awknum i, Array *a)
+{
+	Cell *p;
+
+	DPRINTF("setptrtab %p[%lld]\n", (void*)a, i);
+	i--;	/* 0-index */
+	if(i < 0 || i >= a->nelem)
+		FATAL("index out of bounds %lld", i);
+	p = gettemp(a->type & (PTR|P32|P16|P08|STR|FLT|NUM));
+	p->nval = EMPTY;
+	p->sval = EMPTY;
+	p->cnext = (Cell *)((char *)a->tab + a->size * i);
+	updateptr(p);
+	return p;
+}
+
 Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 {
 	int h;
-	Cell *p;
+	size_t i;
+	Cell *p, *w;
 
+	if(tp->type != 0){
+		if((t & (STR|NUM)) == STR){
+			if(tp->ids != NULL && (w = lookup(s, tp->ids)) != NULL)
+				i = getival(w);
+			else
+				FATAL("no such id %s in flat array", s);
+		}else
+			i = v.i;
+		return setptrtab(i, tp);
+	}
 	if (n != NULL && (p = lookup(n, tp)) != NULL) {
 		DPRINTF("setsymtab found %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
 			(void*)p, NN(p->nval), NN(p->sval), p->val.i, p->val.f, p->tval);
@@ -250,6 +339,8 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 	int i, nh, nsz;
 	Cell *cp, *op, **np;
 
+	if(tp->type != 0)
+		FATAL("BUG: rehashing ptr array");
 	nsz = GROWTAB * tp->size;
 	np = (Cell **) CALLOC(nsz, sizeof(*np));
 	for (i = 0; i < tp->size; i++) {
@@ -270,6 +361,8 @@ Cell *lookup(const char *s, Array *tp)	/* look for s in tp */
 	Cell *p;
 	int h;
 
+	if(tp->type != 0)
+		FATAL("BUG: lookup in ptr array");
 	h = hash(s, tp->size);
 	for (p = tp->tab[h]; p != NULL; p = p->cnext)
 		if (strcmp(s, p->nval) == 0)
@@ -282,6 +375,8 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	int fldno;
 
 	f += 0.0;		/* normalise negative zero to positive zero */
+	if (f == -0)  /* who would have thought this possible? */
+		f = 0;
 	if ((vp->tval & (NUM | STR)) == 0)
 		funnyvar(vp, "assign to");
 	if (isfld(vp)) {
@@ -301,13 +396,28 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	} else if (vp == ofsloc) {
 		if (!donerec)
 			recbld();
-	}
-	if (freeable(vp))
+	} else if (isptr(vp)) {
+		if((vp->tval & NUM) == 0)
+			FATAL("can\'t assign number to non-numeric pointer type");
+		if(vp->tval & FLT){
+			if(vp->tval & P32)
+				*(float *)(vp->cnext) = f;
+			else
+				*(double *)(vp->cnext) = f;
+		}else{
+			if(vp->tval & P32)
+				*(int *)(vp->cnext) = f;
+			else if(vp->tval & P16)
+				*(short *)(vp->cnext) = f;
+			else if(vp->tval & P08)
+				*(char *)(vp->cnext) = f;
+			else
+				*(long long int *)(vp->cnext) = f;
+		}
+	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
 	vp->tval &= ~STR; /* mark string invalid */
 	vp->tval |= NUM | FLT;	/* mark number ok */
-	if (f == -0)  /* who would have thought this possible? */
-		f = 0;
 	DPRINTF("setfval %p: %s = %g, t=%o\n", (void*)vp, NN(vp->nval), f, vp->tval);
 	return vp->val.f = f;
 }
@@ -335,8 +445,25 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	} else if (vp == ofsloc) {
 		if (!donerec)
 			recbld();
-	}
-	if (freeable(vp))
+	} else if (isptr(vp)) {
+		if((vp->tval & NUM) == 0)
+			FATAL("can\'t assign number to non-numeric pointer type");
+		if(vp->tval & FLT){
+			if(vp->tval & P32)
+				*(float *)(vp->cnext) = f;
+			else
+				*(double *)(vp->cnext) = f;
+		}else{
+			if(vp->tval & P32)
+				*(int *)(vp->cnext) = f;
+			else if(vp->tval & P16)
+				*(short *)(vp->cnext) = f;
+			else if(vp->tval & P08)
+				*(char *)(vp->cnext) = f;
+			else
+				*(long long int *)(vp->cnext) = f;
+		}
+	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
 	vp->tval &= ~(STR|FLT); /* mark string invalid; force int */
 	vp->tval |= NUM;	/* mark number ok */
@@ -393,15 +520,24 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 	t = vp->sval;
 	if(s != t || s == NULL){
 		t = s && s != EMPTY && *s != 0 ? tostring(s) : EMPTY;
-		if (freeable(vp))
+		if(freeable(vp))
 			xfree(vp->sval);
 		if(t == EMPTY)
 			vp->tval |= DONTFREE;
-		else
+		else if(!isptr(vp))
 			vp->tval &= ~DONTFREE;
 	}
-	vp->tval |= STR;
-	vp->tval &= ~(FLT|NUM);	/* no longer a number */
+	if(isptr(vp)){
+		if((vp->tval & STR) == 0)
+			FATAL("can\'t assign string to numeric pointer type");
+		/* FIXME: not freeing previous? */
+		*(char **)(vp->cnext) = t;
+		vp->sval = t;
+	}else{
+		vp->tval |= STR;
+		if(!isptr(vp))
+			vp->tval &= ~(FLT|NUM);	/* no longer a number */
+	}
 	vp->sval = t;
 	DPRINTF("setsval %p: %s = \"%s (%p) \", t=%o r,f=%d,%d\n",
 		(void*)vp, NN(vp->nval), t, (void*)t, vp->tval, donerec, donefld);
@@ -429,6 +565,8 @@ Value getval(Cell *vp, short *type)
 		recbld();
 	r = 0;
 	t = vp->tval;
+	if(isptr(vp))
+		updateptr(vp);
 	if(!isnum(vp)){
 		s = vp->sval;
 		if(r = is_valid_number(s, true, &no_trailing, NULL, &v)){
@@ -442,8 +580,10 @@ Value getval(Cell *vp, short *type)
 			v.i = 0;
 			t &= ~FLT;
 		}
-		vp->tval = t;
-		vp->val = v;
+		if(!isptr(vp)){
+			vp->tval = t;
+			vp->val = v;
+		}
 	}else
 		v = vp->val;
 	*type = t;
@@ -511,11 +651,11 @@ static char *get_str_val(Cell *vp)        /* get string val of a Cell */
 		fldbld();
 	else if (isrec(vp) && ! donerec)
 		recbld();
-	if (isstr(vp) == 0)
+	if (!isstr(vp) || isptr(vp) && updateptr(vp))
 		update_str_val(vp);
 	DPRINTF("getsval %p: %s = \"%s (%p)\", t=%o\n",
 		(void*)vp, NN(vp->nval), vp->sval, (void*)vp->sval, vp->tval);
-	return(vp->sval);
+	return vp->sval;
 }
 
 char *getsval(Cell *vp)       /* get string val of a Cell */

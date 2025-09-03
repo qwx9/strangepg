@@ -415,11 +415,12 @@ makearraystring(TNode *p, const char *func)
 
 Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
-	Cell *x, *z;
-	char *buf;
+	Cell *w, *x, *y, *z;
+	char *buf, *s;
+	Awknum i;
+	Array *ap;
 
 	x = execute(a[0]);	/* Cell* for symbol table */
-	buf = makearraystring(a[1], __func__);
 	if (!isarr(x)) {
 		DPRINTF("making %s into an array\n", NN(x->nval));
 		if (freeable(x))
@@ -428,11 +429,54 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		x->tval |= ARR;
 		x->sval = (char *) makesymtab(NSYMTAB);
 	}
-	z = setsymtab(buf, NULL, ZV, STR|NUM, (Array *) x->sval);
+	ap = (Array *)x->sval;
+	if(isptr(x)){
+		y = execute(a[1]);
+		/* FIXME: can't be a float or have commas, make it explicit? */
+		if((y->tval & (STR|NUM)) == STR){
+			s = getsval(y);
+			if(ap->ids != NULL && (w = lookup(s, ap->ids)) != NULL)
+				i = getival(w);
+			else
+				FATAL("no such id %s in flat array", s);
+		}else
+			i = getival(y);
+		tempfree(y);
+		z = setptrtab(i, ap);
+	}else{
+		buf = makearraystring(a[1], __func__);
+		z = setsymtab(buf, NULL, ZV, STR|NUM, ap);
+	}
 	z->ctype = OCELL;
 	z->csub = CVAR;
 	tempfree(x);
 	return(z);
+}
+
+Array *attach(Cell *cp, Array *ids, void *buf, size_t nel, size_t sz, int type)
+{
+	Array *ap;
+
+	if(!isarr(cp) || !isptr(cp))
+		SYNTAX("can only attach to pointer variables");
+	if(freeable(cp))
+		xfree(cp->sval);
+	ap = MALLOC(sizeof *ap);
+	ap->ids = ids;
+	ap->type = type | PTR;
+	assert((type & (NUM|FLT)) != FLT);
+	ap->nelem = nel;
+	ap->size = sz;
+	ap->tab = (Cell **)buf;
+	cp->sval = (char *)ap;
+	return ap;
+}
+
+void reattach(Array *ap, void *buf, size_t sz, size_t nel)
+{
+	ap->tab = (Cell **)buf;
+	ap->size = sz;
+	ap->nelem = nel;
 }
 
 Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
@@ -445,6 +489,8 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 	}
 	if (!isarr(x))
 		return True;
+	else if(isptr(x))
+		return False;	/* FIXME: can't delete */
 	if (a[1] == NULL) {	/* delete the elements, not the table */
 		freesymtab(x);
 		x->tval &= ~STR;
@@ -471,6 +517,12 @@ Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 		ap->tval &= ~(STR|NUM|DONTFREE);
 		ap->tval |= ARR;
 		ap->sval = (char *) makesymtab(NSYMTAB);
+	/* FIXME: UNLESS it's a string and we actually query if a value exists
+	 * for that id -- but we haven't yet established a way to check for
+	 * unset value */
+	} else if(isptr(ap)) {
+		tempfree(ap);
+		return(False);	/* can't do in for arrays */
 	}
 	buf = makearraystring(a[0], __func__);
 	k = lookup(buf, (Array *) ap->sval);
@@ -1877,6 +1929,31 @@ Cell *forstat(TNode **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
 	}
 }
 
+static Cell *ptrinstat(Array *ap, Cell *vp, TNode *expr)
+{
+	size_t n, w;
+	uschar *buf, *e, *s;
+	Cell *x;
+
+	buf = (uschar *)ap->tab;
+	n = ap->nelem;
+	w = ap->size;
+	for(s=buf, e=s+n*w, n=1; s<e; s+=w, n++){
+		setival(vp, n);
+		x = execute(expr);
+		if (isbreak(x)) {
+			tempfree(vp);
+			return True;
+		}
+		if (isnext(x) || isexit(x) || isret(x)) {
+			tempfree(vp);
+			return(x);
+		}
+		tempfree(x);
+	}
+	return True;
+}
+
 Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 {
 	Cell *x, *vp, *arrayp, *cp, *ncp;
@@ -1885,11 +1962,12 @@ Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 
 	vp = execute(a[0]);
 	arrayp = execute(a[1]);
-	if (!isarr(arrayp)) {
+	if (!isarr(arrayp))
 		return True;
-	}
 	tp = (Array *) arrayp->sval;
 	tempfree(arrayp);
+	if (isptr(arrayp))
+		return ptrinstat(tp, vp, a[2]);
 	for (i = 0; i < tp->size; i++) {	/* this routine knows too much */
 		for (cp = tp->tab[i]; cp != NULL; cp = ncp) {
 			setsval(vp, cp->nval);

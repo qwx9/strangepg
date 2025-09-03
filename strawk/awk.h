@@ -34,12 +34,10 @@ THIS SOFTWARE.
 typedef double	Awkfloat;
 typedef long long int	Awknum;
 typedef unsigned long long int Awkword;
-typedef char *Awkstr;
 union Value{
 	Awknum i;
 	Awkfloat f;
 	Awkword u;
-	Awkstr s;
 	unsigned char buf[8];
 };
 typedef union Value Value;
@@ -112,8 +110,10 @@ typedef struct Cell {
 } Cell;
 
 typedef struct Array {		/* symbol table array */
-	int	nelem;		/* elements in table right now */
-	int	size;		/* size of tab */
+	int		type;		/* (ptr) type of variable or (non-ptr) 0 */
+	struct Array	*ids;		/* (ptr) label to index table */
+	size_t	nelem;		/* elements in table right now */
+	size_t	size;		/* size of tab */
 	Cell	**tab;		/* hash table pointers */
 } Array;
 
@@ -134,16 +134,21 @@ extern Cell	*subseploc;	/* SUBSEP */
 extern Cell	*symtabloc;	/* SYMTAB */
 
 /* Cell.tval values: */
-#define	NUM	01	/* number value is valid */
-#define	STR	02	/* string value is valid */
-#define DONTFREE 04	/* string space is not freeable */
-#define	CON	010	/* this is a constant */
-#define	ARR	020	/* this is an array */
-#define	FCN	040	/* this is a function name */
-#define FLD	0100	/* this is a field $1, $2, ... */
-#define	REC	0200	/* this is $0 */
-#define	FLT	0400	/* if valid, number is floating point */
-
+enum{
+	NUM = 1<<0,		/* number value is valid */
+	STR = 1<<1,		/* string value is valid */
+	DONTFREE = 1<<2,	/* string space is not freeable */
+	CON = 1<<3,		/* this is a constant */
+	ARR = 1<<4,		/* this is an array */
+	FCN = 1<<5,		/* this is a function name */
+	FLD = 1<<6,		/* this is a field $1, $2, ... */
+	REC = 1<<7,		/* this is $0 */
+	FLT = 1<<8,		/* if valid, number is floating point */
+	PTR = 1<<9,		/* flat array pointer, 64bit wide by default */
+	P32 = 1<<10,	/* pointer to 32bit value */
+	P16 = 1<<11,	/* pointer to 16bit value */
+	P08 = 1<<12,	/* pointer to 8bit value */
+};
 
 /* function types */
 enum{
@@ -237,6 +242,7 @@ extern	int	pairstack[], paircnt;
 #define isstr(n)	((n)->tval & STR)
 #define isnum(n)	((n)->tval & NUM)
 #define isarr(n)	((n)->tval & ARR)
+#define isptr(n)	((n)->tval & PTR)
 #define isfcn(n)	((n)->tval & FCN)
 #define istrue(n)	((n)->csub == BTRUE)
 #define istemp(n)	((n)->csub == CTEMP)
