@@ -77,7 +77,7 @@ extern	size_t	npfile;
 
 void syminit(void)	/* initialize symbol table with builtin vars */
 {
-	literal0 = setsymtab("$0", "0", ZV, NUM|STR|CON|DONTFREE, symtab);
+	literal0 = setsymtab("0", NULL, ZV, NUM|CON|DONTFREE, symtab);
 	/* this is used for if(x)... tests: */
 	nullloc = setsymtab("$zero&null", NULL, ZV, NUM|STR|CON|DONTFREE, symtab);
 	nullnode = celltonode(nullloc, CCON);
