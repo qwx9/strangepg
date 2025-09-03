@@ -203,7 +203,7 @@ static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
 Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
-	static const Cell newcopycell = { OCELL, CCOPY, NUM|STR|DONTFREE, NULL, EMPTY, {.i=0}, NULL };
+	static const Cell newcopycell = { OCELL, CCOPY, NUM|DONTFREE, EMPTY, EMPTY, {.i=0}, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
 	TNode *x;
@@ -271,8 +271,9 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 					tempfree(t);
 				} else {
 					oargs[i]->tval = t->tval;
-					oargs[i]->tval &= ~(STR|NUM|DONTFREE);
+					oargs[i]->tval &= ~(STR|NUM|FLT|DONTFREE);	/* FIXME: ???? */
 					oargs[i]->sval = t->sval;
+					oargs[i]->val = t->val;
 					tempfree(t);
 				}
 			}
@@ -345,7 +346,7 @@ Cell *jump(TNode **a, int n)	/* break, continue, next, nextfile, return */
 			if(y->tval & NUM){
 				setval(frp->retval, y);
 				if(y->tval & STR){
-					t = frp->retval->tval;
+					t = frp->retval->tval & ~DONTFREE;
 					setsval(frp->retval, getsval(y));
 					frp->retval->tval |= t;
 				}
@@ -419,6 +420,8 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	char *buf, *s;
 	Awknum i;
 	Array *ap;
+	short t;
+	Value v;
 
 	x = execute(a[0]);	/* Cell* for symbol table */
 	if (!isarr(x)) {
@@ -432,13 +435,17 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	ap = (Array *)x->sval;
 	if(isptr(x)){
 		y = execute(a[1]);
-		/* FIXME: can't be a float or have commas, make it explicit? */
 		if((y->tval & (STR|NUM)) == STR){
 			s = getsval(y);
 			if(ap->ids != NULL && (w = lookup(s, ap->ids)) != NULL)
 				i = getival(w);
-			else
-				FATAL("no such id %s in flat array", s);
+			else{
+				v = getval(y, &t);	/* instat uses nval */
+				if((t & NUM) == 0)
+					FATAL("no such id %s in flat array %s", s, x->nval);
+				else
+					i = v.i;
+			}
 		}else
 			i = getival(y);
 		tempfree(y);
@@ -1571,7 +1578,7 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 		if(ty & NUM){
 			setval(x, y);
 			if(y->tval & STR){
-				tx = x->tval;
+				tx = x->tval & ~DONTFREE;
 				setsval(x, getsval(y));
 				x->tval |= tx;
 			}
