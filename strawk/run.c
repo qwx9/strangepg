@@ -449,7 +449,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		}else
 			i = getival(y);
 		tempfree(y);
-		z = setptrtab(i, ap);
+		z = setptrtab(i, ap, 1);
 	}else{
 		buf = makearraystring(a[1], __func__);
 		z = setsymtab(buf, NULL, ZV, STR|NUM, ap);
@@ -467,8 +467,6 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*up
 
 	cp = setsymtab(name, NULL, ZV, PTR|ARR|type, symtab);
 	if((cp->tval & ~DONTFREE) != (PTR|ARR|type) || cp->sval != EMPTY){
-		fprintf(stderr, "tval %s: %o not %o or %p not %p\n",
-			name, cp->tval&~DONTFREE, PTR|ARR|type, cp->sval, EMPTY);
 		if(isarr(cp))
 			freesymtab(cp);
 		else if(freeable(cp))

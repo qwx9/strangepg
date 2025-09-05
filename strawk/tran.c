@@ -272,7 +272,7 @@ static inline int updateptr(Cell *vp)
 }
 
 /* FIXME: use CON to flag constant values */
-Cell *setptrtab(Awknum i, Array *a)
+Cell *setptrtab(Awknum i, Array *a, int readit)
 {
 	Cell *p;
 
@@ -283,7 +283,8 @@ Cell *setptrtab(Awknum i, Array *a)
 	p->nval = (char *)i;
 	p->sval = EMPTY;
 	p->cnext = (Cell *)a;
-	updateptr(p);
+	if(readit)
+		updateptr(p);
 	return p;
 }
 
@@ -294,6 +295,7 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	Cell *p, *w;
 
 	if(tp->type != 0){
+		i = -1;
 		if((t & (STR|NUM)) == STR){
 			if(tp->ids != NULL && (w = lookup(s, tp->ids)) != NULL)
 				i = getival(w);
@@ -301,7 +303,7 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 				FATAL("no such id %s in flat array", s);
 		}else
 			i = v.i;
-		return setptrtab(i, tp);
+		return setptrtab(i, tp, 1);
 	}
 	if (n != NULL && (p = lookup(n, tp)) != NULL) {
 		DPRINTF("setsymtab found %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
@@ -378,6 +380,7 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	int fldno;
 	Array *ap;
 	Awknum i;
+	Value v;
 
 	f += 0.0;		/* normalise negative zero to positive zero */
 	if (f == -0)  /* who would have thought this possible? */
@@ -421,8 +424,10 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 			else
 				*((unsigned long long int *)ap->tab + i) = f;
 		}
-		if(ap->upfn != NULL)
-			ap->upfn(i, (Value){.f = f});
+		if(ap->upfn != NULL){
+			v.f = f;
+			ap->upfn(i, v);
+		}
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
 	vp->tval &= ~STR; /* mark string invalid */
@@ -441,6 +446,7 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	int fldno;
 	Awknum i;
 	Array *ap;
+	Value v;
 
 	if ((vp->tval & (NUM | STR)) == 0)
 		funnyvar(vp, "assign to");
@@ -481,8 +487,10 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 			else
 				*((unsigned long long int *)ap->tab + i) = f;
 		}
-		if(ap->upfn != NULL)
-			ap->upfn(i, (Value){.i = f});
+		if(ap->upfn != NULL){
+			v.i = f;
+			ap->upfn(i, v);
+		}
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
 	vp->tval &= ~(STR|FLT); /* mark string invalid; force int */
@@ -525,6 +533,7 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 	int fldno;
 	Awknum i, f;
 	Array *ap;
+	Value v;
 
 	DPRINTF("starting setsval %p: %s = \"%s\", t=%o, done=%d,%d\n",
 		(void*)vp, isptr(vp) ? EMPTY : NN(vp->nval), s, vp->tval, donerec, donefld);
@@ -563,8 +572,10 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 		if(*sp != NULL)
 			free(*sp);
 		*sp = t;
-		if(ap->upfn != NULL)
-			ap->upfn(i, (Value){.s = t});
+		if(ap->upfn != NULL){
+			v.s = t;
+			ap->upfn(i, v);
+		}
 	}else{
 		vp->tval |= STR;
 		if(!isptr(vp))

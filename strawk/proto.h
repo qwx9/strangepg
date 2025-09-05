@@ -129,7 +129,7 @@ extern	Array	*makesymtab(int);
 extern	void	freesymtab(Cell *);
 extern	void	freeelem(Cell *, const char *);
 extern	Cell	*setsym(const char *, const char *, Array *);
-extern	Cell	*setptrtab(Awknum, Array *);
+extern	Cell	*setptrtab(Awknum, Array *, int);
 extern	Cell	*setsymtab(const char *, const char *, Value, unsigned int, Array *);
 extern	int	hash(const char *, int);
 extern	void	rehash(Array *);
