@@ -2,479 +2,417 @@
 #include "fs.h"
 #include "threads.h"
 #include "em.h"
+#include "../lib/khashl.h"
 
-/* FIXME:
- * - always clean up on exit: sig/notehandler
- * - test string and arbitrary read/write functions
- * - windowing, buffering, etc.
- * - prefetch, ie. readahead or other?
- * - testct13: test concurrent em with 10 procs (old: add qlock)
- * - tune Nwriters, channel size, age, etc.
- * - buf[Pagesz]: should it rather be allocated contiguous than just
- *	 pointing to a buffer? would be better for sequential access
- * - emfree; reuse freed etab slots
- * - read/write functions as inline or macros?
- * - add test: read from file (new=1)
- */
+/* based on: Yang et al, FIFO Queues are all you need for cache eviction, 2023
+ * with growable pool, single hash table for all 3 queues and freq packed into
+ * values */
 
-int multiplier = 30;
+int multiplier = 16;
+
+KHASHL_MAP_INIT(KH_LOCAL, Pool, p, uvlong, uvlong, kh_hash_uint64, kh_eq_generic)
+
+typedef	uchar* Page;
 
 enum{
-	/* must be powers of two */
-	Poolsz = 1ULL<<32,
-	Pshift = 16,
-	Pagesz = 1ULL<<Pshift,
-	Pmask = Pagesz - 1,
-	Bshift = 12,
-	Banksz = 1ULL<<Bshift,
-	Bmask = Banksz - 1,
-	Ashift = Pshift + Bshift,
-	Amask = (1ULL<<Ashift) - 1,
-	Pelder = 32,	/* FIXME: tune w/ prints */
-	Chansz = 16,	/* FIXME: tune w/ prints */
-	Nwriters = 10,
-	Fdirty = 1<<0,
-	Fsent = 1<<1,
-	Eclosing = 1<<0,
+	Pagesz = 1<<16,
+	EMsz = (1LL<<32) >> 16,
+	PFagesh = 58,
+	PFagesz = 1<<2,
+	PFg = 1ULL<<60,
+	PFm = 1ULL<<61,
+	PFqmask = 3ULL<<60,
+	PFmask = 15ULL<<58,
+	PFdirty = 1ULL<<62,
+	PFcached = 1ULL<<63,
+	Nope = ~0ULL,
 };
-typedef struct Page Page;
-typedef struct Bank Bank;
-struct Page{
-	Bank *bank;
-	char flags;
-	uvlong age;
-	usize vaddr;
-	uchar buf[Pagesz];
-	RWLock l;
-	Page *lleft;
-	Page *lright;
-};
-struct Bank{
-	ssize paddr;
-	EM *em;
-	Page *pt[Banksz];
-};
-struct EM{
-	int ref;
-	char flags;
-	int infd;
-	QLock l;
-	Bank **banks;
-	Page *cur;
-};
-static int swapfd = -1;
-static Bank **banks;
-static QLock elock;
-static EM **etab, *emstrbuf;
-static Page pused = {.lleft = &pused, .lright = &pused};
-static uvlong poolsz = Poolsz;
-static ssize mpages, memfree, memreallyfree = Poolsz / Pagesz;
-static Channel *wchan[Nwriters];
-static uvlong emtc;
-static vlong stroff;
+static Pool *pool;
+static Page *pages;
+static uvlong *S, *M, *G;
+static int msz, ssz, stail, shead, mtail, mhead, gtail, ghead;
+static uvlong top, freep, nfree, nalloc = 16;
+static int nextem, swapfd = -1;
+static EM emstr = -1;
+static vlong emstroff;
 
-#define PLINK(u, v)	do{ \
-	Page *a = (u), *b = (v); \
-	a->lright->lleft = b->lleft; \
-	b->lleft->lright = a->lright; \
-	a->lright = b; \
-	b->lleft = a; \
-}while(0)
-#define PUNLINK(p)	do{ \
-	(p)->lright->lleft = (p)->lleft; \
-	(p)->lleft->lright = (p)->lright; \
-	(p)->lleft = (p); \
-	(p)->lright = (p); \
-}while(0)
-#define PRELINK(ll, p)	do{ \
-	PUNLINK((p)); \
-	PLINK((ll), (p)); \
-}while(0)
+/* FIXME: writer procs on eviction from m or s and dispatch */
 
-/* FIXME: naming */
-#define	VADDR(off)	((off) & ~Pmask)
-#define	VOFF(off)	((off) & Pmask)
-#define	PADDR(off, pa)	((pa) | VADDR((off)) & Amask)
-#define	BANK(off)	((off) >> Ashift)
-#define	PAGE(off)	((off) >> Pshift & Bmask)
-#define PLEA(p, a)	((p)->buf + VOFF((a)))
-#define PREAD(fd, p, off)	do{ \
-	if(pread((fd), (p)->buf, sizeof((p)->buf), (off)) < 0) \
-		warn("pread: %s\n", error()); \
-}while(0)
-
-/* FIXME
-static void
-cleanup(void *)
-{
-	int i;
-	EM **em;
-
-	if(swapfd < 0)
-		return;
-	qlock(&elock);
-	close(swapfd);
-	swapfd = -1;
-	for(em=etab; em<etab+dylen(etab); em++){
-		(*em)->ref = 0;
-		emclose(*em);
-		free(*em);
-	}
-	dyfree(etab);
-	qunlock(&elock);
-}
-*/
-
-/* FIXME: UGHHHHHH */
-static inline Page *
-GETPAGE(EM *em, ssize off)
-{
-	int new, old;
-	ssize i, va;
-	Bank *bank;
-	Page *p, *l;
-
-	va = VADDR(off);
-	if(em->cur == nil || (p = em->cur)->vaddr != va){
-		old = new = 0;
-		i = BANK(off);
-		if(i >= dylen(em->banks) || (bank = em->banks[i]) == nil){
-			bank = emalloc(sizeof *bank);
-			bank->paddr = dylen(banks) << Ashift;
-			bank->em = em;
-			qlock(&elock);
-			dypush(banks, bank);
-			qunlock(&elock);
-			qlock(&em->l);
-			dypushat(em->banks, i, bank);
-			qunlock(&em->l);
-			new = 1;
-		}else if((p = bank->pt[PAGE(off)]) == nil)
-			new = 1;
-		else if(p->vaddr != va || p->bank != bank)
-			old = 1;
-		else
-			goto relink;
-		rlock(&pused.l);
-		p = pused.lleft;
-		rlock(&p->l);
-		runlock(&pused.l);
-		vlong m = 0;
-		while((p->flags & Fdirty) != 0 || p == &pused){
-			if(p->vaddr == va && p->bank == bank){
-				old = new = 0;
-				break;
-			}
-			l = p->lleft;
-			rlock(&l->l);
-			runlock(&p->l);
-			p = l;
-			m++;
-		}
-		runlock(&p->l);
-		p->vaddr = va;
-		p->bank = bank;
-		if(p->age == 0)	/* virgin */
-			memfree--;
-		p->age = 0;
-		bank->pt[PAGE(va)] = p;
-		if(m > 64)
-			warn("stalled, %lld iterations age %#llx emtc %#llx\n",
-				m, p->age, emtc);
-relink:
-		assert(p != &pused);
-		em->cur = p;
-		if(p->age == 0 || emtc - p->age >= Pelder){
-			PUNLINK(p);
-			PLINK(&pused, p);
-			p->age = emtc;
-		}
-		emtc++;
-		if(old)
-			PREAD(swapfd, p, PADDR(va, bank->paddr));
-		else if(new && em->infd >= 0)
-			PREAD(em->infd, p, VADDR(off));
-	}
-	return p;
-}
-
-static void
-cacheproc(void *arg)
-{
-	EM *em;
-	Bank *bank;
-	Page *p;
-	Channel *c;
-
-	c = arg;
-	for(;;){
-		if((p = recvp(c)) == nil)
-			break;
-		bank = p->bank;
-		em = bank->em;
-		em->ref--;
-		if((p->flags & Fdirty) == 0){
-			p->flags &= ~Fsent;
-			continue;
-		}
-		if((em->flags & Eclosing) == 0){
-			wlock(&p->l);
-			DPRINT(Debugem, "flush %#p:%#p:%#p\n", em, p, p->buf);
-			if(pwrite(swapfd, p->buf, sizeof p->buf, PADDR(p->vaddr, bank->paddr)) < 0)
-				warn("flush: %s\n", error());
-			wunlock(&p->l);
-		}else if(em->ref <= 0)
-			emclose(em);
-		p->flags &= ~(Fdirty | Fsent);
-	}
-}
-
-static void
+static inline void
 feedpages(void)
 {
-	ssize n;
-	Page *l, *r, *pl, *p, *pe;
+	int n, np, psz;
+	uchar *d;
+	Page *p, *e;
 
-	n = memreallyfree;
-	if(n > 128)
-		n = 128;
-	pl = emalloc(n * sizeof *pl);
-	memreallyfree -= n;
-	for(p=pl, pe=p+n; p<pe; p++){
-		initrwlock(&p->l);
-		p->lright = p + 1;
-		p->lleft = p - 1;
-	}
-	p--;
-	r = &pused;
-	p->lright = r;
-	l = r->lleft;
-	pl->lleft = l;
-	r->lleft = p;
-	l->lright = pl;
-	mpages += n;
-	memfree += n;
+	if((np = nalloc) > nfree)
+		np = nfree;
+	nalloc *= 2;
+	d = emalloc(np * (psz = Pagesz * sizeof *d));
+	n = dylen(pages);
+	DPRINT(Debugem, "feedpages: freep %lld top %lld n %d np %d", freep, top, n, np);
+	dygrow(pages, n + np - 1);
+	for(p=pages+n, e=p+np; p<e; p++, d+=psz)
+		*p = d;
+	dyresize(M, n + np);
+	dyresize(S, 0.1 * (n + np));
+	top += np;
+	nfree -= np;
 }
 
-/* FIXME: check if the slowdowns on linux we've seen are because of the
- * sleep amount; this function over all just sucks, we need better */
-static void
-lruproc(void *)
+static inline void
+qinsertg(uvlong va)
 {
-	vlong n;
-	uint i;
-	int j;
-	EM *em;
-	Page *p, *l;
+	uvlong i, h;
 
-	for(;;){
-		p = pused.lleft;
-		/* this doesn't do any locking so scanning is just optimistic
-		 * but in practice it's faster to do this and go wherever */
-		for(n=0, i=0, j=0;; n++){
-			l = p->lleft;
-			if(p->bank == nil)
-				goto skip;
-			em = p->bank->em;
-			if((em->flags & Eclosing) != 0){
-				p->flags &= ~(Fdirty|Fsent);
-				goto skip;
+	if(ghead == gtail){ /* FIXME: if size > 0 and fragmentation... */
+		h = gtail;
+		do{
+			if((i = G[h++]) != Nope){
+				G[ghead++] = i;
+				if(ghead >= ssz)
+					ghead = 0;
 			}
-			if((p->flags & (Fdirty|Fsent)) == Fdirty){
-				for(j=0; j<nelem(wchan); j++)
-					if(nbsendp(wchan[i++ % nelem(wchan)], p) != 0)
-						break;
-				if(j == nelem(wchan))
-					break;
-				p->flags |= Fsent;
-				em->ref++;
-			}
-		skip:
-			if(l == &pused || n >= mpages)
-				break;
-			p = l;
+			if(h >= ssz)
+				h = 0;
+		}while(h != gtail);
+	}
+	G[ghead++] = va;
+	if(ghead >= ssz)
+		ghead = 0;
+}
+
+static inline void
+qinsertm(uvlong i)
+{
+	M[mhead++] = i;
+	if(mhead >= msz)
+		mhead = 0;
+}
+
+static inline void
+qinserts(uvlong va, uvlong i)
+{
+	S[shead++] = i;
+	if(shead >= ssz)
+		shead = 0;
+	qinsertg(va);
+}
+
+static inline void
+qevictm(void)
+{
+	uvlong i;
+
+	while(mtail != mhead){
+		i = M[mtail++];
+		if(mtail >= msz)
+			mtail = 0;
+		if((i & PFagesz-1ULL<<PFagesh) != 0)
+			qinsertm(i - (1ULL << PFagesh));
+		else
+			break;
+	}
+}
+
+static inline void
+qevicts(void)
+{
+	uvlong i;
+
+	while(stail != shead){
+		i = S[stail++];
+		if(stail >= ssz)
+			stail = 0;
+		if(i & PFagesz-1ULL<<PFagesh > 1ULL << PFagesh){
+			qinsertm(i);
+			if(mhead == mtail)
+				qevictm();
+		}else{
+			qinsertg(i);	/* FIXME: not va! maybe just have another i->va ht? */
+			break;
 		}
-		if(j < nelem(wchan))
-			lsleep(100);
 	}
 }
 
-void
-emw64(EM *em, vlong off, u64int v)
+static inline void
+checkcache(void)
 {
-	uchar *u;
-	Page *p;
-
-	off *= 8;
-	p = GETPAGE(em, off);
-	u = PLEA(p, off);
-	PBIT64(u, v);
-	p->flags |= Fdirty;
-	DPRINT(Debugem, "w64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) → %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
-}
-
-u64int
-emr64(EM *em, vlong off)
-{
-	uchar *u;
-	u64int v;
-	Page *p;
-
-	off *= 8;
-	p = GETPAGE(em, off);
-	u = PLEA(p, off);
-	v = GBIT64(u);
-	DPRINT(Debugem, "r64 %#llx:%#p:%#p[%#llx][%#llx]:%#p[%#llx] (%#llx) ← %llx", PADDR(off, p->bank->paddr), em, p->bank, BANK(off), PAGE(off), p, VOFF(off), off/8, v);
-	return v;
-}
-
-void
-emwrite(EM *em, vlong off, uchar *buf, int sz)
-{
-	int n;
-	uchar *u;
-	vlong bound;
-	Page *p;
-
-	assert(buf != nil);
-	while(sz > 0){
-		p = GETPAGE(em, off);
-		u = PLEA(p, off);
-		bound = off + (1 << Pshift) & ~Pmask;
-		n = sz;
-		if(bound - off < sz)
-			n = bound - off;
-		memcpy(u, buf, n);
-		sz -= n;
-		off = bound;
+	while(shead == stail && mhead == mtail){	/* while cache is full */
+		if(shead == stail)
+			qevicts();
+		else
+			qevictm();
 	}
 }
 
-/* assumption: fits in buffer, not going to bother further; instead
- * "allocate" within page boundaries */
-uchar *
-emread(EM *em, vlong off, int sz, vlong *n)
+/* so long as the value is in the hash table, it's in one of the 3 queues */
+static inline uvlong
+popg(void)
 {
-	vlong bound;
-	uchar *u;
-	Page *p;
+	uvlong va, i, t, h;
+	khint_t k;
 
-	p = GETPAGE(em, off);
-	u = PLEA(p, off);
-	bound = off + (1 << Pshift) & ~Pmask;
-	if(bound - off < sz)
-		sz = bound - off;
-	*n = sz;
-	return u;
-}
-
-/* 64k max characters ought to be quite enough... */
-char *
-emgetstring(EMstring off)
-{
-	char *s;
-	Page *p;
-
-	/* uninitialized or past the tail are both errors */
-	if(emstrbuf == nil){
-		emstrbuf = emopen(nil);
-		return nil;
-	}else if(off >= stroff)
-		return nil;
-	p = GETPAGE(emstrbuf, off);
-	s = (char *)PLEA(p, off);
-	return s;
-}
-
-EMstring
-emputstring(char *s, int len)
-{
-	uchar *u;
-	vlong off, bound;
-	Page *p;
-
-	len++;
-	if(len > Pagesz){
-		werrstr("string too long");
-		return -1;
+	checkcache();
+	for(t=gtail, h=ghead; t!=h; t++){
+		if(t >= ssz)
+			t = 0;
+		if((va = G[t]) != Nope){
+			k = p_get(pool, va);
+			assert(k != kh_end(pool));
+			i = kh_val(pool, k);
+			if((i & PFmask) != PFg){	/* picked up earlier from qread (hit) */
+				G[t] = Nope;
+				continue;
+			}
+			p_del(pool, k);
+			G[t] = Nope;
+			gtail = t + 1 >= ssz ? 0 : t + 1;
+			return i;
+		}
 	}
-	if(emstrbuf == nil)
-		emstrbuf = emopen(nil);
-	off = stroff;
-	bound = off + (1 << Pshift) & ~Pmask;
-	if(bound - off < len)
-		off = bound;
-	p = GETPAGE(emstrbuf, off);
-	u = PLEA(p, off);
-	memcpy(u, (uchar *)s, len);
-	stroff = off + len;
+	abort();
+}
+
+static inline uvlong
+getpage(void)
+{
+	if(freep < top)
+		return freep++;
+	else if(nfree == 0)
+		return popg();
+	else{
+		feedpages();
+		return freep++;
+	}
+}
+
+static inline ssize
+qread(EM em, vlong addr, int wr)
+{
+	int abs;
+	uvlong i, va;
+	khint_t k;
+
+	va = addr & ~(PFagesz-1) | em;
+	k = p_get(pool, va);
+	if(k != kh_end(pool)){
+		i = kh_val(pool, k);
+		if((i & PFqmask) != PFg){
+			if((i & PFagesz-1ULL << PFagesh) != PFagesz-1ULL << PFagesh)
+				kh_val(pool, k) = i + (1ULL<<PFagesh);
+			return i & PFm ? M[i & ~PFmask] : S[i & ~PFmask];
+		}
+		i &= ~PFmask;	/* removed from G in popg */
+		if(wr)
+			i |= PFdirty;
+		checkcache();
+		kh_val(pool, k) = i | PFm;
+		qinsertm(i);
+	}else{
+		checkcache();
+		i = getpage();
+		qinserts(va, i);
+		k = p_put(pool, va, &abs);
+		assert(abs);
+		kh_val(pool, k) = i;
+	}
+	return i;
+}
+
+static inline uchar *
+lookup(EM em, uvlong addr, int wr)
+{
+	uvlong i;
+
+	i = qread(em, addr, wr);
+	return pages[i] + (addr & Pagesz-1);
+}
+
+static inline int
+getoverlap(vlong off, int sz)
+{
+	vlong end;
+
+	end = off + Pagesz & ~(Pagesz-1);
+	if(off + sz > end)
+		return off + sz - end;
+	else
+		return 0;
+}
+
+static inline vlong
+jumpoverlap(vlong off, int sz)
+{
+	vlong end;
+
+	end = off + Pagesz & ~(Pagesz-1);
+	if(off + sz >= end)
+		off = end;
 	return off;
 }
 
-/* FIXME: overwrites clean pages, wasting time */
-int
-em2fs(EM *em, File *f, ssize nbytes)
+/* FIXME: alignment/cross-boundary access:
+ * we want all bytes in u to be in the page, right now it's assumed */
+u64int
+emr64(EM em, vlong i)
 {
-	u64int u;
-	vlong off;
-
-	if(em == nil || (em->flags & Eclosing) != 0)
-		return 0;
-	for(off=0; off<nbytes/sizeof u; off++){
-		//n = nbytes - off > Pagesz ? Pagesz : nbytes - off;
-		u = emr64(em, off);
-		put64(f, u);
-	}
-	return 0;
+	return *(u64int *)lookup(em, sizeof(u64int) * i, 0);
+}
+void
+emw64(EM em, vlong i, u64int v)
+{
+	*(u64int *)lookup(em, sizeof(u64int) * i, 1) = v;
+}
+u32int
+emr32(EM em, vlong i)
+{
+	return *(u32int *)lookup(em, sizeof(u32int) * i, 0);
+}
+void
+emw32(EM em, vlong i, u32int v)
+{
+	*(u32int *)lookup(em, sizeof(u32int) * i, 1) = v;
+}
+u16int
+emr16(EM em, vlong i)
+{
+	return *(u16int *)lookup(em, sizeof(u16int) * i, 0);
+}
+void
+emw16(EM em, vlong i, u16int v)
+{
+	*(u16int *)lookup(em, sizeof(u16int) * i, 1) = v;
+}
+u8int
+emr8(EM em, vlong i)
+{
+	return *lookup(em, i, 0);
+}
+void
+emw8(EM em, vlong i, u8int v)
+{
+	*lookup(em, i, 1) = v;
 }
 
 void
-emclose(EM *em)
+emreadi(EM em, vlong i, void *p, int sz)
 {
-	if(em == nil)
-		return;
-	em->flags |= Eclosing;
-	if(em->ref > 0)
-		return;
-	if(em->infd >= 0)
-		close(em->infd);
+	int o;
+	uchar *u;
+
+	i *= sz;
+	o = getoverlap(i, sz);
+	u = lookup(em, i, 0);
+	memcpy(p, u, sz - o);
+	if(o > 0){
+		u = lookup(em, i+o, 0);
+		memcpy(p, u, o);
+	}
 }
 
-EM *
-emopen(char *path)
+void
+emwritei(EM em, vlong i, void *p, int sz)
 {
-	int i;
-	EM *em;
+	int o;
+	uchar *u;
 
-	em = emalloc(sizeof *em);
-	initqlock(&em->l);
-	dypush(etab, em);
-	em->infd = -1;
-	if(path != nil && (em->infd = open(path, OREAD)) < 0){
-		free(em);
+	i *= sz;
+	o = getoverlap(i, sz);
+	u = lookup(em, i, 1);
+	memcpy(u, p, sz - o);
+	if(o > 0){
+		u = lookup(em, i+o, 1);
+		memcpy(u, p, o);
+	}
+}
+
+char *
+emgetstr(EMstring off)
+{
+	uchar *u;
+
+	if(emstr == -1){
+		werrstr("no strings to hand");
+		return nil;
+	}else if(off < 0 || off >= emstroff){
+		werrstr("invalid offset");
 		return nil;
 	}
-	if(swapfd < 0){
-		if((swapfd = sysmktmp()) < 0)
-			sysfatal("emopen: %s", error());
-		for(i=0; i<nelem(wchan); i++)
-			if((wchan[i] = chancreate(sizeof(Page*), Chansz)) == nil)
-				sysfatal("chancreate: %s", error());
-		feedpages();
-		/* FIXME: proper cleanup: cleanfn + reclaim used: kill when empty */
-		newthread(lruproc, nil, nil, nil, "lru", mainstacksize);
-		for(i=0; i<nelem(wchan); i++)
-			newthread(cacheproc, nil, wchan[i], nil, "cache", mainstacksize);
-	}
+	u = lookup(emstr, off, 0);
+	return (char *)u;
+}
+
+EMstring
+emputstr(char *s, int len)
+{
+	uchar *u;
+	vlong off;
+
+	if(emstr == -1)
+		emstr = emopen(nil);
+	if(++len >= Pagesz)
+		sysfatal("emputstr: string too long: %d > %d", len, Pagesz);
+	off = jumpoverlap(emstroff, len);
+	u = lookup(emstr, off, 1);
+	memcpy(u, s, len);
+	emstroff = off + len;
+	return off;
+}
+
+void
+emclose(EM em)
+{
+	USED(em);
+}
+
+static void
+allsystemsgo(void)
+{
+	M = emalloc((msz = nfree) * sizeof *M);
+	S = emalloc((ssz = msz / 10) * sizeof *M);
+	G = emalloc(ssz * sizeof *G);	/* FIXME: ? */
+	if((swapfd = sysmktmp()) < 0)
+		sysfatal("initem: %s", error());
+	/*
+	for(i=0; i<nelem(wchan); i++)
+		if((wchan[i] = chancreate(sizeof(void*), Wchansz)) == nil)
+			sysfatal("chancreate: %s", error());
+	for(i=0; i<nelem(wchan); i++)
+		newthread(writer, nil, wchan[i], nil, "emwriter", mainstacksize);
+	*/
+}
+
+/* FIXME: no reuse */
+static EM
+openaccount(void)
+{
+	EM em;
+
+	if((em = nextem++) >= EMsz)
+		sysfatal("emopen: too many buffers in reuse-less implementation");
+	return em;
+}
+
+EM
+emopen(char *path/*, int sequential*/)
+{
+	EM em;
+
+	USED(path);
+	em = openaccount();
+	if(swapfd < 0)
+		allsystemsgo();
 	return em;
 }
 
 void
 initem(void)
 {
-	initqlock(&elock);
-	if(multiplier < 28 || multiplier > 63)
-		sysfatal("invalid memory size");
-	poolsz = 1ULL << multiplier;
-	memreallyfree = poolsz / Pagesz;
+	if(multiplier < 6 || multiplier > 22)
+		sysfatal("invalid memory ceiling: %dMB, multiplier must be [6-22]",
+			1 << multiplier >> 4);
+	nfree = 1 << multiplier;
+	if((pool = p_init()) == nil)
+		sysfatal("initem: %s", error());
 }
