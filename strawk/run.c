@@ -1998,6 +1998,7 @@ Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 			tempfree(x);
 		}
 	}
+	// FIXME: not tempfreeing vp?
 	return True;
 }
 

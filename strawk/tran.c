@@ -494,7 +494,7 @@ void funnyvar(Cell *vp, const char *rw)
 
 char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 {
-	char *t;
+	char *t, **sp;
 	int fldno;
 	Awknum f;
 
@@ -529,8 +529,10 @@ char *setsval(Cell *vp, const char *s)	/* set string val of a Cell */
 	if(isptr(vp)){
 		if((vp->tval & STR) == 0)
 			FATAL("can\'t assign string to numeric pointer type");
-		/* FIXME: not freeing previous? */
-		*(char **)(vp->cnext) = t;
+		sp = (char **)(vp->cnext);
+		if(*sp != NULL)
+			free(*sp);
+		*sp = t;
 		vp->sval = t;
 	}else{
 		vp->tval |= STR;
