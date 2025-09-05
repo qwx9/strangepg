@@ -876,7 +876,7 @@ int awkmain(int argc, char **argv)
 	initpool();
 	cmdname = argv[0];
 	if (argc == 1) {
-		fprintf(awkstderr,
+		fprintf(stderr,
 		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
 		  cmdname);
 		exit(1);

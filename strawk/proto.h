@@ -179,8 +179,8 @@ extern	noreturn void	FATAL(const char *, ...)
     __attribute__((__format__(__printf__, 1, 2)));
 extern	void	WARNING(const char *, ...)
     __attribute__((__format__(__printf__, 1, 2)));
-extern	void	ERROR(void);
-extern	void	eprint(void);
+extern	void	ERROR(FILE *);
+extern	void	eprint(FILE *);
 extern	void	bclass(int);
 extern	Awkfloat	errcheck(Awkfloat, const char *);
 extern	int	isclvar(const char *);

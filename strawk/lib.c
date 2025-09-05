@@ -598,21 +598,27 @@ void SYNTAX(const char *fmt, ...)
 {
 	extern char *curfname;
 	va_list varg;
+	FILE *fp;
 
-	fprintf(awkstderr, "%s: ", cmdname);
+	if(evalstr != NULL)
+		fp = awkstderr;
+	else{
+		fp = stderr;
+		fprintf(fp, "%s: ", cmdname);
+	}
 	va_start(varg, fmt);
-	vfprintf(awkstderr, fmt, varg);
+	vfprintf(fp, fmt, varg);
 	va_end(varg);
-	fprintf(awkstderr, " at source line %d", lineno);
-	if (curfname != NULL)
-		fprintf(awkstderr, " in function %s", curfname);
-	if (evalstr != NULL)
-		fprintf(awkstderr, " eval(\"%s\")", evalstr);
-	else if (compile_time == COMPILING && cursource() != NULL)
-		fprintf(awkstderr, " source file %s", cursource());
-	fprintf(awkstderr, "\n");
+	if(evalstr == NULL){
+		fprintf(fp, " at source line %d", lineno);
+		if(curfname != NULL)
+			fprintf(fp, " in function %s", curfname);
+		else if(compile_time == COMPILING && cursource() != NULL)
+			fprintf(fp, " source file %s", cursource());
+	}
+	fprintf(fp, "\n");
 	errorflag = 2;
-	eprint();
+	eprint(fp);
 	bracecnt = brackcnt = parencnt = 0;
 	infunc = false;
 }
@@ -634,27 +640,33 @@ void bracecheck(void)
 void bcheck2(int n, int c1, int c2)
 {
 	if (n == 1)
-		fprintf(awkstderr, "\tmissing %c\n", c2);
+		fprintf(evalstr != NULL ? awkstderr : stderr, "\tmissing %c\n", c2);
 	else if (n > 1)
-		fprintf(awkstderr, "\t%d missing %c's\n", n, c2);
+		fprintf(evalstr != NULL ? awkstderr : stderr, "\t%d missing %c's\n", n, c2);
 	else if (n == -1)
-		fprintf(awkstderr, "\textra %c\n", c2);
+		fprintf(evalstr != NULL ? awkstderr : stderr, "\textra %c\n", c2);
 	else if (n < -1)
-		fprintf(awkstderr, "\t%d extra %c's\n", -n, c2);
+		fprintf(evalstr != NULL ? awkstderr : stderr, "\t%d extra %c's\n", -n, c2);
 }
 
 void FATAL(const char *fmt, ...)
 {
 	va_list varg;
+	FILE *fp;
 
 	fflush(awkstdout);
-	fprintf(awkstderr, "%s: ", cmdname);
+	if(evalstr != NULL)
+		fp = awkstderr;
+	else{
+		fp = stderr;
+		fprintf(fp, "%s: ", cmdname);
+	}
 	va_start(varg, fmt);
-	vfprintf(awkstderr, fmt, varg);
+	vfprintf(fp, fmt, varg);
 	va_end(varg);
-	ERROR();
+	ERROR(fp);
 	if(evalstr != NULL){
-		fflush(awkstderr);
+		fflush(fp);
 		longjmp(evalenv, -1);
 	}
 	if (dbg > 1)		/* core dump if serious debugging on */
@@ -665,43 +677,48 @@ void FATAL(const char *fmt, ...)
 void WARNING(const char *fmt, ...)
 {
 	va_list varg;
+	FILE *fp;
 
 	fflush(awkstdout);
-	fprintf(awkstderr, "%s: ", cmdname);
+	if(evalstr != NULL)
+		fp = awkstderr;
+	else{
+		fp = stderr;
+		fprintf(fp, "%s: ", cmdname);
+	}
 	va_start(varg, fmt);
-	vfprintf(awkstderr, fmt, varg);
+	vfprintf(fp, fmt, varg);
 	va_end(varg);
-	ERROR();
+	ERROR(fp);
 }
 
-void ERROR(void)
+void ERROR(FILE *fp)
 {
 	extern TNode *curnode;
 
-	if (runnerup != NULL) {
-		fprintf(awkstderr, " eval(\"%s\")\n", evalstr);
-		eprint();
-	} else if (compile_time != ERROR_PRINTING) {
-		fprintf(awkstderr, "\n");
+	if (runnerup != NULL)
+		eprint(fp);
+	else if (compile_time != ERROR_PRINTING) {
+		fprintf(fp, "\n");
 		if (NR && *NR > 0) {
-			fprintf(awkstderr, " input record number %d", (int) (*FNR));
+			fprintf(fp, " input record number %d", (int) (*FNR));
 			if (strcmp(*FILENAME, "-") != 0)
-				fprintf(awkstderr, ", file %s", *FILENAME);
-			fprintf(awkstderr, "\n");
+				fprintf(fp, ", file %s", *FILENAME);
+			fprintf(fp, "\n");
 		}
 		if (curnode)
-			fprintf(awkstderr, " source line number %d", curnode->lineno);
+			fprintf(fp, " source line number %d", curnode->lineno);
 		else if (lineno)
-			fprintf(awkstderr, " source line number %d", lineno);
+			fprintf(fp, " source line number %d", lineno);
 		if (compile_time == COMPILING && cursource() != NULL)
-			fprintf(awkstderr, " source file %s", cursource());
-		fprintf(awkstderr, "\n");
-		eprint();
+			fprintf(fp, " source file %s", cursource());
+		fprintf(fp, "\n");
+		eprint(fp);
 	} else
-		fprintf(awkstderr, "\n");
+		fprintf(fp, "\n");
 }
 
-void eprint(void)	/* try to print context around error */
+void eprint(FILE *fp)	/* try to print context around error */
 {
 	char *p, *q;
 	int c;
@@ -718,23 +735,23 @@ void eprint(void)	/* try to print context around error */
 		;
 	while (*p == '\n')
 		p++;
-	fprintf(awkstderr, " context is\n\t");
+	fprintf(fp, " context is\n\t");
 	for (q=ep-1; q>=p && *q!=' ' && *q!='\t' && *q!='\n'; q--)
 		;
 	for ( ; p < q; p++)
 		if (*p)
-			putc(*p, awkstderr);
-	fprintf(awkstderr, " >>> ");
+			putc(*p, fp);
+	fprintf(fp, " >>> ");
 	for ( ; p < ep; p++)
 		if (*p)
-			putc(*p, awkstderr);
-	fprintf(awkstderr, " <<< ");
+			putc(*p, fp);
+	fprintf(fp, " <<< ");
 	if (*ep)
 		while ((c = input()) != '\n' && c != '\0' && c != EOF) {
-			putc(c, awkstderr);
+			putc(c, fp);
 			bclass(c);
 		}
-	putc('\n', awkstderr);
+	putc('\n', fp);
 	ep = ebuf;
 }
 

@@ -467,7 +467,7 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*up
 
 	cp = setsymtab(name, NULL, ZV, PTR|ARR|type, symtab);
 	if((cp->tval & ~DONTFREE) != (PTR|ARR|type) || cp->sval != EMPTY){
-		fprintf(awkstderr, "tval %s: %o not %o or %p not %p\n",
+		fprintf(stderr, "tval %s: %o not %o or %p not %p\n",
 			name, cp->tval&~DONTFREE, PTR|ARR|type, cp->sval, EMPTY);
 		if(isarr(cp))
 			freesymtab(cp);

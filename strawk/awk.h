@@ -57,7 +57,7 @@ typedef	unsigned char uschar;
 
 #define	NN(p)	((p) ? (p) : "(null)")	/* guaranteed non-null for DPRINTF
 */
-#define	DPRINTF(...)	if (dbg) fprintf(awkstderr, __VA_ARGS__)
+#define	DPRINTF(...)	if (dbg) fprintf(stderr, __VA_ARGS__)
 
 extern enum compile_states {
 	RUNNING,
@@ -83,6 +83,7 @@ extern char	**SUBSEP;
 extern Awknum *RSTART;
 extern Awknum *RLENGTH;
 
+/* used for communication, stderr is still open and distinct */
 extern FILE *awkstdin, *awkstdout, *awkstderr;
 void	awkprint(char*, ...);
 
