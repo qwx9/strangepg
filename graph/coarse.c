@@ -1105,6 +1105,7 @@ buildct(void)
 		return -1;
 	}else
 		status |= FSlockedctab;
+	logmsg("building coarsening table...\n");
 	t = μsec();
 	if(initcoarse() < 0)
 		return -1;
@@ -1179,5 +1180,6 @@ buildct(void)
 	for(U=cnodes, UE=U+nnodes; U<UE; U++)	/* FIXME */
 		U->flags &= ~FCNvisited;
 	TIME("buildct", "cleanup", t);
+	logmsg("coarsening table built.\n");
 	return 0;
 }
