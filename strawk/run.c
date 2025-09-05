@@ -347,11 +347,11 @@ Cell *jump(TNode **a, int n)	/* break, continue, next, nextfile, return */
 				setval(frp->retval, y);
 				if(y->tval & STR){
 					t = frp->retval->tval & ~DONTFREE;
-					setsval(frp->retval, getsval(y));
+					setsval(frp->retval, getsval(y), 1);
 					frp->retval->tval |= t;
 				}
 			}else if(y->tval & STR)
-				setsval(frp->retval, getsval(y));
+				setsval(frp->retval, getsval(y), 1);
 			else		/* can't happen */
 				FATAL("bad type variable %d", y->tval);
 			tempfree(y);
@@ -515,6 +515,21 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 	return True;
 }
 
+static Cell *ptrintest(Array *ap, TNode *id)
+{
+	int r;
+	Awknum i;
+	Cell *x;
+
+	x = execute(id);
+	i = getival(x);
+	tempfree(x);
+	x = setptrtab(i, ap, 1);
+	r = x->tval & UNS;
+	tempfree(x);
+	return r ? False : True;
+}
+
 Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 {
 	Cell *ap, *k;
@@ -531,10 +546,8 @@ Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 	/* FIXME: UNLESS it's a string and we actually query if a value exists
 	 * for that id -- but we haven't yet established a way to check for
 	 * unset value */
-	} else if(isptr(ap)) {
-		tempfree(ap);
-		return(False);	/* can't do in for arrays */
-	}
+	} else if(isptr(ap))
+		return ptrintest((Array *)ap->sval, a[0]);
 	buf = makearraystring(a[0], __func__);
 	k = lookup(buf, (Array *) ap->sval);
 	tempfree(ap);
@@ -890,7 +903,7 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 			tempfree(z);
 		}
 		x = gettemp(STR);
-		setsval(x, NULL);
+		setsval(x, NULL, 0);
 		return(x);
 	}
 	m = getival(y);
@@ -916,7 +929,7 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 
 	temp = s[nb];	/* with thanks to John Linderman */
 	s[nb] = '\0';
-	setsval(y, s + mb);
+	setsval(y, s + mb, 1);
 	s[nb] = temp;
 	tempfree(x);
 	return(y);
@@ -1576,11 +1589,11 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 			setval(x, y);
 			if(y->tval & STR){
 				tx = x->tval & ~DONTFREE;
-				setsval(x, getsval(y));
+				setsval(x, getsval(y), 1);
 				x->tval |= tx;
 			}
 		}else if(y->tval & STR)
-			setsval(x, getsval(y));
+			setsval(x, getsval(y), 1);
 		else
 			funnyvar(y, "read value of");
 		tempfree(y);
@@ -1978,7 +1991,7 @@ Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 		return ptrinstat(tp, vp, a[2]);
 	for (i = 0; i < tp->size; i++) {	/* this routine knows too much */
 		for (cp = tp->tab[i]; cp != NULL; cp = ncp) {
-			setsval(vp, cp->nval);
+			setsval(vp, cp->nval, 0);
 			ncp = cp->cnext;
 			x = execute(a[2]);
 			if (isbreak(x)) {
@@ -2194,7 +2207,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			buf = nawk_tolower(getsval(x));
 		tempfree(x);
 		x = gettemp(STR);
-		setsval(x, buf);
+		setsval(x, buf, 1);
 		return x;
 	/* FIXME: this can accept an argument, use it; not very useful
 	 * this way */
@@ -2392,7 +2405,7 @@ next_search:
 		while ((*pb++ = *start++) != '\0')
 			;
 
-		setsval(x, buf);
+		setsval(x, buf, 1);
 	}
 
 	tempfree(x);

@@ -138,7 +138,7 @@ extern	Awkfloat	setfval(Cell *, Awkfloat);
 extern	Awknum	setival(Cell *, Awknum);
 extern	void	setval(Cell *, Cell *);
 extern	void	funnyvar(Cell *, const char *);
-extern	char	*setsval(Cell *, const char *);
+extern	char	*setsval(Cell *, const char *, int);
 extern	Value	getval(Cell *, short *);
 extern	Awknum	getival(Cell *);
 extern	Awkfloat	getfval(Cell *);

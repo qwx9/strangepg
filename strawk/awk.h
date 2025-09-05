@@ -31,6 +31,8 @@ THIS SOFTWARE.
 #include <stdnoreturn.h>
 #endif
 
+#define	UNSET	0xfefefefeUL
+
 typedef double	Awkfloat;
 typedef long long int	Awknum;
 typedef unsigned long long int Awkword;
@@ -39,7 +41,7 @@ union Value{
 	Awkfloat f;
 	Awkword u;
 	char *s;
-	unsigned char buf[8];
+	unsigned char buf[sizeof(Awknum)];
 };
 typedef union Value Value;
 
@@ -147,10 +149,10 @@ enum{
 	FLD = 1<<6,		/* this is a field $1, $2, ... */
 	REC = 1<<7,		/* this is $0 */
 	FLT = 1<<8,		/* if valid, number is floating point */
-	PTR = 1<<9,		/* flat array pointer, 64bit wide by default */
-	P32 = 1<<10,	/* pointer to 32bit value */
-	P16 = 1<<11,	/* pointer to 16bit value */
-	P08 = 1<<12,	/* pointer to 8bit value */
+	PTR = 1<<9,		/* flat array pointer, i32 by default */
+	P16 = 1<<10,	/* pointer to 16bit value */
+	USG = 1<<11,	/* pointer to unsigned int */
+	UNS = 1<<12,	/* pointer to unset value */
 };
 
 /* function types */
