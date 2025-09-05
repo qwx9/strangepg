@@ -87,6 +87,7 @@ struct Clk{
 
 enum{
 	FSlockedctab = 1<<0,
+	FSquiet = 1<<1,
 };
 extern int status;
 

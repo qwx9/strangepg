@@ -53,7 +53,7 @@ logmsg(char *s)
 {
 	qlock(&llock);
 	writelog(s, 0);
-	if(!onscreen)
+	if(!onscreen || (status & FSquiet) == 0)
 		warn("%s", s);
 	qunlock(&llock);
 }

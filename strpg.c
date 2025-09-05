@@ -78,7 +78,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
+	warn("usage: %s [-AHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -86,6 +86,7 @@ help(void)
 		"-h             Print usage information and exit\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
+		"-q             Avoid printing messages to stdout\n"
 		"-r FILE        Read coarsening table from FILE\n"
 		"-s LEN WIDE    Set node length and width (max: %.1f %.1f, default: %.1f %.1f)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
@@ -107,7 +108,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-AHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
 }
 
 static char **
@@ -178,6 +179,7 @@ parseargs(int argc, char **argv)
 		pushcmd("layfile=\"%s\"", EARGF(usage()));
 		drawing.flags |= DFnope;
 		break;
+	case 'q': status |= FSquiet; break;
 	case 'r':
 		pushfile(EARGF(usage()), FFctab);
 		status |= FSlockedctab;	/* prevent rebuilding it */
