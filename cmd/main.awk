@@ -310,9 +310,9 @@ function groupby(tag, incl, 	acc, n, m){
 	m = 0
 	# FIXME: error handling in nested evals?
 	if(incl == "")
-		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; nodecolor(i, cmap[acc[c] % n]) } }")
+		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; CL[i] = cmap[acc[c] % n] } }")
 	else
-		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = cmap[acc[c] % n] }}; nodecolor(i, c)}}")
+		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = cmap[acc[c] % n] }}; CL[i] = c}}")
 	if(m > n)
 		print "E", "more categories than colors"
 }
@@ -374,9 +374,7 @@ crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)
 	s = substr($0, i + 1)
-	if(v == "CL" || v ~ /[Cc][Oo][Ll][Oo][Rr]/)
-		subexpr(s, v, "nodecolor")
-	else if(v == "x0")
+	if(v == "x0")
 		subexpr(s, v, "initx")
 	else if(v == "y0")
 		subexpr(s, v, "inity")

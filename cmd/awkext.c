@@ -16,78 +16,9 @@ extern QLock symlock;
 /* NOTE: pushcmd here is asking for trouble. fs/gfa and others
  * may be saturating the cmd buffer and we're the only reader. */
 
-/* FIXME: additional functions:
- * - Tab → extant tables → extra info to nodeinfo;
- * - multigraph: query graph node ranges or whatever */
-/* FIXME: add hooks for the access of certain tables instead of regex?
- * when we are batch loading, we can cheat with the syntax to avoid
- * having to match at all */
+QLock buflock;
 
-KHASHL_MAP_INIT(KH_LOCAL, tabmap, tab, char*, int, kh_hash_str, kh_eq_str)
-
-typedef struct Val Val;
-typedef struct Tab Tab;
-
-enum{
-	Tint,
-	Tuint,
-	Tfloat,
-	Tstring,
-};
-struct Val{
-	int tab;
-	int type;
-	ioff id;
-	V val;
-};
-static Val *valbuf;
-
-struct Tab{
-	int intidx;
-	char *name;
-	char *fn;
-	Array *a;
-};
-static tabmap *map;
-static Tab *tabs;
-static RWLock tablock;
-static QLock buflock;
-
-int
-gettab(char *s)
-{
-	khint_t k;
-
-	k = tab_get(map, s);
-	if(k == kh_end(map))
-		return -1;
-	return kh_val(map, k);
-}
-
-static int
-mktab(char *tab, int intidx)
-{
-	int i, abs;
-	char *s;
-	Tab t;
-	khint_t k;
-
-	k = tab_put(map, tab, &abs);
-	if(!abs){
-		i = kh_val(map, k);
-		return i;
-	}
-	s = estrdup(tab);
-	t = (Tab){intidx, s, nil, nil};
-	wlock(&tablock);
-	i = dylen(tabs);
-	dypush(tabs, t);
-	wunlock(&tablock);
-	kh_key(map, k) = s;
-	kh_val(map, k) = i;
-	return i;
-}
-
+/* FIXME: remove */
 static inline Array *
 getarray(char *arr)
 {
@@ -120,34 +51,7 @@ getarray(char *arr)
 	return a;
 }
 
-/* FIXME: silly to do on every call */
-static inline Array *
-gettabarray(int t)
-{
-	Array *a;
-
-	rlock(&tablock);
-	a = tabs[t].a;
-	runlock(&tablock);
-	return a;
-}
-
-static inline Array *
-mkarray(int t)
-{
-	Array *a;
-	Tab *tab;
-
-	if((a = gettabarray(t)) == nil){
-		wlock(&tablock);
-		tab = tabs + t;
-		assert(tab->name != nil);
-		a = tab->a = getarray(tab->name);
-		wunlock(&tablock);
-	}
-	return a;
-}
-
+/* FIXME: remove (?) */
 static inline Cell *
 getcell(char *lab, Array *a)
 {
@@ -160,302 +64,16 @@ getcell(char *lab, Array *a)
 	return c;
 }
 
-static inline Cell *
-setstr(char *lab, char *s, Array *a, int *new)
-{
-	Cell *c;
-	Value v;
-
-	if((c = getcell(lab, a)) == nil){
-		v.u = 0;
-		qlock(&symlock);
-		c = setsymtab(lab, nil, v, STR, a);
-		qunlock(&symlock);
-		if(new != nil)
-			*new = 1;
-	}else if(freeable(c))
-		xfree(c->sval);
-	c->sval = s;
-	return c;
-}
-
-static inline Cell *
-setint(char *lab, s64int i, Array *a, int *new)
-{
-	Cell *c;
-	Value v;
-
-	if((c = getcell(lab, a)) == nil){
-		v.i = i;
-		qlock(&symlock);
-		c = setsymtab(lab, nil, v, NUM, a);
-		qunlock(&symlock);
-		if(new != nil)
-			*new = 1;
-	}else
-		setival(c, i);
-	return c;
-}
-
-static inline Cell *
-setfloat(char *lab, double f, Array *a, int *new)
-{
-	Cell *c;
-	Value v;
-
-	if((c = getcell(lab, a)) == nil){
-		v.f = f;
-		qlock(&symlock);
-		c = setsymtab(lab, nil, v, NUM|FLT, a);
-		qunlock(&symlock);
-		if(new != nil)
-			*new = 1;
-	}else
-		setfval(c, f);
-	return c;
-}
-
-/* FIXME: kind of feels like it's just native awk code... */
-/* not using Tab pointers to avoid locking; assumes string values are already
- * strdup'ed where appropriate */
-static void
-set(int i, int type, ioff id, V val)
-{
-	int intidx, new;
-	char l[64], *lab;
-	Cell *c;
-	Array *a;
-
-	new = 0;
-	a = mkarray(i);
-	DPRINT(Debugawk, "set %s type %d id %d", tabs[i].name, type, id);
-	/* FIXME: better type checking; merge with generic tag code */
-	switch(i){
-	case TCL:
-		if(type != Tint && type != Tuint){
-			lab = getname(id);
-			logerr(va("set CL[%s]: invalid non-integer color: %s\n", lab, type == Tstring ? val.s : ""));
-			break;
-		}
-		setcoretag(TCL, id, val);
-		if(setattr(i, id, val) < 0)
-			DPRINT(Debugawk, "set CL: %s", error());
-		break;
-	case TLN:
-		/* FIXME */
-		break;
-		if(type != Tuint && type != Tint){
-			DPRINT(Debuginfo, "not assigning string value %s to LN[%d]", val.s, id);
-			return;
-		}
-		lab = getname(id);
-		if(setattr(i, id, val) < 0)
-			DPRINT(Debugawk, "set LN: %s", error());
-		c = setint(lab, val.u, a, &new);
-		if(new){
-			free(c->nval);
-			c->nval = lab;
-		}
-		break;
-	case Tdegree:
-		/* FIXME: should exist just to disallow writes */
-		break;
-		if(type != Tuint && type != Tint){
-			DPRINT(Debuginfo, "not assigning string value %s to degree[%d]", val.s, id);
-			return;
-		}
-		lab = getname(id);
-		c = setint(lab, val.u, a, &new);
-		if(new){
-			free(c->nval);
-			c->nval = lab;
-		}
-		break;
-	case Tfx:
-	case Tfy:
-	case Tfz:
-	case Tx0:
-	case Ty0:
-	case Tz0:
-		lab = getname(id);
-		if(type != Tfloat)	/* FIXME */
-			val.f = val.i;
-		if(setattr(i, id, val) < 0)
-			DPRINT(Debugawk, "set fx/f0: %s", error());
-		c = setfloat(lab, val.f, a, &new);
-		if(new){
-			free(c->nval);
-			c->nval = lab;
-		}
-		break;
-	default:
-		if(setattr(i, id, val) < 0)
-			DPRINT(Debugawk, "set: %s", error());
-		rlock(&tablock);
-		intidx = tabs[i].intidx;
-		runlock(&tablock);
-		if(intidx){
-			snprint(l, sizeof l, "%d", id);
-			lab = l;
-		}else
-			lab = getname(id);
-		switch(type){
-		case Tint: setint(lab, val.i, a, nil); break;
-		case Tuint: setint(lab, val.u, a, nil); break;
-		case Tfloat: setfloat(lab, val.f, a, nil); break;
-		case Tstring: setstr(lab, val.s, a, nil); break;
-		default: FATAL("loadbatch: unknown type %d", type);
-		}
-	}
-}
-
-static void
+static inline void
 fnloadbatch(void)
 {
-	Val *v, *vs, *ve;
-
-	if(valbuf == nil)	/* because clang is stupid */
-		return;
-	qlock(&buflock);
-	vs = valbuf;
-	valbuf = nil;
-	qunlock(&buflock);
-	for(v=vs, ve=v+dylen(v); v<ve; v++)
-		set(v->tab, v->type, v->id, v->val);
-	dyfree(vs);
-	USED(vs);
+	loadbatch();
 }
 
 static inline void
-pushval(int tab, int type, ioff id, V val)
-{
-	ssize n;
-	Val v;
-
-	v = (Val){tab, type, id, val};
-	qlock(&buflock);
-	dypush(valbuf, v);
-	n = dylen(valbuf);
-	qunlock(&buflock);
-	if(n >= 64*1024){
-		pushcmd("loadbatch()");
-		flushcmd();
-	}
-}
-
-static inline int
-vartype(char *val, V *v, int iscolor)
-{
-	int type;
-	char c, *s, *p;
-	s64int i;
-	double f;
-	Cell *cp;
-
-	s = val;
-	if(s[0] == '#'){
-		s++;
-		i = strtoull(s, &p, 16);
-		if(iscolor && p - s < 8)	/* sigh */
-			i = i << 8;
-		type = Tuint;
-	}else{
-		i = strtoll(s, &p, 0);
-		type = Tint;
-	}
-	if(p != s){
-		if((c = *p) == '\0' || isspace(c)){
-			v->i = i;
-			return type;
-		}else if(c == 'e' || c == 'E' || c == '.'){
-			f = strtod(s, &p);
-			if(p != s && ((c = *p) == '\0' || isspace(c))){
-				v->f = f;
-				return Tfloat;
-			}
-		}else
-			type = Tstring;
-	}else
-		type = Tstring;
-	if(type == Tstring && symtab != nil && (cp = getcell(val, symtab)) != nil){
-		if(cp->tval & FLT){
-			v->f = getfval(cp);
-			return Tfloat;
-		}else if(cp->tval & NUM){
-			v->i = getival(cp);
-			return Tint;
-		}else
-			val = getsval(cp);
-	}
-	v->s = estrdup(val);	/* always freeable, even if sym */
-	return Tstring;
-}
-
-/* FIXME: kind of shitty api with intidx */
-/* called by other threads; DOES strdup strings */
-void
-settag(char *tag, ioff id, char *val, int intidx)
-{
-	int t, type;
-	V v;
-
-	t = mktab(tag, intidx);
-	type = vartype(val, &v, t == TCL);
-	DPRINT(Debugawk, "settag %s[%d] = %s (%d)", tag, id, val, type);
-	pushval(t, type, id, v);
-}
-
-/* called by other threads; does NOT strdup, caller's responsibility */
-void
-setspectag(int i, ioff id, V val)
-{
-	DPRINT(Debugawk, "setspectag %s[%d] = %llx", tabs[i].name, id, val.i);
-	pushval(i, 0, id, val);
-}
-
-/* only call after all nodes have been created: csv, etc.; strdups strings */
-void
-setnamedtag(char *tag, char *name, char *val)
-{
-	int i, type;
-	ioff id;
-	V v;
-
-	i = mktab(tag, 1);	/* assuming index by node */
-	if((id = getid(name)) < 0)
-		FATAL("%s", error());
-	type = vartype(val, &v, i == TCL);
-	if(debug & Debugawk){
-		switch(type){
-		case Tint: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %lld (%s)", tag, name, id, v.i, val); break;
-		case Tuint: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %llx (%s)", tag, name, id, v.u, val); break;
-		case Tfloat: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = %f (%s)", tag, name, id, v.f, val); break;
-		case Tstring: DPRINT(Debugawk, "setnamedtag %s[\"%s\":%d] = \"%s\" (%s)", tag, name, id, v.s, val); break;
-		}
-	}
-	pushval(i, type, id, v);
-}
-
-static void
 fnloadall(void)
 {
-	static char already;
-	ioff id;
-	Node *n, *ne;
-	RNode *r;
-	V vv;
-
-	if(already)
-		return;
-	already++;
-	fnloadbatch();
-	for(id=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
-		if(r->col[3] == 0.0f){
-			vv.u = somecolor(id, nil);
-			set(TCL, Tuint, id, vv);
-		}
-		/* FIXME: edges */
-	}
+	loadvars();
 }
 
 /* FIXME: make variadic funs work in strawk itself,
@@ -496,32 +114,6 @@ fnexplode(Cell *x, TNode *nextarg)
 		explode(idx);
 	}
 	return nil;
-}
-
-static TNode *
-fnnodecolor(Cell *x, TNode *next)
-{
-	ioff id;
-	char *lab;
-	Cell *y;
-	Array *a;
-	V v;
-
-	/* FIXME: more input validation */
-	lab = getsval(x);
-	y = execute(next);
-	next = next->nnext;
-	v.u = getival(y);
-	if((a = gettabarray(TCL)) == nil)
-		 sysfatal("awk/nodecolor: uninitialized table");
-	if((id = getid(lab)) < 0)
-		FATAL("%s", error());
-	setint(lab, v.u, a, nil);
-	if(setattr(TCL, id, v) < 0)
-		DPRINT(Debuggraph, "nodecolor: ignoring inactive node %d", id);
-	tempfree(y);
-	reqdraw(Reqrefresh);
-	return next;
 }
 
 static void
@@ -766,7 +358,6 @@ addon(TNode **a, int)
 	case AINFO: fninfo(x); break;
 	case ALOAD: fnloadall(); break;
 	case ALOADBATCH: fnloadbatch(); break;
-	case ANODECOLOR: nextarg = fnnodecolor(x, nextarg); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	case AREFRESH: fnrefresh(); break;
 	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
@@ -788,30 +379,5 @@ addon(TNode **a, int)
 void
 initext(void)
 {
-	int i;
-	struct {
-		char *name;
-		char *fn;
-		int nodeidx;
-		short type;
-	} sptags[] = {
-		[TLN] = {"LN", nil, 1, Tint},
-		[Tfx] = {"fx", "fixx", 1, Tfloat},
-		[Tfy] = {"fy", "fixy", 1, Tfloat},
-		[Tfz] = {"fz", "fixz", 1, Tfloat},
-		[Tx0] = {"x0", "initx", 1, Tfloat},
-		[Ty0] = {"y0", "inity", 1, Tfloat},
-		[Tz0] = {"z0", "initz", 1, Tfloat},
-		[Tdegree] = {"degree", nil, 1, Tint},
-		[TCL] = {"CL", "nodecolor", 1, Tint},
-	}, *pp;
-
 	initqlock(&buflock);
-	initrwlock(&tablock);
-	if((map = tab_init()) == nil)
-		sysfatal("initext: %s", error());
-	for(pp=sptags; pp<sptags+nelem(sptags); pp++){
-		i = mktab(pp->name, pp->nodeidx);
-		tabs[i].fn = pp->fn;
-	}
 }

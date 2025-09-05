@@ -87,12 +87,10 @@ setattr(int type, ioff id, V val)
 	ioff idx;
 	Node *u;
 	CNode *U;
-	RNode *r;
 
 	if((idx = getnodeidx(id)) < 0)
 		return - 1;
 	u = nodes + idx;
-	r = rnodes + idx;
 	switch(type){
 	case TLN:
 		if(val.i <= 0){
@@ -117,9 +115,6 @@ setattr(int type, ioff id, V val)
 			if(U->length == 0)
 				U->length = val.i;
 		}
-		break;
-	case TCL:
-		setcolor(r->col, setdefalpha(val.u));
 		break;
 	case Tfx:
 		u->flags |= FNfixedx;

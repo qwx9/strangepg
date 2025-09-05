@@ -1,3 +1,4 @@
+/* FIXME: remove */
 typedef union V V;
 union V{
 	s64int i;
@@ -6,7 +7,9 @@ union V{
 	char *s;
 };
 
+/* FIXME: remove */
 enum{
+	/* FIXME: reevaluated how? */
 	TLN,	/* reevaluated during layouting */
 	Tfx,
 	Tfy,
@@ -19,6 +22,7 @@ enum{
 	TCL,
 	Tnil,
 
+	/* FIXME: get rid of this? */
 	Tlayout = Tdegree,	/* end of tags affecting layout */
 };
 
@@ -34,7 +38,6 @@ enum{
 	AINFO,
 	ALOAD,
 	ALOADBATCH,
-	ANODECOLOR,
 	AREALEDGE,
 	AREFRESH,
 	AUNSHOW,
@@ -47,14 +50,17 @@ extern int infd[2], outfd[2];
 
 char*	getname(voff);
 voff	getid(char*);
+void	loadbatch(void);
+void	loadvars(void);
+void	settag(char*, voff, char*);
+void	setnamedtag(char*, char*, char*);
 voff	pushname(char*);
-void	setcoretag(int, voff, V);
 void	fixtabs(voff, int*, ushort*);
 void	initvars(void);
+
+/* FIXME */
 int	gettab(char*);
-void	settag(char*, ioff, char*, int);
-void	setspectag(int, ioff, V);
-void	setnamedtag(char*, char*, char*);
+
 void	initext(void);
 
 void	killcmd(void);

@@ -60,7 +60,7 @@ readnodetags(Aux *a, File *f)
 				continue;
 			}
 			s[2] = 0;
-			settag(s, id, s+5, 0);
+			settag(s, id, s+5);
 			nerr = 0;
 		}
 	}
@@ -84,8 +84,11 @@ readedgetags(Aux *a, File *f)
 			sysfatal("readedgetags: %s", error());
 		if((s = nextfield(f)) == nil)
 			sysfatal("readedgetags: bug: short read, line %d", f->nr);
+		USED(s);
+		/* FIXME: edge ids are now separate
 		if(strcmp(s, "*") != 0)
-			settag("cigar", id, s, 1);
+			settag("cigar", id, s);
+		*/
 		while((s = nextfield(f)) != nil){
 			DPRINT(Debugmeta, "readedgetags: [%d] %s", id, s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
