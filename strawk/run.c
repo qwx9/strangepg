@@ -486,10 +486,9 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, size_t sz, int type
 	return ap;
 }
 
-void reattach(Array *ap, void *buf, size_t sz, size_t nel)
+void reattach(Array *ap, void *buf, size_t nel)
 {
 	ap->tab = (Cell **)buf;
-	ap->size = sz;
 	ap->nelem = nel;
 }
 

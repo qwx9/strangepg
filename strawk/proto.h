@@ -96,7 +96,7 @@ extern	void	dfree(void *, const char *);
 #define tempfree(x)	do { if (istemp(x)) tfree(x); } while (0)
 
 extern	Array	*attach(char *, Array *, void *, size_t, size_t, int);
-extern	void	reattach(Array *, void *, size_t, size_t);
+extern	void	reattach(Array *, void *, size_t);
 
 extern	TNode	*exptostat(TNode *);
 extern	TNode	*node1(int, TNode *);
