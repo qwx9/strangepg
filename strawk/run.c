@@ -304,7 +304,7 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 
 	/* copy is not constant or field */
 
-	y = gettemp(x->tval & ~(CON|FLD|REC));
+	y = gettemp(x->tval & ~(CON|FLD|REC|PTR));
 	y->csub = CCOPY;	/* prevents freeing until call is over */
 	y->nval = isptr(x) ? EMPTY : x->nval;	/* BUG? */
 	if (isstr(x) /* || x->ctype == OCELL */) {
