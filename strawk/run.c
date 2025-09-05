@@ -232,7 +232,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		y = execute(x);
 		oargs[i] = y;
 		DPRINTF("args[%d]: %s i=%lld f=%f <%s>, t=%o\n",
-			i, NN(y->nval), y->val.i, y->val.f, isarr(y) ? "(array)" : NN(y->sval), y->tval);
+			i, isptr(y) ? EMPTY : NN(y->nval), y->val.i, y->val.f, isarr(y) ? "(array)" : NN(y->sval), y->tval);
 		if (isfcn(y))
 			FATAL("can't use function %s as argument in %s", y->nval, s);
 		if (isarr(y))
@@ -306,7 +306,7 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 
 	y = gettemp(x->tval & ~(CON|FLD|REC));
 	y->csub = CCOPY;	/* prevents freeing until call is over */
-	y->nval = x->nval;	/* BUG? */
+	y->nval = isptr(x) ? EMPTY : x->nval;	/* BUG? */
 	if (isstr(x) /* || x->ctype == OCELL */) {
 		y->sval = tostring(x->sval);
 		y->tval &= ~DONTFREE;
@@ -401,7 +401,7 @@ makearraystring(TNode *p, const char *func)
 
 		if (!adjbuf(&buf, &bufsz, tlen + 1, recsize, 0, func)) {
 			FATAL("%s: out of memory %s[%s...]",
-			    func, x->nval, buf);
+			    func, isptr(x) ? EMPTY : x->nval, buf);
 		}
 		memcpy(buf + blen, s, slen);
 		if (nsub) {
@@ -460,7 +460,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	return(z);
 }
 
-Array *attach(char *name, Array *ids, void *buf, size_t nel, size_t sz, int type)
+Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*upfn)(size_t, Value))
 {
 	Cell *cp;
 	Array *ap;
@@ -480,7 +480,7 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, size_t sz, int type
 	ap->type = type | PTR;
 	assert((type & (NUM|FLT)) != FLT);
 	ap->nelem = nel;
-	ap->size = sz;
+	ap->upfn = upfn;
 	ap->tab = (Cell **)buf;
 	cp->sval = (char *)ap;
 	return ap;
@@ -1944,15 +1944,12 @@ Cell *forstat(TNode **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
 
 static Cell *ptrinstat(Array *ap, Cell *vp, TNode *expr)
 {
-	size_t n, w;
-	uschar *buf, *e, *s;
+	size_t i, n;
 	Cell *x;
 
-	buf = (uschar *)ap->tab;
 	n = ap->nelem;
-	w = ap->size;
-	for(s=buf, e=s+n*w, n=0; s<e; s+=w, n++){
-		setival(vp, n);
+	for(i=0; i<n; i++){
+		setival(vp, i);
 		x = execute(expr);
 		if (isbreak(x)) {
 			tempfree(vp);

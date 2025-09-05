@@ -79,10 +79,12 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	dyresize(degp, nnodes);
 	dyresize(core.labels, nnodes);
 	dyresize(core.colors, nnodes);
-	core.length = attach("LN", core.ids, lenp, nnodes, sizeof *lenp, NUM|P32);
-	core.degree = attach("degree", core.ids, degp, nnodes, sizeof *degp, NUM|P16);
-	core.label = attach("node", core.ids, core.labels, nnodes, sizeof *core.labels, STR);
-	core.color = attach("CL", core.ids, core.colors, nnodes, sizeof *core.colors, NUM|P32);
+	qlock(&symlock);
+	core.length = attach("LN", core.ids, lenp, nnodes, NUM|P32, nil);
+	core.degree = attach("degree", core.ids, degp, nnodes, NUM|P16, nil);
+	core.label = attach("node", core.ids, core.labels, nnodes, STR, nil);
+	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|P32, nil);
+	qunlock(&symlock);
 }
 
 void

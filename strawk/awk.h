@@ -38,6 +38,7 @@ union Value{
 	Awknum i;
 	Awkfloat f;
 	Awkword u;
+	char *s;
 	unsigned char buf[8];
 };
 typedef union Value Value;
@@ -112,6 +113,7 @@ typedef struct Cell {
 typedef struct Array {		/* symbol table array */
 	int		type;		/* (ptr) type of variable or (non-ptr) 0 */
 	struct Array	*ids;		/* (ptr) label to index table */
+	void	(*upfn)(size_t, Value);	/* (ptr) update hook */
 	size_t	nelem;		/* elements in table right now */
 	size_t	size;		/* size of tab */
 	Cell	**tab;		/* hash table pointers */

@@ -480,6 +480,8 @@ TNode *notnull(TNode *n)
 
 void checkdup(TNode *vl, Cell *cp)	/* check if name already in list */
 {
+	if(isptr(cp) && !isarr(cp))
+		FATAL("checkdup: ptr argument, shouldn\'t happen");
 	char *s = cp->nval;
 	for ( ; vl; vl = vl->nnext) {
 		if (strcmp(s, ((Cell *)(vl->narg[0]))->nval) == 0) {

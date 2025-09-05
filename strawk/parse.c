@@ -254,11 +254,16 @@ int isarg(const char *s)		/* is s in argument list for current function? */
 {			/* return -1 if not, otherwise arg # */
 	extern TNode *arglist;
 	TNode *p = arglist;
+	Cell *cp;
 	int n;
 
-	for (n = 0; p != NULL; p = p->nnext, n++)
-		if (strcmp(((Cell *)(p->narg[0]))->nval, s) == 0)
+	for (n = 0; p != NULL; p = p->nnext, n++){
+		cp = (Cell *)p->narg[0];
+		if (isptr(cp) && !isarr(cp))
+			FATAL("isarg: ptr argument, shouldn\'t happen");
+		if (strcmp(cp->nval, s) == 0)
 			return n;
+	}
 	return -1;
 }
 
