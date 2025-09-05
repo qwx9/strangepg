@@ -178,8 +178,8 @@ initnodes(Aux *a)
 static void
 mkgraph(Aux *a)
 {
-	fixtabs(a->nnodes, a->length, a->degree);
 	initnodes(a);
+	fixtabs(a->nnodes, a->length, a->degree);
 	initedges(a);
 	edges_destroy(a->edges);
 	if(newlayout(-1) < 0)
