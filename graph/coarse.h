@@ -15,7 +15,6 @@ struct CNode{
 	ioff child;
 	ioff sibling;
 	uchar flags;	/* FIXME */
-	int length;		/* LN[id] value before coarsening */	/* FIXME: uint? */
 };
 extern CNode *cnodes;	/* immutable */
 extern ioff *cedges;	/* immutable */

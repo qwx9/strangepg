@@ -15,6 +15,8 @@
 /* FIXME: handle crnl */
 /* FIXME: quoting? */
 
+int	gettab(char*);	/* FIXME */
+
 static char **
 csvheader(File *f, int *wait)
 {

@@ -6,6 +6,8 @@
 #include "fs.h"
 #include "layout.h"
 #include "coarse.h"
+#include "strawk/awk.h"
+#include "var.h"
 
 Graph graph;
 Node *nodes;
@@ -86,36 +88,11 @@ setattr(int type, ioff id, V val)
 {
 	ioff idx;
 	Node *u;
-	CNode *U;
 
 	if((idx = getnodeidx(id)) < 0)
 		return - 1;
 	u = nodes + idx;
 	switch(type){
-	case TLN:
-		if(val.i <= 0){
-			werrstr("nonsense segment length %lld, node %d", val.i, idx);
-			return -1;
-		}
-		if(drawing.length.min == 0.0f || drawing.length.min > val.i){
-			drawing.length.min = val.i;
-			drawing.flags |= DFstalelen;
-		}else if(drawing.length.min == u->length)
-			drawing.flags |= DFstalelen | DFrecalclen;
-		if(drawing.length.max < val.i){
-			drawing.length.max = val.i;
-			drawing.flags |= DFstalelen;
-		}else if(drawing.length.max == u->length)
-			drawing.flags |= DFstalelen | DFrecalclen;
-		u->length = val.i;
-		/* only set cnode length if it wasn't before */
-		if(cnodes != nil){	/* FIXME: can be abused */
-			assert(u->id >= 0 && u->id < nnodes);
-			U = cnodes + u->id;
-			if(U->length == 0)
-				U->length = val.i;
-		}
-		break;
 	case Tfx:
 		u->flags |= FNfixedx;
 		/* wet floor */
@@ -154,11 +131,52 @@ setattr(int type, ioff id, V val)
 }
 
 void
-setnodelength(Node *u, vlong n)
+updatenodelength(ioff idx, uint n)
 {
-	V val;
+	Node *u;
 
-	val.i = n;
-	if(setattr(TLN, u->id, val) < 0)
-		warn("setnodelength %zd: %s\n", u - nodes, error());
+	u = nodes + idx;
+	if(drawing.length.min == 0.0f || drawing.length.min > n){
+		drawing.length.min = n;
+		drawing.flags |= DFstalelen;
+	}else if(drawing.length.min == u->length)
+		drawing.flags |= DFstalelen | DFrecalclen;
+	if(drawing.length.max < n){
+		drawing.length.max = n;
+		drawing.flags |= DFstalelen;
+	}else if(drawing.length.max == u->length)
+		drawing.flags |= DFstalelen | DFrecalclen;
+	u->length = n;
+}
+
+void
+setnodelength(size_t id, Value v)
+{
+	ioff idx;
+	Node *u;
+
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	u = nodes + idx;
+	if(u->length != 0){
+		if(u->length == v.u)
+			return;
+		else	/* FIXME: will be handled by ro values */
+			warn("LN[%s]: conflicting value %d not %d\n",
+				getname(id), v.u, u->length);
+	}
+	updatenodelength(idx, v.u);
+}
+
+void
+setnodecolor(size_t id, Value v)
+{
+	ioff idx;
+	RNode *r;
+
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	r = rnodes + idx;
+	setcolor(r->col, setdefalpha(v.u));
+	reqdraw(Reqrefresh);
 }

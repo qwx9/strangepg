@@ -7,6 +7,8 @@
 #include "drw.h"
 #include "fs.h"
 #include "coarse.h"
+#include "strawk/awk.h"
+#include "var.h"
 
 CNode *cnodes;
 ioff *cedges;
@@ -94,7 +96,6 @@ checkcnode(CNode *U)
 	U->flags |= FCNvisited;
 }
 
-/* FIXME: only useful when the ct is modified */
 static void
 checkbranch(CNode *U)
 {
@@ -270,7 +271,7 @@ sublength(CNode *U)
 	vlong n;
 	ioff i;
 
-	n = U->length;
+	n = getnodelength(U - cnodes);
 	for(i=U->child; i!=-1; i=U->sibling){
 		U = cnodes + i;
 		if(U->idx == -1)
@@ -306,6 +307,7 @@ uncoarsen(void)
 	vlong t;
 	Node *u, *ue, *unew;
 	CNode *U, *V, *UE;
+	Value val;
 	edgeset *eset;
 
 	if(expnodes == nil){
@@ -367,8 +369,10 @@ uncoarsen(void)
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
 		U = cnodes + u->id;
-		if(U->length > 0)
-			setnodelength(u, sublength(U));
+		if(getnodelength(u->id) > 0){
+			val.u = sublength(U);
+			setnodelength(u - nodes, val);
+		}
 		if(u >= nodes + nn)
 			spawn(cnodes[U->parent].idx);
 	}
@@ -652,7 +656,7 @@ lastchild(CNode *U)
 static inline int
 hide(CNode *U, CNode *P)
 {
-	Node *u, *p;
+	Node *u;
 
 	if(U->idx == -1)
 		return 0;
@@ -662,8 +666,7 @@ hide(CNode *U, CNode *P)
 	u->flags |= FNalias;
 	assert(U != P);
 	assert(P->idx != -1);
-	p = nodes + P->idx;
-	setnodelength(p, p->length + u->length);
+	updatenodelength(P->idx, nodes[P->idx].length + u->length);
 	U->idx = -1;
 	u->id = P - cnodes;
 	ncoarsed++;
@@ -944,7 +947,6 @@ initcoarse(void)
 		U->eoff = u->eoff;
 		U->nedges = u->nedges;
 		U->parent = U->child = U->sibling = -1;
-		U->length = u->length;	/* can be 0 if unset */
 	}
 	nedges = dylen(edges);
 	n = nedges * sizeof *edges;

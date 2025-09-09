@@ -6,9 +6,9 @@
 #include <locale.h>
 #include <signal.h>
 #include "strawk/awk.h"
+#include "var.h"
 
-/* FIXME: broken: expand, getrealedge, csv loading */
-/* FIXME: type errors here will halt everything */
+/* FIXME: broken: expand, getrealedge, csv loading, cigars; integer labels */
 
 extern QLock symlock;
 extern QLock buflock;	/* FIXME */
@@ -16,8 +16,7 @@ extern QLock buflock;	/* FIXME */
 typedef struct Val Val;
 typedef struct Core Core;
 
-/* FIXME: switch strawk to use 32-bit values as well? */
-/* GFAv1 does not support 64-bit wide types */
+/* GFA does not support 64-bit wide types */
 enum{
 	Tint,
 	Tuint,
@@ -52,10 +51,10 @@ struct Core{
 static Core core;
 
 char *
-getname(voff id)
+getname(voff idx)
 {
-	assert(id >= 0 && id < dylen(core.labels));
-	return core.labels[id];
+	assert(idx >= 0 && idx < dylen(core.labels));
+	return core.labels[idx];
 }
 
 voff
@@ -69,23 +68,16 @@ getid(char *s)
 	if(c == nil)
 		return -1;
 	else
-		return getival(c);	/* FIXME: rather than c->val.i? */
+		return getival(c);
 }
 
-static void
-setnodecolor(size_t id, Value v)
+uint
+getnodelength(voff idx)
 {
-	ioff idx;
-	RNode *r;
-
-	if((idx = getnodeidx(id)) < 0)
-		return;
-	r = rnodes + idx;
-	setcolor(r->col, setdefalpha(v.u));
-	reqdraw(Reqrefresh);
+	assert(idx >= 0 && idx < dylen(core.labels));
+	return *((uint *)core.length->tab + idx);
 }
 
-/* FIXME: fx, and other optional tabs: strcmp and set upfn */
 static inline Array *
 mktab(Cell *cp, char type)
 {
@@ -197,7 +189,7 @@ pushval(Cell *cp, ioff id, char type, TVal v)
 }
 
 /* FIXME: offload to loadbatch? */
-/* FIXME: compare against user-provided tag type */
+/* FIXME: compare against user-provided tag type (esp for floats vs. int) */
 static inline char
 vartype(char *val, TVal *v, int iscolor)
 {
@@ -265,7 +257,7 @@ settag(char *tag, voff id, char *val)
 	Cell *cp;
 	TVal v;
 
-	DPRINT(Debugawk, "settag %s[%d] = %s", tag, id, val);
+	DPRINT(Debugawk, "settag %s[%s] = %s", tag, getname(id), val);
 	assert(id >= 0 && id < dylen(core.labels));
 	qlock(&symlock);
 	cp = setsymtab(tag, NULL, ZV, NUM, symtab);

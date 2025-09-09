@@ -31,7 +31,6 @@
 #include "view.h"
 #include "ui.h"
 #include "threads.h"
-#include "cmd.h"
 
 extern Channel *rendc;
 

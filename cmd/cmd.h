@@ -25,6 +25,7 @@ enum{
 	/* FIXME: get rid of this? */
 	Tlayout = Tdegree,	/* end of tags affecting layout */
 };
+int	setattr(int, ioff, V);
 
 enum{
 	ACOLLAPSE,
@@ -57,10 +58,6 @@ void	setnamedtag(char*, char*, char*);
 voff	pushname(char*);
 void	fixtabs(voff, int*, ushort*);
 void	initvars(void);
-
-/* FIXME */
-int	gettab(char*);
-
 void	initext(void);
 
 void	killcmd(void);
@@ -70,6 +67,3 @@ int	sysinitcmd(void);
 void	initstdin(void);
 int	initrepl(void);
 int	initcmd(void);
-
-int	setattr(int, ioff, V);
-void	setnodelength(Node*, vlong);

@@ -61,6 +61,7 @@ HFILES=\
 	dat.h\
 	fns.h\
 	cmd/cmd.h\
+	cmd/var.h\
 	draw/drw.h\
 	draw/view.h\
 	fs/em.h\
