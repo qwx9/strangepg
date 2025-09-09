@@ -443,6 +443,8 @@ drawproc(void *)
 			go = 1;
 			break;
 		}
+		if(r & Reqrefresh)
+			resizenodes();
 		if(r & Reqredraw)
 			go = 1;
 		if(!(go = redraw(go)))

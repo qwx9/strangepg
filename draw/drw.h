@@ -115,7 +115,7 @@ void	setcolor(float*, u32int);
 
 enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
-	Reqresetview = 1<<1,		/* reset view position, etc., redraw */
+	Reqresetview = 1<<1,	/* reset view position, etc., redraw */
 	Reqrefresh = 1<<2,		/* re-render + redraw if needed */
 	Reqshape = 1<<3,		/* change node shape */
 	Reqredraw = 1<<4,		/* redraw current geometry */

@@ -169,6 +169,7 @@ loadvars(void)
 		}
 		/* FIXME: edges */
 	}
+	reqdraw(Reqrefresh);
 }
 
 static inline void
