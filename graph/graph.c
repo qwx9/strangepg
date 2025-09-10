@@ -155,6 +155,7 @@ setnodelength(size_t id, Value v)
 	ioff idx;
 	Node *u;
 
+	DPRINT(Debugawk, "set LN[%s] ← %08zx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
 		return;
 	u = nodes + idx;
@@ -162,7 +163,7 @@ setnodelength(size_t id, Value v)
 		if(u->length == v.u)
 			return;
 		else	/* FIXME: will be handled by ro values */
-			warn("LN[%s]: conflicting value %d not %d\n",
+			warn("LN[%s]: conflicting value %llu not %lld\n",
 				getname(id), v.u, u->length);
 	}
 	updatenodelength(idx, v.u);
@@ -174,6 +175,7 @@ setnodecolor(size_t id, Value v)
 	ioff idx;
 	RNode *r;
 
+	DPRINT(Debugawk, "set CL[%s] ← %08zx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
 		return;
 	r = rnodes + idx;
