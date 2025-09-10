@@ -21,3 +21,4 @@ void	initp9draw(void);
 #define	initqlock(x)
 #define	initrwlock(x)
 #define	nukerwlock(x)
+#define	strtof(x,y)	strtod(x,y)
