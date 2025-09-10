@@ -2188,6 +2188,8 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			u = -(u & (1ULL<<32)-1);
 		else
 			u = u & (1ULL<<32)-1;
+		if (!isrec(x))
+			u %= getival(x);
 		break;
 	case FSRAND:
 		if (isrec(x))	/* no argument provided */
