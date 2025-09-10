@@ -166,10 +166,8 @@ checktree(void)
 	Node *u, *ue;
 	CNode *U;
 
-	/* FIXME
 	if((debug & Debugcoarse) == 0)
 		return;
-	*/
 	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
 		U = cnodes + u->id;
 		if(u - nodes != U->idx)
@@ -1004,7 +1002,7 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 			*op = m;
 			m += w * d;	/* total number of edges in bucket */
 		}
-		//warn("totals[%zd] %d, sum %d (%d)\n", tp-totals, w, n, m);
+		DPRINT(Debugcoarse, "totals[%zd] %d, sum %d (%d)", tp-totals, w, n, m);
 	}
 	TIME("sortedges", "offset computation", t);
 	sz = nn * sizeof *adj + m * sizeof adj->u;
@@ -1014,22 +1012,26 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 		for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
 			d = U->nedges;
 			a = (Adj *)((ioff *)(adj + totals[d]) + off[d]);
-			//warn("d=%d id=%d total %d off %d p %zd ", d, i, totals[d], off[d], (uchar*)a-(uchar*)adj);
+			DPRINTS(Debugcoarse, "d=%d id=%d total %d off %d p %zd",
+				d, i, totals[d], off[d], (uchar*)a-(uchar*)adj);
 			off[d] += d;
 			totals[d]++;
 			a->u = i;
 			a->deg = d;
 			for(ep=a->adj, e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
-				//warn(" → [%zd] %zd", (uchar *)ep-(uchar *)adj, e-cedges+U->eoff);
+				DPRINTN(Debugcoarse, " → [%zd] %zd",
+					(uchar *)ep-(uchar *)adj, e-cedges+U->eoff);
 				*ep++ = *e >> 2;
 			}
-			//warn("\n");
+			DPRINTN(Debugcoarse, "\n");
 		}
-		//for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
-		//	warn("adj[%d] off=%zd id=%d d=%d\n",
-		//		i, (uchar*)a-(uchar*)adj, a->u, a->deg);
-		//	e = a->adj + a->deg;
-		//}
+		if(debug & Debugcoarse){
+			for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
+				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d\n",
+					i, (uchar*)a-(uchar*)adj, a->u, a->deg);
+				e = a->adj + a->deg;
+			}
+		}
 	}else{
 		/* FIXME: SLOW */
 		offof = emalloc(nnodes * sizeof *offof);
@@ -1041,12 +1043,12 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 			j = top(cnodes + j) - cnodes;
 			if(i == j)
 				continue;
-			//warn("uv %d,%d: i=%d", i, j, i);
+			DPRINTS(Debugcoarse, "uv %d,%d: i=%d", i, j, i);
 			k = dg_get(deg, i);
 			assert(k != kh_end(deg));
 			d = kh_val(deg, k);
 			o = off[d];
-			//warn(" d=%d off[d]=%d", d, o);
+			DPRINTN(Debugcoarse, " d=%d off[d]=%d", d, o);
 			if(offof[i] == 0){	/* avoid preinitializing by incrementing... */
 				a = (Adj *)((ioff *)(adj + totals[d]) + o);
 				off[d] += d;
@@ -1056,12 +1058,12 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 			}else
 				a = (Adj *)((uchar *)adj + offof[i] - 1);
 			a->adj[a->deg++] = j;
-			//warn(" :: j=%d", j);
+			DPRINTN(Debugcoarse, " :: j=%d", j);
 			k = dg_get(deg, j);
 			assert(k != kh_end(deg));
 			d = kh_val(deg, k);
 			o = off[d];
-			//warn(" d=%d off[d]=%d\n", d, o);
+			DPRINTN(Debugcoarse, " d=%d off[d]=%d\n", d, o);
 			if(offof[j] == 0){
 				a = (Adj *)((ioff *)(adj + totals[d]) + o);
 				off[d] += d;
@@ -1072,11 +1074,13 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 				a = (Adj *)((uchar *)adj + offof[j] - 1);
 		}
 		free(offof);
-		//for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
-		//	warn("adj[%d] off=%zd id=%d d=%d\n",
-		//		i, (uchar*)a-(uchar*)adj, a->u, a->deg);
-		//	e = a->adj + a->deg;
-		//}
+		if(debug & Debugcoarse){
+			for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
+				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d\n",
+					i, (uchar*)a-(uchar*)adj, a->u, a->deg);
+				e = a->adj + a->deg;
+			}
+		}
 	}
 	TIME("sortedges", "edge placement", t);
 	dyfree(totals);
@@ -1128,21 +1132,26 @@ buildct(void)
 		for(a=adj; a<adje; a=(Adj*)e){
 			i = a->u;
 			U = cnodes + i;
-			//warn("node %d d=%d %d %d %d ", i, a->deg, U->parent, U->child, U->sibling);
+			DPRINTS(Debugcoarse, "node %d d=%d %d %d %d ",
+				i, a->deg, U->parent, U->child, U->sibling);
 			U = top(U);
 			i = U - cnodes;
-			//warn("⇒ [%zd] %d %d %d\n", i, U->parent, U->child, U->sibling);
+			DPRINTN(Debugcoarse, "⇒ [%zd] %d %d %d\n",
+				i, U->parent, U->child, U->sibling);
 			C = nil;
 			for(e=a->adj, ee=e+a->deg; e<ee; e++){
 				j = *e;
 				V = cnodes + j;
-				//warn("adj %d %d %d %d ", j, V->parent, V->child, V->sibling);
+				DPRINTS(Debugcoarse, "adj %d %d %d %d ",
+					j, V->parent, V->child, V->sibling);
 				if((V = top(V)) == U){
-					//warn("⇒ %zd %d %d %d = U\n", V-cnodes, V->parent, V->child, V->sibling);
+					DPRINTN(Debugcoarse, "⇒ %zd %d %d %d = U\n",
+						V-cnodes, V->parent, V->child, V->sibling);
 					continue;
 				}
 				j = V - cnodes;
-				//warn("⇒ %d %d %d %d visited %d\n", j, V->parent, V->child, V->sibling, V->flags & FCNvisited);
+				DPRINTN(Debugcoarse, "⇒ %d %d %d %d visited %d\n",
+					j, V->parent, V->child, V->sibling, V->flags & FCNvisited);
 				if((V->flags & FCNvisited) == 0){
 					V->flags |= FCNvisited;	/* don't reassign this turn */
 					V->parent = i;
@@ -1165,7 +1174,6 @@ buildct(void)
 						k = dg_put(deg, i, &abs);
 					}else
 						d = kh_val(deg, k) + 1;
-					//warn("\tadd %d,%d d=%d\n", i, j, d);
 					kh_val(deg, k) = d;
 				}
 			}
