@@ -45,49 +45,95 @@ BEGIN{
 	palepurple = 0xc893f000
 	palered = 0xfb9a9900
 	paleviolet = 0xcab2d600
-	paleyellow = 0xffffb300
+	paleyellow = 0xffeb4900
 	purple = 0xb160c900
 	purpleblue = 0x8080ff00
 	red = 0xe31a1c00
+	tan = 0xd2b48c00
 	teal = 0x00969600
 	violet = purple
 	white = 0xffffff00
-	yellow = 0xffed6f00
+	yellow = 0xfbf50000
+	yellowgreen = 0xc5fa0000
 	translucent = 0xeeeeee30
-	cmap[n++] = blue
-	cmap[n++] = green
-	cmap[n++] = red
-	cmap[n++] = purple
-	cmap[n++] = brown
-	cmap[n++] = orange
-	cmap[n++] = bluegreen
-	cmap[n++] = yellow
+	gmap[n++] = blue
+	gmap[n++] = green
+	gmap[n++] = red
+	gmap[n++] = purple
+	gmap[n++] = brown
+	gmap[n++] = orange
+	gmap[n++] = bluegreen
+	gmap[n++] = yellow
+	gmap[n++] = purpleblue
+	gmap[n++] = greyred
+	gmap[n++] = lightbrown
+	gmap[n++] = palepurple
+	gmap[n++] = greybrown
+	gmap[n++] = darkpink
+	gmap[n++] = darkgreen
+	gmap[n++] = darkpurple
+	gmap[n++] = lightteal
+	gmap[n++] = paleyellow
+	gmap[n++] = greyblue
+	gmap[n++] = lightred
+	gmap[n++] = lightblue
+	gmap[n++] = lightorange
+	gmap[n++] = lightgreen
+	gmap[n++] = lightpink
+	gmap[n++] = lightgrey
+	gmap[n++] = lightpurple
+	gmap[n++] = greygreen
+	gmap[n++] = paleblue
+	gmap[n++] = palegreen
+	gmap[n++] = palered
+	gmap[n++] = paleorange
+	gmap[n++] = paleviolet
+	gmap[n] = cyan
+	n = 0
 	cmap[n++] = purpleblue
+	cmap[n++] = green
 	cmap[n++] = greyred
 	cmap[n++] = lightbrown
 	cmap[n++] = palepurple
 	cmap[n++] = greybrown
+	cmap[n++] = purple
+	cmap[n++] = bluegreen
 	cmap[n++] = darkpink
+	cmap[n++] = blue
+	cmap[n++] = orange
 	cmap[n++] = darkgreen
+	cmap[n++] = red
 	cmap[n++] = darkpurple
+	cmap[n++] = brown
 	cmap[n++] = lightteal
-	cmap[n++] = paleyellow
 	cmap[n++] = greyblue
+	cmap[n++] = tan
+	cmap[n++] = lightgreen
 	cmap[n++] = lightred
 	cmap[n++] = lightblue
 	cmap[n++] = lightorange
-	cmap[n++] = lightgreen
-	cmap[n++] = lightpink
-	cmap[n++] = lightgrey
 	cmap[n++] = lightpurple
+	cmap[n++] = lightgrey
+	cmap[n++] = lightpink
 	cmap[n++] = greygreen
+	cmap[n++] = yellow
 	cmap[n++] = paleblue
-	cmap[n++] = palegreen
 	cmap[n++] = palered
+	cmap[n++] = palegreen
 	cmap[n++] = paleorange
 	cmap[n++] = paleviolet
 	cmap[n] = cyan
 	OFS = "\t"
+}
+function setdefcols(	n, i, c, oc){
+	if((n = length(cmap)) <= 0){
+		print "E", "no colors to hand"
+		return
+	}
+	oc = 0
+	for(i in CL)
+		if(!(i in CL))
+			CL[i] = cmap[i % n]
 }
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
@@ -101,14 +147,17 @@ function cmd(code){
 		die = 1
 		cmd("FHJ142")
 	}else if(code == "OPL753"){	# wing to contact base immediately
-		loadall()
+		loadbatch()
+		if(!crm114)
+			setdefcols()
 		print "R"
 		crm114 = 1
 	}else if(code == "FGD135"){	# wing attack plan R
 		if(crm114 || fnr < nd + 1)
 			return
 		crm114 = 1
-		loadall()
+		loadbatch()
+		setdefcols()
 		if(die)
 			quit()
 		print (noreset ? "r" : "R")
@@ -288,21 +337,8 @@ function expand(i){
 	selectall()
 	deselect()
 }
-# FIXME: randomize
-function mkcolormap(	i, colors){
-	for(i in CL){
-		c = CL[i]
-		if(!(c in colors)){
-			colors[c] = ""
-			cmap[n++] = c
-		}
-	}
-	delete colors
-}
 function groupby(tag, incl, 	acc, n, m){
-	if(length(cmap) == 0)
-		mkcolormap()
-	if((n = length(cmap)) <= 0){
+	if((n = length(gmap)) <= 0){
 		print "E", "no colors to hand"
 		return
 	}
@@ -310,9 +346,9 @@ function groupby(tag, incl, 	acc, n, m){
 	m = 0
 	# FIXME: error handling in nested evals?
 	if(incl == "")
-		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; CL[i] = cmap[acc[c] % n] } }")
+		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; CL[i] = gmap[acc[c] % n] } }")
 	else
-		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = cmap[acc[c] % n] }}; CL[i] = c}}")
+		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = gmap[acc[c] % n] }}; CL[i] = c}}")
 	if(m > n)
 		print "E", "more categories than colors"
 }

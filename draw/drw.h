@@ -2,12 +2,9 @@ typedef struct RNode RNode;
 typedef struct REdge REdge;
 typedef struct RLine RLine;
 typedef struct Quad Quad;
-typedef struct Color Color;
 typedef struct Box Box;
 typedef struct Drawing Drawing;
 typedef struct Range Range;
-
-#pragma incomplete Color
 
 #define	Nodesz	1.0f
 #define	Ptsz	1.0f
@@ -105,10 +102,7 @@ enum{
 extern u32int *theme;
 
 void	highlightnode(ioff);
-Color*	newcolor(u32int);
-Color*	color(u32int);
 u32int	setdefalpha(u32int);
-u32int	somecolor(ioff, char**);
 void	settheme(void);
 u32int	getcolor(float*);
 void	setcolor(float*, u32int);
@@ -138,5 +132,4 @@ void	freezeworld(void);
 void	waitforit(void);
 void	reqdraw(int);
 void	initview(void);
-void	initcol(void);
 void	initdrw(void);

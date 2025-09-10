@@ -70,12 +70,6 @@ fnloadbatch(void)
 	loadbatch();
 }
 
-static inline void
-fnloadall(void)
-{
-	loadvars();
-}
-
 /* FIXME: make variadic funs work in strawk itself,
  * then we won't need this shit; also for coarsening */
 static TNode *
@@ -356,7 +350,6 @@ addon(TNode **a, int)
 	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;
 	case AINFO: fninfo(x); break;
-	case ALOAD: fnloadall(); break;
 	case ALOADBATCH: fnloadbatch(); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	case AREFRESH: fnrefresh(); break;

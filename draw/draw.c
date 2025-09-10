@@ -443,10 +443,10 @@ drawproc(void *)
 			go = 1;
 			break;
 		}
-		if(r & Reqrefresh)
+		if(r & Reqredraw){
 			resizenodes();
-		if(r & Reqredraw)
 			go = 1;
+		}
 		if(!(go = redraw(go)))
 			reqdraw(Reqsleep);
 		else
@@ -522,7 +522,6 @@ initdrw(void)
 {
 	drawing.flags |= DFstalelen | DFrecalclen;
 	settheme();
-	initcol();
 	/* FIXME: this chan implementation SUCKS */
 	if((drawc = chancreate(sizeof(ulong), 8)) == nil
 	|| (rendc = chancreate(sizeof(ulong), 8)) == nil

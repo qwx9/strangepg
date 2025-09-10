@@ -37,7 +37,6 @@ enum{
 	AEXPORTGFA,
 	AEXPORTSVG,
 	AINFO,
-	ALOAD,
 	ALOADBATCH,
 	AREALEDGE,
 	AREFRESH,
@@ -52,7 +51,6 @@ extern int infd[2], outfd[2];
 char*	getname(voff);
 voff	getid(char*);
 void	loadbatch(void);
-void	loadvars(void);
 void	settag(char*, voff, char*);
 void	setnamedtag(char*, char*, char*);
 voff	pushname(char*);

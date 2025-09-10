@@ -47,7 +47,6 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "info",	AINFO,		ADDON },
 	{ "int",	FINT,		BLTIN },
 	{ "length",	FLENGTH,	BLTIN },
-	{ "loadall",	ALOAD,	ADDON },
 	{ "loadbatch",	ALOADBATCH,	ADDON },
 	{ "log",	FLOG,		BLTIN },
 	{ "match",	MATCHFCN,	MATCHFCN },

@@ -142,36 +142,6 @@ loadbatch(void)
 	USED(vs);
 }
 
-void
-loadvars(void)
-{
-	static char already;
-	ioff id;
-	Node *n, *ne;
-	RNode *r;
-	Cell *cp;
-	TVal v;
-
-	if(already)
-		return;
-	already++;
-	loadbatch();
-	qlock(&symlock);
-	cp = lookup("CL", symtab);
-	qunlock(&symlock);
-	assert(cp != nil);
-	/* FIXME: this is a kludge, just assign a default color and overwrite,
-	 * then we can remove loadall altogether */
-	for(id=0, r=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, r++, id++){
-		if(r->col[3] == 0.0f){
-			v.u = somecolor(id, nil);
-			set(cp, id, Tuint, v);
-		}
-		/* FIXME: edges */
-	}
-	reqdraw(Reqrefresh);
-}
-
 static inline void
 pushval(Cell *cp, ioff id, char type, TVal v)
 {
@@ -307,6 +277,7 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	dyresize(degp, nnodes);
 	dyresize(core.labels, nnodes);
 	dyresize(core.colors, nnodes);
+	memset(core.colors, 0xfe, nnodes * sizeof *core.colors);
 	qlock(&symlock);
 	core.length = attach("LN", core.ids, lenp, nnodes, NUM|USG, setnodelength);
 	core.degree = attach("degree", core.ids, degp, nnodes, NUM|P16|USG, nil);

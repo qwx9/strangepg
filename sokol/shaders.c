@@ -463,14 +463,14 @@ setuplines(void)
 static void
 setuppasses(void)
 {
-	Color *c;
+	float c[4];
 
-	c = color(theme[Cbg]);
+	setcolor(c, theme[Cbg]);
 	render.clearscreen = (sg_pass_action){
 		.colors = {
 			[0] = {
 				.load_action = SG_LOADACTION_CLEAR,
-				.clear_value = { c->col[0], c->col[1], c->col[2], c->col[3] },
+				.clear_value = { c[0], c[1], c[2], c[3] },
 			},
 		},
 	};

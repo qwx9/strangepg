@@ -38,30 +38,6 @@ void	drawui(struct nk_context*);
 void	event(const sapp_event*);
 
 void
-setcolor(float *col, u32int v)
-{
-	Color *c;
-
-	c = color(v);
-	memcpy(col, c->col, sizeof c->col);
-}
-
-Color *
-newcolor(u32int v)
-{
-	float a;
-	Color *c;
-
-	a = (v & 0xff) / 255.f;
-	c = emalloc(sizeof *c);
-	c->col[0] = a * ((v >> 24 & 0xff) / 255.f);
-	c->col[1] = a * ((v >> 16 & 0xff) / 255.f);
-	c->col[2] = a * ((v >> 8 & 0xff) / 255.f);
-	c->col[3] = a;
-	return c;
-}
-
-void
 endmove(void)
 {
 	drawstate &= ~DSmoving;

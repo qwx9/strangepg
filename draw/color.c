@@ -6,9 +6,6 @@
 
 u32int *theme;
 
-KHASHL_MAP_INIT(KH_LOCAL, colormap, cmap, u32int, Color*, kh_hash_uint32, kh_eq_generic)
-static colormap *cmap;
-
 static u32int theme1[Cend] = {
 	[Cbg]	= 0x000000ff,
 	[Ctext]	= 0xbb1100ff,
@@ -28,51 +25,6 @@ static u32int theme2[Cend] = {
 	[Cxaxis] = 0xff0000ff,
 	[Cyaxis] = 0x00ff00ff,
 	[Czaxis] = 0x0000ffff,
-};
-
-typedef struct Palette Palette;
-struct Palette{
-	char *name;
-	u32int col;
-};
-Palette pal[] = {
-	/* some bandage */
-	{"purpleblue", 0x8080ff},
-	{"green", 0x8ec65e},
-	{"greyred", 0xc76758},
-	{"lightbrown", 0xca9560},
-	{"palepurple", 0xc893f0},
-	{"greybrown", 0x7f5f67},
-	{"purple", 0xb160c9},
-	{"bluegreen", 0x5fc69f},
-	{"darkpink", 0xc96088},
-	/* 12 class paired */
-	{"blue", 0x1f78b4},
-	{"orange", 0xff7f00},
-	{"darkgreen", 0x33a02c},
-	{"red", 0xe31a1c},
-	{"darkpurple", 0x6a3d9a},
-	{"brown", 0xb15928},
-	/* 12 class set3 */
-	{"lightteal", 0x8dd3c7},
-	{"paleyellow", 0xeaf47f},
-	{"greyblue", 0xbebada},
-	{"lightred", 0xfb8072},
-	{"lightblue", 0x80b1d3},
-	{"lightorange", 0xfdb462},
-	{"lightgreen", 0xd5f65f},
-	{"lightpink", 0xfccde5},
-	{"lightgrey", 0xd9d9d9},
-	{"lightpurple", 0xbc80bd},
-	{"greygreen", 0xccebc5},
-	{"yellow", 0xffed6f},
-	/* 12 class paired, pale counterparts */
-	{"paleblue", 0xa6cee3},
-	{"palegreen", 0xb2df8a},
-	{"palered", 0xfb9a99},
-	{"paleorange", 0xfdbf6f},
-	{"paleviolet", 0xcab2d6},
-	{"cyan", 0x7acdcd},
 };
 
 /* D65 */
@@ -223,21 +175,13 @@ highlightnode(ioff idx)
 	mixcolors(r->col, theme[Chigh] >> 8);
 }
 
-Color *
-color(u32int v)
+void
+setcolor(float *f, u32int c)
 {
-	int abs;
-	khint_t k;
-	Color *c;
-
-	k = cmap_get(cmap, v);
-	if(k == kh_end(cmap)){
-		c = newcolor(v);
-		k = cmap_put(cmap, v, &abs);
-		kh_val(cmap, k) = c;
-	}else
-		c = kh_val(cmap, k);
-	return c;
+	f[3] = (c & 0xff) / 255.f;
+	f[0] = f[3] * ((c >> 24 & 0xff) / 255.f);
+	f[1] = f[3] * ((c >> 16 & 0xff) / 255.f);
+	f[2] = f[3] * ((c >> 8 & 0xff) / 255.f);
 }
 
 u32int
@@ -251,15 +195,6 @@ setdefalpha(u32int c)
 	return c;
 }
 
-u32int
-somecolor(ioff i, char **name)
-{
-	i %= nelem(pal);
-	if(name != nil)
-		*name = pal[i].name;
-	return pal[i].col << 8;
-}
-
 void
 settheme(void)
 {
@@ -267,11 +202,4 @@ settheme(void)
 		theme = theme1;
 	else
 		theme = theme2;
-}
-
-void
-initcol(void)
-{
-	if((cmap = cmap_init()) == nil)
-		sysfatal("initcol: %s", error());
 }
