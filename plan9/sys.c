@@ -35,7 +35,6 @@ vadebug(char *type, char *fmt, va_list arg)
 	fprint(2, "[%s] ", type);
 	vfprint(2, fmt, arg);
 	va_end(arg);
-	fprint(2, "\n");
 }
 
 char *

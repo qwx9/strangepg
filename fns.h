@@ -2,6 +2,7 @@ void	warn(char*, ...);
 void	logmsg(char*);
 void	logerr(char*);
 char*	va(char*, ...);
+void	dprintnl(int, char*, ...);
 void	dprint(int, char*, ...);
 void	vawarn(char*, va_list);
 void	vadebug(char*, char*, va_list);
@@ -33,7 +34,17 @@ void*	threadstore(void*);
 
 #define DPRINT(x,...)	do{ \
 	if((debug&(x)) != 0) \
+		dprintnl((x), __VA_ARGS__); \
+}while(0)
+
+/* single line, multiple print calls */
+#define DPRINTS(x,...)	do{ \
+	if((debug&(x)) != 0) \
 		dprint((x), __VA_ARGS__); \
+}while(0)
+#define DPRINTN(x,...)	do{ \
+	if((debug&(x)) != 0) \
+		warn(__VA_ARGS__); \
 }while(0)
 
 /* FIXME: get something better */

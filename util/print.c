@@ -83,18 +83,17 @@ panic(char *fmt, ...)
 
 	va_start(arg, fmt);
 	vawarn(fmt, arg);
-	fprintf(stderr, "\n");
+	warn("\n");
 	abort();
 }
 
-void
-dprint(int flags, char *fmt, ...)
+static inline char *
+dtype(int flags)
 {
 	char *type;
-	va_list arg;
 
 	switch(debug & flags){
-	case 0: return;
+	case 0: return nil;
 	case Debuginfo: type = "warning"; break;
 	case Debugawk: type = "awk"; break;
 	case Debugcmd: type = "cmd"; break;
@@ -112,8 +111,32 @@ dprint(int flags, char *fmt, ...)
 	case Debugui: type = "ui"; break;
 	default: type = "dafuq"; break;
 	}
+	return type;
+}
+
+void
+dprint(int flags, char *fmt, ...)
+{
+	char *type;
+	va_list arg;
+
+	if((type = dtype(flags)) == nil)
+		return;
 	va_start(arg, fmt);
 	vadebug(type, fmt, arg);
+}
+
+void
+dprintnl(int flags, char *fmt, ...)
+{
+	char *type;
+	va_list arg;
+
+	if((type = dtype(flags)) == nil)
+		return;
+	va_start(arg, fmt);
+	vadebug(type, fmt, arg);
+	warn("\n");
 }
 
 void

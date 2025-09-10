@@ -68,7 +68,6 @@ vadebug(char *type, char *fmt, va_list arg)
 	fprintf(stderr, "[%s] ", type);
 	vfprintf(stderr, fmt, arg);
 	va_end(arg);
-	fprintf(stderr, "\n");
 }
 
 void
