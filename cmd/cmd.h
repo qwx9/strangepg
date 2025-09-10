@@ -40,7 +40,6 @@ enum{
 	ALOADBATCH,
 	AREALEDGE,
 	AREFRESH,
-	AUNSHOW,
 };
 
 extern int noreset;	// FIXME: flag

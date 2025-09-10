@@ -119,30 +119,6 @@ fninfo(Cell *x)
 	reqdraw(Reqshallowdraw);
 }
 
-static TNode *
-fnunshow(Cell *x, TNode *next)
-{
-	ioff idx;
-	u32int col;
-	RNode *r;
-	Cell *y;
-
-	/* FIXME: more input validation, also which next is next */
-	y = execute(next);
-	next = next->nnext;
-	if((idx = getnodeidx(getival(x))) < 0)
-		return next;
-	r = rnodes + idx;
-	col = setdefalpha(getival(y));
-	setcolor(r->col, col);
-	tempfree(y);
-	if((y = getcell("selinfo", symtab)) == nil)
-		return next;
-	strecpy(selstr, selstr+sizeof selstr, getsval(y));
-	reqdraw(Reqrefresh);
-	return next;
-}
-
 static void
 fnrefresh(void)
 {
@@ -353,7 +329,6 @@ addon(TNode **a, int)
 	case ALOADBATCH: fnloadbatch(); break;
 	case AREALEDGE: fnrealedge(x, ret); break;
 	case AREFRESH: fnrefresh(); break;
-	case AUNSHOW: nextarg = fnunshow(x, nextarg); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
 		break;

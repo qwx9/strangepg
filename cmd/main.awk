@@ -252,7 +252,7 @@ function nodeinfo(i,	name, s){
 function deselect(	i){
 	selinfo = ""
 	for(i in selected)
-		unshow(i, selected[i])
+		CL[i] = CL[i]
 	delete selected
 }
 function deselectnodebyid(i,	col){
@@ -266,10 +266,9 @@ function deselectnodebyid(i,	col){
 		deselect()
 		return
 	}
-	col = selected[i]
 	delete selected[i]
 	selinfo = selinfostr()
-	unshow(i, col)
+	CL[i] = CL[i]
 }
 function deselectnode(name,	i){
 	if(!checknodename(name))
@@ -283,7 +282,7 @@ function showselected(){
 function selectnodebyid(i, noshow){
 	if(!checknodeid(i) || i in selected)
 		return
-	selected[i] = CL[i]
+	selected[i] = 0
 	if(!noshow)
 		showselected()
 }

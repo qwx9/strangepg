@@ -67,7 +67,6 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "substr",	SUBSTR,		SUBSTR },
 	{ "tolower",	FTOLOWER,	BLTIN },
 	{ "toupper",	FTOUPPER,	BLTIN },
-	{ "unshow",	AUNSHOW,	ADDON },
 	{ "while",	WHILE,		WHILE },
 };
 const size_t nkeywords = nelem(keywords);
