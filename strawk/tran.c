@@ -263,11 +263,12 @@ static inline int updateptr(Cell *vp)
 	case STR|NUM:
 	case NUM:
 		/* FIXME: yuck */
-		if((vp->tval & P16) == 0){
+		if((vp->tval & P16) == 0)
+			m.i = *((unsigned int *)ap->tab + i);
+		else{
 			m.uh[0] = *((unsigned short *)ap->tab + i);
 			m.uh[1] = m.uh[0];
-		}else
-			m.i = *((unsigned int *)ap->tab + i);
+		}
 		if(m.u == UNSET){
 			vp->tval |= UNS;
 			v.i = 0;
