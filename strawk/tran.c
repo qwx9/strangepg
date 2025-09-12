@@ -816,7 +816,7 @@ char *qstring(const char *is, int delim)	/* collect string up to next delim */
 	const uschar *s = (const uschar *) is;
 	uschar *buf, *bp;
 
-	buf = (uschar *) defalloc(strlen(is)+3);
+	buf = (uschar *) MALLOC(strlen(is)+3);
 	for (bp = buf; (c = *s) != delim; s++) {
 		if (c == '\n')
 			SYNTAX( "newline in string %.20s...", is );
