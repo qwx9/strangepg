@@ -796,12 +796,17 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 		FATAL("catstr: out of memory");
 	snprintf(buf, l, "%s%s ", sa, sb);
 
-	if((c = lookup(buf, symtab)) != NULL)
-		return c;
-
 	/* FIXME: same comments as in lex.c */
 	// See string() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
+	if(runnerup != NULL){
+		c = gettemp(CON|STR);
+		c->nval = tempstrdup(buf);
+		buf[l-2] = '\0';
+		c->sval = tempstrdup(buf);
+		return c;
+	}else if((c = lookup(buf, symtab)) != NULL)
+		return c;
 	p = STRDUP(buf);
 	buf[l-2] = '\0';
 	s = STRDUP(buf);

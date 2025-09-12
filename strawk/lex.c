@@ -341,6 +341,7 @@ int string(void)
 	int c;
 	unsigned int n;
 	char *s, *p, *bp;
+	Cell *cp;
 	static char *buf = NULL;
 	static int bufsz = 64;
 
@@ -456,8 +457,16 @@ int string(void)
 	}
 	/* seems that this is common enough that the redundant lookups
 	 * on a miss is worth it */
-	if((yylval.cp = lookup(buf, symtab)) != NULL)
+	if(runnerup != NULL){
+		cp = gettemp(CON|STR);
+		cp->nval = tempstrdup(buf);
+		bp[-2] = 0;
+		cp->sval = tempstrdup(buf);
+		yylval.cp = cp;
 		RET(STRING);
+	}else if((yylval.cp = lookup(buf, symtab)) != NULL){
+		RET(STRING);
+	}
 	s = STRDUP(buf);
 	bp[-2] = 0;
 	p = STRDUP(buf);

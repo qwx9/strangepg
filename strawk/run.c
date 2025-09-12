@@ -1973,7 +1973,7 @@ Cell *forstat(TNode **a, int n)	/* for (a[0]; a[1]; a[2]) a[3] */
 		x = execute(a[3]);
 		if (isbreak(x))		/* turn off break */
 			return True;
-		if (isnext(x) || isexit(x) || isret(x))
+		if (isnext(x) || isret(x))
 			return(x);
 		tempfree(x);
 		x = execute(a[2]);
@@ -1990,11 +1990,9 @@ static Cell *ptrinstat(Array *ap, Cell *vp, TNode *expr)
 	for(i=0; i<n; i++){
 		setival(vp, i);
 		x = execute(expr);
-		if (isbreak(x)) {
-			tempfree(vp);
-			return True;
-		}
-		if (isnext(x) || isexit(x) || isret(x)) {
+		if (isbreak(x))
+			break;
+		if (isnext(x) || isret(x)) {
 			tempfree(vp);
 			return(x);
 		}
