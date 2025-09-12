@@ -445,13 +445,24 @@ int string(void)
 			break;
 		}
 	}
+	/* FIXME: why store these in symtab at all, let alone in this
+	 * clumsy and wasteful manner? can we use temp alloc here, esp
+	 * for eval? */
 	*bp++ = ' ';
 	*bp++ = '\0';
-	s = defalloc(bp - buf);
-	p = defalloc(bp - buf - 1);
-	memcpy(s, buf, bp-buf - 1);
-	memcpy(p, buf, bp-buf - 2);
-	yylval.cp = setsymtab(s, p, ZV, CON|STR|DONTFREE, symtab);
+	if(bp - buf == 2){
+		yylval.cp = setsymtab(EMPTY, EMPTY, ZV, CON|STR, symtab);
+		RET(STRING);
+	}
+	/* seems that this is common enough that the redundant lookups
+	 * on a miss is worth it */
+	if((yylval.cp = lookup(buf, symtab)) != NULL)
+		RET(STRING);
+	s = STRDUP(buf);
+	bp[-2] = 0;
+	p = STRDUP(buf);
+	yylval.cp = setsymtab(s, p, ZV, CON|STR, symtab);
+	yylval.cp->tval &= ~(CON|DONTFREE);
 	RET(STRING);
 }
 

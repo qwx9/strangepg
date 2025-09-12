@@ -780,6 +780,7 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 	Cell *c;
 	char *sa = getsval(a);
 	char *sb = getsval(b);
+	char *p, *s;
 	size_t l = strlen(sa) + strlen(sb) + 1;
 	static char *buf;
 	static int bufsz;
@@ -795,12 +796,17 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 		FATAL("catstr: out of memory");
 	snprintf(buf, l, "%s%s ", sa, sb);
 
+	if((c = lookup(buf, symtab)) != NULL)
+		return c;
+
+	/* FIXME: same comments as in lex.c */
 	// See string() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
-	//snprintf(buf, l, "%s ", p);
-	c = setsymtab(buf, NULL, ZV, CON|STR|DONTFREE, symtab);
+	p = STRDUP(buf);
 	buf[l-2] = '\0';
-	c->sval = STRDUP(buf);
+	s = STRDUP(buf);
+	c = setsymtab(p, s, ZV, CON|STR, symtab);
+	c->tval &= ~(CON|DONTFREE);
 	return c;
 }
 
