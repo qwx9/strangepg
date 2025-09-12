@@ -120,7 +120,7 @@ void arginit(int ac, char **av)	/* set up ARGV and ARGC */
 	v.i = (Awknum)ac;
 	ARGC = &setsymtab("ARGC", NULL, v, NUM, symtab)->val.i;
 	cp = setsymtab("ARGV", NULL, ZV, ARR, symtab);
-	ap = makesymtab(NSYMTAB);	/* could be (int) ARGC as well */
+	ap = makesymtab(*ARGC);
 	cp->sval = (char *) ap;
 	for (i = 0; i < ac; i++) {
 		sprintf(temp, "%d", i);
