@@ -307,6 +307,8 @@ void setclvar(char *s)	/* set var=value from s */
 	p = qstring(p, '\0');
 	if((q = lookup(s, symtab)) != NULL){
 		if(strcmp(q->sval, p) != 0){
+			if(isptr(q) && q->tval & RO)
+				FATAL("can\'t assign to read-only value\n");
 			if(freeable(q))
 				xfree(q->sval);
 			if(r = is_number(p, &v)){
@@ -672,10 +674,8 @@ void FATAL(const char *fmt, ...)
 	vfprintf(fp, fmt, varg);
 	va_end(varg);
 	ERROR(fp);
-	if(evalstr != NULL){
-		fflush(fp);
+	if(evalstr != NULL)
 		longjmp(evalenv, -1);
-	}
 	if (dbg > 1)		/* core dump if serious debugging on */
 		abort();
 	exit(2);

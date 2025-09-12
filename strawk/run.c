@@ -317,7 +317,7 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 
 	/* copy is not constant or field */
 
-	y = gettemp(x->tval & ~(CON|FLD|REC|PTR));
+	y = gettemp(x->tval & ~(CON|FLD|REC|PTR|RO));
 	y->csub = CCOPY;	/* prevents freeing until call is over */
 	y->nval = isptr(x) ? EMPTY : x->nval;	/* BUG? */
 	if (isstr(x) /* || x->ctype == OCELL */)
@@ -2267,6 +2267,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		lexprog = olex;
 		evalstr = oeval;
 		fflush(awkstdout);
+		fflush(awkstderr);
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);

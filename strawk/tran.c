@@ -231,7 +231,7 @@ static inline int updateptr(Cell *vp)
 		unsigned short uh[2];
 	} m;
 
-	if(vp->tval & CON)
+	if(vp->tval & RO)
 		return 0;
 	n = 0;
 	i = (Awknum)vp->nval;
@@ -316,7 +316,6 @@ static inline int updateptr(Cell *vp)
 	return n;
 }
 
-/* FIXME: use CON to flag constant values (avoiding updates) */
 Cell *setptrtab(Awknum i, Array *a, int readit)
 {
 	Cell *p;
@@ -330,6 +329,8 @@ Cell *setptrtab(Awknum i, Array *a, int readit)
 	p->cnext = (Cell *)a;
 	if(readit)
 		updateptr(p);
+	if(a->type & RO)
+		p->tval |= RO;
 	return p;
 }
 
@@ -453,6 +454,8 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	if (isptr(vp)) {
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
+		if(vp->tval & RO)
+			FATAL("can\'t assign to read-only value\n");
 		ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
@@ -512,6 +515,8 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	if (isptr(vp)) {
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
+		if(vp->tval & RO)
+			FATAL("can\'t assign to read-only value\n");
 		ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
@@ -590,6 +595,8 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 		if (!donerec)
 			recbld();
 	}
+	if(isptr(vp) && vp->tval & RO)
+		FATAL("can\'t assign to read-only value\n");
 	t = vp->sval;
 	if(s != t || s == NULL){
 		t = s && s != EMPTY && *s != 0 ? new ? STRDUP(s) : s : EMPTY;

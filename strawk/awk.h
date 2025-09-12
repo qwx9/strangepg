@@ -153,6 +153,7 @@ enum{
 	P16 = 1<<10,	/* pointer to 16bit value */
 	USG = 1<<11,	/* pointer to unsigned int */
 	UNS = 1<<12,	/* pointer to unset value */
+	RO  = 1<<13,	/* pointer to read-only constant value */
 };
 
 /* function types */
