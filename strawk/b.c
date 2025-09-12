@@ -237,9 +237,11 @@ fa *mkdfa(const char *s, bool anchor)	/* does the real work of making a dfa */
 	*f->posns[1] = 0;
 	f->initstat = makeinit(f, anchor);
 	f->anchor = anchor;
-	f->restr = (uschar *) tostring(s);
-	if (firstbasestr != basestr)
+	f->restr = (uschar *) STRDUP(s);
+	if (firstbasestr != basestr){
+		FREE(basestr);
 		basestr = NULL;
+	}
 	return f;
 }
 
@@ -1172,7 +1174,7 @@ replace_repeat(const uschar *reptok, int reptoklen, const uschar *atom,
 	buf[j] = '\0';
 	/* free old basestr */
 	if (firstbasestr != basestr)
-		basestr = NULL;
+		FREE(basestr);
 	basestr = buf;
 	prestr  = buf + prefix_length;
 	if (special_case == REPEAT_ZERO) {
@@ -1367,7 +1369,9 @@ rescan:
 				*bp++ = c;
 			} else if (c == ']') {
 				*bp++ = 0;
-				rlxstr = (uschar *) tostring((char *) buf);
+				if(rlxstr != NULL)
+					FREE(rlxstr);
+				rlxstr = (uschar *) STRDUP((char *) buf);
 				if (cflag == 0)
 					return CCL;
 				else
