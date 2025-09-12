@@ -232,7 +232,7 @@ static inline int updateptr(Cell *vp)
 	n = 0;
 	i = (Awknum)vp->nval;
 	ap = (Array *)vp->cnext;
-	switch(vp->tval & (FLT|NUM|STR)){
+	switch(vp->tval & (STR|NUM|FLT)){
 	case STR|FLT|NUM:
 	case FLT|NUM:
 		m.f = *((float *)ap->tab + i);

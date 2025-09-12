@@ -492,7 +492,7 @@ int word(char *w)
 				SYNTAX( "return not in function" );
 			RET(kp->type);
 		case VARNF:
-			yylval.cp = setsymtab("NF", NULL, ZV, NUM, symtab);
+			yylval.cp = nfloc;
 			RET(VARNF);
 		case BLTIN:
 		case ADDON:
