@@ -516,7 +516,7 @@ int word(char *w)
 		yylval.i = n;
 		RET(ARG);
 	} else {
-		yylval.cp = setsymtab(w, NULL, ZV, STR|NUM|DONTFREE, symtab);
+		yylval.cp = setsymtab(w, NULL, ZV, STR|NUM, symtab);
 		if (c == '(') {
 			RET(CALL);
 		} else {

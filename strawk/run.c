@@ -289,8 +289,10 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 				}
 			}
 		} else if (t != y) {	/* kludge to prevent freeing twice */
-			t->csub = CTEMP;
-			tempfree(t);
+			if(t->csub == CCOPY || t->csub == CTEMP){
+				t->csub = CTEMP;
+				tempfree(t);
+			}
 		} else if (t == y && t->csub == CCOPY) {
 			t->csub = CTEMP;
 			tempfree(t);
@@ -461,10 +463,9 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		z = setptrtab(i, ap, 1);
 	}else{
 		buf = makearraystring(a[1], __func__);
-		z = setsymtab(buf, NULL, ZV, STR|NUM, ap);
+		z = setsymtab(buf, NULL, ZV, STR, ap);
+		z->csub = CVAR;
 	}
-	z->ctype = OCELL;
-	z->csub = CVAR;
 	tempfree(x);
 	return(z);
 }
