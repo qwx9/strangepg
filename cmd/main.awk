@@ -405,19 +405,16 @@ function quit(){
 }
 # too complicated if nested, and temporary anyway; would ideally expand
 # other tags into tag[i]
-function subexpr(s, v, fn,	i, j, t, pred){
+function subexpr(s, v, fn,	i, pred){
 	i = match(s, "\][ 	]*=[^=]")
 	# error check: i not 0; only sub expression up to } or ; etc
 	pred = substr(s, 1, i-1)
 	s = substr(s, RSTART+RLENGTH-1)
-	# my god man, implement pointers
-	eval("{w = length(" v ") == 0 ? \"node\" : v}")
-	$0 = "for(i in " w ") if(" pred "){ " fn "(i, " s ")}"
+	if(fn != "")
+		$0 = "for(i in " v ") if(" pred "){ " fn "(i, " s ")}"
+	else
+		$0 = "for(i in " v ") if(" pred "){ " v "[i]=" s "}"
 }
-#crm114 && $1 == function"{
-#	eval($0)
-#	next
-#}
 crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)
@@ -430,6 +427,8 @@ crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 		subexpr(s, v, "fixx")
 	else if(v == "fy")
 		subexpr(s, v, "fixy")
+	else
+		subexpr(s, v)
 }
 {
 	eval("{" $0 "}")
