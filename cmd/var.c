@@ -192,10 +192,8 @@ vartype(char *val, TVal *v, int iscolor)
 				v->f = f;
 				return Tfloat;
 			}
-		}else
-			type = Tstring;
-	}else
-		type = Tstring;
+		}
+	}
 	qlock(&symlock);
 	cp = lookup(val, symtab);
 	qunlock(&symlock);
@@ -214,7 +212,7 @@ vartype(char *val, TVal *v, int iscolor)
 	}else{
 		val = estrdup(val);
 		qlock(&symlock);
-		cp = setsymtab(val, NULL, ZV, STR|CON, core.strs);
+		setsymtab(val, NULL, ZV, STR|CON, core.strs);
 		qunlock(&symlock);
 	}
 	v->s = val;
