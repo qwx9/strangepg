@@ -161,9 +161,11 @@ void freesymtab(Cell *ap)	/* free a symbol table */
 		return;
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp != NULL; cp = temp) {
-			xfree(cp->nval);
-			if (freeable(cp))
-				xfree(cp->sval);
+			if ((cp->tval & CON) == 0){
+				xfree(cp->nval);
+				if (freeable(cp))
+					xfree(cp->sval);
+			}
 			temp = cp->cnext;	/* avoids freeing then using */
 			free(cp);
 			tp->nelem--;
@@ -192,9 +194,11 @@ void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
 				tp->tab[h] = p->cnext;
 			else			/* middle somewhere */
 				prev->cnext = p->cnext;
-			if (freeable(p))
-				xfree(p->sval);
-			free(p->nval);
+			if ((p->tval & CON) == 0){
+				if (freeable(p))
+					xfree(p->sval);
+				free(p->nval);
+			}
 			free(p);
 			tp->nelem--;
 			return;
@@ -352,11 +356,11 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 		return(p);
 	}
 	p = (Cell *) MALLOC(sizeof(*p));
-	p->nval = tostring(n);
-	p->sval = s && s != EMPTY && *s != 0 ? tostring(s) : EMPTY;
+	p->nval = t & CON ? n : STRDUP(n);
+	p->sval = s && s != EMPTY && *s != 0 ? t & CON ? s : STRDUP(s) : EMPTY;
 	p->val = v;
 	p->tval = t;
-	if(p->sval == EMPTY)
+	if(p->sval == EMPTY || t & CON)
 		p->tval |= DONTFREE;
 	p->csub = CUNK;
 	p->ctype = OCELL;
