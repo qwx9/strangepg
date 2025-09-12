@@ -535,25 +535,26 @@ static Cell *ptrintest(Array *ap, TNode *id)
 
 Cell *intest(TNode **a, int n)	/* a[0] is index (list), a[1] is symtab */
 {
-	Cell *ap, *k;
+	Array *ap;
+	Cell *cp, *k;
 	char *buf;
 
-	ap = execute(a[1]);	/* array name */
-	if (!isarr(ap)) {
-		DPRINTF("making %s into an array\n", ap->nval);
-		if (freeable(ap))
-			xfree(ap->sval);
-		ap->tval &= ~(STR|NUM|DONTFREE);
-		ap->tval |= ARR;
-		ap->sval = (char *) makesymtab(NSYMTAB);
-	/* FIXME: UNLESS it's a string and we actually query if a value exists
-	 * for that id -- but we haven't yet established a way to check for
-	 * unset value */
-	} else if(isptr(ap))
-		return ptrintest((Array *)ap->sval, a[0]);
+	cp = execute(a[1]);	/* array name */
+	if (!isarr(cp)) {
+		DPRINTF("making %s into an array\n", cp->nval);
+		if (freeable(cp))
+			xfree(cp->sval);
+		cp->tval &= ~(STR|NUM|FLT);
+		cp->tval |= ARR|DONTFREE;
+		cp->sval = (char *) makesymtab(NSYMTAB);
+	} else if(isptr(cp)){
+		ap = (Array *)cp->sval;
+		tempfree(cp);
+		return ptrintest(ap, a[0]);
+	}
 	buf = makearraystring(a[0], __func__);
-	k = lookup(buf, (Array *) ap->sval);
-	tempfree(ap);
+	k = lookup(buf, (Array *) cp->sval);
+	tempfree(cp);
 	if (k == NULL)
 		return(False);
 	else
@@ -797,6 +798,7 @@ Cell *boolop(TNode **a, int n)	/* a[0] || a[1], a[0] && a[1], !a[0] */
 Cell *relop(TNode **a, int n)	/* a[0 < a[1], etc. */
 {
 	Cell *x, *y;
+	int r;
 	Awkfloat i, j;
 	bool x_is_nan, y_is_nan;
 
@@ -804,36 +806,45 @@ Cell *relop(TNode **a, int n)	/* a[0 < a[1], etc. */
 	y = execute(a[1]);
 	x_is_nan = y_is_nan = false;
 	if (x->tval&NUM && y->tval&NUM) {
-		i = getfval(x);
-		j = getfval(y);
-		x_is_nan = isnan(i);
-		y_is_nan = isnan(j);
+		if(x->tval & FLT){
+			i = getfval(x);
+			if((x_is_nan = isnan(i)) && n != NE)
+				goto err;
+		}else
+			i = getival(x);
+		if(y->tval & FLT){
+			j = getfval(y);
+			if((y_is_nan = isnan(j)) && n != NE)
+				goto err;
+		}else
+			j = getival(y);
 		j = i - j;
-		if ((x_is_nan || y_is_nan) && n != NE)
-			return(False);
-		i = j<0? -1: (j>0? 1: 0);
+		r = j<0? -1: (j>0? 1: 0);
 	} else
-		i = strcmp(getsval(x), getsval(y));
+		r = strcmp(getsval(x), getsval(y));
 	tempfree(x);
 	tempfree(y);
 	switch (n) {
-	case LT:	if (i<0) return(True);
+	case LT:	if (r<0) return(True);
 			else return(False);
-	case LE:	if (i<=0) return(True);
+	case LE:	if (r<=0) return(True);
 			else return(False);
 	case NE:	if (x_is_nan && y_is_nan) return(True);
-			else if (i!=0) return(True);
+			else if (r!=0) return(True);
 			else return(False);
-	case EQ:	if (i == 0) return(True);
+	case EQ:	if (r == 0) return(True);
 			else return(False);
-	case GE:	if (i>=0) return(True);
+	case GE:	if (r>=0) return(True);
 			else return(False);
-	case GT:	if (i>0) return(True);
+	case GT:	if (r>0) return(True);
 			else return(False);
 	default:	/* can't happen */
 		FATAL("unknown relational operator %d", n);
 	}
-	return 0;	/*NOTREACHED*/
+err:
+	tempfree(x);
+	tempfree(y);
+	return False;
 }
 
 void tfree(Cell *a)	/* free a tempcell */
