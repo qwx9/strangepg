@@ -270,9 +270,9 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	dyresize(core.colors, nnodes);
 	memset(core.colors, 0xfe, nnodes * sizeof *core.colors);
 	qlock(&symlock);
-	core.length = attach("LN", core.ids, lenp, nnodes, NUM|USG, setnodelength);
-	core.degree = attach("degree", core.ids, degp, nnodes, NUM|P16|USG, nil);
-	core.label = attach("node", core.ids, core.labels, nnodes, STR, nil);
+	core.length = attach("LN", core.ids, lenp, nnodes, RO|NUM|USG, setnodelength);
+	core.degree = attach("degree", core.ids, degp, nnodes, RO|NUM|P16|USG, nil);
+	core.label = attach("node", core.ids, core.labels, nnodes, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
 	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
 	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
