@@ -649,7 +649,10 @@ Value getval(Cell *vp, short *type)
 	if(isptr(vp))
 		updateptr(vp);
 	if(!isnum(vp)){
-		s = vp->sval;
+		if((s = vp->sval) == EMPTY){
+			*type = STR;
+			return ZV;
+		}
 		if(r = is_valid_number(s, true, &no_trailing, NULL, &v)){
 			if (no_trailing && (t & CON) == 0)
 				t |= r;	/* make NUM only sparingly */
