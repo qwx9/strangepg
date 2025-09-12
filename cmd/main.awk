@@ -226,7 +226,7 @@ function nodeinfostr(i,	a, t){
 	s = node[i] ", LN=" LN[i]
 	xxx = ""	# has to be global for eval
 	for(a in ATTACHED){
-		if(a == "degree" || a == "LN")
+		if(a == "degree" || a == "LN" || a == "CL")
 			continue
 		eval("{ xxx = (i in " a ") ? " a "[i] : \"\" }")
 		if(xxx != "")
