@@ -210,7 +210,7 @@ static struct Frame *frp = NULL;	/* frame pointer. bottom level unused */
 
 Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 {
-	static const Cell newcopycell = { OCELL, CCOPY, NUM|DONTFREE, EMPTY, EMPTY, {.i=0}, NULL };
+	static const Cell newcopycell = { OCELL, CCOPY, STR|DONTFREE, EMPTY, EMPTY, {.i=0}, NULL };
 	int i, ncall, ndef;
 	int freed = 0; /* handles potential double freeing when fcn & param share a tempcell */
 	TNode *x;
