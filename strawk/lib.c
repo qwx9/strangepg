@@ -310,23 +310,31 @@ void setclvar(char *s)	/* set var=value from s */
 			if(freeable(q))
 				xfree(q->sval);
 			if(r = is_number(p, &v)){
+				if(isptr(q) && (q->tval & (STR|NUM)) == STR)
+					FATAL("can\'t assign number to string pointer type");
 				q->val = v;
 				q->tval |= r;
-				q->tval &= ~STR;
+				q->tval &= ~(STR|DONTFREE);
 				q->sval = NULL;
+				FREE(p);
 			}else{
-				q->sval = STRDUP(p);
+				if(isptr(q) && (q->tval & STR) == 0)
+					FATAL("can\'t assign string to number pointer type");
+				q->sval = p;
 				q->tval |= STR;
+				q->tval &= ~DONTFREE;
 			}
 		}else
-			free(p);
+			FREE(p);
 	}else{
 		q = setsym(s, p, symtab);
 		/* FIXME: ? */
 		if(q->sval == EMPTY){
-			q->sval = STRDUP(p);
+			q->sval = p;
 			q->tval |= STR;
-		}
+			q->tval &= ~DONTFREE;
+		}else
+			FREE(p);
 	}
 	DPRINTF("command line set %s to |%s|\n", s, q->sval);
 	*e = '=';
