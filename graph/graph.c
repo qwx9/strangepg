@@ -49,30 +49,6 @@ explode(ioff idx)
 		r->pos[2] += 32.0f * (0.5f - xfrand());
 }
 
-/* FIXME: this is a problem; we're also reencoding and decoding in
- * awk again */
-/* bleh, our edge data structures aren't making lookups easy;
- * our list is unsorted, but there shouldn't be many objects on
- * screen in the end */
-u64int
-getrealedge(ioff idx)
-{
-	ioff e;
-	u64int uv;
-	Node *u, *v, *ue;
-
-	idx = vedges[idx];	/* FIXME: horrible crutch */
-	for(u=nodes, ue=u+dylen(u); u<ue; u++)
-		if(idx >= u->eoff && idx < u->eoff + u->nedges)
-			break;
-	assert(u < ue);
-	uv = (u64int)u->id << 32;
-	e = edges[idx];
-	v = nodes + (e >> 2);
-	uv |= v->id << 2 | e & 3;
-	return uv;
-}
-
 ioff
 getrealid(ioff idx)
 {

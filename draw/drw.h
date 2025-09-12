@@ -69,6 +69,7 @@ extern RNode *rnodes;
 extern REdge *redges;
 extern RLine *rlines;
 extern ssize ndnodes, ndedges, ndlines;
+extern u64int *vedges;	/* redge index */
 
 struct Box{
 	float x1;
@@ -123,6 +124,7 @@ enum{
 };
 
 void	updatenode(ioff);
+s64int	getvedge(ioff);
 void	resizenodes(void);
 void	setnodeshape(int);
 void	updatedraw(void);

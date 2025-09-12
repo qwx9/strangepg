@@ -55,7 +55,6 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "print",	PRINT,		PRINT },
 	{ "printf",	PRINTF,		PRINTF },
 	{ "rand",	FFRAND,		BLTIN },
-	{ "realedge",	AREALEDGE,		ADDON },
 	{ "refresh",	AREFRESH,		ADDON },
 	{ "return",	RETURN,		RETURN },
 	{ "sin",	FSIN,		BLTIN },

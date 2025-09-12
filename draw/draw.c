@@ -11,7 +11,7 @@
 RNode *rnodes;
 REdge *redges;
 RLine *rlines;
-ioff *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFORMAT_UBYTE4N instead */
+u64int *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFORMAT_UBYTE4N instead */
 ssize ndnodes, ndedges, ndlines;
 Drawing drawing = {
 	.length = {0.0f, 0.0f},
@@ -63,6 +63,19 @@ initstatic(void)
 	}
 }
 
+s64int
+getvedge(ioff idx)
+{
+	if(drawing.flags & DFfreeze){
+		werrstr("resize in progress");
+		return -1;
+	}else if(idx < 0 || idx >= dylen(vedges)){
+		werrstr("index out of bounds %d/%zd", idx, dylen(vedges));
+		return -1;
+	}
+	return vedges[idx];
+}
+
 /* FIXME: completely redundant with what the node pipeline is doing,
  * we should either do everything cpu-side or in the shaders; can one
  * shader use the results of another? a doesn't depend at all on b;
@@ -106,27 +119,49 @@ drawaxes(int n)
 static intptr
 drawedges(void)
 {
-	ioff id, eid, aid, x, *e, *ee;
-	Node *n, *ne;
-	RNode *u, *v;
+	ioff i, j, x, *e, *ee;
+	Node *u, *ue;
+	RNode *ru, *rv;
 	REdge *r;
 
 	r = redges;
-	x = dylen(redges);
-	dyresize(vedges, x);
-	for(id=eid=0, u=rnodes, n=nodes, ne=n+dylen(n); n<ne; n++, u++, id++){
-		for(e=edges+n->eoff, ee=e+n->nedges; e<ee; e++){
+	for(i=0, ru=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, ru++, i++){
+		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;
-			aid = x >> 2;
-			if(id > aid || id == aid && (x & 1) == 1)
+			j = x >> 2;
+			if(i > j || i == j && (x & 1) == 1)
 				continue;
-			v = rnodes + (x >> 2);
-			drawedge(r, u, v, x & 1, x & 2);
+			rv = rnodes + j;
+			drawedge(r, ru, rv, x & 1, x & 2);
 			r++;
-			vedges[eid++] = e - edges;
 		}
 	}
 	return r - redges;
+}
+
+/* must follow the same exclusion criteria as other functions */
+static void
+resetvedges(void)
+{
+	ioff i, j, x, *e, *ee;
+	usize n;
+	Node *u, *ue, *v;
+	u64int w, *wp;
+
+	n = dylen(redges);
+	dyresize(vedges, n);
+	wp = vedges;
+	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
+		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
+			x = *e;
+			j = x >> 2;
+			if(i > j || i == j && (x & 1) == 1)
+				continue;
+			v = nodes + j;
+			w = (u64int)u->id << 32 | v->id << 2 | x & 3;
+			*wp++ = w;
+		}
+	}
 }
 
 void
@@ -421,6 +456,7 @@ drawproc(void *)
 	int f, r, go;
 
 	resizenodes();
+	resetvedges();
 	initstatic();
 	go = 1;
 	for(;;){
@@ -467,8 +503,9 @@ thawworld(void)
 {
 	if((drawing.flags & DFnorend) == 0)
 		drawing.flags |= DFnorend;	/* FIXME: or we might miss resizebuf() */
-	drawing.flags &= ~DFfreeze;
 	resizenodes();	/* layout depends on lengths */
+	resetvedges();
+	drawing.flags &= ~DFfreeze;
 	reqdraw(Reqthaw);
 	reqlayout(Lthaw);	/* FIXME: really, just unpause */
 }

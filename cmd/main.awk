@@ -196,23 +196,20 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfostr(i,	e, u, v, a, b, s){
-	e = realedge(i)
-	u = e >> 32
-	v = e >> 2 & 0x3fffffff
-	a = e & 1 ? "-" : "+"
-	b = e & 2 ? "-" : "+"
-	if(!checknodeid(u) || !checknodeid(v))
-		return
+function edgeinfostr(u, v, a, b,	s){
 	s = node[u] a node[v] b
 	if(i in cigar)
 		s = s ", CIGAR=" cigar[i]
 	return s
 }
-function edgeinfo(i, s){
-	if((s = edgeinfostr(i)) == "")
+function edgeinfo(e,	u, v, a, b){
+	u = e >> 32
+	v = e >> 2 & 0x3fffffff
+	if(!checknodeid(u) || !checknodeid(v))
 		return
-	info("Edge: " s)
+	a = e & 1 ? "-" : "+"
+	b = e & 2 ? "-" : "+"
+	info("Edge: " edgeinfostr(u, v, a, b))
 }
 function findnode(name,	i){
 	if(!checknodename(name))

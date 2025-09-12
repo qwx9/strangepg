@@ -8,7 +8,7 @@
 #include "strawk/awk.h"
 #include "var.h"
 
-/* FIXME: broken: expand, getrealedge, csv loading, cigars; integer labels */
+/* FIXME: broken: expand, csv loading, cigars; integer labels */
 
 extern QLock symlock;
 extern QLock buflock;	/* FIXME */

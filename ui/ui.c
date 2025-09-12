@@ -246,6 +246,7 @@ mousehover(int x, int y)
 {
 	ioff id, idx;
 	int isedge;
+	s64int w;
 	union{
 		ioff i;
 		u32int u;
@@ -264,9 +265,13 @@ mousehover(int x, int y)
 		return u.i;
 	isedge = u.u & 1UL<<31;
 	idx = u.u & ~(1UL<<31);
-	if(isedge)
-		pushcmd("edgeinfo(%d)", idx);	/* untranslated to avoid lookup lag */
-	else{
+	if(isedge){
+		if((w = getvedge(idx)) == -1){
+			DPRINT(Debugui, "mousehover: can\'t get edge: %s", error());
+			return -1;
+		}
+		pushcmd("edgeinfo(%D)", w);	/* untranslated to avoid lookup lag */
+	}else{
 		/* FIXME: race between coarsening and ui mouse hover/select;
 		 * box sel could add shit that is no longer there, etc. */
 		if((id = getrealid(idx)) < 0){

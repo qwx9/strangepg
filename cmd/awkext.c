@@ -131,17 +131,6 @@ fnrefresh(void)
 }
 
 static void
-fnrealedge(Cell *x, Cell *ret)
-{
-	ioff idx;
-	u64int uv;
-
-	idx = getival(x);
-	uv = getrealedge(idx);
-	setival(ret, uv);
-}
-
-static void
 fnexpand1(Cell *x)
 {
 	ioff id;
@@ -327,7 +316,6 @@ addon(TNode **a, int)
 	case AEXPORTSVG: fnexportsvg(x); break;
 	case AINFO: fninfo(x); break;
 	case ALOADBATCH: fnloadbatch(); break;
-	case AREALEDGE: fnrealedge(x, ret); break;
 	case AREFRESH: fnrefresh(); break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);

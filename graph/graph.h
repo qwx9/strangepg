@@ -15,4 +15,3 @@ int	buildct(void);
 
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
-u64int	getrealedge(ioff);

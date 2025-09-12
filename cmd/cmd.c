@@ -56,6 +56,7 @@ pushcmd(char *fmt, ...)
 {
 	ioff ai;
 	double af;
+	s64int av;
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
@@ -74,6 +75,10 @@ pushcmd(char *fmt, ...)
 			break;
 		}
 		switch(c){
+		case 'D':
+			av = va_arg(arg, s64int);
+			sp = seprint(sp, sb+sizeof sb-1, "0x%llx", av);
+			break;
 		case 's':
 			as = va_arg(arg, char*);
 			sp = strecpy(sp, sb+sizeof sb-1, as);
