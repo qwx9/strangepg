@@ -46,6 +46,7 @@ int dbg;
 Awknum	srand_seed = 1;
 enum compile_states	compile_time = ERROR_PRINTING;
 char *evalstr;
+static int evalfrm;
 
 static char *wide_char_to_byte_str(int rune, size_t *outlen);
 
@@ -164,7 +165,10 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			FATAL("illegal break, continue, next or nextfile from BEGIN");
 		tempfree(x);
 		fflush(awkstdout);
-		cleanpool();
+		if(evalfrm <= 1){
+			tmps = NULL;
+			cleanpool();
+		}
 	}
 	if (a[1] || a[2]){
 		while (getrec(&record, &recsize, true) > 0) {
@@ -172,7 +176,10 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			if (isexit(x))
 				break;
 			tempfree(x);
-			cleanpool();
+			if(evalfrm <= 1){
+				tmps = NULL;
+				cleanpool();
+			}
 		}
 	}
   ex:
@@ -864,7 +871,7 @@ Cell *gettemp(int type)	/* get a tempcell */
 	Cell *x;
 
 	if (!tmps) {
-		tmps = (Cell *) CALLOC(100, sizeof(*tmps));
+		tmps = (Cell *) tempalloc(100 * sizeof(*tmps));
 		for (i = 1; i < 100; i++)
 			tmps[i-1].cnext = &tmps[i];
 		tmps[i-1].cnext = NULL;
@@ -2172,7 +2179,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	Cell *x, *y;
 	Awknum u = 0, tmp;
 	int t;
-	char *buf;
+	char *buf, *olex, *oeval;
 	TNode *nextarg;
 
 	t = ptoi(a[0]);
@@ -2235,17 +2242,23 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			FATAL("write error on awkstdout");
 		break;
 	case FEVAL:
+		olex = lexprog;
+		oeval = evalstr;
+		orunner = runnerup;
 		lexprog = getsval(x);
 		DPRINTF("eval: \"%s\"\n", lexprog);
 		evalstr = lexprog;
+		evalfrm++;
 		yyparse();
 		if(setjmp(evalenv) >= 0){
 			y = execute(runnerup);
 			tempfree(y);
 		}
+		evalfrm--;
 		errorflag = 0;
-		runnerup = NULL;
-		evalstr = NULL;
+		runnerup = orunner;
+		lexprog = olex;
+		evalstr = oeval;
 		fflush(awkstdout);
 		break;
 	default:	/* can't happen */
