@@ -1,138 +1,204 @@
 BEGIN{
 	black = 0x00000000
 	blue = 0x1f78b400
-	bluegreen = 0x5fc69f00
+	bluegreen = 0x00cc7700
 	brightblue = 0x0000ff00
+	brightcyan = 0x00ffff00
 	brightgreen = 0x00ff0000
-	brightpurple = 0x00ffff00
+	brightpurple = 0xff00ff00
 	brightred = 0xff000000
 	brightyellow = 0xffff0000
 	brown = 0xb1592800
-	cyan = 0x7acdcd00
+	cyan = 0x4ddfdf00
 	darkblue = 0x03328500
 	darkgray = 0x3f3f3f00
+	darkgreen = 0x549f2c00
 	darkgrey = darkgray
-	darkgreen = 0x33a02c00
-	darkpink = 0xc9608800
+	darkpink = 0xd7548900
 	darkpurple = 0x6a3d9a00
 	darksalmon = 0xe9967a00
 	gray = 0x77777700
 	grayblue = 0xbebada00
 	graybrown = 0x7f5f6700
-	graygreen = 0xccebc500
+	graygreen = 0xa5e39500
 	grayred = 0xc7675800
+	green = 0x74d04100
 	grey = gray
 	greyblue = grayblue
 	greybrown = graybrown
 	greygreen = graygreen
 	greyred = grayred
-	green = 0x8ec65e00
 	lightblue = 0x80b1d300
 	lightbrown = 0xca956000
-	lightgray = 0xd9d9d900
-	lightgreen = 0xd5f65f00
+	lightgray = 0xb6b6b600
+	lightgreen = 0x88f03b00
 	lightgrey = lightgray
-	lightorange = 0xfdb46200
-	lightpink = 0xfccde500
+	lightorange = 0xfba72400
+	lightpink = 0xfbacd600
 	lightpurple = 0xbc80bd00
-	lightred = 0xfb807200
-	lightteal = 0x8dd3c700
+	lightred = 0xfa3e4300
+	lightteal = 0x7fe0cf00
+	olive = 0x7ab64100
 	orange = 0xff7f0000
 	paleblue = 0xa6cee300
 	palegray = 0xdcdcdc00
-	palegreen = 0xb2df8a00
+	palegreen = 0x94fb6a00
 	paleorange = 0xfdbf6f00
 	palepurple = 0xc893f000
-	palered = 0xfb9a9900
+	palered = 0xfb696700
 	paleviolet = 0xcab2d600
 	paleyellow = 0xffeb4900
+	pink = 0xffb6c100
 	purple = 0xb160c900
-	purpleblue = 0x8080ff00
-	red = 0xe31a1c00
+	purpleblue = 0x6481fc00
+	red = 0xda181a00
 	tan = 0xd2b48c00
-	teal = 0x00969600
+	teal = 0x00bbbb00
+	translucent = 0xd7d7d730
 	violet = purple
 	white = 0xffffff00
-	yellow = 0xfbf50000
-	yellowgreen = 0xc5fa0000
+	yellow = 0xe7d94100
+	yellowgreen = 0xd5ef0000
 	translucent = 0xeeeeee30
-	gmap[n++] = blue
-	gmap[n++] = green
-	gmap[n++] = red
-	gmap[n++] = purple
-	gmap[n++] = brown
-	gmap[n++] = orange
-	gmap[n++] = bluegreen
-	gmap[n++] = yellow
-	gmap[n++] = purpleblue
-	gmap[n++] = greyred
-	gmap[n++] = lightbrown
-	gmap[n++] = palepurple
-	gmap[n++] = greybrown
-	gmap[n++] = darkpink
-	gmap[n++] = darkgreen
-	gmap[n++] = darkpurple
-	gmap[n++] = lightteal
-	gmap[n++] = paleyellow
-	gmap[n++] = greyblue
-	gmap[n++] = lightred
-	gmap[n++] = lightblue
-	gmap[n++] = lightorange
-	gmap[n++] = lightgreen
-	gmap[n++] = lightpink
-	gmap[n++] = lightgrey
-	gmap[n++] = lightpurple
-	gmap[n++] = greygreen
-	gmap[n++] = paleblue
-	gmap[n++] = palegreen
-	gmap[n++] = palered
-	gmap[n++] = paleorange
-	gmap[n++] = paleviolet
-	gmap[n] = cyan
 	n = 0
-	cmap[n++] = purpleblue
-	cmap[n++] = green
-	cmap[n++] = greyred
-	cmap[n++] = lightbrown
-	cmap[n++] = palepurple
-	cmap[n++] = greybrown
-	cmap[n++] = purple
-	cmap[n++] = bluegreen
-	cmap[n++] = darkpink
-	cmap[n++] = blue
-	cmap[n++] = orange
-	cmap[n++] = darkgreen
-	cmap[n++] = red
-	cmap[n++] = darkpurple
-	cmap[n++] = brown
-	cmap[n++] = lightteal
-	cmap[n++] = greyblue
-	cmap[n++] = tan
-	cmap[n++] = lightgreen
-	cmap[n++] = lightred
-	cmap[n++] = lightblue
-	cmap[n++] = lightorange
-	cmap[n++] = lightpurple
-	cmap[n++] = lightgrey
-	cmap[n++] = lightpink
-	cmap[n++] = greygreen
-	cmap[n++] = yellow
-	cmap[n++] = paleblue
-	cmap[n++] = palered
-	cmap[n++] = palegreen
-	cmap[n++] = paleorange
-	cmap[n++] = paleviolet
-	cmap[n] = cyan
+	# named palettes courtesy of colorbrewer
+	defgrp[n++] = greyblue
+	defgrp[n++] = paleblue
+	defgrp[n++] = lightblue
+	defgrp[n++] = blue
+	defgrp[n++] = purpleblue
+	defgrp[n++] = darkblue
+	defgrp[n++] = bluegreen
+	defgrp[n++] = darkgreen
+	defgrp[n++] = green
+	defgrp[n++] = lightgreen
+	defgrp[n++] = palegreen
+	defgrp[n++] = greygreen
+	defgrp[n++] = greyred
+	defgrp[n++] = palered
+	defgrp[n++] = lightred
+	defgrp[n++] = red
+	defgrp[n++] = orange
+	defgrp[n++] = lightorange
+	defgrp[n++] = paleorange
+	defgrp[n++] = palepurple
+	defgrp[n++] = paleviolet
+	defgrp[n++] = lightpurple
+	defgrp[n++] = purple
+	defgrp[n++] = darkpurple
+	defgrp[n++] = darkbrown
+	defgrp[n++] = greybrown
+	defgrp[n++] = brown
+	defgrp[n++] = lightbrown
+	defgrp[n++] = paleyellow
+	defgrp[n++] = yellow
+	defgrp[n++] = tan
+	defgrp[n++] = lightteal
+	defgrp[n++] = lightgrey
+	n = 0
+	set1[n++] = 0xe41a1c00
+	set1[n++] = 0x377eb800
+	set1[n++] = 0x4daf4a00
+	set1[n++] = 0x984ea300
+	set1[n++] = 0xff7f0000
+	set1[n++] = 0xffff3300
+	set1[n++] = 0xa5452800
+	set1[n++] = 0xf781bf00
+	set1[n++] = 0x99999900
+	n = 0
+	set2[n++] = 0x66c2a500
+	set2[n++] = 0xfc8d6200
+	set2[n++] = 0x8da0cb00
+	set2[n++] = 0xe78ac300
+	set2[n++] = 0xa6d85400
+	set2[n++] = 0xffd92f00
+	set2[n++] = 0xe4c49400
+	set2[n++] = 0xb3b3b300
+	n = 0
+	set3[n++] = 0x8dd3c700
+	set3[n++] = 0xffffb300
+	set3[n++] = 0xbebada00
+	set3[n++] = 0xfb807200
+	set3[n++] = 0x80b1d300
+	set3[n++] = 0xfdb46200
+	set3[n++] = 0xb3de6900
+	set3[n++] = 0xfccde500
+	set3[n++] = 0xd9d9d900
+	set3[n++] = 0xbc80bd00
+	set3[n++] = 0xccebc500
+	set3[n++] = 0xffed6f00
+	n = 0
+	paired[n++] = 0xa6cee300
+	paired[n++] = 0x1f78b400
+	paired[n++] = 0xb2df8a00
+	paired[n++] = 0x33a02c00
+	paired[n++] = 0xfb9a9900
+	paired[n++] = 0xe31a1c00
+	paired[n++] = 0xfdbf6f00
+	paired[n++] = 0xff7f0000
+	paired[n++] = 0xcab2d600
+	paired[n++] = 0x6a3d9a00
+	paired[n++] = 0xffff9900
+	paired[n++] = 0xb1592800
+	n = 0
+	spectral[n++] = 0x5e4fa200
+	spectral[n++] = 0x3288bd00
+	spectral[n++] = 0x66c2a500
+	spectral[n++] = 0xabdda400
+	spectral[n++] = 0xe6f59800
+	spectral[n++] = 0xffffbf00
+	spectral[n++] = 0xfee08b00
+	spectral[n++] = 0xfdae6100
+	spectral[n++] = 0xf45d4300
+	spectral[n++] = 0xd53e4f00
+	spectral[n++] = 0x9e014200
+	n = 0
+	default[n++] = purpleblue
+	default[n++] = green
+	default[n++] = greyred
+	default[n++] = lightbrown
+	default[n++] = palepurple
+	default[n++] = greybrown
+	default[n++] = purple
+	default[n++] = lightteal
+	default[n++] = darkpink
+	default[n++] = blue
+	default[n++] = orange
+	default[n++] = darkgreen
+	default[n++] = red
+	default[n++] = darkpurple
+	default[n++] = brown
+	default[n++] = lightteal
+	default[n++] = greyblue
+	default[n++] = tan
+	default[n++] = darksalmon
+	default[n++] = olive
+	default[n++] = yellowgreen
+	default[n++] = lightgreen
+	default[n++] = lightred
+	default[n++] = lightblue
+	default[n++] = lightorange
+	default[n++] = lightpurple
+	default[n++] = lightgrey
+	default[n++] = lightpink
+	default[n++] = greygreen
+	default[n++] = yellow
+	default[n++] = paleblue
+	default[n++] = palered
+	default[n++] = palegreen
+	default[n++] = paleorange
+	default[n++] = paleviolet
+	default[n++] = cyan
 	OFS = "\t"
 }
 function setdefcols(	n, i){
-	if((n = length(cmap)) <= 0){
+	if((n = length(default)) <= 0){
 		print "E", "no colors to hand"
 		return
 	}
 	for(i in CL)
 		if(!(i in CL))
-			CL[i] = cmap[i % n]
+			CL[i] = default[i % n]
 }
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
@@ -349,20 +415,18 @@ function expand(i){
 	selectall()
 	deselect()
 }
-function groupby(tag, incl, 	acc, n, m){
-	if((n = length(gmap)) <= 0){
-		print "E", "no colors to hand"
-		return
-	}
+function groupby(tag, incl, cm, 	acc, n, m){
 	delete acc
 	m = 0
-	# FIXME: error handling in nested evals?
+	if(cm == "")
+		cm = "defgrp"
 	if(incl == "")
-		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)) acc[c] = m++; CL[i] = gmap[acc[c] % n] } }")
+		eval("{n=length("cm"); for(i in "tag"){ c = "tag"[i]; if(!(c in acc)){ if(int(c) != 0) acc[c] = c; else acc[c] = m++}; CL[i] = "cm"[acc[c] % n] } }")
 	else
-		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = gmap[acc[c] % n] }}; CL[i] = c}}")
+		eval("{n=length("cm"); for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = "cm"[acc[c] % n] }}; CL[i] = c}}")
 	if(m > n)
-		print "E", "more categories than colors"
+		print "warning: more categories than colors"
+	delete acc
 }
 function initx(name, x){
 	if(!checknodename(name))
