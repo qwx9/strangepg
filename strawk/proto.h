@@ -144,8 +144,6 @@ extern	Awknum	getival(Cell *);
 extern	Awkfloat	getfval(Cell *);
 extern	char	*getsval(Cell *);
 extern	char	*getpssval(Cell *);     /* for print */
-extern	char	*tostring(const char *);
-extern	char	*tostringN(const char *, size_t);
 extern	char	*qstring(const char *, int);
 extern	Cell	*catstr(Cell *, Cell *);
 

@@ -89,7 +89,7 @@ void makefields(int n1, int n2)		/* create $n1..$n2 inclusive */
 		fldtab[i] = (Cell *) MALLOC(sizeof(**fldtab));
 		*fldtab[i] = dollar1;
 		snprintf(temp, sizeof(temp), "%d", i);
-		fldtab[i]->nval = tostring(temp);
+		fldtab[i]->nval = STRDUP(temp);
 	}
 }
 
@@ -398,7 +398,7 @@ void fldbld(void)	/* create fields from current record */
 			for (j = 0; j < n; j++)
 				buf[j] = *r++;
 			buf[j] = '\0';
-			fldtab[i]->sval = tostring(buf);
+			fldtab[i]->sval = STRDUP(buf);
 			fldtab[i]->tval = FLD | STR;
 		}
 		*fr = 0;

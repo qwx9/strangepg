@@ -318,11 +318,9 @@ Cell *copycell(Cell *x)	/* make a copy of a cell in a temp */
 	y = gettemp(x->tval & ~(CON|FLD|REC|PTR));
 	y->csub = CCOPY;	/* prevents freeing until call is over */
 	y->nval = isptr(x) ? EMPTY : x->nval;	/* BUG? */
-	if (isstr(x) /* || x->ctype == OCELL */) {
-		y->sval = tostring(x->sval);
-		y->tval &= ~DONTFREE;
-	} else
-		y->tval |= DONTFREE;
+	if (isstr(x) /* || x->ctype == OCELL */)
+		y->sval = tempstrdup(x->sval);
+	y->tval |= DONTFREE;
 	y->val = x->val;
 	return y;
 }

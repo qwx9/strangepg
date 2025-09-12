@@ -592,7 +592,7 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 	}
 	t = vp->sval;
 	if(s != t || s == NULL){
-		t = s && s != EMPTY && *s != 0 ? new ? tostring(s) : s : EMPTY;
+		t = s && s != EMPTY && *s != 0 ? new ? STRDUP(s) : s : EMPTY;
 		if(freeable(vp))
 			xfree(vp->sval);
 		if(t == EMPTY || !new)
@@ -724,8 +724,6 @@ static const char *get_inf_nan(Awkfloat d)
 		return NULL;
 }
 
-/* FIXME: tostring usage: detect if this is a throwaway value,
- * only do it if we plan to keep the string around */
 static inline void update_str_val(Cell *vp)
 {
 	const char *p;
@@ -775,23 +773,6 @@ char *getsval(Cell *vp)       /* get string val of a Cell */
 char *getpssval(Cell *vp)     /* get string val of a Cell for print */
 {
       return get_str_val(vp);
-}
-
-
-char *tostring(const char *s)	/* make a copy of string s */
-{
-	char *p = STRDUP(s);
-	return(p);
-}
-
-/* FIXME: what the fuck */
-char *tostringN(const char *s, size_t n)	/* make a copy of string s */
-{
-	char *p;
-
-	p = (char *) MALLOC(n);
-	strcpy(p, s);
-	return(p);
 }
 
 Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */

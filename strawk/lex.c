@@ -547,7 +547,7 @@ int regexpr(void)
 	*bp = 0;
 	if (c == 0)
 		SYNTAX("non-terminated regular expression %.10s...", buf);
-	yylval.s = tostring(buf);
+	yylval.s = STRDUP(buf);
 	unput('/');
 	RET(REGEXPR);
 }
