@@ -42,6 +42,7 @@ struct Core{
 	char **labels;
 	u32int *colors;
 	Array *strs;
+	Array *ptrs;
 	Array *ids;
 	Array *label;
 	Array *length;
@@ -104,6 +105,7 @@ mktab(Cell *cp, char type)
 		memset(buf, 0xfe, n * m);
 	qlock(&symlock);
 	ap = attach(cp->nval, core.ids, buf, n, atype, nil);
+	setsymtab(cp->nval, cp->nval, ZV, STR|CON, core.ptrs);
 	qunlock(&symlock);
 	return ap;
 }
@@ -194,28 +196,26 @@ vartype(char *val, TVal *v, int iscolor)
 			type = Tstring;
 	}else
 		type = Tstring;
-	if(type == Tstring){
-		qlock(&symlock);
-		cp = lookup(val, symtab);
-		qunlock(&symlock);
-		if(cp != nil){
-			if(cp->tval & FLT){
-				v->f = getfval(cp);
-				return Tfloat;
-			}else if(cp->tval & NUM){
-				v->i = getival(cp);
-				return Tint;
-			}else{
-				val = getsval(cp);
-				if((cp->tval & DONTFREE) == 0)
-					val = estrdup(val);
-			}
+	qlock(&symlock);
+	cp = lookup(val, symtab);
+	qunlock(&symlock);
+	if(cp != nil){
+		if(cp->tval & FLT){
+			v->f = getfval(cp);
+			return Tfloat;
+		}else if(cp->tval & NUM){
+			v->i = getival(cp);
+			return Tint;
 		}else{
-			qlock(&symlock);
-			cp = setsymtab(val, NULL, ZV, STR|CON, core.strs);
-			qunlock(&symlock);
-			val = cp->nval;
+			val = getsval(cp);	/* FIXME: sval could change */
+			if((cp->tval & DONTFREE) == 0)	/* FIXME: when freeable? */
+				val = estrdup(val);
 		}
+	}else{
+		val = estrdup(val);
+		qlock(&symlock);
+		cp = setsymtab(val, NULL, ZV, STR|CON, core.strs);
+		qunlock(&symlock);
 	}
 	v->s = val;
 	return Tstring;
@@ -283,6 +283,9 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	core.degree = attach("degree", core.ids, degp, nnodes, NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nnodes, STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
+	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
+	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
+	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 	qunlock(&symlock);
 }
 
@@ -301,4 +304,9 @@ initvars(void)
 		freesymtab(c);
 	core.strs = makesymtab(NSYMTAB);
 	c->sval = (char *)core.strs;
+	c = setsymtab("ATTACHED", NULL, ZV, CON|ARR, symtab);
+	if(c->sval != EMPTY)
+		freesymtab(c);
+	core.ptrs = makesymtab(NSYMTAB);
+	c->sval = (char *)core.ptrs;
 }
