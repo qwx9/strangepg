@@ -291,10 +291,14 @@ initvars(void)
 {
 	Cell *c;
 
+	c = setsymtab("id", NULL, ZV, CON|ARR, symtab);
+	if(c->sval != EMPTY)
+		freesymtab(c);
 	core.ids = makesymtab(NSYMTAB);
-	c = setsymtab("id", NULL, ZV, ARR, symtab);
 	c->sval = (char *)core.ids;
+	c = setsymtab("STR", NULL, ZV, CON|ARR, symtab);
+	if(c->sval != EMPTY)
+		freesymtab(c);
 	core.strs = makesymtab(NSYMTAB);
-	c = setsymtab("STR", NULL, ZV, ARR, symtab);
 	c->sval = (char *)core.strs;
 }
