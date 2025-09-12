@@ -1593,33 +1593,45 @@ Cell *fassign(Cell *x, Cell *y, int n)
 
 Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 {		/* this is subtle; don't muck with it. */
-	Cell *x, *y;
+	Cell *x, *y, *z;
 	int xf, yf;
+	char *s;
 	short tx, ty;
 	Awknum i, j;
 	Value u, v;
 
 	y = execute(a[1]);
 	x = execute(a[0]);
-	u = getval(x, &tx);
-	v = getval(y, &ty);
+	z = gettemp(0);
+	tx = x->tval;
+	ty = y->tval;
 	if (n == ASSIGN) {	/* ordinary assignment */
 		if (x == y && !(tx & (FLD|REC)) && x != nfloc)
 			;	/* self-assignment: leave alone unless it's a field or NF */
-		if(ty & NUM){
+		else if(ty & NUM){
 			setval(x, y);
+			z->val = x->val;
+			z->tval |= x->tval & (NUM|FLT);
+			/*
 			if(y->tval & STR){
 				tx = x->tval & ~DONTFREE;
 				setsval(x, getsval(y), 1);
 				x->tval |= tx;
 			}
-		}else if(y->tval & STR)
-			setsval(x, getsval(y), 1);
-		else
+			*/
+		}else if(y->tval & STR){
+			s = getsval(y);
+			setsval(x, s, 1);
+			z->sval = x->sval;
+			z->tval |= STR|DONTFREE;
+		}else
 			funnyvar(y, "read value of");
 		tempfree(y);
-		return(x);
+		tempfree(x);
+		return z;
 	}
+	u = getval(x, &tx);
+	v = getval(y, &ty);
 	xf = tx & FLT;
 	yf = ty & FLT;
 	if(xf || yf)
@@ -1674,7 +1686,10 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 	}
 	tempfree(y);
 	setival(x, i);
-	return(x);
+	z->tval |= NUM;
+	z->val = x->val;
+	tempfree(x);
+	return z;
 }
 
 Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
