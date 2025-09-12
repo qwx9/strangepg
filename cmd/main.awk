@@ -125,12 +125,11 @@ BEGIN{
 	cmap[n] = cyan
 	OFS = "\t"
 }
-function setdefcols(	n, i, c, oc){
+function setdefcols(	n, i){
 	if((n = length(cmap)) <= 0){
 		print "E", "no colors to hand"
 		return
 	}
-	oc = 0
 	for(i in CL)
 		if(!(i in CL))
 			CL[i] = cmap[i % n]
@@ -222,9 +221,26 @@ function findnode(name,	i){
 	selectnodebyid(i)
 	print "N", i
 }
+# FIXME: cache it?
+function nodeinfostr(i,	a, t){
+	s = node[i] ", LN=" LN[i]
+	xxx = ""	# has to be global for eval
+	for(a in ATTACHED){
+		if(a == "degree" || a == "LN")
+			continue
+		eval("{ xxx = (i in " a ") ? " a "[i] : \"\" }")
+		if(xxx != "")
+			s = s " " a "=" xxx
+	}
+	return s
+}
 function selinfostr(	i, l, n, m, s){
 	if(length(selected) == 0)
 		return ""
+	# very deliberate and assuming nodes for now
+	if(length(selected) == 0)
+		for(i in selected)
+			return nodeinfostr(i)
 	l = 0
 	s = ""
 	n = m = 0
@@ -246,7 +262,7 @@ function selinfostr(	i, l, n, m, s){
 function nodeinfo(i,	name, s){
 	if(!checknodeid(i))
 		return
-	s = "Node: " node[i] ", length=" LN[i]
+	s = "Node: " nodeinfostr(i)
 	info(s)
 }
 function deselect(	i){
