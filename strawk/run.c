@@ -1594,7 +1594,7 @@ Cell *fassign(Cell *x, Cell *y, int n)
 
 Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 {		/* this is subtle; don't muck with it. */
-	Cell *x, *y, *z;
+	Cell *x, *y;
 	int xf, yf;
 	char *s;
 	short tx, ty;
@@ -1603,7 +1603,6 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 
 	y = execute(a[1]);
 	x = execute(a[0]);
-	z = gettemp(0);
 	tx = x->tval;
 	ty = y->tval;
 	if (n == ASSIGN) {	/* ordinary assignment */
@@ -1611,8 +1610,6 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 			;	/* self-assignment: leave alone unless it's a field or NF */
 		else if(ty & NUM){
 			setval(x, y);
-			z->val = x->val;
-			z->tval |= x->tval & (NUM|FLT);
 			/*
 			if(y->tval & STR){
 				tx = x->tval & ~DONTFREE;
@@ -1623,13 +1620,10 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 		}else if(y->tval & STR){
 			s = getsval(y);
 			setsval(x, s, 1);
-			z->sval = x->sval;
-			z->tval |= STR|DONTFREE;
 		}else
 			funnyvar(y, "read value of");
 		tempfree(y);
-		tempfree(x);
-		return z;
+		return x;
 	}
 	u = getval(x, &tx);
 	v = getval(y, &ty);
@@ -1687,10 +1681,7 @@ Cell *assign(TNode **a, int n)	/* a[0] = a[1], a[0] += a[1], etc. */
 	}
 	tempfree(y);
 	setival(x, i);
-	z->tval |= NUM;
-	z->val = x->val;
-	tempfree(x);
-	return z;
+	return x;
 }
 
 Cell *cat(TNode **a, int q)	/* a[0] cat a[1] */
@@ -2198,7 +2189,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	Awknum u = 0, tmp;
 	int t;
 	char *buf, *olex, *oeval;
-	TNode *nextarg;
+	TNode *nextarg, *orunner;
 
 	t = ptoi(a[0]);
 	switch(t){
