@@ -991,8 +991,10 @@ int awkmain(int argc, char **argv)
 	// other awks and with what most users expect. So comment it out.
 	setlocale(LC_NUMERIC, ""); /* back to whatever it is locally */
 #endif
-	if (fs)
+	if (fs){
+		xfree(*FS);
 		*FS = qstring(fs, '\0');
+	}
 	DPRINTF("errorflag=%d\n", errorflag);
 	if (errorflag == 0) {
 		compile_time = RUNNING;
