@@ -66,8 +66,6 @@ static Cell	contcell	={ OJUMP, JCONT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jcont	= &contcell;
 static Cell	nextcell	={ OJUMP, JNEXT, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jnext	= &nextcell;
-static Cell	exitcell	={ OJUMP, JEXIT, NUM, 0, 0, {.i=0}, NULL };
-Cell	*jexit	= &exitcell;
 static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jret	= &retcell;
 static Cell	tempcell	={ OCELL, CTEMP, DONTFREE, 0, EMPTY, {.i=0}, NULL };

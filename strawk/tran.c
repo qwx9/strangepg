@@ -77,21 +77,21 @@ extern	size_t	npfile;
 
 void syminit(void)	/* initialize symbol table with builtin vars */
 {
-	literal0 = setsymtab("0", NULL, ZV, NUM|CON|DONTFREE, symtab);
+	literal0 = setsymtab("0", EMPTY, ZV, NUM|CON, symtab);
 	/* this is used for if(x)... tests: */
-	nullloc = setsymtab("$zero&null", NULL, ZV, NUM|STR|CON|DONTFREE, symtab);
+	nullloc = setsymtab("$zero&null", EMPTY, ZV, STR|NUM|CON, symtab);
 	nullnode = celltonode(nullloc, CCON);
 
 	/* default FS and OFS assumed 0x20 in tests */
-	fsloc = setsymtab("FS", " ", ZV, STR|DONTFREE, symtab);
+	fsloc = setsymtab("FS", " ", ZV, STR, symtab);
 	FS = &fsloc->sval;
-	rsloc = setsymtab("RS", "\n", ZV, STR|DONTFREE, symtab);
+	rsloc = setsymtab("RS", "\n", ZV, STR, symtab);
 	RS = &rsloc->sval;
-	ofsloc = setsymtab("OFS", " ", ZV, STR|DONTFREE, symtab);
+	ofsloc = setsymtab("OFS", " ", ZV, STR, symtab);
 	OFS = &ofsloc->sval;
-	orsloc = setsymtab("ORS", "\n", ZV, STR|DONTFREE, symtab);
+	orsloc = setsymtab("ORS", "\n", ZV, STR, symtab);
 	ORS = &orsloc->sval;
-	OFMT = &setsymtab("OFMT", "%.6g", ZV, STR|DONTFREE, symtab)->sval;
+	OFMT = &setsymtab("OFMT", "%.6g", ZV, STR, symtab)->sval;
 	FILENAME = &setsymtab("FILENAME", NULL, ZV, STR|DONTFREE, symtab)->sval;
 	nfloc = setsymtab("NF", NULL, ZV, NUM, symtab);
 	NF = &nfloc->val.i;
@@ -99,7 +99,7 @@ void syminit(void)	/* initialize symbol table with builtin vars */
 	NR = &nrloc->val.i;
 	fnrloc = setsymtab("FNR", NULL, ZV, NUM, symtab);
 	FNR = &fnrloc->val.i;
-	subseploc = setsymtab("SUBSEP", "\034", ZV, STR|DONTFREE, symtab);
+	subseploc = setsymtab("SUBSEP", "\034", ZV, STR, symtab);
 	SUBSEP = &subseploc->sval;
 	rstartloc = setsymtab("RSTART", NULL, ZV, NUM, symtab);
 	RSTART = &rstartloc->val.i;
