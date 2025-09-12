@@ -106,8 +106,10 @@ int adjbuf(char **pbuf, int *psiz, int minlen, int quantum, char **pbptr,
 
 void run(TNode *a)	/* execution of parse tree starts here */
 {
+	Cell *cp;
 
-	execute(a);
+	cp = execute(a);
+	tempfree(cp);
 }
 
 Cell *execute(TNode *u)	/* execute a node of the parse tree */
@@ -496,10 +498,13 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 	if (x == symtabloc) {
 		FATAL("cannot delete SYMTAB or its elements");
 	}
-	if (!isarr(x))
+	if (!isarr(x)){
+		tempfree(x);
 		return True;
-	else if(isptr(x))
+	} else if(isptr(x)){
+		tempfree(x);
 		return False;	/* FIXME: can't delete */
+	}
 	if (a[1] == NULL) {	/* delete the elements, not the table */
 		freesymtab(x);
 		x->tval &= ~STR;
@@ -706,7 +711,7 @@ int u8_byte2char(const char *s, int bytenum)
 
 Cell *matchop(TNode **a, int n)	/* ~ and match() */
 {
-	Cell *x, *y, *z;
+	Cell *x, *y;
 	char *s, *t;
 	int i;
 	int cstart, cpatlen, len;
@@ -728,7 +733,6 @@ Cell *matchop(TNode **a, int n)	/* ~ and match() */
 		i = (*mf)(pfa, s);
 		tempfree(y);
 	}
-	z = x;
 	if (n == MATCHFCN) {
 		int start = patbeg - s + 1; /* origin 1 */
 		if (patlen < 0) {
@@ -747,15 +751,14 @@ Cell *matchop(TNode **a, int n)	/* ~ and match() */
 
 		setival(rstartloc, start);
 		setival(rlengthloc, patlen);
-		x = gettemp(NUM);
-		x->val.i = start;
+		y = gettemp(NUM);
+		y->val.i = start;
 	} else if ((n == MATCH && i == 1) || (n == NOTMATCH && i == 0))
-		x = True;
+		y = True;
 	else
-		x = False;
-
-	tempfree(z);
-	return x;
+		y = False;
+	tempfree(x);
+	return y;
 }
 
 
@@ -909,7 +912,6 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 		m = 1;
 	else if (m > k)
 		m = k;
-	tempfree(y);
 	if (a[2] != NULL) {
 		n = getival(z);
 		tempfree(z);
@@ -921,12 +923,13 @@ Cell *substr(TNode **a, int nnn)		/* substr(a[0], a[1], a[2]) */
 		n = k - m;
 	/* m is start, n is length from there */
 	DPRINTF("substr: m=%d, n=%d, s=%s\n", m, n, s);
-	y = gettemp(STR);
 	mb = u8_char2byte(s, m-1); /* byte offset of start char in s */
 	nb = u8_char2byte(s, m-1+n);  /* byte offset of end+1 char in s */
 
 	temp = s[nb];	/* with thanks to John Linderman */
 	s[nb] = '\0';
+	tempfree(y);
+	y = gettemp(STR);
 	setsval(y, s + mb, 1);
 	s[nb] = temp;
 	tempfree(x);
@@ -944,7 +947,6 @@ Cell *sindex(TNode **a, int nnn)		/* index(a[0], a[1]) */
 	y = execute(a[1]);
 	s2 = getsval(y);
 
-	z = gettemp(NUM);
 	for (p1 = s1; *p1 != '\0'; p1++) {
 		for (q = p1, p2 = s2; *p2 != '\0' && *q == *p2; q++, p2++)
 			continue;
@@ -963,8 +965,9 @@ Cell *sindex(TNode **a, int nnn)		/* index(a[0], a[1]) */
 	}
 	tempfree(x);
 	tempfree(y);
+	z = gettemp(NUM);
 	setival(z, v);
-	return(z);
+	return z;
 }
 
 int has_utf8(char *s)	/* return 1 if s contains any utf-8 (2 bytes or more) character */
@@ -1970,6 +1973,7 @@ static Cell *ptrinstat(Array *ap, Cell *vp, TNode *expr)
 		}
 		tempfree(x);
 	}
+	tempfree(vp);
 	return True;
 }
 
@@ -1981,8 +1985,11 @@ Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 
 	vp = execute(a[0]);
 	arrayp = execute(a[1]);
-	if (!isarr(arrayp))
+	if (!isarr(arrayp)){
+		tempfree(vp);
+		tempfree(arrayp);
 		return True;
+	}
 	tp = (Array *) arrayp->sval;
 	tempfree(arrayp);
 	if (isptr(arrayp))
@@ -2003,7 +2010,7 @@ Cell *instat(TNode **a, int n)	/* for (a[0] in a[1]) a[2] */
 			tempfree(x);
 		}
 	}
-	// FIXME: not tempfreeing vp?
+	tempfree(vp);
 	return True;
 }
 
