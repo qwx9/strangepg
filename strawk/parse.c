@@ -190,7 +190,8 @@ TNode *makearr(TNode *p)
 		else if (!isarr(cp)) {
 			xfree(cp->sval);
 			cp->sval = (char *) makesymtab(NSYMTAB);
-			cp->tval = ARR;
+			cp->tval &= ~(STR|NUM|FLT);
+			cp->tval = ARR|DONTFREE;
 		}
 	}
 	return p;

@@ -282,7 +282,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 					tempfree(t);
 				} else {
 					oargs[i]->tval = t->tval;
-					oargs[i]->tval &= ~(STR|NUM|FLT|DONTFREE);	/* FIXME: ???? */
+					oargs[i]->tval &= ~(STR|NUM|FLT);	/* FIXME: ???? */
 					oargs[i]->sval = t->sval;
 					oargs[i]->val = t->val;
 					tempfree(t);
@@ -437,8 +437,8 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 		DPRINTF("making %s into an array\n", NN(x->nval));
 		if (freeable(x))
 			xfree(x->sval);
-		x->tval &= ~(STR|NUM|FLT|DONTFREE);
-		x->tval |= ARR;
+		x->tval &= ~(STR|NUM|FLT);
+		x->tval |= ARR|DONTFREE;
 		x->sval = (char *) makesymtab(NSYMTAB);
 	}
 	ap = (Array *)x->sval;
@@ -517,7 +517,7 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 	if (a[1] == NULL) {	/* delete the elements, not the table */
 		freesymtab(x);
 		x->tval &= ~STR;
-		x->tval |= ARR;
+		x->tval |= ARR|DONTFREE;
 		x->sval = (char *) makesymtab(NSYMTAB);
 	} else {
 		char *buf = makearraystring(a[1], __func__);
@@ -1796,7 +1796,7 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	freesymtab(ap);
 	DPRINTF("split: s=|%s|, a=%s, sep=|%s|\n", s, NN(ap->nval), fs);
 	ap->tval &= ~STR;
-	ap->tval |= ARR;
+	ap->tval |= ARR|DONTFREE;
 	ap->sval = (char *) makesymtab(NSYMTAB);
 
 	n = 0;
