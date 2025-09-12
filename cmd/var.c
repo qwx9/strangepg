@@ -8,7 +8,7 @@
 #include "strawk/awk.h"
 #include "var.h"
 
-/* FIXME: broken: expand, csv loading, cigars; integer labels */
+/* FIXME: broken: cigars */
 
 extern QLock symlock;
 extern QLock buflock;	/* FIXME */
@@ -239,13 +239,6 @@ void
 setnamedtag(char *tag, char *name, char *val)
 {
 	settag(tag, getid(name), val);
-}
-
-/* FIXME */
-int
-gettab(char *)
-{
-	return 0;
 }
 
 voff

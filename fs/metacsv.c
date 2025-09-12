@@ -15,12 +15,10 @@
 /* FIXME: handle crnl */
 /* FIXME: quoting? */
 
-int	gettab(char*);	/* FIXME */
-
 static char **
 csvheader(File *f, int *wait)
 {
-	char z, c, w;
+	char c, w;
 	char *p, *s, **tags;
 
 	*wait = w = 0;
@@ -52,11 +50,12 @@ csvheader(File *f, int *wait)
 			}
 		}
 		/* don't wait for csv to load if there are  no layout tags */
-		if(cistrncmp(s, "color", 5) == 0){
+		if(cistrncmp(s, "color", 5) == 0)
 			s = "CL";
+		else if(strlen(s) == 2
+		&& (s[0] == 'f' && (s[1] == 'x' || s[1] == 'y' || s[1] == 'z')
+		|| s[1] == '0' && (s[0] == 'x' || s[0] == 'y' || s[0] == 'z')))
 			w++;
-		}else if((z = gettab(s)) >= 0 && z < Tlayout)
-				w++;
 		p = estrdup(s);
 		dypush(tags, p);
 	}
