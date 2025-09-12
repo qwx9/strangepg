@@ -19,21 +19,21 @@ LDFLAGS?=
 LDLIBS:= -lm
 
 ifdef DEBUG
-	ifdef FORTIFY
+	ifdef ASAN
 		CFLAGS+= -O1 -g -Wall -pedantic -Wcast-qual -Wno-parentheses
 		CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
 		CFLAGS+= -fasynchronous-unwind-tables
 		CFLAGS+= -fstack-clash-protection -fstack-protector-strong
+		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined \
+				 -fsanitize-address-use-after-scope
+		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined \
+				  -fsanitize-address-use-after-scope
 	else
 		CFLAGS+= -O0 -pg -g -Wall -pedantic -Wcast-qual -Wno-parentheses
 	endif
 	ifdef PROFILE
 		CFLAGS+= -pg
 		LDFLAGS+= -pg
-	endif
-	ifdef ASAN
-		CFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
-		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
 	endif
 	ifeq ($(CC), clang)
 		CFLAGS+= -glldb
