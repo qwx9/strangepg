@@ -276,6 +276,10 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 					freesymtab(t);
 					t->csub = CTEMP;
 					tempfree(t);
+				} else if (isptr(t)) {
+					/* FIXME: we disallow type changes and updates here,
+					 * but check if anything else should be done here */
+					tempfree(t);
 				} else {
 					oargs[i]->tval = t->tval;
 					oargs[i]->tval &= ~(STR|NUM|FLT|DONTFREE);	/* FIXME: ???? */

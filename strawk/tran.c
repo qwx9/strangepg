@@ -445,7 +445,8 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 	} else if (vp == ofsloc) {
 		if (!donerec)
 			recbld();
-	} else if (isptr(vp)) {
+	}
+	if (isptr(vp)) {
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
 		ap = (Array *)vp->cnext;
@@ -503,7 +504,8 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 	} else if (vp == ofsloc) {
 		if (!donerec)
 			recbld();
-	} else if (isptr(vp)) {
+	}
+	if (isptr(vp)) {
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
 		ap = (Array *)vp->cnext;
