@@ -85,10 +85,8 @@ readedgetags(Aux *a, File *f)
 		if((s = nextfield(f)) == nil)
 			sysfatal("readedgetags: bug: short read, line %d", f->nr);
 		USED(s);
-		/* FIXME: edge ids are now separate
 		if(strcmp(s, "*") != 0)
-			settag("cigar", id, s);
-		*/
+			setedgetag("cigar", id, s);
 		while((s = nextfield(f)) != nil){
 			DPRINT(Debugmeta, "readedgetags: [%d] %s", id, s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
@@ -99,8 +97,8 @@ readedgetags(Aux *a, File *f)
 				}
 				continue;
 			}
-			/* FIXME: unhandled for now; these names aren't used, and we
-			 * need an actual correspondence with cid's */
+			s[2] = 0;
+			setedgetag(s, id, s+5);
 			nerr = 0;
 		}
 	}

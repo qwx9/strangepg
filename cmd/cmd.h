@@ -49,6 +49,7 @@ extern int infd[2], outfd[2];
 char*	getname(voff);
 voff	getid(char*);
 void	loadbatch(void);
+void	setedgetag(char*, voff, char*);
 void	settag(char*, voff, char*);
 void	setnamedtag(char*, char*, char*);
 voff	pushname(char*);

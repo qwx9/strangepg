@@ -8,8 +8,6 @@
 #include "strawk/awk.h"
 #include "var.h"
 
-/* FIXME: broken: cigars */
-
 extern QLock symlock;
 extern QLock buflock;	/* FIXME */
 
@@ -43,6 +41,7 @@ struct Core{
 	u32int *colors;
 	Array *strs;
 	Array *ptrs;
+	Array *eptrs;
 	Array *ids;
 	Array *label;
 	Array *length;
@@ -86,10 +85,11 @@ mktab(Cell *cp, char type)
 	int m;
 	short atype;
 	void *buf;
-	Array *ap;
+	Array *ap, *ids, *ptrs;
 
 	if(isptr(cp))
 		return (Array *)cp->sval;
+	ids = nil;
 	m = 0;
 	atype = 0;
 	switch(type){
@@ -99,13 +99,20 @@ mktab(Cell *cp, char type)
 	case Tstring: m = sizeof(char*); atype = STR; break;
 	default: panic("mktab: unknown type %o\n", type);
 	}
-	n = dylen(core.labels);
+	if(cp->tval & UNS){	/* FIXME: hack */
+		n = dylen(edges);
+		ptrs = core.eptrs;
+	}else{
+		n = dylen(core.labels);
+		ids = core.ids;
+		ptrs = core.ptrs;
+	}
 	buf = emalloc(n * m);
 	if(type != Tstring)
 		memset(buf, 0xfe, n * m);
 	qlock(&symlock);
-	ap = attach(cp->nval, core.ids, buf, n, atype, nil);
-	setsymtab(cp->nval, cp->nval, ZV, STR|CON, core.ptrs);
+	ap = attach(cp->nval, ids, buf, n, atype, nil);
+	setsymtab(cp->nval, cp->nval, ZV, STR|CON, ptrs);
 	qunlock(&symlock);
 	return ap;
 }
@@ -220,6 +227,29 @@ vartype(char *val, TVal *v, int iscolor)
 }
 
 void
+setedgetag(char *tag, voff id, char *val)
+{
+	char type, etag[32];
+	Cell *cp;
+	TVal v;
+
+	DPRINT(Debugawk, "setedgetag %s[%d] = %s", tag, id, val);
+	qlock(&symlock);
+	cp = setsymtab(tag, NULL, ZV, NUM|UNS, symtab);	/* FIXME: hack */
+	qunlock(&symlock);
+	if(isptr(cp) && ((Array *)cp->sval)->ids != nil
+	|| !isptr(cp) && (cp->tval & UNS) == 0){
+		DPRINT(Debuginfo, "%s is a node tag, renaming\n", tag);
+		snprint(etag, sizeof etag, "e%s", tag);
+		qlock(&symlock);
+		cp = setsymtab(etag, NULL, ZV, NUM|UNS, symtab);
+		qunlock(&symlock);
+	}
+	type = vartype(val, &v, 0);
+	pushval(cp, id, type, v);
+}
+
+void
 settag(char *tag, voff id, char *val)
 {
 	char type;
@@ -270,7 +300,8 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	dyresize(core.colors, nnodes);
 	memset(core.colors, 0xfe, nnodes * sizeof *core.colors);
 	qlock(&symlock);
-	core.length = attach("LN", core.ids, lenp, nnodes, RO|NUM|USG, setnodelength);
+	/* FIXME: make it RO after loading? */
+	core.length = attach("LN", core.ids, lenp, nnodes, NUM|USG, setnodelength);
 	core.degree = attach("degree", core.ids, degp, nnodes, RO|NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nnodes, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
@@ -300,4 +331,9 @@ initvars(void)
 		freesymtab(c);
 	core.ptrs = makesymtab(NSYMTAB);
 	c->sval = (char *)core.ptrs;
+	c = setsymtab("EATTACHED", NULL, ZV, CON|ARR, symtab);
+	if(c->sval != EMPTY)
+		freesymtab(c);
+	core.eptrs = makesymtab(NSYMTAB);
+	c->sval = (char *)core.eptrs;
 }

@@ -262,20 +262,29 @@ function checknodename(name){
 	}
 	return 1
 }
-function edgeinfostr(u, v, a, b,	s){
+function edgeinfostr(u, v, a, b, e,	s){
 	s = node[u] a node[v] b
-	if(i in cigar)
-		s = s ", CIGAR=" cigar[i]
+	if(e == "")
+		return s
+	xxx = ""	# has to be global for eval
+	for(a in EATTACHED){
+		eval("{ xxx = (e in " a ") ? " a "[e] : \"\" }")
+		if(xxx != ""){
+			if(a ~ /^e..$/)
+				a = substr(a, 2)
+			s = s " " a "=" xxx
+		}
+	}
 	return s
 }
-function edgeinfo(e,	u, v, a, b){
-	u = e >> 32
-	v = e >> 2 & 0x3fffffff
+function edgeinfo(w, e,	u, v, a, b){
+	u = w >> 32
+	v = w >> 2 & 0x3fffffff
 	if(!checknodeid(u) || !checknodeid(v))
 		return
-	a = e & 1 ? "-" : "+"
-	b = e & 2 ? "-" : "+"
-	info("Edge: " edgeinfostr(u, v, a, b))
+	a = w & 1 ? "-" : "+"
+	b = w & 2 ? "-" : "+"
+	info("Edge: " edgeinfostr(u, v, a, b, e))
 }
 function findnode(name,	i){
 	if(!checknodename(name))

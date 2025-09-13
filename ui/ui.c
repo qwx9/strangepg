@@ -241,12 +241,35 @@ mousedrag(float Δx, float Δy)
 	return 1;
 }
 
+static inline ioff
+hoveredge(ioff idx)
+{
+	int fake;
+	ioff i, j, x, eid;
+	s64int w;
+
+	if((w = getvedge(idx)) == -1){
+		DPRINT(Debugui, "mousehover: can\'t get edge: %s", error());
+		return -1;
+	}
+	eid = w & 0x7fffffff;
+	x = edges[eid];
+	i = w >> 32;
+	j = x >> 2;
+	fake = nodes[i].id != i || nodes[j].id != j;
+	w = w & ~0xffffffffULL | x;
+	if(!fake)
+		pushcmd("edgeinfo(%D,%d)", w, eid);
+	else
+		pushcmd("edgeinfo(%D)", w);
+	return 0;
+}
+
 static ioff
 mousehover(int x, int y)
 {
 	ioff id, idx;
 	int isedge;
-	s64int w;
 	union{
 		ioff i;
 		u32int u;
@@ -266,11 +289,8 @@ mousehover(int x, int y)
 	isedge = u.u & 1UL<<31;
 	idx = u.u & ~(1UL<<31);
 	if(isedge){
-		if((w = getvedge(idx)) == -1){
-			DPRINT(Debugui, "mousehover: can\'t get edge: %s", error());
+		if(hoveredge(idx) < 0)
 			return -1;
-		}
-		pushcmd("edgeinfo(%D)", w);	/* untranslated to avoid lookup lag */
 	}else{
 		/* FIXME: race between coarsening and ui mouse hover/select;
 		 * box sel could add shit that is no longer there, etc. */

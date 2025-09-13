@@ -145,7 +145,7 @@ resetvedges(void)
 {
 	ioff i, j, x, *e, *ee;
 	usize n;
-	Node *u, *ue, *v;
+	Node *u, *ue;
 	u64int w, *wp;
 
 	n = dylen(redges);
@@ -157,8 +157,7 @@ resetvedges(void)
 			j = x >> 2;
 			if(i > j || i == j && (x & 1) == 1)
 				continue;
-			v = nodes + j;
-			w = (u64int)u->id << 32 | v->id << 2 | x & 3;
+			w = (u64int)i << 32 | (e - edges);
 			*wp++ = w;
 		}
 	}
