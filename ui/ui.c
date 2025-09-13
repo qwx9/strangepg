@@ -292,8 +292,6 @@ mousehover(int x, int y)
 		if(hoveredge(idx) < 0)
 			return -1;
 	}else{
-		/* FIXME: race between coarsening and ui mouse hover/select;
-		 * box sel could add shit that is no longer there, etc. */
 		if((id = getrealid(idx)) < 0){
 			warn("mousehover: %s\n", error());
 			return -1;
@@ -371,11 +369,13 @@ int
 mouseevent(float x, float y, float Δx, float Δy)
 {
 	int m;
-	static int omod, inwin;
+	static int omod = 0xcafebabe, inwin;
 	khint_t k;
 
-	if(Δx == 0.0f && Δy == 0.0f && mod == omod)	/* first event */
+	if(omod == 0xcafebabe){	/* first event */
+		omod = 0;
 		return 0;
+	}
 	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
 	m = mod & Mmask;
 	/* FIXME: clean up */
