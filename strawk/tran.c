@@ -744,9 +744,13 @@ static inline void update_str_val(Cell *vp)
 		snprintf(s, sizeof(s), "%lld", vp->val.i);
 	else
 		snprintf(s, sizeof(s), *OFMT, vp->val.f);
-	vp->sval = STRDUP(s);
-	if(!isptr(vp))
-		vp->tval &= ~DONTFREE;
+	if(vp->csub == CTEMP || vp->csub == CCOPY)
+		vp->sval = tempstrdup(s);
+	else{
+		vp->sval = STRDUP(s);
+		if(!isptr(vp))
+			vp->tval &= ~DONTFREE;
+	}
 	vp->tval |= STR;
 }
 
