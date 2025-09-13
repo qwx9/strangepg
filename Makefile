@@ -1,5 +1,5 @@
 PROGRAM:= strangepg
-VERSION:= 0.9.0
+VERSION:= 0.9.1
 DIRS:=
 
 ifeq ($(wildcard .git),.git)
@@ -63,7 +63,9 @@ CFLAGS+= -Wall -Wformat=2 -Wunused -Wno-parentheses -Wno-unknown-pragmas
 ifdef DEBUG
 	ifdef ASAN
 		CFLAGS+= -O1 -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		CFLAGS+= -fsanitize-address-use-after-scope
 		LDFLAGS+= -fsanitize=address -fsanitize=leak -fsanitize=undefined
+		LDFLAGS+= -fsanitize-address-use-after-scope
 		CPPFLAGS+= -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fexceptions
 	else
 		CFLAGS+= -O0
