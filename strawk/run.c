@@ -678,7 +678,7 @@ int u8_strlen(const char *s)
 		}
 		totlen++;
 		if (i > n)
-			FATAL("bad utf count [%s] n=%d i=%d\n", s, n, i);
+			FATAL("bad utf count [%s] n=%d i=%d", s, n, i);
 	}
 	return totlen;
 }

@@ -455,7 +455,7 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
 		if(vp->tval & RO)
-			FATAL("can\'t assign to read-only value\n");
+			FATAL("can\'t assign to read-only value");
 		ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
@@ -516,7 +516,7 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
 		if(vp->tval & RO)
-			FATAL("can\'t assign to read-only value\n");
+			FATAL("can\'t assign to read-only value");
 		ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
@@ -596,7 +596,7 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 			recbld();
 	}
 	if(isptr(vp) && vp->tval & RO)
-		FATAL("can\'t assign to read-only value\n");
+		FATAL("can\'t assign to read-only value");
 	t = vp->sval;
 	if(s != t || s == NULL){
 		t = s && s != EMPTY && *s != 0 ? new ? STRDUP(s) : s : EMPTY;

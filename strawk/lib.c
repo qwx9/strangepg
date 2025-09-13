@@ -308,7 +308,7 @@ void setclvar(char *s)	/* set var=value from s */
 	if((q = lookup(s, symtab)) != NULL){
 		if(strcmp(q->sval, p) != 0){
 			if(isptr(q) && q->tval & RO)
-				FATAL("can\'t assign to read-only value\n");
+				FATAL("can\'t assign to read-only value");
 			if(freeable(q))
 				xfree(q->sval);
 			if(r = is_number(p, &v)){
@@ -703,9 +703,10 @@ void ERROR(FILE *fp)
 {
 	extern TNode *curnode;
 
-	if (runnerup != NULL)
-		eprint(fp);
-	else if (compile_time != ERROR_PRINTING) {
+	if (runnerup != NULL){
+		if (!eprint(fp))
+			putc('\n', fp);
+	}else if (compile_time != ERROR_PRINTING) {
 		fprintf(fp, "\n");
 		if (NR && *NR > 0) {
 			fprintf(fp, " input record number %d", (int) (*FNR));
@@ -725,16 +726,16 @@ void ERROR(FILE *fp)
 		fprintf(fp, "\n");
 }
 
-void eprint(FILE *fp)	/* try to print context around error */
+int eprint(FILE *fp)	/* try to print context around error */
 {
 	char *p, *q;
 	int c;
 	extern char ebuf[], *ep;
 
 	if (compile_time != COMPILING || ebuf == ep)
-		return;
+		return 0;
 	if (ebuf == ep)
-		return;
+		return 0;
 	p = ep - 1;
 	if (p > ebuf && *p == '\n')
 		p--;
@@ -760,6 +761,7 @@ void eprint(FILE *fp)	/* try to print context around error */
 		}
 	putc('\n', fp);
 	ep = ebuf;
+	return 1;
 }
 
 void bclass(int c)
