@@ -78,7 +78,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
+	warn("usage: %s [-AEHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -93,6 +93,7 @@ help(void)
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
 		"-A             Disable transparency (for performance)\n"
+		"-E             Disable loading edge tags\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
@@ -108,7 +109,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-AHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-AEHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
 }
 
 static char **
@@ -158,6 +159,7 @@ parseargs(int argc, char **argv)
 			usage();
 		}
 		break;
+	case 'E': status |= FSnoetags; break;
 	case 'H': drawing.flags |= DFhidpi; break;
 	case 'M': drawing.flags |= DFmsaa; break;
 	case 'W': debug |= Debuginfo; break;

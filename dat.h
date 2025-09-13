@@ -35,7 +35,7 @@ enum{
 struct Node{
 	ioff id;
 	uchar flags;
-	vlong length;	/* FIXME: shouldn't be here? */
+	vlong length;
 	Vertex pos0;	/* FIXME: shouldn't be here, only query */
 	ioff eoff;
 	ioff nedges;
@@ -87,6 +87,7 @@ struct Clk{
 enum{
 	FSlockedctab = 1<<0,
 	FSquiet = 1<<1,
+	FSnoetags = 1<<2,
 };
 extern int status;
 

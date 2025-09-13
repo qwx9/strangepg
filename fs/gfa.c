@@ -75,6 +75,8 @@ readedgetags(Aux *a, File *f)
 	ioff id;
 	vlong off, *o, *oe;
 
+	if(status & FSnoetags)
+		return 0;
 	for(nerr=0, id=0, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++){
 		if((off = *o) < 0)
 			continue;
@@ -84,7 +86,6 @@ readedgetags(Aux *a, File *f)
 			sysfatal("readedgetags: %s", error());
 		if((s = nextfield(f)) == nil)
 			sysfatal("readedgetags: bug: short read, line %d", f->nr);
-		USED(s);
 		if(strcmp(s, "*") != 0)
 			setedgetag("cigar", id, s);
 		while((s = nextfield(f)) != nil){
