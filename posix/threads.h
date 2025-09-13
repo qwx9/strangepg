@@ -22,6 +22,18 @@ void	initqlock(QLock*);
 void	initrwlock(RWLock*);
 void	nukerwlock(RWLock*);
 
+static inline int
+canrlock(RWLock *l)
+{
+	return pthread_rwlock_tryrdlock(l) == 0 ? 1 : 0;
+}
+
+static inline int
+canwlock(RWLock *l)
+{
+	return pthread_rwlock_trywrlock(l) == 0 ? 1 : 0;
+}
+
 static inline void
 rlock(RWLock *l)
 {
@@ -48,6 +60,12 @@ runlock(RWLock *l)
 {
 	if(pthread_rwlock_unlock(l) != 0)
 		sysfatal("pthread_rwlock_unlock: %s", error());
+}
+
+static inline int
+canqlock(QLock *l)
+{
+	return pthread_mutex_trylock(l) == 0 ? 1 : 0;
 }
 
 static inline void
