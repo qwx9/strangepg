@@ -267,8 +267,9 @@ function edgeinfostr(u, v, a, b, e,	s){
 	if(e == "")
 		return s
 	xxx = ""	# has to be global for eval
+	xxe = e
 	for(a in EATTACHED){
-		eval("{ xxx = (e in " a ") ? " a "[e] : \"\" }")
+		eval("{ xxx = (xxe in " a ") ? " a "[xxe] : \"\" }")
 		if(xxx != ""){
 			if(a ~ /^e..$/)
 				a = substr(a, 2)
@@ -294,13 +295,14 @@ function findnode(name,	i){
 	print "N", i
 }
 # FIXME: cache it?
-function nodeinfostr(i,	a, t){
+function nodeinfostr(i,	a, s){
 	s = node[i] ", LN=" LN[i]
 	xxx = ""	# has to be global for eval
+	xxi = i
 	for(a in ATTACHED){
 		if(a == "degree" || a == "LN" || a == "CL")
 			continue
-		eval("{ xxx = (i in " a ") ? " a "[i] : \"\" }")
+		eval("{ xxx = (xxi in " a ") ? " a "[xxi] : \"\" }")
 		if(xxx != "")
 			s = s " " a "=" xxx
 	}
@@ -424,16 +426,16 @@ function expand(i){
 	selectall()
 	deselect()
 }
-function groupby(tag, incl, cm, 	acc, n, m){
+function groupby(tag, incl, cm,	acc){
 	delete acc
-	m = 0
+	m_ = n_ = 0	# have to be global for eval
 	if(cm == "")
 		cm = "defgrp"
 	if(incl == "")
-		eval("{n=length("cm"); for(i in "tag"){ c = "tag"[i]; if(!(c in acc)){ if(int(c) != 0) acc[c] = c; else acc[c] = m++}; CL[i] = "cm"[acc[c] % n] } }")
+		eval("{n_=length("cm"); for(i in "tag"){ c = "tag"[i]; if(!(c in acc)){ if(int(c) != 0) acc[c] = c; else acc[c] = m_++}; CL[i] = "cm"[acc[c] % n_] } }")
 	else
-		eval("{n=length("cm"); for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m++; c = "cm"[acc[c] % n] }}; CL[i] = c}}")
-	if(m > n)
+		eval("{n_=length("cm"); for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m_++; c = "cm"[acc[c] % n_] }}; CL[i] = c}}")
+	if(m_ > n_)
 		print "warning: more categories than colors"
 	delete acc
 }
