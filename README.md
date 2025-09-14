@@ -73,7 +73,7 @@ Thanks!_
 
 ## Features
 
-- Scaling to arbitrarily large graphs via coarsening (not yet merged!); expanding/retracting parts of the graph on-demand with the mouse or object lookups and commands.
+- Scaling to arbitrarily large graphs via coarsening; expanding/retracting parts of the graph on-demand with the mouse or object lookups and commands.
 - Layouting, rendering, drawing to the screen and handling user interface, file loading, graph manipulation
 all in separate and independent threads to reduce any waiting time to a minimum;
 immediate output and interaction whenever possible.
@@ -98,26 +98,25 @@ Right now, because layouting is parallelized, in real-time and can be interacted
 not that much is left to make it more useful in practice.
 
 Near finished:
-- Online and offline coarsening and usage
-- Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
+- offline coarsening and easy import/export of partial graph
 - Better external memory implementation and hooks
+- Alignment visualization
+- Annotations, overlays
+- Path handling: highlighting, coloring
 - Manpage
 
 Near future:
-- Path handling: highlighting, coloring
+- Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
 - Better UI; macros as user-defined buttons
 - Newick format and phylogenetic tree layouts
 - Additional capabilities in the graph language
-- Multiple graph handling
 
 Future:
 - Edge bundling
 - Prettier graphs: node/line thickness and curvature
-- Additional annotation overlays
-- Better graph manipulation language
 - More user-friendly layout specification/implementation
-- IGV-like subviews (?)
 - Further graphics performance improvements if warranted
+- Multiple graph handling
 - GBZ support
 
 Released under the terms of the MIT license.
@@ -411,18 +410,21 @@ strangepg test/02.gfa
 
 ```bash
 $ strangepg -h
-usage: ./strangepg [-AHMWZbhvw] [-f FILE] [-l ALG] [-n FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]
+usage: ./strangepg [-AEHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]
 -b             White-on-black color theme
 -c FILE        Load tags from csv FILE
 -f FILE        Load layout from FILE
 -h             Print usage information and exit
 -l ALG         Set layouting algorithm (default: pfr)
 -n FILE        Run layouting headless, saving to FILE periodically
--s LEN WIDE    Set node length and width (max: 40, default: 1.0 1.0)
+-q             Avoid printing messages to stdout
+-r FILE        Read coarsening table from FILE
+-s LEN WIDE    Set node length and width (max: 40.0 128.0, default: 1.0 1.0)
 -t N           Set number of layouting threads (1-1024, default: 4)
 -v             Print version and exit
 -w             Do not wait for all files to load to start layouting
 -A             Disable transparency (for performance)
+-E             Disable loading edge tags
 -H             Enable Hi-DPI mode
 -M             Enable 4x multisample anti-aliasing (MSAA)
 -Z             Minimize node depth (z-axis) offsets in 2d layouts
@@ -450,10 +452,14 @@ Each file's changes are applied on top of previous ones.
 Suitable for running on headless (displayless) servers.
 Snapshots are written every 10 seconds;
 layouting can be resumed from one by using `-f` flag.
+- `-r FILE` reads a previously computed coarsening table from file
+instead of generating one at runtime.
+The file format is not final.
 
 Additional settings:
 
 - `-b` sets the obligatory dark theme.
+- `-q` disables echoing log messages to standard output.
 - `-w` enables gottagofast mode:
 begin layouting before all files are fully loaded.
 Normally, because it's unknown ahead of time if there are tags
@@ -463,6 +469,7 @@ layouting only begins when it is safe to assume that everything is ready.
 This option completely ignores all of this
 and instead signals layouting to begin immediately after all nodes and
 edges have been created.
+- `-E` disable loading edge tags: mostly for saving memory if those won't be used.
 - `-W` disables suppressing warnings:
 redundant edges and such are discarded, but printing warnings about this
 and some other cases is too common;
@@ -698,9 +705,10 @@ Error messages are drawn in red.
 strangepg embeds a simple graph manipulation language,
 which presents GFA tags as tables (associative arrays)
 and provides means to manipulate the graph and its
-properties via those and additional tags.
+properties based on them.
 Using it involves typing commands in the text prompt
-of the status window.
+of the status window,
+or the terminal where strangepg was started.
 
 Whenever a node's tag is loaded from a GFA or CSV file or
 on the prompt, the table with the same name is updated with
@@ -724,13 +732,18 @@ The language is a fork of [_awk_](https://awk.dev),
 hacked up to evaluate commands interactively.
 Any awk code valid within a pattern or function (ie. inside braces)
 is also valid here.
-New functions may not yet be defined.
 Currently, it's somewhat limited and a bit hacky, but it works.
+Users may not define new functions yet.
 It will be improved later on.
 
 <p align="center"><img src=".pics/dbg.png"/></p>
 
 #### Examples
+
+Color a node in red:
+```awk
+CL["s1"] = red
+```
 
 Color nodes with labels matching a regular expression:
 ```awk
@@ -747,23 +760,30 @@ Color nodes which have a certain tag defined:
 CL[i in CN] = purple
 ```
 
-Color a specific node:
-```awk
-nodecolor("s1", red)
-# also works but will loop through all nodes:
-CL[i == "s1"] = red
-```
-
-Color 42th node in order of appearance in GFA (in S or L records):
-```awk
-nodecolor(label[42], blue)
-# also works but will loop through all nodes:
-CL[node[i] == 42] = blue
-```
-
 Color every other node:
 ```awk
-CL[node[i] % 2 == 1] = orange
+CL[i % 2 == 1] = orange
+```
+
+Recolor nodes:
+```awk
+CL[CL[i] == purple] = blue
+```
+
+Autocolor nodes based on the number of edges:
+```awk
+groupby("degree")
+```
+
+Autocolor nodes based on SN tag, excluding anything that doesn't start with "chr":
+```awk
+groupby("SN", "^chr")
+```
+
+Autocolor nodes using one of the predefined color palettes:
+```awk
+groupby("degree", "", "set3")	# following previous examples
+groupby("SN", "^chr", "set3")
 ```
 
 Look up a node by name, zooming in and centering on it if it exists:
@@ -786,14 +806,19 @@ Read in [a CSV file](#loading-tags-from-csv-files):
 readcsv("filepath")
 ```
 
-See [strawk.md](strawk.md) for a more detailed overview.
+See [Example applications](#example-applications) for more compliated examples,
+and [strawk.md](strawk.md) for a more detailed overview of strawk itself.
 
 
 #### Quick function reference
 
 ```awk
-nodecolor(name, color)     change a node's color
+deselect()                 empty selection
 findnode(name)             zoom onto and select a node
+groupby(tag, cond, map)    autocoloring by tag values, optionally only if matching cond and/or with a named colormap
+refresh()                  refresh screen
+selectall()                select all nodes (currently won't update screen)
+selectnode(name)           select node by name (currently won't update screen)
 quit()                     give up
 ```
 
@@ -803,14 +828,29 @@ Layouts:
 explode(name)              add random jitter to a node or to the selection if no name is given
 fixx(name, x)              force node to a fixed x coordinate
 fixy(name, y)              force node to a fixed y coordinate
+fixy(name, y)              force node to a fixed z coordinate
+initx(name, x)             set initial x coordinate
+inity(name, y)             set initial y coordinate
+initz(name, z)             set initial z coordinate
+```
+
+Coarsening:
+
+```awk
+collapse()                 collapse selection or everything if empty
+expand()                   expand selection or everything if empty
 ```
 
 Files:
 
 ```awk
-readcsv(path)              read a csv file
+exportcoarse(path)         export coarsening table to file (experimental)
+exportgfa(path)            export gfa file (experimental)
 exportlayou(path)          export layout to file
+exportsvg(path)            export a render of the entire graph to an svg file (experimental)
 importlayout(path)         import layout from file
+readcsv(path)              read a csv file
+readctab(path)             import coarsening table from file (experimental)
 ```
 
 Paths are absolute or relative to the current working directory.
@@ -837,6 +877,7 @@ The name of the first column does not matter.
 The `CL` tag is used as a node's color and can thus also be set in this way.
 `Color` can also be used (in any casing).
 Node labels must refer to existing nodes from the input GFA file.
+Any tag (including new ones) except LN can be set in this way.
 
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
 (see [Graph manipulation](#graph-manipulation)).
@@ -895,6 +936,10 @@ Nodes `s1` to `s6` will all have the same color and transparency,
 except `s3` to `s5` are set to full opacity.
 
 The same rules apply to GFA file tags.
+
+A special `translucent` color is provided for near-transparency.
+It's used in `groupby()` to mask nodes that don't match a condition.
+Its default value is `0xeeeeee30`.
 
 <p align="center"><img src=".pics/colors.png"/></p>
 
@@ -991,8 +1036,6 @@ and a `a+a-` edge will be a dot at the end of the node (in read direction).
 not sure what and how to fix.
 
 Less major bugs:
-- strawk could still use less memory and be faster; its language is very limited;
-yet to be hooked up to external memory.
 - The selection box is a kludge and is stupidly resource-heavy.
 - The selection box currently only works in one direction.
 - Only one node can be moved at a time.
@@ -1000,7 +1043,6 @@ yet to be hooked up to external memory.
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well.
 - The text boxes suck, a lot. Nuklear doesn't handle edit boxes much.
-- strawk leaks about 200 bytes during initialization.
 - ... and many more!
 
 
