@@ -609,7 +609,7 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 	}
 	if(isptr(vp)){
 		if((vp->tval & STR) == 0)
-			FATAL("can\'t assign string to numeric pointer type");
+			FATAL("can\'t assign string %s to numeric pointer type", s);
 		ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		sp = (char **)ap->tab + i;
