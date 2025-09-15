@@ -1027,7 +1027,7 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 		}
 		if(debug & Debugcoarse){
 			for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
-				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d\n",
+				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d",
 					i, (uchar*)a-(uchar*)adj, a->u, a->deg);
 				e = a->adj + a->deg;
 			}
@@ -1076,7 +1076,7 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 		free(offof);
 		if(debug & Debugcoarse){
 			for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
-				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d\n",
+				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d",
 					i, (uchar*)a-(uchar*)adj, a->u, a->deg);
 				e = a->adj + a->deg;
 			}
