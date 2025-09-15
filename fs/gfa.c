@@ -332,7 +332,7 @@ readgfa(Aux *a, File *f)
 		}
 		if(r < 0){
 			if(debug & Debuginfo)
-				warn("line %d: %s\n", f->nr, error());
+				DPRINT(Debuginfo, "line %d: %s", f->nr, error());
 			else
 				nwarn++;
 			if(r < -1 && ++nerr >= 10){
