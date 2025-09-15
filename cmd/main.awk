@@ -448,7 +448,7 @@ function subexpr(s, v, fn,	i, pred){
 	i = match(s, "\][ 	]*=[^=]")
 	# error check: i not 0; only sub expression up to } or ; etc
 	pred = substr(s, 1, i-1)
-	if(pred !~ /[^a-zA-Z0-9 \t]/)
+	if(pred !~ /[^a-zA-Z0-9" \t]/ && pred !~ /[^ \t]+[ \t]+in[ \t]+[^ \t]+/)
 		return
 	s = substr(s, RSTART+RLENGTH-1)
 	if(fn != "")
