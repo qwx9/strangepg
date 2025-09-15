@@ -84,7 +84,9 @@ mktab(Cell *cp, char type)
 	voff n;
 	int m;
 	short atype;
+	char *tag;
 	void *buf;
+	void (*fn)(size_t, Value);
 	Array *ap, *ids, *ptrs;
 
 	if(isptr(cp))
@@ -92,6 +94,8 @@ mktab(Cell *cp, char type)
 	ids = nil;
 	m = 0;
 	atype = 0;
+	fn = nil;
+	tag = cp->nval;
 	switch(type){
 	case Tint: m = sizeof(s32int); atype = NUM; break;
 	case Tuint: m = sizeof(u32int); atype = NUM | USG; break;
@@ -106,13 +110,27 @@ mktab(Cell *cp, char type)
 		n = dylen(core.labels);
 		ids = core.ids;
 		ptrs = core.ptrs;
+		if(strlen(tag) == 2){
+			if(tag[0] == 'f')
+				switch(tag[1]){
+				case 'x': fn = setnodefixedx; break;
+				case 'y': fn = setnodefixedy; break;
+				case 'z': fn = setnodefixedz; break;
+				}
+			else if(tag[1] == '0')
+				switch(tag[0]){
+				case 'x': fn = setnodeinitx; break;
+				case 'y': fn = setnodeinity; break;
+				case 'z': fn = setnodeinitz; break;
+				}
+		}
 	}
 	buf = emalloc(n * m);
 	if(type != Tstring)
 		memset(buf, 0xfe, n * m);
 	qlock(&symlock);
-	ap = attach(cp->nval, ids, buf, n, atype, nil);
-	setsymtab(cp->nval, cp->nval, ZV, STR|CON, ptrs);
+	ap = attach(tag, ids, buf, n, atype, fn);
+	setsymtab(tag, tag, ZV, STR|CON, ptrs);
 	qunlock(&symlock);
 	return ap;
 }

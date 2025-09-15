@@ -1,32 +1,3 @@
-/* FIXME: remove */
-typedef union V V;
-union V{
-	s64int i;
-	u64int u;
-	double f;
-	char *s;
-};
-
-/* FIXME: remove */
-enum{
-	/* FIXME: reevaluated how? */
-	TLN,	/* reevaluated during layouting */
-	Tfx,
-	Tfy,
-	Tfz,
-	Tx0,
-	Ty0,
-	Tz0,
-
-	Tdegree,
-	TCL,
-	Tnil,
-
-	/* FIXME: get rid of this? */
-	Tlayout = Tdegree,	/* end of tags affecting layout */
-};
-int	setattr(int, ioff, V);
-
 enum{
 	ACOLLAPSE,
 	ACOMMIT,

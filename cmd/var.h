@@ -1,3 +1,9 @@
+void	setnodeinitz(size_t, Value);
+void	setnodeinity(size_t, Value);
+void	setnodeinitx(size_t, Value);
+void	setnodefixedz(size_t, Value);
+void	setnodefixedy(size_t, Value);
+void	setnodefixedx(size_t, Value);
 void	updatenodelength(ioff, uint);
 uint	getnodelength(voff);
 void	setnodelength(size_t, Value);

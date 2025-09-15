@@ -439,42 +439,6 @@ function groupby(tag, incl, cm,	acc){
 		print "warning: more categories than colors"
 	delete acc
 }
-function initx(name, x){
-	if(!checknodename(name))
-		return
-	x0[name] = x
-	print "x", id[name], x
-}
-function inity(name, y){
-	if(!checknodename(name))
-		return
-	y0[name] = y
-	print "y", id[name], y
-}
-function initz(name, z){
-	if(!checknodename(name))
-		return
-	z0[name] = z
-	print "z", id[name], z
-}
-function fixx(name, x){
-	if(!checknodename(name))
-		return
-	fx[name] = x
-	print "X", id[name], x
-}
-function fixy(name, y){
-	if(!checknodename(name))
-		return
-	fy[name] = y
-	print "Y", id[name], y
-}
-function fixz(name, z){
-	if(!checknodename(name))
-		return
-	fz[name] = z
-	print "Z", id[name], z
-}
 function quit(){
 	print "!"
 }
@@ -496,16 +460,7 @@ crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
 	i = index($0, "[")
 	v = substr($0, 1, i - 1)
 	s = substr($0, i + 1)
-	if(v == "x0")
-		subexpr(s, v, "initx")
-	else if(v == "y0")
-		subexpr(s, v, "inity")
-	else if(v == "fx")
-		subexpr(s, v, "fixx")
-	else if(v == "fy")
-		subexpr(s, v, "fixy")
-	else
-		subexpr(s, v)
+	subexpr(s, v)
 }
 {
 	eval("{" $0 "}")

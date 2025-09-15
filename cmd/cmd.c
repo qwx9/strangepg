@@ -121,21 +121,6 @@ str2id(char *s)
 	return id;
 }
 
-/* FIXME: this has to go away in favor of fix() or initpos() functions */
-static inline int
-fnsetpos(char *label, char *pos, int tag)
-{
-	ioff id;
-	V v;
-
-	if((id = str2id(label)) < 0)
-		return -1;
-	v.f = atof(pos);
-	if(setattr(tag, id, v) < 0)
-		warn("fnsetpos: %s\n", error());
-	return 0;
-}
-
 static inline int
 fnfindnode(char *sid){
 	ioff id;
@@ -210,16 +195,10 @@ readcmd(char *s)
 			flushcmd();
 			continue;
 		case 'N':
-		case 'X':
-		case 'Y':
-		case 'Z':
 		case 'f':
 		case 'i':
 		case 'o':
 		case 't':
-		case 'x':
-		case 'y':
-		case 'z':
 			break;
 		default:
 			logmsg(va("%s\n", s));
@@ -238,24 +217,6 @@ readcmd(char *s)
 			if(m != 1)
 				goto invalid;
 			if(fnfindnode(fld[0]) < 0)
-				goto error;
-			break;
-		case 'X':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Tfx) < 0)
-				goto error;
-			break;
-		case 'Y':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Tfy) < 0)
-				goto error;
-			break;
-		case 'Z':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Tfz) < 0)
 				goto error;
 			break;
 		case 'f':
@@ -285,24 +246,6 @@ readcmd(char *s)
 				goto invalid;
 			if(loadfs(fld[0], FFctab) < 0)
 				warn("readcmd: readctab %s: %s\n", fld[0], error());
-			break;
-		case 'x':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Tx0) < 0)
-				goto error;
-			break;
-		case 'y':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Ty0) < 0)
-				goto error;
-			break;
-		case 'z':
-			if(m != 2)
-				goto invalid;
-			if(fnsetpos(fld[0], fld[1], Tz0) < 0)
-				goto error;
 			break;
 		}
 	}
