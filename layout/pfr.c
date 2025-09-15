@@ -152,7 +152,7 @@ new_(int nuke, int is3d)
 						? 0.1f * z
 						: 0.00001 * z;
 				}else
-					r->pos[2] = z;
+					r->pos[2] = z / (f * var[2]);
 			}else
 				r->pos[2] = (u->pos0.z - mid[2]);
 		}
