@@ -30,12 +30,12 @@ struct Aux{
 static int
 readnodetags(Aux *a, File *f)
 {
-	int nerr;
+	int nerr, nwarn;
 	char *s;
 	ioff id;
 	vlong off, *o, *oe;
 
-	for(nerr=0, id=0, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++){
+	for(nerr=nwarn=0, id=0, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++){
 		if((off = *o) < 0){
 			DPRINT(Debugmeta, "readnodetags: [%d] off=%lld, skipping", id, off);
 			continue;
@@ -60,24 +60,29 @@ readnodetags(Aux *a, File *f)
 				continue;
 			}
 			s[2] = 0;
-			settag(s, id, s+5);
+			if(settag(s, id, s[3], s+5) < 0){
+				DPRINT(Debuginfo, "readnodetags: line %d: %s", f->nr, error());
+				nwarn++;
+			}
 			nerr = 0;
 		}
 	}
+	if(nwarn > 0 && (debug & Debuginfo) == 0)
+		warn("readnodetags: suppressed %d warning messages (use -W to display them)\n", nwarn);
 	return 0;
 }
 
 static int
 readedgetags(Aux *a, File *f)
 {
-	int nerr;
+	int nerr, nwarn;
 	char *s;
 	ioff id;
 	vlong off, *o, *oe;
 
 	if(status & FSnoetags)
 		return 0;
-	for(nerr=0, id=0, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++){
+	for(nerr=nwarn=0, id=0, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++){
 		if((off = *o) < 0)
 			continue;
 		if(seekfs(f, off) < 0)
@@ -87,7 +92,7 @@ readedgetags(Aux *a, File *f)
 		if((s = nextfield(f)) == nil)
 			sysfatal("readedgetags: bug: short read, line %d", f->nr);
 		if(strcmp(s, "*") != 0)
-			setedgetag("cigar", id, s);
+			setedgetag("cigar", id, 'Z', s);
 		while((s = nextfield(f)) != nil){
 			DPRINT(Debugmeta, "readedgetags: [%d] %s", id, s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
@@ -99,10 +104,15 @@ readedgetags(Aux *a, File *f)
 				continue;
 			}
 			s[2] = 0;
-			setedgetag(s, id, s+5);
+			if(setedgetag(s, id, s[3], s+5) < 0){
+				DPRINT(Debuginfo, "readedgetags: line %d: %s", f->nr, error());
+				nwarn++;
+			}
 			nerr = 0;
 		}
 	}
+	if(nwarn > 0 && (debug & Debuginfo) == 0)
+		warn("readedgetags: suppressed %d warning messages (use -W to display them)\n", nwarn);
 	return 0;
 }
 

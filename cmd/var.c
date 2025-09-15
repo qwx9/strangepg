@@ -20,6 +20,7 @@ enum{
 	Tuint,
 	Tfloat,
 	Tstring,
+	Tnil,
 };
 typedef union{
 	s32int i;
@@ -186,36 +187,81 @@ pushval(Cell *cp, ioff id, char type, TVal v)
 	}
 }
 
-/* FIXME: offload to loadbatch? */
-/* FIXME: compare against user-provided tag type (esp for floats vs. int) */
-static inline char
-vartype(char *val, TVal *v, int iscolor)
+/* can't be strict here because these types are not respected much */
+static inline int
+tagtype(char *val, char ttype, char *p)
 {
-	char type, c, *s, *p;
-	int i;
-	float f;
-	Cell *cp;
+	int r;
+	char type;
+
+	r = 0;
+	switch(ttype){
+	case '\0': type = val[0] == '#' ? Tuint : Tnil; break;
+	case 'J':
+	case 'H':
+	case 'B':
+		werrstr("unhandled tag type %c", ttype);
+		r = -1;
+		type = Tstring;
+		break;
+	case 'A': type = Tstring; break;
+	case 'Z': type = val[0] == '#' ? Tuint : Tstring; break;
+	case 'i': type = val[0] == '#' ? Tuint : Tint; break;
+	case 'f': type = val[0] == '#' ? Tuint : Tfloat; break;
+	default:
+		werrstr("unknown tag type %c", ttype);
+		r = -1;
+		type = Tnil;
+	}
+	*p = type;
+	return r;
+}
+
+/* we have to be careful with assigning numeric types since
+ * ptrs are not dynamic yet we can't trust the tag types in
+ * the input data */
+static inline char
+vartype(char *val, char type, TVal *vp, Cell *cp)
+{
+	char c, *s, *p;
+	TVal v;
 
 	s = val;
-	if(s[0] == '#'){
-		s++;
-		i = strtoul(s, &p, 16);
-		if(iscolor && p - s < 8)	/* sigh */
-			i = i << 8;
-		type = Tuint;
-	}else{
-		i = strtol(s, &p, 0);
-		type = Tint;
-	}
-	if(p != s){
-		if((c = *p) == '\0' || isspace(c)){
-			v->i = i;
-			return type;
-		}else if(c == 'e' || c == 'E' || c == '.'){
-			f = strtof(s, &p);
-			if(p != s && ((c = *p) == '\0' || isspace(c))){
-				v->f = f;
-				return Tfloat;
+	if(type != Tstring || cp->tval & NUM){
+		if(type == Tuint){
+			if(val[0] == '#')
+				s++;
+			v.u = strtoul(s, &p, 16);
+			if(p - s < 8 && (Array *)cp->sval == core.color)
+				v.u = v.u << 8;
+		}else{
+			v.i = strtol(s, &p, 0);
+			if(type == Tnil)
+				type = Tint;
+		}
+		if(p != s){
+			if((c = *p) == '\0' || isspace(c)){
+				switch(type){
+				case Tfloat: vp->f = v.i; return type;
+				case Tuint: vp->u = v.u; return type;
+				case Tint: vp->i = v.i; return type;
+				case Tstring:
+					for(p++; (c=*p)!=0; p++)
+						if(!isspace(c))
+							break;
+					if(c == 0){
+						vp->i = v.i;
+						return Tint;
+					}
+					break;
+				default: panic("numeric vartype %d: can\'t happen", type);
+				}
+			}else if(c == 'e' || c == 'E' || c == '.'){
+				v.f = strtof(s, &p);
+				if(p != s && ((c = *p) == '\0' || isspace(c))){
+					*vp = v;
+					return Tfloat;
+				}
 			}
 		}
 	}
@@ -224,14 +270,14 @@ vartype(char *val, TVal *v, int iscolor)
 	qunlock(&symlock);
 	if(cp != nil){
 		if(cp->tval & FLT){
-			v->f = getfval(cp);
+			vp->f = getfval(cp);
 			return Tfloat;
 		}else if(cp->tval & NUM){
-			v->i = getival(cp);
+			vp->i = getival(cp);
 			return Tint;
 		}else{
 			val = getsval(cp);	/* FIXME: sval could change */
-			if((cp->tval & DONTFREE) == 0)	/* FIXME: when freeable? */
+			if((cp->tval & DONTFREE) == 0)
 				val = estrdup(val);
 		}
 	}else{
@@ -240,36 +286,46 @@ vartype(char *val, TVal *v, int iscolor)
 		setsymtab(val, NULL, ZV, STR|CON, core.strs);
 		qunlock(&symlock);
 	}
-	v->s = val;
+	vp->s = val;
 	return Tstring;
 }
 
-void
-setedgetag(char *tag, voff id, char *val)
+int
+setedgetag(char *tag, voff id, char ttype, char *val)
 {
+	int r;
 	char type, etag[32];
 	Cell *cp;
 	TVal v;
 
+	r = 0;
 	DPRINT(Debugawk, "setedgetag %s[%d] = %s", tag, id, val);
 	qlock(&symlock);
-	cp = setsymtab(tag, NULL, ZV, NUM|UNS, symtab);	/* FIXME: hack */
+	cp = setsymtab(tag, NULL, ZV, 0|UNS, symtab);	/* FIXME: hack */
 	qunlock(&symlock);
 	if(isptr(cp) && ((Array *)cp->sval)->ids != nil
 	|| !isptr(cp) && (cp->tval & UNS) == 0){
-		DPRINT(Debuginfo, "%s is a node tag, renaming\n", tag);
 		snprint(etag, sizeof etag, "e%s", tag);
 		qlock(&symlock);
-		cp = setsymtab(etag, NULL, ZV, NUM|UNS, symtab);
+		cp = setsymtab(etag, NULL, ZV, NUM, symtab);
 		qunlock(&symlock);
+		/* only print the warning once */
+		if(!isptr(cp) && (cp->tval & UNS) == 0){
+			werrstr("%s is a node tag, renaming", tag);
+			r--;
+			cp->tval |= UNS;
+		}
 	}
-	type = vartype(val, &v, 0);
+	r += tagtype(val, ttype, &type);
+	type = vartype(val, type, &v, cp);
 	pushval(cp, id, type, v);
+	return r;
 }
 
-void
-settag(char *tag, voff id, char *val)
+int
+settag(char *tag, voff id, char ttype, char *val)
 {
+	int r;
 	char type;
 	Cell *cp;
 	TVal v;
@@ -277,16 +333,18 @@ settag(char *tag, voff id, char *val)
 	DPRINT(Debugawk, "settag %s[%s] = %s", tag, getname(id), val);
 	assert(id >= 0 && id < dylen(core.labels));
 	qlock(&symlock);
-	cp = setsymtab(tag, NULL, ZV, NUM, symtab);
+	cp = setsymtab(tag, NULL, ZV, 0, symtab);
 	qunlock(&symlock);
-	type = vartype(val, &v, (Array *)cp->sval == core.color);	/* FIXME */
+	r = tagtype(val, ttype, &type);
+	type = vartype(val, type, &v, cp);
 	pushval(cp, id, type, v);
+	return r;
 }
 
-void
+int
 setnamedtag(char *tag, char *name, char *val)
 {
-	settag(tag, getid(name), val);
+	return settag(tag, getid(name), '\0', val);
 }
 
 voff
@@ -323,35 +381,57 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	core.degree = attach("degree", core.ids, degp, nnodes, RO|NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nnodes, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
-	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
-	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
-	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 	qunlock(&symlock);
+}
+
+static inline void
+inittag(char *tag, short type, Array **app)
+{
+	Cell *cp;
+	Array *ap;
+
+	cp = setsymtab(tag, EMPTY, ZV, CON|type, symtab);
+	if(cp->sval != EMPTY)
+		cp->tval |= type;
+	if(app == nil)
+		return;
+	if(!isarr(cp)){	/* else preallocated during parsing */
+		if(freeable(cp))
+			xfree(cp->sval);
+		cp->tval |= ARR|DONTFREE;
+		ap = makesymtab(NSYMTAB);
+		cp->sval = (char *)ap;
+	}else{
+		ap = (Array *)cp->sval;
+		if(ap->nelem != 0){
+			freesymtab(cp);
+			ap = makesymtab(NSYMTAB);
+			cp->sval = (char *)ap;
+		}
+	}
+	cp->tval |= ARR;
+	*app = ap;
 }
 
 void
 initvars(void)
 {
-	Cell *c;
-
-	c = setsymtab("id", NULL, ZV, CON|ARR, symtab);
-	if(c->sval != EMPTY)
-		freesymtab(c);
-	core.ids = makesymtab(NSYMTAB);
-	c->sval = (char *)core.ids;
-	c = setsymtab("STR", NULL, ZV, CON|ARR, symtab);
-	if(c->sval != EMPTY)
-		freesymtab(c);
-	core.strs = makesymtab(NSYMTAB);
-	c->sval = (char *)core.strs;
-	c = setsymtab("ATTACHED", NULL, ZV, CON|ARR, symtab);
-	if(c->sval != EMPTY)
-		freesymtab(c);
-	core.ptrs = makesymtab(NSYMTAB);
-	c->sval = (char *)core.ptrs;
-	c = setsymtab("EATTACHED", NULL, ZV, CON|ARR, symtab);
-	if(c->sval != EMPTY)
-		freesymtab(c);
-	core.eptrs = makesymtab(NSYMTAB);
-	c->sval = (char *)core.eptrs;
+	inittag("id", RO, &core.ids);
+	inittag("STR", RO|STR, &core.strs);
+	inittag("ATTACHED", RO|STR, &core.ptrs);
+	inittag("EATTACHED", RO|STR, &core.eptrs);
+	inittag("CL", NUM|USG, nil);
+	inittag("LN", NUM|USG, nil);
+	inittag("node", RO|STR, nil);
+	inittag("degree", RO|NUM|P16|USG, nil);
+	inittag("fx", NUM|FLT, nil);
+	inittag("fy", NUM|FLT, nil);
+	inittag("fz", NUM|FLT, nil);
+	inittag("x0", NUM|FLT, nil);
+	inittag("y0", NUM|FLT, nil);
+	inittag("z0", NUM|FLT, nil);
+	inittag("cigar", STR|UNS, nil);	/* FIXME: hack */
+	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
+	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
+	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 }

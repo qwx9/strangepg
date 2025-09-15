@@ -120,7 +120,8 @@ loadcsv(void *arg)
 				break;
 			}
 			tag = tags[nf-1];
-			setnamedtag(tag, name, s);
+			if(setnamedtag(tag, name, s) < 0)
+				DPRINT(Debuginfo, "loadcsv: line %d: %s", f->nr, error());
 		}
 		nr++;
 	}
