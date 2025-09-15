@@ -312,7 +312,7 @@ function selinfostr(	i, l, n, m, s){
 	if(length(selected) == 0)
 		return ""
 	# very deliberate and assuming nodes for now
-	if(length(selected) == 0)
+	if(length(selected) == 1)
 		for(i in selected)
 			return nodeinfostr(i)
 	l = 0
