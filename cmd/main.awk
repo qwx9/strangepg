@@ -431,10 +431,19 @@ function groupby(tag, incl, cm,	acc){
 	m_ = n_ = 0	# have to be global for eval
 	if(cm == "")
 		cm = "defgrp"
+	else if(!(cm in SYMTAB)){
+		print "E\tno such color palette"
+		return
+	}
+	eval("{n_ = length("cm")}")
+	if(n_ <= 1){
+		print "E\tinvalid color palette"
+		return
+	}
 	if(incl == "")
-		eval("{n_=length("cm"); for(i in "tag"){ c = "tag"[i]; if(!(c in acc)){ if(int(c) != 0) acc[c] = c; else acc[c] = m_++}; CL[i] = "cm"[acc[c] % n_] } }")
+		eval("{for(i in "tag"){ c = "tag"[i]; if(!(c in acc)){ if(int(c) != 0) acc[c] = c; else acc[c] = m_++}; CL[i] = "cm"[acc[c] % n_] } }")
 	else
-		eval("{n_=length("cm"); for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m_++; c = "cm"[acc[c] % n_] }}; CL[i] = c}}")
+		eval("{for(i in CL){ if(!(i in "tag")){ c = translucent }else{ c = "tag"[i]; if(c !~ /"incl"/) c = translucent; else{ if(!(c in acc)) acc[c] = m_++; c = "cm"[acc[c] % n_] }}; CL[i] = c}}")
 	if(m_ > n_)
 		print "warning: more categories than colors"
 	delete acc
