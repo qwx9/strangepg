@@ -18,8 +18,8 @@
 static char **
 csvheader(File *f, int *wait)
 {
-	char c, w;
-	char *p, *s, **tags;
+	int r;
+	char c, w, *p, *s, **tags;
 
 	*wait = w = 0;
 	if(readline(f) == nil){
@@ -33,11 +33,15 @@ csvheader(File *f, int *wait)
 		return nil;
 	}
 	for(; (s = nextfield(f)) != nil;){
+		r = 0;
 		while(isspace(*s))
 			s++;
 		for(p=s; (c=*p)!=0; p++){
-			if(isspace(c))
+			if(isspace(c)){
+				*p = '_';
+				r = 1;
 				continue;
+			}
 			if(p == s){
 				if(!isalpha(c)){
 					werrstr("loadcsv: invalid tag name \"%s\" in header", s);
@@ -45,17 +49,23 @@ csvheader(File *f, int *wait)
 				}
 			}else if(!isalnum(c)){
 				*p = 0;
+				r = 1;
 				warn("loadcsv: truncating tag name \"%s\" on invalid character \'%c\'\n", s, c);
 				break;
 			}
 		}
+		for(p--; *p=='_'; p--)
+			*p = 0;
 		/* don't wait for csv to load if there are  no layout tags */
-		if(cistrncmp(s, "color", 5) == 0)
+		if(cistrncmp(s, "color", 5) == 0){
 			s = "CL";
-		else if(strlen(s) == 2
+			r = 1;
+		}else if(strlen(s) == 2
 		&& (s[0] == 'f' && (s[1] == 'x' || s[1] == 'y' || s[1] == 'z')
 		|| s[1] == '0' && (s[0] == 'x' || s[0] == 'y' || s[0] == 'z')))
 			w++;
+		if(r)
+			DPRINT(Debuginfo, "loadcsv: tag renamed to \"%s\"", s);
 		p = estrdup(s);
 		dypush(tags, p);
 	}
