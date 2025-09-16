@@ -98,8 +98,8 @@ Right now, because layouting is parallelized, in real-time and can be interacted
 not that much is left to make it more useful in practice.
 
 Near finished:
-- offline coarsening and easy import/export of partial graph
-- Better external memory implementation and hooks
+- Offline coarsening and easy import/export of partial graph
+- Finish external memory implementation
 - Alignment visualization
 - Annotations, overlays
 - Path handling: highlighting, coloring
@@ -826,12 +826,6 @@ Layouts:
 
 ```awk
 explode(name)              add random jitter to a node or to the selection if no name is given
-fixx(name, x)              force node to a fixed x coordinate
-fixy(name, y)              force node to a fixed y coordinate
-fixy(name, y)              force node to a fixed z coordinate
-initx(name, x)             set initial x coordinate
-inity(name, y)             set initial y coordinate
-initz(name, z)             set initial z coordinate
 ```
 
 Coarsening:
@@ -878,6 +872,9 @@ The `CL` tag is used as a node's color and can thus also be set in this way.
 `Color` can also be used (in any casing).
 Node labels must refer to existing nodes from the input GFA file.
 Any tag (including new ones) except LN can be set in this way.
+
+Spaces within tag names are replaced by underscrores.
+A column name _Copy number_ would thus create the tag `Copy\_number`.
 
 A CSV file may be loaded at runtime with the `readcsv("file.csv")` command
 (see [Graph manipulation](#graph-manipulation)).
@@ -1021,6 +1018,7 @@ strangepg \
 ## Known bugs
 
 Major bugs:
+- Coarsening does not update strawk tables
 - Layouting is slow and larger graphs show up as a ball at the center of the screen:
 this is the initial state for any of the layouting algorithms,
 but because it is shown in real time and the algorithms currently used being slow
@@ -1032,10 +1030,13 @@ the screen to the center of the graph.
 - Edges are ugly and are 1 pixel-wide lines, making them difficult to select.
 - Self-edges aren't drawn well. An `a+a+` edge will appear as a line inside the node,
 and a `a+a-` edge will be a dot at the end of the node (in read direction).
+- Edge objects and adjacencies in general can't really be manipulated through strawk
 - OpenGL ES: mouse picking code doesn't work and crashes with an assertion failure;
 not sure what and how to fix.
 
 Less major bugs:
+- Blinking nodes due to renderer's lack of reordering of nodes for correct alpha blending
+- "Spinning" nodes due to an edge case in average angle computation
 - The selection box is a kludge and is stupidly resource-heavy.
 - The selection box currently only works in one direction.
 - Only one node can be moved at a time.

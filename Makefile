@@ -1,5 +1,5 @@
 PROGRAM:= strangepg
-VERSION:= 0.9.1
+VERSION:= 0.9.2
 DIRS:=
 
 ifeq ($(wildcard .git),.git)
