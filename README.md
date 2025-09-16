@@ -61,10 +61,12 @@ Thanks!_
 - [Loading tags from CSV files](#loading-tags-from-csv-files)
   + [Format notes](#format-notes)
   + [On colors](#on-colors)
+  + [Color palettes](#color-palettes)
 - [Example applications](#example-applications)
   + [Conga line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segments-order)
   + [Random coordinates](#random-coordinates)
   + [Linear layout using bubble id tags from gaftools](#linear-layout-using-bubble-id-tags-from-gaftools)
+  + [Coloring by path in rGFA files](#coloring-by-path-in-rgfa-files)
   + [Rapid visual inspection of long linear segments](#rapid_visual_inspection_of_long_linear_segments)
 - [Known bugs](#bugs)
 - [Used and bundled alien software](#bundled)
@@ -847,6 +849,8 @@ readcsv(path)              read a csv file
 readctab(path)             import coarsening table from file (experimental)
 ```
 
+<p align="center"><img src=".pics/explode.png"/></p>
+
 Paths are absolute or relative to the current working directory.
 
 
@@ -941,6 +945,34 @@ Its default value is `0xeeeeee30`.
 <p align="center"><img src=".pics/colors.png"/></p>
 
 
+#### Color palettes
+
+Several color palettes have been defined, based on Color Brewer.
+For now they are limited to use with `groupby`.
+Their values can be changed freely.
+Users can define their own palettes.
+They must simply be arrays of integers indexed from 0 to the number of colors - 1,
+in the same format as discussed above (with the alpha byte set to 0).
+
+<p align="center"><img src=".pics/cmap0.png"/></p>
+Default (`defgrp`).
+
+<p align="center"><img src=".pics/cmap4.png"/></p>
+`set1`.
+
+<p align="center"><img src=".pics/cmap3.png"/></p>
+`set2`.
+
+<p align="center"><img src=".pics/cmap2.png"/></p>
+`set3`.
+
+<p align="center"><img src=".pics/cmap1.png"/></p>
+`spectral`.
+
+<p align="center"><img src=".pics/cmap5.png"/></p>
+`paired`.
+
+
 ## Example applications
 
 One of the goals of strangepg is to enable experimentation with layouting.
@@ -983,6 +1015,29 @@ y0[CL[i] != orange] = 2 - 4 * rand()
 ```
 
 <p align="center"><img src=".pics/bo.png"/></p>
+
+
+#### Coloring by path in rGFA files
+
+The following uses the HPRC 1.0 minigraph CHM13 graph as an example.
+Use `groupby` to autogroup based on the values of the SN tag.
+The second argument is a regular expression.
+Only values matching it will be used, everything else is set to a `translucent` color.
+By combining these, we can color only chromosome nodes.
+The third argument is the name of a color palette.
+Do 4 rounds of coarsening first to reduce the size of the graph.
+
+```awk
+for(i=1; i<=4; i++) collapse()
+groupby("SN", "^chr", "paired")
+```
+
+<p align="center"><img src=".pics/sn.png"/></p>
+
+With one global `expand` operation:
+
+<p align="center"><img src=".pics/sn2.png"/></p>
+
 
 #### Rapid visual inspection of long linear segments
 
