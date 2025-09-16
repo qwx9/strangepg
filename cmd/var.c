@@ -40,7 +40,7 @@ static Val *valbuf;
 struct Core{
 	char **labels;
 	u32int *colors;
-	Array *strs;
+	Array *strs;	/* FIXME: val could be a refcount to allow freeing */
 	Array *ptrs;
 	Array *eptrs;
 	Array *ids;
@@ -79,6 +79,58 @@ getnodelength(voff idx)
 	return *((uint *)core.length->tab + idx);
 }
 
+static Array *
+autoattach(Cell *cp)
+{
+	short type;
+	char *tag;
+	usize n, m;
+	void *buf;
+	Array *ap;
+	void (*fn)(size_t, Value);
+
+	qlock(&symlock);
+	cp = lookup(cp->nval, symtab);
+	qunlock(&symlock);
+	assert(cp != nil);
+	fn = nil;
+	tag = cp->nval;
+	type = cp->tval;
+	n = dylen(core.labels);
+	m = 0;
+	switch(type & (NUM|STR|FLT)){
+	case NUM:
+	case STR|NUM: m = sizeof(s32int); type &= ~(STR|FLT); break;
+	case NUM|FLT:
+	case STR|NUM|FLT: m = sizeof(float); type &= ~STR; break;
+	case STR: m = sizeof(char *); type &= ~(NUM|FLT); break;
+	default: panic("autoattach %s: invalid type %o", tag, type & (NUM|STR|FLT));
+	}
+	cp->tval = type & ~UND;
+	buf = emalloc(n * m);
+	if((type & STR) == 0)
+		memset(buf, 0xfe, n * m);
+	if(strlen(tag) == 2){
+		if(tag[0] == 'f')
+			switch(tag[1]){
+			case 'x': fn = setnodefixedx; break;
+			case 'y': fn = setnodefixedy; break;
+			case 'z': fn = setnodefixedz; break;
+			}
+		else if(tag[1] == '0')
+			switch(tag[0]){
+			case 'x': fn = setnodeinitx; break;
+			case 'y': fn = setnodeinity; break;
+			case 'z': fn = setnodeinitz; break;
+			}
+	}
+	qlock(&symlock);
+	ap = attach(tag, core.ids, buf, n, type, fn);
+	setsymtab(tag, tag, ZV, STR|CON, core.ptrs);
+	qunlock(&symlock);
+	return ap;
+}
+
 static inline Array *
 mktab(Cell *cp, char type)
 {
@@ -90,8 +142,9 @@ mktab(Cell *cp, char type)
 	void (*fn)(size_t, Value);
 	Array *ap, *ids, *ptrs;
 
-	if(isptr(cp))
-		return (Array *)cp->sval;
+	ap = (Array *)cp->sval;
+	if(isptr(cp) && ap != (Array *)EMPTY)
+		return ap;
 	ids = nil;
 	m = 0;
 	atype = 0;
@@ -137,12 +190,15 @@ mktab(Cell *cp, char type)
 }
 
 static inline void
-set(Cell *cp, voff id, char type, TVal v)
+set(Cell *tp, voff id, char type, TVal v)
 {
+	Cell *cp;
 	Array *ap;
 
-	ap = mktab(cp, type);
+	ap = mktab(tp, type);
+	qlock(&symlock);
 	cp = setptrtab(id, ap, 0);
+	qunlock(&symlock);
 	switch(type){
 	case Tint: setival(cp, v.i); break;
 	case Tuint: setival(cp, v.u); break;
@@ -150,7 +206,9 @@ set(Cell *cp, voff id, char type, TVal v)
 	case Tstring: setsval(cp, v.s, 0); break;
 	default: panic("set: unknown type %o\n", type);
 	}
-	tempfree(cp);
+	qlock(&symlock);
+	tempfree(cp);	/* FIXME: race with run.c */
+	qunlock(&symlock);
 }
 
 void
@@ -281,9 +339,12 @@ vartype(char *val, char type, TVal *vp, Cell *cp)
 				val = estrdup(val);
 		}
 	}else{
-		val = estrdup(val);
 		qlock(&symlock);
-		setsymtab(val, NULL, ZV, STR|CON, core.strs);
+		cp = setsymtab(val, NULL, ZV, STR|CON, core.strs);
+		if(cp->nval == val)
+			cp->nval = val = estrdup(val);
+		else
+			val = cp->nval;
 		qunlock(&symlock);
 	}
 	vp->s = val;
@@ -303,7 +364,7 @@ setedgetag(char *tag, voff id, char ttype, char *val)
 	qlock(&symlock);
 	cp = setsymtab(tag, NULL, ZV, 0|UNS, symtab);	/* FIXME: hack */
 	qunlock(&symlock);
-	if(isptr(cp) && ((Array *)cp->sval)->ids != nil
+	if(isptr(cp) && cp->sval != EMPTY && ((Array *)cp->sval)->ids != nil
 	|| !isptr(cp) && (cp->tval & UNS) == 0){
 		snprint(etag, sizeof etag, "e%s", tag);
 		qlock(&symlock);
@@ -391,10 +452,11 @@ inittag(char *tag, short type, Array **app)
 	Array *ap;
 
 	cp = setsymtab(tag, EMPTY, ZV, CON|type, symtab);
-	if(cp->sval != EMPTY)
-		cp->tval |= type;
-	if(app == nil)
+	if(app == nil){
+		if(!isarr(cp))
+			cp->tval |= ARR|PTR;
 		return;
+	}
 	if(!isarr(cp)){	/* else preallocated during parsing */
 		if(freeable(cp))
 			xfree(cp->sval);
@@ -409,7 +471,6 @@ inittag(char *tag, short type, Array **app)
 			cp->sval = (char *)ap;
 		}
 	}
-	cp->tval |= ARR;
 	*app = ap;
 }
 
@@ -434,4 +495,5 @@ initvars(void)
 	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
 	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
 	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
+	autoattachfn = autoattach;
 }

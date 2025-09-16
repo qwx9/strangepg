@@ -57,6 +57,8 @@ TNode	*winner = NULL;	/* root of parse tree */
 TNode	*runnerup;
 Cell	*tmps;		/* free temporary cells for execution */
 
+Array *(*autoattachfn)(Cell *);
+
 static Cell	truecell	={ OBOOL, BTRUE, NUM, 0, 0, {.i=1}, NULL };
 Cell	*True	= &truecell;
 static Cell	falsecell	={ OBOOL, BFALSE, NUM, 0, 0, {.i=0}, NULL };
@@ -446,6 +448,16 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 	ap = (Array *)x->sval;
 	if(isptr(x)){
 		y = execute(a[1]);
+		if(isarr(x) && ap == (Array *)EMPTY){
+			if(autoattachfn != NULL)
+				ap = autoattachfn(x);
+			else{
+				tempfree(y);
+				z = dummyptrsym(x);
+				tempfree(x);
+				return z;
+			}
+		}
 		if((y->tval & (STR|NUM)) == STR){
 			s = getsval(y);
 			if(ap->ids != NULL && (w = lookup(s, ap->ids)) != NULL)
@@ -477,9 +489,12 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*up
 
 	cp = setsymtab(name, NULL, ZV, PTR|ARR|type, symtab);
 	if((cp->tval & ~(DONTFREE|CON)) != (PTR|ARR|type) || cp->sval != EMPTY){
-		if(isarr(cp))
-			freesymtab(cp);
-		else if(freeable(cp))
+		if(isarr(cp)){
+			if(cp->sval != EMPTY){
+				cp->tval &= ~PTR;
+				freesymtab(cp);
+			}
+		}else if(freeable(cp))
 			xfree(cp->sval);
 		cp->tval = PTR|ARR|type;
 	}

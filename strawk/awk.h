@@ -138,6 +138,8 @@ extern Cell	*rlengthloc;	/* RLENGTH */
 extern Cell	*subseploc;	/* SUBSEP */
 extern Cell	*symtabloc;	/* SYMTAB */
 
+extern Array *(*autoattachfn)(Cell *);
+
 /* Cell.tval values: */
 enum{
 	NUM = 1<<0,		/* number value is valid */
@@ -154,6 +156,7 @@ enum{
 	USG = 1<<11,	/* pointer to unsigned int */
 	UNS = 1<<12,	/* pointer to unset value */
 	RO  = 1<<13,	/* pointer to read-only constant value */
+	UND = 1<<14,	/* uninitialized pointer array */
 };
 
 /* function types */

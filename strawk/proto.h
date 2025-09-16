@@ -95,6 +95,7 @@ extern	void	dfree(void *, const char *);
 }while(0)
 #define tempfree(x)	do { if (istemp(x)) tfree(x); } while (0)
 
+extern	Cell	*dummyptrsym(Cell *);
 extern	Array	*attach(char *, Array *, void *, size_t, int, void (*)(size_t, Value));
 extern	void	reattach(Array *, void *, size_t);
 

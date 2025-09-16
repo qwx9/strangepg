@@ -316,6 +316,18 @@ static inline int updateptr(Cell *vp)
 	return n;
 }
 
+Cell *dummyptrsym(Cell *cp)
+{
+	Cell *p;
+
+	p = gettemp(cp->tval & ~ARR | (UND|UNS|DONTFREE));
+	p->val = ZV;
+	p->nval = EMPTY;
+	p->sval = EMPTY;
+	p->cnext = cp;
+	return p;
+}
+
 Cell *setptrtab(Awknum i, Array *a, int readit)
 {
 	Cell *p;
@@ -456,7 +468,11 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 			FATAL("can\'t assign number to non-numeric pointer type");
 		if(vp->tval & RO)
 			FATAL("can\'t assign to read-only value");
-		ap = (Array *)vp->cnext;
+		if(vp->tval & UND){
+			WARNING("can\'t update unattached flat array");
+			goto end;
+		}else
+			ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
 			*((float *)ap->tab + i) = f;
@@ -474,6 +490,7 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 		vp->tval &= ~UNS;
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
+end:
 	vp->tval &= ~STR; /* mark string invalid */
 	vp->tval |= NUM | FLT;	/* mark number ok */
 	if(dbg){
@@ -513,11 +530,16 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 			recbld();
 	}
 	if (isptr(vp)) {
+		/* FIXME: just WARNING and keep going instead? */
 		if((vp->tval & NUM) == 0)
 			FATAL("can\'t assign number to non-numeric pointer type");
 		if(vp->tval & RO)
 			FATAL("can\'t assign to read-only value");
-		ap = (Array *)vp->cnext;
+		if(vp->tval & UND){
+			WARNING("can\'t update unattached flat array");
+			goto end;
+		}else
+			ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		if(vp->tval & FLT)
 			*((float *)ap->tab + i) = f;
@@ -535,6 +557,7 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 		vp->tval &= ~UNS;
 	} else if (freeable(vp))
 		xfree(vp->sval); /* free any previous string */
+end:
 	vp->tval &= ~(STR|FLT); /* mark string invalid; force int */
 	vp->tval |= NUM;	/* mark number ok */
 	if(dbg){
@@ -610,11 +633,16 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 	if(isptr(vp)){
 		if((vp->tval & STR) == 0)
 			FATAL("can\'t assign string %s to numeric pointer type", s);
-		ap = (Array *)vp->cnext;
+		if(vp->tval & UND){
+			WARNING("can\'t update unattached flat array");
+			goto end;
+		}else
+			ap = (Array *)vp->cnext;
 		i = (Awknum)vp->nval;
 		sp = (char **)ap->tab + i;
-		if(*sp != NULL)
-			free(*sp);
+		if(*sp != NULL){
+			//free(*sp);	/* FIXME: could have been set multiple times; see cmd/var.c:/strs */
+		}
 		*sp = t;
 		if(ap->upfn != NULL){
 			v.s = t;
@@ -626,6 +654,7 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 		if(!isptr(vp))
 			vp->tval &= ~(FLT|NUM);	/* no longer a number */
 	}
+end:
 	vp->sval = t;
 	if(dbg){
 		if(!isptr(vp))
