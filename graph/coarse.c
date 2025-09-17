@@ -404,18 +404,16 @@ expand(ioff i)
 	}else if(i < 0 || i >= nnodes){
 		werrstr("out of bounds %d > %d", i, nnodes);
 		return -1;
-	}else if((U = cnodes + i)->child == -1){
-		DPRINT(Debugcoarse, "expand: %d not a parent", i);
-		return 0;
 	}
+	U = cnodes + i;
 	nid = dylen(nodes) + dylen(expnodes);
 	if(U->idx == -1){
-		for(V=nil, j=V->parent; j!=-1; j=V->parent){	/* check first */
+		for(V=U, j=U->parent; j!=-1; j=V->parent){	/* check first */
 			V = cnodes + j;
 			if(V->idx != -1)
 				break;
 		}
-		if(V == nil || V->idx == -1){
+		if(V == U || V->idx == -1){
 			werrstr("%d has no visible parent??", i);
 			return -1;
 		}
