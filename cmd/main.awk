@@ -291,6 +291,8 @@ function findnode(name,	i){
 	if(!checknodename(name))
 		return
 	i = id[name]
+	expand1(i)
+	commit(1)
 	selectnodebyid(i)
 	print "N", i
 }
