@@ -58,7 +58,7 @@ BEGIN{
 	white = 0xffffff00
 	yellow = 0xe7d94100
 	yellowgreen = 0xd5ef0000
-	translucent = 0xaaaaaa20
+	translucent = 0xdfdfdf60
 	n = 0
 	# named palettes courtesy of colorbrewer
 	defgrp[n++] = greyblue

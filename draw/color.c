@@ -187,10 +187,11 @@ setcolor(float *f, u32int c)
 u32int
 setdefalpha(u32int c)
 {
-	if((c & 0xff) == 0){
+	if(drawing.flags & DFnoalpha)
+		c |= 0xff;
+	else if((c & 0xff) == 0){
 		c &= ~0xff;
-		c |= (drawing.flags & DFnoalpha ? 0xff
-			: drawing.flags & DFhaxx0rz ? 0x70 : 0xc0);
+		c |= drawing.flags & DFhaxx0rz ? 0x70 : 0xc0;
 	}
 	return c;
 }
