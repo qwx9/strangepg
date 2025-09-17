@@ -233,6 +233,8 @@ static inline int updateptr(Cell *vp)
 
 	if(vp->tval & RO)
 		return 0;
+	if(isarr(vp))
+		funnyvar(vp, "access");
 	n = 0;
 	i = (Awknum)vp->nval;
 	ap = (Array *)vp->cnext;
