@@ -50,7 +50,7 @@ csvheader(File *f, int *wait)
 			}else if(!isalnum(c)){
 				*p = 0;
 				r = 1;
-				warn("loadcsv: truncating tag name \"%s\" on invalid character \'%c\'\n", s, c);
+				logmsg(va("loadcsv: truncating tag name \"%s\" on invalid character \'%c\'\n", s, c));
 				break;
 			}
 		}
@@ -91,7 +91,7 @@ loadcsv(void *arg)
 	path = arg;
 	DPRINT(Debugfs, "loadcsv %s", path);
 	if((f = openfs(path, OREAD)) == nil){
-		warn("loadcsv %s: %s\n", path, error());
+		logerr(va("loadcsv %s: %s\n", path, error()));
 		free(path);
 		return;
 	}
@@ -116,7 +116,7 @@ loadcsv(void *arg)
 				strecpy(name, name+sizeof name, s);
 				continue;
 			}else if(nf-1 >= dylen(tags)){
-				warn("readcsv: line %d: ignoring extra columns\n", nr);
+				logmsg(va("readcsv: line %d: ignoring extra columns\n", nr));
 				break;
 			}
 			tag = tags[nf-1];
