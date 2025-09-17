@@ -464,11 +464,14 @@ Awkfloat setfval(Cell *vp, Awkfloat f)	/* set float val of a Cell */
 			recbld();
 	}
 	if (isptr(vp)) {
-		if((vp->tval & NUM) == 0)
-			FATAL("can\'t assign number to non-numeric pointer type");
-		if(vp->tval & RO)
-			FATAL("can\'t assign to read-only value");
-		if(vp->tval & UND){
+		/* FIXME: convert to string then */
+		if((vp->tval & NUM) == 0){
+			WARNING("can\'t assign number to string type");
+			goto end;
+		}else if(vp->tval & RO){
+			WARNING("can\'t assign to read-only value");
+			goto end;
+		}else if(vp->tval & UND){
 			WARNING("can\'t update unattached flat array");
 			goto end;
 		}else
@@ -530,12 +533,14 @@ Awknum setival(Cell *vp, Awknum f)	/* set int val of a Cell */
 			recbld();
 	}
 	if (isptr(vp)) {
-		/* FIXME: just WARNING and keep going instead? */
-		if((vp->tval & NUM) == 0)
-			FATAL("can\'t assign number to non-numeric pointer type");
-		if(vp->tval & RO)
-			FATAL("can\'t assign to read-only value");
-		if(vp->tval & UND){
+		/* FIXME: convert to string */
+		if((vp->tval & NUM) == 0){
+			WARNING("can\'t assign number to string type");
+			goto end;
+		}else if(vp->tval & RO){
+			WARNING("can\'t assign to read-only value");
+			goto end;
+		}else if(vp->tval & UND){
 			WARNING("can\'t update unattached flat array");
 			goto end;
 		}else
@@ -618,9 +623,11 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 		if (!donerec)
 			recbld();
 	}
-	if(isptr(vp) && vp->tval & RO)
-		FATAL("can\'t assign to read-only value");
 	t = vp->sval;
+	if(isptr(vp) && vp->tval & RO){
+		WARNING("can\'t assign to read-only value");
+		goto end;
+	}
 	if(s != t || s == NULL){
 		t = s && s != EMPTY && *s != 0 ? new ? STRDUP(s) : s : EMPTY;
 		if(freeable(vp))
@@ -631,8 +638,10 @@ char *setsval(Cell *vp, const char *s, int new)	/* set string val of a Cell */
 			vp->tval &= ~DONTFREE;
 	}
 	if(isptr(vp)){
-		if((vp->tval & STR) == 0)
-			FATAL("can\'t assign string %s to numeric pointer type", s);
+		if((vp->tval & STR) == 0){
+			WARNING("can\'t assign string \"%s\" to numeric type", s);
+			goto end;
+		}
 		if(vp->tval & UND){
 			WARNING("can\'t update unattached flat array");
 			goto end;
