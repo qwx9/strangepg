@@ -686,6 +686,10 @@ void WARNING(const char *fmt, ...)
 	va_list varg;
 	FILE *fp;
 
+	if(quiet){
+		awknwarn++;
+		return;
+	}
 	fflush(awkstdout);
 	if(evalstr != NULL)
 		fp = awkstderr;

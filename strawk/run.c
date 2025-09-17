@@ -42,7 +42,7 @@ THIS SOFTWARE.
 
 FILE *awkstdin, *awkstdout, *awkstderr;
 
-int dbg;
+int dbg, quiet, awknwarn;
 Awknum	srand_seed = 1;
 enum compile_states	compile_time = ERROR_PRINTING;
 char *evalstr;
@@ -2200,7 +2200,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 {
 	Cell *x, *y;
 	Awknum u = 0, tmp;
-	int t;
+	int t, oawkw;
 	char *buf, *olex, *oeval;
 	TNode *nextarg, *orunner;
 
@@ -2266,7 +2266,9 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	case FEVAL:
 		olex = lexprog;
 		oeval = evalstr;
+		oawkw = awknwarn;
 		orunner = runnerup;
+		awknwarn = 0;
 		lexprog = getsval(x);
 		DPRINTF("eval: \"%s\"\n", lexprog);
 		evalstr = lexprog;
@@ -2277,10 +2279,13 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 			tempfree(y);
 		}
 		evalfrm--;
+		if(awknwarn > 0)
+			fprintf(awkstderr, "suppressed %d warnings\n", awknwarn);
 		errorflag = 0;
 		runnerup = orunner;
 		lexprog = olex;
 		evalstr = oeval;
+		awknwarn = oawkw;
 		fflush(awkstdout);
 		fflush(awkstderr);
 		break;
