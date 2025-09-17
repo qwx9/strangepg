@@ -54,12 +54,11 @@ BEGIN{
 	red = 0xda181a00
 	tan = 0xd2b48c00
 	teal = 0x00bbbb00
-	translucent = 0xd7d7d730
 	violet = purple
 	white = 0xffffff00
 	yellow = 0xe7d94100
 	yellowgreen = 0xd5ef0000
-	translucent = 0xeeeeee30
+	translucent = 0xaaaaaa20
 	n = 0
 	# named palettes courtesy of colorbrewer
 	defgrp[n++] = greyblue
@@ -200,6 +199,11 @@ function setdefcols(	n, i){
 		if(!(i in CL))
 			CL[i] = default[i % n]
 }
+function resetcols(	i){
+	deselect()
+	for(i in CL)
+		CL[i] = CL[i]
+}
 function cmd(code){
 	if(code == "FHJ142"){	# wing to proceed to targets
 		if(++fnr == nd + 1)
@@ -293,6 +297,7 @@ function findnode(name,	i){
 	i = id[name]
 	expand1(i)
 	commit(1)
+	resetcols()
 	selectnodebyid(i)
 	print "N", i
 }
@@ -414,6 +419,7 @@ function reselectnode(i){
 #	commit()
 #	deselect()
 #}
+# not deselecting
 function expand(i){
 	if(i != ""){
 		if(!checknodeid(i))
@@ -425,8 +431,7 @@ function expand(i){
 	}else
 		expandall()
 	commit()
-	selectall()
-	deselect()
+	resetcols()
 }
 function groupby(tag, incl, cm,	acc){
 	delete acc
