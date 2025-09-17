@@ -5,6 +5,7 @@
 #include "layout.h"
 #include "fs.h"
 #include "ui.h"
+#include "strawk/awk.h"
 
 extern int dbg;	/* FIXME: arg parsing happens after strawk is launched */
 
@@ -162,7 +163,7 @@ parseargs(int argc, char **argv)
 	case 'E': status |= FSnoetags; break;
 	case 'H': drawing.flags |= DFhidpi; break;
 	case 'M': drawing.flags |= DFmsaa; break;
-	case 'W': debug |= Debuginfo; break;
+	case 'W': debug |= Debuginfo; quiet = 0; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;
 	case 'c': pushfile(EARGF(usage()), FFcsv); break;

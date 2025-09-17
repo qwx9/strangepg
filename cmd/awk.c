@@ -90,6 +90,7 @@ awk(void *)
 	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
 		sysfatal("awk: %s", error());
 	dbg = (debug & Debugstrawk) != 0;
+	quiet = status & FSquiet || (debug & Debuginfo) == 0;	/* debug set later */
 	/* note: srand has already been called, so awk's srand_seed
 	 * has a wrong value of 1; we don't care. */
 	compileawk(nelem(args), args);
