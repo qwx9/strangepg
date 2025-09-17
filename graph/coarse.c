@@ -305,7 +305,6 @@ uncoarsen(void)
 	vlong t;
 	Node *u, *ue, *unew;
 	CNode *U, *V, *UE;
-	Value val;
 	edgeset *eset;
 
 	if(expnodes == nil){
@@ -367,10 +366,8 @@ uncoarsen(void)
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
 		U = cnodes + u->id;
-		if(getnodelength(u->id) > 0){
-			val.u = sublength(U);
-			setnodelength(u - nodes, val);
-		}
+		if(getnodelength(u->id) > 0)
+			updatenodelength(u - nodes, sublength(U));
 		if(u >= nodes + nn)
 			spawn(cnodes[U->parent].idx);
 	}
