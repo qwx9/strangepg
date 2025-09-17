@@ -142,9 +142,12 @@ fnexpand1(Cell *x)
 
 /* erst die falafel, dann der wein */
 static void
-fncommit(void)
+fncommit(Cell *x)
 {
-	if(commit() < 0)
+	ioff quiet;
+
+	quiet = getival(x);
+	if(commit(quiet) < 0)
 		FATAL("%s", error());
 }
 
@@ -307,7 +310,7 @@ addon(TNode **a, int)
 	setival(ret, 0);
 	switch(t){
 	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
-	case ACOMMIT: fncommit(); break;
+	case ACOMMIT: fncommit(x); break;
 	case AEXPAND1: fnexpand1(x); break;
 	case AEXPANDALL: expandall(); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;

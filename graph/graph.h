@@ -5,7 +5,7 @@ void	explode(ioff);
 void	expandall(void);
 int	coarsen(void);
 int	uncoarsen(void);
-int	commit(void);
+int	commit(int);
 int	expand(ioff);
 int	collapseup(ioff*);
 int	collapsedown(ioff*);

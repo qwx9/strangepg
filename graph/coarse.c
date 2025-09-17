@@ -601,7 +601,7 @@ coarsen(void)
 
 /* FIXME: logmsg or just print? */
 int
-commit(void)
+commit(int quiet)
 {
 	int r;
 	double t;
@@ -616,7 +616,10 @@ commit(void)
 		fn = uncoarsen;
 		name = "expand";
 	}else{
-		logmsg("collapse/expand: no effect.\n");
+		if(!quiet)
+			logmsg("collapse/expand: no effect.\n");
+		else
+			DPRINT(Debugcoarse, "collapse/expand: no effect");
 		return 0;
 	}
 	switch(r = fn()){
