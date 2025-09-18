@@ -667,10 +667,11 @@ Clicking while holding the shift or control key toggles its selection,
 ie. adds or removes it to the current selection.
 Dragging a selection box selects all intersecting nodes
 (current implementation is [very limited](#known-bugs)).
-Clicking on empty space deselects everything.
+Clicking on empty space deselects everything unless the shift or control key are held.
 
 Nodes can be dragged around by clicking and holding the left mouse button.
-Currently, only one node can be moved at a time.
+An entire selection can be moved together also by holding the shift or control key
+while clicking and dragging in empty space.
 
 
 #### Keyboard shortcuts:
@@ -891,6 +892,12 @@ but once colors are known, selections can be made based on them.
 
 <p align="center"><img src=".pics/basic.png"/></p>
 
+*Important:* tags are set to a specific type based on the first values encountered:
+integer, floating point (both 64-bit), or string.
+Setting a floating point value on an integer type will implicity truncate it.
+Conversions between strings and numeric types are currently disallowed.
+To check for an _unset_ value (or NA), use the strawk `in` operator: `if(!(label in tag)) print label`.
+
 #### Format notes
 
 The accepted format here is more stringent than usual.
@@ -1073,7 +1080,7 @@ strangepg \
 ## Known bugs
 
 Major bugs:
-- Coarsening does not update strawk tables
+- Coarsening does not update strawk tables.
 - Layouting is slow and larger graphs show up as a ball at the center of the screen:
 this is the initial state for any of the layouting algorithms,
 but because it is shown in real time and the algorithms currently used being slow
@@ -1088,13 +1095,16 @@ and a `a+a-` edge will be a dot at the end of the node (in read direction).
 - Edge objects and adjacencies in general can't really be manipulated through strawk
 - OpenGL ES: mouse picking code doesn't work and crashes with an assertion failure;
 not sure what and how to fix.
+- Broken on WSL2 on some machines; the Windows native binary can still be used
+directly through the terminal emulator.
+- DirectX: mouse picking code is buggy and can crash the application near startup.
+- Fatal errors in strawk are not always handled gracefully and may result in broken state.
 
 Less major bugs:
-- Blinking nodes due to renderer's lack of reordering of nodes for correct alpha blending
-- "Spinning" nodes due to an edge case in average angle computation
+- Blinking nodes due to renderer's lack of reordering of nodes for correct alpha blending.
+- "Spinning" nodes due to an edge case in average angle computation.
 - The selection box is a kludge and is stupidly resource-heavy.
 - The selection box currently only works in one direction.
-- Only one node can be moved at a time.
 - The renderer is fairly efficient, but it could be made an order of magnitude faster.
 - (pfr*) Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well.
