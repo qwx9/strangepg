@@ -275,7 +275,7 @@ Cell *call(TNode **a, int n)	/* function call.  very kludgy and fragile */
 		if (isarr(t)) {
 			if (t->csub == CCOPY) {
 				if (i >= ncall) {
-					freesymtab(t);
+					freesymtab(t, 1);
 					t->csub = CTEMP;
 					tempfree(t);
 				} else if (isptr(t)) {
@@ -492,7 +492,7 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*up
 		if(isarr(cp)){
 			if(cp->sval != EMPTY){
 				cp->tval &= ~PTR;
-				freesymtab(cp);
+				freesymtab(cp, 1);
 			}
 		}else if(freeable(cp))
 			xfree(cp->sval);
@@ -531,10 +531,12 @@ Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts 
 		return False;	/* FIXME: can't delete */
 	}
 	if (a[1] == NULL) {	/* delete the elements, not the table */
-		freesymtab(x);
+		freesymtab(x, 0);
 		x->tval &= ~STR;
-		x->tval |= ARR|DONTFREE;
-		x->sval = (char *) makesymtab(NSYMTAB);
+		if(!isarr(x) || x->sval == NULL){
+			x->tval |= ARR|DONTFREE;
+			x->sval = (char *) makesymtab(NSYMTAB);
+		}
 	} else {
 		char *buf = makearraystring(a[1], __func__);
 		freeelem(x, buf);
@@ -1800,12 +1802,13 @@ Cell *split(TNode **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	sep = *fs;
 	ap = execute(a[1]);	/* array name */
 /* BUG 7/26/22: this appears not to reset array: see C1/asplit */
-	freesymtab(ap);
+	freesymtab(ap, 0);
 	DPRINTF("split: s=|%s|, a=%s, sep=|%s|\n", s, NN(ap->nval), fs);
-	ap->tval &= ~STR;
-	ap->tval |= ARR|DONTFREE;
-	ap->sval = (char *) makesymtab(NSYMTAB);
-
+	if(!isarr(ap)){
+		ap->tval &= ~STR;
+		ap->tval |= ARR|DONTFREE;
+		ap->sval = (char *) makesymtab(NSYMTAB);
+	}
 	n = 0;
 	if (arg3type == REGEXPR && strlen((char*)((fa*)a[2])->restr) == 0) {
 		/* split(s, a, //); have to arrange that it looks like empty sep */

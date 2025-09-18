@@ -144,7 +144,7 @@ Array *makesymtab(int n)	/* make a new symbol table */
 	return(ap);
 }
 
-void freesymtab(Cell *ap)	/* free a symbol table */
+void freesymtab(Cell *ap, int nuke)	/* free a symbol table */
 {
 	Cell *cp, *temp;
 	Array *tp;
@@ -174,8 +174,10 @@ void freesymtab(Cell *ap)	/* free a symbol table */
 	}
 	if (tp->nelem != 0)
 		WARNING("can't happen: inconsistent element count freeing %s", ap->nval);
-	FREE(tp->tab);
-	FREE(tp);
+	if(nuke){
+		FREE(tp->tab);
+		FREE(tp);
+	}
 }
 
 void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */

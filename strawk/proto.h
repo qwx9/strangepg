@@ -127,7 +127,7 @@ extern	TNode	*itonp(int);
 extern	void	syminit(void);
 extern	void	arginit(int, char **);
 extern	Array	*makesymtab(int);
-extern	void	freesymtab(Cell *);
+extern	void	freesymtab(Cell *, int);
 extern	void	freeelem(Cell *, const char *);
 extern	Cell	*setsym(const char *, const char *, Array *);
 extern	Cell	*setptrtab(Awknum, Array *, int);
