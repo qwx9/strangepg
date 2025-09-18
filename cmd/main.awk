@@ -406,11 +406,9 @@ function selectnode(name){
 #	deselect()
 #}
 # not deselecting
-function expand(i){
-	if(i != ""){
-		if(!checknodeid(i))
-			return
-		expand1(i)
+function expand(name,	i){
+	if(name != ""){
+		expand1(id[i])
 	}else if(length(selected) > 0){
 		for(i in selected)
 			expand1(i)
@@ -418,6 +416,18 @@ function expand(i){
 		expandall()
 	commit()
 	resetcols()
+}
+function redraw(){
+	print "D"
+}
+function explode(d,	i){
+	if(length(selected) == 0)
+		return
+	if(d == "" || float(d) <= 0)
+		d = 8.0
+	for(i in selected)
+		explode1(i, d)
+	redraw()
 }
 function groupby(tag, incl, cm,	acc){
 	delete acc

@@ -828,7 +828,7 @@ quit()                     give up
 Layouts:
 
 ```awk
-explode(name)              add random jitter to a node or to the selection if no name is given
+explode(Δ)                 add a random amount of jitter in [-Δ/2,+Δ/2] to the selected nodes, default Δ=8.0
 ```
 
 Coarsening:
@@ -851,6 +851,7 @@ readctab(path)             import coarsening table from file (experimental)
 ```
 
 <p align="center"><img src=".pics/explode.png"/></p>
+_explode() function._
 
 Paths are absolute or relative to the current working directory.
 

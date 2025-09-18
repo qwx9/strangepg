@@ -1,6 +1,6 @@
 int	exportct(char*);
 void	printgraph(void);
-void	explode(ioff);
+void	explode(ioff, float);
 
 void	expandall(void);
 int	coarsen(void);

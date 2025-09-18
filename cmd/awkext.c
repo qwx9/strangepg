@@ -87,40 +87,22 @@ fnloadbatch(void)
 	loadbatch();
 }
 
-/* FIXME: make variadic funs work in strawk itself,
- * then we won't need this shit; also for coarsening */
 static TNode *
-fnexplode(Cell *x, TNode *nextarg)
+fnexplode1(Cell *x, TNode *next)
 {
-	int i;
-	ioff idx, id;
-	Cell *c;
-	Array *a;
-
-	if(nextarg == nil){
-		a = core.sel;
-		for(i=0; i<a->size; i++){
-			for(c=a->tab[i]; c!=nil; c=c->cnext){
-				id = atoi(c->nval);
-				if((idx = getnodeidx(id)) < 0)
-					continue;
-				explode(idx);
-			}
-		}
-		return nil;
-	}
-	for(;nextarg!=nil; nextarg=nextarg->nnext){
+	ioff id;
+	float Δ;
+	
+	id = getival(x);
+	if(next != nil){
+		x = execute(next);
+		Δ = getfval(x);
 		tempfree(x);
-		x = execute(nextarg);
-		if((id = getid(getsval(x))) < 0)
-			FATAL("%s", error());
-		if((idx = getnodeidx(id)) < 0){
-			DPRINT(Debuggraph, "explode: ignoring inactive node %d", id);
-			continue;
-		}
-		explode(idx);
-	}
-	return nil;
+		next = next->nnext;
+	}else
+		Δ = 8.0f;
+	explode(id, Δ);
+	return next;
 }
 
 static void
@@ -321,7 +303,7 @@ addon(TNode **a, int)
 	case ACOMMIT: fncommit(x); break;
 	case AEXPAND1: fnexpand1(x); break;
 	case AEXPANDALL: expandall(); break;
-	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
+	case AEXPLODE1: nextarg = fnexplode1(x, nextarg); break;
 	case AEXPORTCOARSE: fnexportct(x); break;
 	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;

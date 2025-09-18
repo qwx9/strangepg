@@ -173,6 +173,9 @@ readcmd(char *s)
 		case '!':
 			quit();
 			break;
+		case 'D':
+			req |= Reqredraw;
+			continue;
 		case 'E':
 			logerr(va("error: %s\n", s+2));
 			continue;
@@ -250,7 +253,7 @@ readcmd(char *s)
 		}
 	}
 	if(req != 0)
-		reqdraw(req);
+		reqdraw(req);	/* FIXME: arg is not a mask but just an enum */
 }
 
 static void

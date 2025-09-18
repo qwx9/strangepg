@@ -29,7 +29,7 @@ const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "exp",	FEXP,		BLTIN },
 	{ "expand1",	AEXPAND1,		ADDON },
 	{ "expandall",	AEXPANDALL,		ADDON },
-	{ "explode",	AEXPLODE,		ADDON },
+	{ "explode1",	AEXPLODE1,		ADDON },
 	{ "exportcoarse",	AEXPORTCOARSE,		ADDON },
 	{ "exportgfa",	AEXPORTGFA,		ADDON },
 	{ "exportsvg",	AEXPORTSVG,		ADDON },

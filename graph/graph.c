@@ -36,17 +36,20 @@ printgraph(void)
 }
 
 void
-explode(ioff idx)
+explode(ioff id, float Δ)
 {
+	ioff idx;
 	RNode *r;
 
-	if(idx < 0 || idx >= dylen(rnodes))
-		sysfatal("explode: out of bounds index: %d > %zd", idx, dylen(rnodes)-1);
+	if((idx = getnodeidx(id)) < 0){
+		DPRINT(Debuggraph, "explode: %s", error());
+		return;
+	}
 	r = rnodes + idx;
-	r->pos[0] += 32.0f * (0.5f - xfrand());
-	r->pos[1] += 32.0f * (0.5f - xfrand());
+	r->pos[0] += Δ * (0.5f - xfrand());
+	r->pos[1] += Δ * (0.5f - xfrand());
 	if(drawing.flags & DF3d)
-		r->pos[2] += 32.0f * (0.5f - xfrand());
+		r->pos[2] += Δ * (0.5f - xfrand());
 }
 
 ioff
