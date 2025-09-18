@@ -355,7 +355,7 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	Cell *p, *w;
 
 	if(tp->type != 0){
-		i = -1;
+		i = getival(tp);
 		if((t & (STR|NUM)) == STR){
 			if(tp->ids != NULL && (w = lookup(s, tp->ids)) != NULL)
 				i = getival(w);

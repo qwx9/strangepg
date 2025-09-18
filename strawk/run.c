@@ -458,6 +458,7 @@ Cell *array(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 				return z;
 			}
 		}
+		i = getival(y);
 		if((y->tval & (STR|NUM)) == STR){
 			s = getsval(y);
 			if(ap->ids != NULL && (w = lookup(s, ap->ids)) != NULL)
