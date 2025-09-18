@@ -165,7 +165,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 42 "awkgram.y"
+#line 46 "awkgram.y"
 
 	TNode	*p;
 	Cell	*cp;

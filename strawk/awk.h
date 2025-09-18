@@ -114,6 +114,9 @@ typedef struct Cell {
 } Cell;
 
 typedef struct Array {		/* symbol table array */
+#ifdef VERSION
+	RWLock	lock;
+#endif
 	int		type;		/* (ptr) type of variable or (non-ptr) 0 */
 	struct Array	*ids;		/* (ptr) label to index table */
 	void	(*upfn)(size_t, Value);	/* (ptr) update hook */

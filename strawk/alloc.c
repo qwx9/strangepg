@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include "awk.h"
 
 enum{

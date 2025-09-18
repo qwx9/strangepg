@@ -14,6 +14,7 @@ YACC:= bison
 YFLAGS:= -d
 CC?= clang
 CPPFLAGS+= -MMD -MP
+CPPFLAGS+= -I.. -I../unix -I../posix -I../util
 CFLAGS?= -O2 -march=native -pipe
 LDFLAGS?=
 LDLIBS:= -lm

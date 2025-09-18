@@ -130,6 +130,10 @@ int main(int argc, char *argv[])
 	enum { TOK_UNKNOWN, TOK_ENUM, TOK_DEFINE } tokentype = TOK_UNKNOWN;
 
 	printf("#include <stdio.h>\n");
+	printf("#ifdef VERSION\n");
+	printf("#include \"strpg.h\"\n");
+	printf("#include \"threads.h\"\n");
+	printf("#endif\n");
 	printf("#include \"awk.h\"\n");
 	printf("#include \"" AWKTAB "\"\n\n");
 

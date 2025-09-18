@@ -6,7 +6,6 @@
 #include "strawk/awk.h"
 #include "var.h"
 
-extern QLock symlock;
 extern QLock buflock;	/* FIXME */
 
 Core core;
@@ -48,9 +47,7 @@ getid(char *s)
 {
 	Cell *c;
 
-	qlock(&symlock);
 	c = lookup(s, core.ids);
-	qunlock(&symlock);
 	if(c == nil)
 		return -1;
 	else
@@ -74,9 +71,7 @@ autoattach(Cell *cp)
 	Array *ap;
 	void (*fn)(size_t, Value);
 
-	qlock(&symlock);
 	cp = lookup(cp->nval, symtab);
-	qunlock(&symlock);
 	assert(cp != nil);
 	fn = nil;
 	tag = cp->nval;
@@ -109,10 +104,8 @@ autoattach(Cell *cp)
 			case 'z': fn = setnodeinitz; break;
 			}
 	}
-	qlock(&symlock);
 	ap = attach(tag, core.ids, buf, n, type, fn);
 	setsymtab(tag, tag, ZV, STR|CON, core.ptrs);
-	qunlock(&symlock);
 	return ap;
 }
 
@@ -167,10 +160,8 @@ mktab(Cell *cp, char type)
 	buf = emalloc(n * m);
 	if(type != Tstring)
 		memset(buf, 0xfe, n * m);
-	qlock(&symlock);
 	ap = attach(tag, ids, buf, n, atype, fn);
 	setsymtab(tag, tag, ZV, STR|CON, ptrs);
-	qunlock(&symlock);
 	return ap;
 }
 
@@ -181,9 +172,7 @@ set(Cell *tp, voff id, char type, TVal v)
 	Array *ap;
 
 	ap = mktab(tp, type);
-	qlock(&symlock);
 	cp = setptrtab(id, ap, 0);
-	qunlock(&symlock);
 	switch(type){
 	case Tint: setival(cp, v.i); break;
 	case Tuint: setival(cp, v.u); break;
@@ -191,9 +180,7 @@ set(Cell *tp, voff id, char type, TVal v)
 	case Tstring: setsval(cp, v.s, 0); break;
 	default: panic("set: unknown type %o\n", type);
 	}
-	qlock(&symlock);
 	tempfree(cp);	/* FIXME: race with run.c */
-	qunlock(&symlock);
 }
 
 void
@@ -308,9 +295,7 @@ vartype(char *val, char type, TVal *vp, Cell *cp)
 			}
 		}
 	}
-	qlock(&symlock);
 	cp = lookup(val, symtab);
-	qunlock(&symlock);
 	if(cp != nil){
 		if(cp->tval & FLT){
 			vp->f = getfval(cp);
@@ -324,13 +309,11 @@ vartype(char *val, char type, TVal *vp, Cell *cp)
 				val = estrdup(val);
 		}
 	}else{
-		qlock(&symlock);
 		cp = setsymtab(val, NULL, ZV, STR|CON, core.strs);
 		if(cp->nval == val)
 			cp->nval = val = estrdup(val);
 		else
 			val = cp->nval;
-		qunlock(&symlock);
 	}
 	vp->s = val;
 	return Tstring;
@@ -346,15 +329,11 @@ setedgetag(char *tag, voff id, char ttype, char *val)
 
 	r = 0;
 	DPRINT(Debugawk, "setedgetag %s[%d] = %s", tag, id, val);
-	qlock(&symlock);
 	cp = setsymtab(tag, NULL, ZV, 0|UNS, symtab);	/* FIXME: hack */
-	qunlock(&symlock);
 	if(isptr(cp) && cp->sval != EMPTY && ((Array *)cp->sval)->ids != nil
 	|| !isptr(cp) && (cp->tval & UNS) == 0){
 		snprint(etag, sizeof etag, "e%s", tag);
-		qlock(&symlock);
 		cp = setsymtab(etag, NULL, ZV, NUM, symtab);
-		qunlock(&symlock);
 		/* only print the warning once */
 		if(!isptr(cp) && (cp->tval & UNS) == 0){
 			werrstr("%s is a node tag, renaming", tag);
@@ -378,9 +357,7 @@ settag(char *tag, voff id, char ttype, char *val)
 
 	DPRINT(Debugawk, "settag %s[%s] = %s", tag, getname(id), val);
 	assert(id >= 0 && id < dylen(core.labels));
-	qlock(&symlock);
 	cp = setsymtab(tag, NULL, ZV, 0, symtab);
-	qunlock(&symlock);
 	r = tagtype(val, ttype, &type);
 	type = vartype(val, type, &v, cp);
 	pushval(cp, id, type, v);
@@ -400,13 +377,15 @@ pushname(char *s)
 	Value v;
 	Cell *c;
 
+	if(autoattachfn == nil){	/* let it cook */
+		qlock(&buflock);
+		qunlock(&buflock);
+	}
 	if((id = getid(s)) != -1)
 		return id;
 	id = dylen(core.labels);
 	v.i = id;
-	qlock(&symlock);
 	c = setsymtab(s, nil, v, NUM, core.ids);
-	qunlock(&symlock);
 	dypush(core.labels, c->nval);
 	return id;
 }
@@ -421,13 +400,11 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	dyresize(core.labels, nnodes);
 	dyresize(core.colors, nnodes);
 	memset(core.colors, 0xfe, nnodes * sizeof *core.colors);
-	qlock(&symlock);
 	/* FIXME: make it RO after loading? */
 	core.length = attach("LN", core.ids, lenp, nnodes, NUM|USG, setnodelength);
 	core.degree = attach("degree", core.ids, degp, nnodes, RO|NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nnodes, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
-	qunlock(&symlock);
 }
 
 static inline Array *
@@ -495,4 +472,5 @@ initvars(void)	/* called within strawk */
 	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 	core.sel = initset("selected");
 	autoattachfn = autoattach;
+	qunlock(&buflock);
 }

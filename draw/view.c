@@ -3,8 +3,6 @@
 #include "drw.h"
 #include "view.h"
 
-/* FIXME: consolidate with rest of ui view and draw.c code */
-
 View view;
 
 void
@@ -58,7 +56,6 @@ pandraw(float Δx, float Δy)
 	}
 }
 
-/* FIXME: pan/zoom in world coordinates; standardize this, make mvp global */
 void
 worldview(HMM_Vec3 v)
 {

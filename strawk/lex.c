@@ -26,6 +26,10 @@ THIS SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include "awk.h"
 #include AWKTAB
 

@@ -37,6 +37,10 @@ THIS SOFTWARE.
 #include <time.h>
 #include <inttypes.h>
 #include <sys/types.h>
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include "awk.h"
 #include AWKTAB
 

@@ -12,8 +12,6 @@
 /* NOTE: pushcmd here is asking for trouble. fs/gfa and others
  * may be saturating the cmd buffer and we're the only reader. */
 
-extern QLock symlock;
-
 QLock buflock;
 
 int
@@ -28,15 +26,11 @@ selectnodebyidx(ioff idx, int toggle)
 		return -1;
 	snprint(buf, sizeof buf, "%d", id);
 	v.i = id;
-	qlock(&symlock);
 	cp = setsymtab(buf, EMPTY, v, CON|NUM, core.sel);
-	qunlock(&symlock);
 	if(cp->nval != buf){
 		if(toggle){
-			qlock(&symlock);
 			cp = lookup("selected", symtab);	/* FIXME */
 			freeelem(cp, buf);
-			qunlock(&symlock);
 		}
 		return 0;
 	}
@@ -56,7 +50,6 @@ dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 	Array *ap;
 
 	ap = core.sel;
-	qlock(&symlock);
 	for(i=0; i<ap->size; i++){
 		for(cp=ap->tab[i]; cp!=nil; cp=cp->cnext){
 			//v.u = strtoull(cp->nval, nil, 10);
@@ -68,7 +61,6 @@ dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 			fn(idx, Δx, Δy);
 		}
 	}
-	qunlock(&symlock);
 }
 
 void
@@ -107,18 +99,14 @@ fnexplode(Cell *x, TNode *nextarg)
 
 	if(nextarg == nil){
 		a = core.sel;
-		qlock(&symlock);
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){
-				qunlock(&symlock);
 				id = atoi(c->nval);
 				if((idx = getnodeidx(id)) < 0)
 					continue;
 				explode(idx);
-				qlock(&symlock);
 			}
 		}
-		qunlock(&symlock);
 		return nil;
 	}
 	for(;nextarg!=nil; nextarg=nextarg->nnext){
@@ -147,9 +135,7 @@ fnrefresh(void)
 {
 	Cell *y;
 
-	qlock(&symlock);
 	y = lookup("selinfo", symtab);
-	qunlock(&symlock);
 	if(y == nil)
 		return;
 	strecpy(selstr, selstr+sizeof selstr, getsval(y));
@@ -210,16 +196,12 @@ fncollapse(Cell *x, TNode *nextarg)
 		}
 	}else{
 		a = core.sel;
-		qlock(&symlock);
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){
-				qunlock(&symlock);
 				id = atoi(c->nval);
 				ops = pushcollapseop(id, ops);
-				qlock(&symlock);
 			}
 		}
-		qunlock(&symlock);
 		if(ops == nil){
 			all = 1;
 			ops = collapseall();
@@ -365,4 +347,5 @@ void
 initext(void)
 {
 	initqlock(&buflock);
+	qlock(&buflock);
 }
