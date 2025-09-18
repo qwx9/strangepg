@@ -3,16 +3,15 @@
 #include "graph.h"
 #include "cmd.h"
 #include "drw.h"
-#include <locale.h>
-#include <signal.h>
 #include "strawk/awk.h"
 #include "var.h"
 
 extern QLock symlock;
 extern QLock buflock;	/* FIXME */
 
+Core core;
+
 typedef struct Val Val;
-typedef struct Core Core;
 
 /* GFA does not support 64-bit wide types */
 enum{
@@ -36,20 +35,6 @@ struct Val{
 	TVal v;
 };
 static Val *valbuf;
-
-struct Core{
-	char **labels;
-	u32int *colors;
-	Array *strs;	/* FIXME: val could be a refcount to allow freeing */
-	Array *ptrs;
-	Array *eptrs;
-	Array *ids;
-	Array *label;
-	Array *length;
-	Array *degree;
-	Array *color;
-};
-static Core core;
 
 char *
 getname(voff idx)
@@ -445,18 +430,11 @@ fixtabs(voff nnodes, int *lenp, ushort *degp)
 	qunlock(&symlock);
 }
 
-static inline void
-inittag(char *tag, short type, Array **app)
+static inline Array *
+mkarray(Cell *cp)
 {
-	Cell *cp;
 	Array *ap;
 
-	cp = setsymtab(tag, EMPTY, ZV, CON|type, symtab);
-	if(app == nil){
-		if(!isarr(cp))
-			cp->tval |= ARR|PTR;
-		return;
-	}
 	if(!isarr(cp)){	/* else preallocated during parsing */
 		if(freeable(cp))
 			xfree(cp->sval);
@@ -465,17 +443,37 @@ inittag(char *tag, short type, Array **app)
 		cp->sval = (char *)ap;
 	}else{
 		ap = (Array *)cp->sval;
-		if(ap->nelem != 0){
-			freesymtab(cp);
-			ap = makesymtab(NSYMTAB);
-			cp->sval = (char *)ap;
-		}
+		if(ap->nelem != 0)
+			freesymtab(cp, 0);
 	}
-	*app = ap;
+	return ap;
+}
+
+static inline Array *
+initset(char *name)
+{
+	Cell *cp;
+
+	cp = setsymtab(name, NULL, ZV, STR, symtab);
+	return mkarray(cp);
+}
+
+static inline void
+inittag(char *tag, short type, Array **app)
+{
+	Cell *cp;
+
+	cp = setsymtab(tag, EMPTY, ZV, CON|type, symtab);
+	if(app == nil){
+		if(!isarr(cp))
+			cp->tval |= ARR|PTR;
+		return;
+	}
+	*app = mkarray(cp);
 }
 
 void
-initvars(void)
+initvars(void)	/* called within strawk */
 {
 	inittag("id", RO, &core.ids);
 	inittag("STR", RO|STR, &core.strs);
@@ -495,5 +493,6 @@ initvars(void)
 	setsymtab("LN", "LN", ZV, STR|CON, core.ptrs);
 	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
 	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
+	core.sel = initset("selected");
 	autoattachfn = autoattach;
 }

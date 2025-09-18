@@ -173,6 +173,7 @@ highlightnode(ioff idx)
 
 	r = rnodes + idx;
 	mixcolors(r->col, theme[Chigh] >> 8);
+	reqdraw(Reqredraw);
 }
 
 void

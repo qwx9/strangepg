@@ -123,7 +123,6 @@ enum{
 	Reqstop = 1<<31,		/* cease all activity and operations */
 };
 
-void	updatenode(ioff);
 s64int	getvedge(ioff);
 void	resizenodes(void);
 void	setnodeshape(int);

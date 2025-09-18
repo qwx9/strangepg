@@ -168,13 +168,6 @@ resizebuf(void)
 	}
 }
 
-/* FIXME: individual nodes */
-void
-updatenode(ioff id)
-{
-	reqdraw(Reqredraw);
-}
-
 static void
 clearscreen(void)
 {

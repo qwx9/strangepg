@@ -1,5 +1,4 @@
 #include "strpg.h"
-#include "lib/khashl.h"
 #include "lib/HandmadeMath.h"
 #include "threads.h"
 #include "cmd.h"
@@ -12,10 +11,7 @@
 int prompting;
 char hoverstr[256], selstr[512];
 
-/* FIXME: horrible */
-KHASHL_SET_INIT(KH_LOCAL, sel, sel, ioff, kh_hash_uint32, kh_eq_generic)
-static sel *sels;
-static ioff selected = -1, shown = -1, focused = -1;
+static ioff shown = -1, focused = -1;
 
 enum{
 	Mctrl = 1<<0,
@@ -102,21 +98,6 @@ keyevent(Rune r, int down)
 }
 
 static void
-clearsel(void)
-{
-	sel_clear(sels);	/* FIXME: shrink? */
-}
-
-static void
-commitsel(void)
-{
-	if(kh_size(sels) > 0){
-		pushcmd("showselected()");
-		flushcmd();
-	}
-}
-
-static void
 resetselbox(int x, int y)
 {
 	selbox.x1 = selbox.x2 = x;
@@ -130,8 +111,7 @@ resetselbox(int x, int y)
 static int
 dragselect(int x, int y)
 {
-	int abs;
-	ioff id, idx, Δx, Δy, oid;
+	ioff idx, Δx, Δy, oid;
 	struct {
 		int x1;
 		int x2;
@@ -168,14 +148,8 @@ dragselect(int x, int y)
 			if(u.i >= 0){
 				if((idx = u.i) == oid)
 					continue;
-				sel_put(sels, idx, &abs);
-				if(!abs)
+				if(selectnodebyidx(idx, 0) <= 0)
 					continue;
-				if((id = getrealid(idx)) < 0){
-					warn("dragselect: %s\n", error());
-					continue;
-				}
-				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(idx);
 				oid = idx;
 			}
@@ -187,14 +161,8 @@ dragselect(int x, int y)
 			if(u.i >= 0){
 				if((idx = u.i) == oid)
 					continue;
-				sel_put(sels, idx, &abs);
-				if(!abs)
+				if(selectnodebyidx(idx, 0) <= 0)
 					continue;
-				if((id = getrealid(idx)) < 0){
-					warn("dragselect: %s\n", error());
-					continue;
-				}
-				pushcmd("selectnodebyid(%d,1)", id);
 				highlightnode(idx);
 				oid = idx;
 			}
@@ -204,39 +172,51 @@ dragselect(int x, int y)
 	return 0;
 }
 
-static int
-mousedrag(float Δx, float Δy)
+static void
+drag2d(ioff idx, float Δx, float Δy)
 {
-	ioff idx;
+	RNode *r;
+
+	r = rnodes + idx;
+	r->pos[0] += Δx;
+	r->pos[1] -= Δy;
+}
+
+static void
+drag3d(ioff idx, float Δx, float Δy)
+{
 	float d;
 	RNode *r;
 	HMM_Vec3 v;
 
-	if((selected & 1UL<<31) != 0)
-		return 0;
+	r = rnodes + idx;
+	v = HMM_V3(r->pos[0], r->pos[1], r->pos[2]);
+	v = HMM_SubV3(view.eye, v);
+	d = HMM_LenV3(v);
+	Δx *= d;
+	Δy *= d;
+	r->pos[0] += Δx * view.right.X - Δy * view.up.X;
+	r->pos[1] += Δx * view.right.Y - Δy * view.up.Y;
+	r->pos[2] += Δx * view.right.Z - Δy * view.up.Z;
+}
+
+static int
+mousedrag(float Δx, float Δy)
+{
+	void (*fn)(ioff, float, float);
+
 	Δx /= view.w;
 	Δy /= view.h;
-	//kh_foreach(sels, k){
-	//	idx = kh_key(sels, k);
-	idx = selected;
-	r = rnodes + idx;
-	/* FIXME: not here */
 	if((drawing.flags & DF3d) == 0){
-		Δx = 2 * Δx * view.Δeye.Z * view.ar * view.tfov;
-		Δy = 2 * Δy * view.Δeye.Z * view.tfov;
-		r->pos[0] += Δx;
-		r->pos[1] -= Δy;
+		Δx *= 2 * view.Δeye.Z * view.ar * view.tfov;
+		Δy *= 2 * view.Δeye.Z * view.tfov;
+		fn = drag2d;
 	}else{
-		v = HMM_V3(r->pos[0], r->pos[1], r->pos[2]);
-		v = HMM_SubV3(view.eye, v);
-		d = HMM_LenV3(v);
-		Δx *= d * view.ar * view.tfov;
-		Δy *= d * view.tfov;
-		/* FIXME: mul + sub */
-		r->pos[0] += Δx * view.right.X - Δy * view.up.X;
-		r->pos[1] += Δx * view.right.Y - Δy * view.up.Y;
-		r->pos[2] += Δx * view.right.Z - Δy * view.up.Z;
+		Δx *= view.ar * view.tfov;
+		Δy *= view.tfov;
+		fn = drag3d;
 	}
+	dragselection(Δx, Δy, fn);
 	reqdraw(Reqredraw);
 	return 1;
 }
@@ -305,34 +285,24 @@ mousehover(int x, int y)
 static int
 mouseselect(ioff idx, int multi)
 {
-	int abs;
-	ioff id;
+	int new;
 
-	if(selected >= 0 && selected == idx && !multi || prompting)
+	if(prompting)
 		return 0;
 	if(idx != -1){
 		if((idx & 1UL<<31) == 0){
-			sel_put(sels, idx, &abs);
-			if((id = getrealid(idx)) < 0){
-				warn("mouseselect: %s\n", error());
+			if((new = selectnodebyidx(idx, multi)) < 0){
+				DPRINT(Debugui, "mouseselect: %s", error());
 				return 0;
 			}
-			selected = idx;
-			if(multi)
-				pushcmd("toggleselect(%d)", id);
-			else
-				pushcmd("reselectnode(%d)", id);
-			flushcmd();
-			highlightnode(idx);
-			updatenode(idx);
-		}else{	/* FIXME: edges: not implemented */
-			selected = idx;
+			if(new)
+				highlightnode(idx);
+			showselection();
+		}else{	/* FIXME: edges: not appearing in this film */
+			;
 		}
 		return 1;
-	}else
-		selected = -1;
-	if(!multi){
-		clearsel();
+	}else if(!multi){
 		pushcmd("deselect()");
 		flushcmd();
 		selstr[0] = 0;
@@ -349,7 +319,6 @@ focusobj(void)
 		return;
 	r = rnodes + focused;
 	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
-	clearsel();
 	mouseselect(focused, 0);
 	resetselbox(view.w, view.h);
 	reqdraw(Reqrefresh);
@@ -370,7 +339,6 @@ mouseevent(float x, float y, float Δx, float Δy)
 {
 	int m;
 	static int omod = 0xcafebabe, inwin;
-	khint_t k;
 
 	if(omod == 0xcafebabe){	/* first event */
 		omod = 0;
@@ -390,7 +358,7 @@ mouseevent(float x, float y, float Δx, float Δy)
 	if(m == 0){
 		endmove();	/* FIXME: doesn't really belong here? */
 		if(omod == Mlmb){
-			commitsel();
+			showselection();
 			resetselbox(x, y);
 			reqdraw(Reqrefresh);
 		}
@@ -400,26 +368,19 @@ mouseevent(float x, float y, float Δx, float Δy)
 		reqdraw(Reqrefresh);
 		omod = 0;
 	}
-	if(Δx != 0.0f || Δy != 0.0f)
+	if(Δx != 0.0f || Δy != 0.0f || mod != omod && omod == 0)
 		shown = mousehover(x, y);
-	/* FIXME: maybe if clicking on empty space, check if there's a node
-	 * very nearby first */
 	/* FIXME: hold shift while dragselect -> super slow down on vnc */
 	if(m == Mlmb){
 		if(omod == 0){
-			/* FIXME: multisel: we'd need to intersect two sets, a new
-			 * sel and the old ones */
-			k = sel_get(sels, shown);
-			if(k == kh_end(sels) && (mod & (Mshift | Mctrl)) == 0)
-				clearsel();
 			resetselbox(x, y);
 			mouseselect(shown, mod & (Mshift|Mctrl));
 		}else if(omod == Mlmb && (Δx != 0.0f || Δy != 0.0f)){
-			/* FIXME: would be nice to just redraw the one node */
-			if(selected != -1)
-				mousedrag(Δx, Δy);
-			else
+			if(selectionsize() == 0
+			|| selbox.x2 - selbox.x1 > 0 || selbox.y2 - selbox.y1 > 0)
 				dragselect(x, y);
+			else
+				mousedrag(Δx, Δy);
 		}
 	}else if(m == Mrmb){
 		if((mod & Mctrl) != 0)
@@ -439,6 +400,4 @@ initui(void)
 	if(drawing.flags & DFnope)
 		return;
 	initsysui();
-	if((sels = sel_init()) == nil)
-		sysfatal("initui: %s", error());
 }

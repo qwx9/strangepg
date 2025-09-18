@@ -6,62 +6,87 @@
 #include "ui.h"
 #include "graph.h"
 #include "cmd.h"
-#include <locale.h>
-#include <signal.h>
-#include "lib/khashl.h"
 #include "strawk/awk.h"
-
-extern QLock symlock;
+#include "var.h"
 
 /* NOTE: pushcmd here is asking for trouble. fs/gfa and others
  * may be saturating the cmd buffer and we're the only reader. */
 
+extern QLock symlock;
+
 QLock buflock;
 
-/* FIXME: remove */
-static inline Array *
-getarray(char *arr)
+int
+selectnodebyidx(ioff idx, int toggle)
 {
-	Cell *c;
-	Array *a;
-	Value v = {.i = 0};
+	ioff id;
+	char buf[64];
+	Cell *cp;
+	Value v;
 
+	if((id = getrealid(idx)) < 0)
+		return -1;
+	snprint(buf, sizeof buf, "%d", id);
+	v.i = id;
 	qlock(&symlock);
-	c = lookup(arr, symtab);
+	cp = setsymtab(buf, EMPTY, v, CON|NUM, core.sel);
 	qunlock(&symlock);
-	if(c == nil){
-		qlock(&symlock);
-		c = setsymtab(arr, nil, v, ARR, symtab);
-		qunlock(&symlock);
-		a = makesymtab(NSYMTAB);
-		c->sval = (char *)a;
-		c->tval |= ARR;
-	}else if(!isarr(c)){
-		if (freeable(c))
-			xfree(c->sval);
-		a = makesymtab(NSYMTAB);
-		c->tval &= ~(STR|NUM|FLT|DONTFREE);
-		c->tval |= ARR;
-		c->sval = (char *)a;
-	}else{
-		qlock(&symlock);
-		a = (Array *)c->sval;
-		qunlock(&symlock);
+	if(cp->nval != buf){
+		if(toggle){
+			qlock(&symlock);
+			cp = lookup("selected", symtab);	/* FIXME */
+			freeelem(cp, buf);
+			qunlock(&symlock);
+		}
+		return 0;
 	}
-	return a;
+	cp->nval = estrdup(buf);
+	cp->tval &= ~CON;
+	return 1;
 }
 
-/* FIXME: remove (?) */
-static inline Cell *
-getcell(char *lab, Array *a)
+void
+dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 {
-	Cell *c;
+	int i;
+	ioff idx;
+	Value v;
+	
+	Cell *cp;
+	Array *ap;
 
-	assert(a != nil);
+	ap = core.sel;
 	qlock(&symlock);
-	c = lookup(lab, a);
+	for(i=0; i<ap->size; i++){
+		for(cp=ap->tab[i]; cp!=nil; cp=cp->cnext){
+			//v.u = strtoull(cp->nval, nil, 10);
+			v.i = getival(cp);
+			if((idx = getnodeidx(v.i)) < 0){
+				DPRINT(Debugui, "dragselection: %s", error());
+				continue;
+			}
+			fn(idx, Δx, Δy);
+		}
+	}
 	qunlock(&symlock);
-	return c;
+}
+
+void
+showselection(void)
+{
+	Array *ap;
+
+	ap = core.sel;
+	if(ap->nelem > 0){
+		pushcmd("showselected()");
+		flushcmd();
+	}
+}
+
+int
+selectionsize(void)
+{
+	return core.sel->nelem;
 }
 
 static inline void
@@ -81,7 +106,7 @@ fnexplode(Cell *x, TNode *nextarg)
 	Array *a;
 
 	if(nextarg == nil){
-		a = getarray("selected");
+		a = core.sel;
 		qlock(&symlock);
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){
@@ -113,8 +138,6 @@ fnexplode(Cell *x, TNode *nextarg)
 static void
 fninfo(Cell *x)
 {
-	/* FIXME: more input validation; disable two-way comms, ie. don't
-	 * allow interactive usage of internals; private functions? */
 	strecpy(hoverstr, hoverstr+sizeof hoverstr, getsval(x));
 	reqdraw(Reqshallowdraw);
 }
@@ -124,7 +147,10 @@ fnrefresh(void)
 {
 	Cell *y;
 
-	if((y = getcell("selinfo", symtab)) == nil)
+	qlock(&symlock);
+	y = lookup("selinfo", symtab);
+	qunlock(&symlock);
+	if(y == nil)
 		return;
 	strecpy(selstr, selstr+sizeof selstr, getsval(y));
 	reqdraw(Reqshallowdraw);
@@ -144,10 +170,10 @@ fnexpand1(Cell *x)
 static void
 fncommit(Cell *x)
 {
-	ioff quiet;
+	ioff shutup;
 
-	quiet = getival(x);
-	if(commit(quiet) < 0)
+	shutup = getival(x);
+	if(commit(shutup) < 0)
 		FATAL("%s", error());
 }
 
@@ -183,7 +209,7 @@ fncollapse(Cell *x, TNode *nextarg)
 			ops = pushcollapseop(id, ops);
 		}
 	}else{
-		a = getarray("selected");	/* sucks */
+		a = core.sel;
 		qlock(&symlock);
 		for(i=0; i<a->size; i++){
 			for(c=a->tab[i]; c!=nil; c=c->cnext){

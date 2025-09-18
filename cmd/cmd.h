@@ -17,6 +17,11 @@ extern int noreset;	// FIXME: flag
 extern char *awkprog;
 extern int infd[2], outfd[2];
 
+int	selectnodebyidx(ioff, int);
+void	dragselection(float, float, void(*)(ioff, float, float));
+void	showselection(void);
+int	selectionsize(void);
+
 char*	getname(voff);
 voff	getid(char*);
 void	loadbatch(void);

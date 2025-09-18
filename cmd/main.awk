@@ -379,7 +379,7 @@ function showselected(){
 function selectnodebyid(i, noshow){
 	if(!checknodeid(i) || i in selected)
 		return
-	selected[i] = 0
+	selected[i] = int(i)
 	if(!noshow)
 		showselected()
 }
@@ -391,20 +391,6 @@ function selectnode(name){
 	if(!checknodename(name))
 		return
 	selectnodebyid(id[name], 1)	# FIXME
-}
-function toggleselect(i){
-	if(!checknodeid(i))
-		return
-	if(i in selected)
-		deselectnodebyid(i)
-	else
-		selectnodebyid(i)
-}
-function reselectnode(i){
-	if(!checknodeid(i))
-		return
-	deselect()
-	selectnodebyid(i)
 }
 # FIXME: can't be variadic, unless in C
 #function collapse(i){
