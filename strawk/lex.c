@@ -53,9 +53,10 @@ static int peek(void)
 	return c;
 }
 
-static int gettok(char **pbuf, int *psz)	/* get next input token */
+static int gettok(char **pbuf, int *psz, Value *vp, short *tp)	/* get next input token */
 {
 	int c, retc, hex;
+	short type;
 	char *buf = *pbuf, *trail;
 	int sz = *psz;
 	char *bp = buf;
@@ -110,10 +111,11 @@ static int gettok(char **pbuf, int *psz)	/* get next input token */
 			c = input();
 		}
 		*bp = 0;
-		if(is_valid_number(buf, true, NULL, &trail, NULL)){		
+		if(type = is_valid_number(buf, true, NULL, &trail, vp)){		
 			unputstr(trail);	/* put rest back for later */
 			trail[0] = 0;	/* truncate buf after number part */
 			retc = '0';	/* type is number */
+			*tp = type;
 		}else{
 			buf[1] = 0;	/* return one character as token */
 			retc = (uschar)buf[0];	/* character is its own type */
@@ -134,6 +136,8 @@ bool	reg	= false;	/* true => return a REGEXPR now */
 int yylex(void)
 {
 	int c;
+	short type;
+	Value v;
 	static char *buf = NULL;
 	static int bufsize = 5; /* BUG: setting this small causes core dump! */
 
@@ -148,13 +152,13 @@ int yylex(void)
 		return regexpr();
 	}
 	for (;;) {
-		c = gettok(&buf, &bufsize);
+		c = gettok(&buf, &bufsize, &v, &type);
 		if (c == 0)
 			return 0;
 		if (isalpha(c) || c == '_')
 			return word(buf);
 		if (isdigit(c)) {
-			yylval.cp = setsym(buf, buf, symtab);
+			yylval.cp = setsymtab(buf, NULL, v, type, symtab);
 			RET(NUMBER);
 		}
 
@@ -283,7 +287,7 @@ int yylex(void)
 
 		case '$':
 			/* BUG: awkward, if not wrong */
-			c = gettok(&buf, &bufsize);
+			c = gettok(&buf, &bufsize, &v, &type);
 			if (isalpha(c)) {
 				if (strcmp(buf, "NF") == 0) {	/* very special */
 					unputstr("(NF)");
