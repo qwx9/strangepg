@@ -80,6 +80,38 @@ worldview(HMM_Vec3 v)
 }
 
 void
+moveview(float Δx, float Δy)
+{
+	HMM_Vec3 v;
+
+	Δx *= HMM_DegToRad;
+	Δy *= HMM_DegToRad;
+	v = HMM_AddV3(HMM_MulV3F(view.front, Δy), HMM_MulV3F(view.right, Δx));
+	v = HMM_AddV3(view.center, v);
+	worldview(v);
+}
+
+void
+rotzview(float Δx, float Δy)
+{
+	float Δ;
+	HMM_Vec3 o;
+	HMM_Quat q;
+
+	/* FIXME: should be circular motion around center */
+	Δ = 0.1 * -(Δx + Δy) / 2;
+	Δ *= HMM_DegToRad;
+	q = HMM_QFromAxisAngle_RH(view.front, Δ);
+	o = view.center;
+	view.rot = HMM_MulQ(q, view.rot);
+	view.eye = HMM_AddV3(HMM_RotateV3Q(HMM_SubV3(view.eye, o), q), o);
+	view.right = HMM_RotateV3Q(view.right, q);
+	view.up = HMM_RotateV3Q(view.up, q);
+	view.front = HMM_RotateV3Q(view.front, q);
+	updateview();
+}
+
+void
 zoomdraw(float Δ, float Δx, float Δy)
 {
 	HMM_Vec3 v;

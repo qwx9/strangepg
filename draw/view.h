@@ -22,3 +22,5 @@ extern View view;
 void	zoomdraw(float, float, float);
 void	pandraw(float, float);
 void	worldview(HMM_Vec3);
+void	rotzview(float, float);
+void	moveview(float, float);

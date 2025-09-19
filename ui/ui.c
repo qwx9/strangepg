@@ -182,22 +182,22 @@ drag2d(ioff idx, float Δx, float Δy)
 	r->pos[1] -= Δy;
 }
 
+/* FIXME: wrong */
 static void
 drag3d(ioff idx, float Δx, float Δy)
 {
 	float d;
 	RNode *r;
-	HMM_Vec3 v;
+	HMM_Vec3 o, v;
 
 	r = rnodes + idx;
-	v = HMM_V3(r->pos[0], r->pos[1], r->pos[2]);
-	v = HMM_SubV3(view.eye, v);
-	d = HMM_LenV3(v);
-	Δx *= d;
-	Δy *= d;
-	r->pos[0] += Δx * view.right.X - Δy * view.up.X;
-	r->pos[1] += Δx * view.right.Y - Δy * view.up.Y;
-	r->pos[2] += Δx * view.right.Z - Δy * view.up.Z;
+	v = HMM_AddV3(HMM_MulV3F(view.right, Δx), HMM_MulV3F(view.up, -Δy));
+	o = HMM_SubV3(view.eye, HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
+	d = HMM_LenV3(o);
+	v = HMM_MulV3F(v, d);
+	r->pos[0] += v.X;
+	r->pos[1] += v.Y;
+	r->pos[2] += v.Z;
 }
 
 static int
@@ -212,8 +212,8 @@ mousedrag(float Δx, float Δy)
 		Δy *= 2 * view.Δeye.Z * view.tfov;
 		fn = drag2d;
 	}else{
-		Δx *= view.ar * view.tfov;
-		Δy *= view.tfov;
+		Δx *= 2 * view.ar * view.tfov;
+		Δy *= 2 * view.tfov;
 		fn = drag3d;
 	}
 	dragselection(Δx, Δy, fn);
@@ -388,8 +388,10 @@ mouseevent(float x, float y, float Δx, float Δy)
 		else
 			pan(-Δx, -Δy);
 	}else if(m == Mmmb){
-		/* FIXME: 2d: rotate on z axis */
-		/* FIXME: 3d: move center */
+		if(drawing.flags & DF3d)
+			moveview(Δx, Δy);
+		else
+			rotzview(Δx, Δy);
 	}else if(m == (Mlmb | Mrmb))
 		zoom(-Δx, -Δy);
 nope:
