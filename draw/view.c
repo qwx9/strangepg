@@ -30,6 +30,7 @@ void
 pandraw(float Δx, float Δy)
 {
 	HMM_Quat q;
+	HMM_Vec3 o;
 
 	if((drawing.flags & DF3d) == 0){
 		/* FIXME: redundancy with scr2world and ui code */
@@ -45,10 +46,11 @@ pandraw(float Δx, float Δy)
 	}else{
 		Δx *= HMM_DegToRad * 0.4f;
 		Δy *= HMM_DegToRad * 0.4f;
+		o = view.center;
 		q = HMM_QFromAxisAngle_RH(view.up, Δx);
 		q = HMM_MulQ(HMM_QFromAxisAngle_RH(view.right, Δy), q);
 		view.rot = HMM_MulQ(q, view.rot);
-		view.eye = HMM_RotateV3Q(view.eye, q);
+		view.eye = HMM_AddV3(HMM_RotateV3Q(HMM_SubV3(view.eye, o), q), o);
 		view.right = HMM_RotateV3Q(view.right, q);
 		view.up = HMM_RotateV3Q(view.up, q);
 		view.front = HMM_RotateV3Q(view.front, q);
@@ -59,10 +61,20 @@ pandraw(float Δx, float Δy)
 void
 worldview(HMM_Vec3 v)
 {
-	view.eye = v;
+	HMM_Vec3 d;
+
 	if((drawing.flags & DF3d) == 0){
+		v.Z += 10.0f;
+		view.eye = v;
 		view.center.X = v.X;
 		view.center.Y = v.Y;
+	}else{
+		view.center = v;
+		d = HMM_MulV3F(view.front, 10.0f);
+		v = HMM_SubV3(v, d);
+		view.eye = v;
+		view.Δeye = d;
+		zoomdraw(-0.1f, 0.0f, 0.0f);
 	}
 	updateview();
 }
@@ -77,7 +89,7 @@ zoomdraw(float Δ, float Δx, float Δy)
 		view.eye.Z -= Δ;
 		pandraw(Δx, Δy);
 	}else{
-		v = HMM_MulV3F(view.eye, Δ);
+		v = HMM_MulV3F(view.Δeye, Δ);
 		view.eye = HMM_SubV3(view.eye, v);
 		updateview();
 	}

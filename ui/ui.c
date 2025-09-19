@@ -318,7 +318,7 @@ focusobj(void)
 	if(focused == -1 || (focused & (1UL<<31)) != 0)	/* unimplemented */
 		return;
 	r = rnodes + focused;
-	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2] + 10.0f));
+	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
 	mouseselect(focused, 0);
 	resetselbox(view.w, view.h);
 	reqdraw(Reqrefresh);
@@ -387,6 +387,9 @@ mouseevent(float x, float y, float Δx, float Δy)
 			zoom(-Δx, -Δy);
 		else
 			pan(-Δx, -Δy);
+	}else if(m == Mmmb){
+		/* FIXME: 2d: rotate on z axis */
+		/* FIXME: 3d: move center */
 	}else if(m == (Mlmb | Mrmb))
 		zoom(-Δx, -Δy);
 nope:
