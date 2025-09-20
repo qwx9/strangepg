@@ -27,20 +27,21 @@ wipe(void *tp)
 	free(th);
 }
 
-/* don't use pthread_exit explicitely:
- * https://www.sourceware.org/bugzilla/show_bug.cgi?id=13199 */
 static void *
 _thread(void *tp)
 {
+	int r;
 	Thread *th;
 
 	th = tp;
 	pthread_cleanup_push(wipe, th);
 	pkey = th->key;
-	if(pthread_setspecific(pkey, th) != 0)
-		sysfatal("newthread: pthread_setspecific: %s", error());
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	if((r = pthread_setspecific(pkey, th)) != 0)
+		sysfatal("pthread_setspecific: %s", strerror(r));
+	if((r = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL)) != 0)
+		sysfatal("pthread_setcancelstate: %s", strerror(r));
+	if((r = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL)) != 0)
+		sysfatal("pthread_setcanceltype: %s", strerror(r));
 	th->fn(th->arg);
 	pthread_cleanup_pop(1);
 	return NULL;
@@ -49,6 +50,7 @@ _thread(void *tp)
 void
 newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char *name, uint stacksize)
 {
+	int r;
 	usize st;
 	pthread_attr_t a;
 	Thread *th;
@@ -60,24 +62,24 @@ newthread(void (*fn)(void*), void (*cleanfn)(void*), void *arg, void *data, char
 	th->cleanfn = cleanfn;
 	th->arg = arg;
 	th->data = data;
-	if(pthread_attr_init(&a) != 0)
-		sysfatal("newthread: pthread_attr_init: %s", error());
-	if(pthread_attr_getstacksize(&a, &st) != 0)
-		sysfatal("newthread: pthread_attr_getstacksize: %s", error());
+	if((r = pthread_attr_init(&a)) != 0)
+		sysfatal("newthread: pthread_attr_init: %s", strerror(r));
+	if((r = pthread_attr_getstacksize(&a, &st)) != 0)
+		sysfatal("newthread: pthread_attr_getstacksize: %s", strerror(r));
 	if(st < stacksize){
 		st = stacksize;
-		if(pthread_attr_setstacksize(&a, st) != 0)
-			sysfatal("newthread: pthread_attr_setstacksize: %s", error());
+		if((r = pthread_attr_setstacksize(&a, st)) != 0)
+			sysfatal("newthread: pthread_attr_setstacksize: %s", strerror(r));
 	}
-	if(pthread_key_create(&th->key, NULL) != 0)
-		sysfatal("newthread: pthread_key_create: %s", error());
-	if(pthread_create(p, &a, _thread, th) != 0)
-		sysfatal("newthread: pthread_create: %s", error());
-	if(pthread_attr_destroy(&a) != 0)
-		sysfatal("newthread: pthread_attr_destroy: %s", error());
+	if((r = pthread_key_create(&th->key, NULL)) != 0)
+		sysfatal("newthread: pthread_key_create: %s", strerror(r));
+	if((r = pthread_create(p, &a, _thread, th)) != 0)
+		sysfatal("newthread: pthread_create: %s", strerror(r));
+	if((r = pthread_attr_destroy(&a)) != 0)
+		sysfatal("newthread: pthread_attr_destroy: %s", strerror(r));
 	/* pthread_*_np is non-portable gnushit
-	if(pthread_setname_np(*p, name) != 0)
-		warn("pthread_setname_np: %s", error());
+	if((r = pthread_setname_np(*p, name)) != 0)
+		warn("pthread_setname_np: %s", strerror(r));
 	*/
 }
 
@@ -87,7 +89,7 @@ threadstore(void *p)
 	Thread *th;
 
 	if((th = pthread_getspecific(pkey)) == NULL)
-		sysfatal("newthread: pthread_getspecific: %s", error());
+		sysfatal("newthread: pthread_getspecific: invalid key");
 	if(p == NULL)
 		return th->data;
 	else
@@ -97,30 +99,39 @@ threadstore(void *p)
 void
 killthread(Thread *th)
 {
+	int r;
+
 	if(th == nil)
 		return;
-	pthread_cancel(th->p);
+	if((r = pthread_cancel(th->p)) != 0)
+		warn("pthread_cancel: %s\n", strerror(r));
 }
 
 void
 initqlock(QLock *l)
 {
-	if(pthread_mutex_init(l, NULL) != 0)
-		sysfatal("pthread_mutex_init: %s", error());
+	int r;
+
+	if((r = pthread_mutex_init(l, NULL)) != 0)
+		sysfatal("pthread_mutex_init: %s", strerror(r));
 }
 
 void
 initrwlock(RWLock *l)
 {
-	if(pthread_rwlock_init(l, NULL) != 0)
-		sysfatal("pthread_rwlock_init: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_init(l, NULL)) != 0)
+		sysfatal("pthread_rwlock_init: %s", strerror(r));
 }
 
 void
 nukerwlock(RWLock *l)
 {
-	if(pthread_rwlock_destroy(l) != 0)
-		sysfatal("pthread_rwlock_destroy: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_destroy(l)) != 0)
+		sysfatal("pthread_rwlock_destroy: %s", strerror(r));
 }
 
 Channel *

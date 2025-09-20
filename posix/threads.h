@@ -37,29 +37,37 @@ canwlock(RWLock *l)
 static inline void
 rlock(RWLock *l)
 {
-	if(pthread_rwlock_rdlock(l) != 0)
-		sysfatal("pthread_rwlock_rdlock: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_rdlock(l)) != 0)
+		sysfatal("pthread_rwlock_rdlock: %s", strerror(r));
 }
 
 static inline void
 wlock(RWLock *l)
 {
-	if(pthread_rwlock_wrlock(l) != 0)
-		sysfatal("pthread_rwlock_wrlock: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_wrlock(l)) != 0)
+		sysfatal("pthread_rwlock_wrlock: %s", strerror(r));
 }
 
 static inline void
 wunlock(RWLock *l)
 {
-	if(pthread_rwlock_unlock(l) != 0)
-		sysfatal("pthread_rwlock_unlock: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_unlock(l)) != 0)
+		sysfatal("pthread_rwlock_unlock: %s", strerror(r));
 }
 
 static inline void
 runlock(RWLock *l)
 {
-	if(pthread_rwlock_unlock(l) != 0)
-		sysfatal("pthread_rwlock_unlock: %s", error());
+	int r;
+
+	if((r = pthread_rwlock_unlock(l)) != 0)
+		sysfatal("pthread_rwlock_unlock: %s", strerror(r));
 }
 
 static inline int
@@ -71,13 +79,17 @@ canqlock(QLock *l)
 static inline void
 qlock(QLock *l)
 {
-	if(pthread_mutex_lock(l) != 0)
-		sysfatal("pthread_mutex_lock: %s", error());
+	int r;
+
+	if((r = pthread_mutex_lock(l)) != 0)
+		sysfatal("pthread_mutex_lock: %s", strerror(r));
 }
 
 static inline void
 qunlock(QLock *l)
 {
-	if(pthread_mutex_unlock(l) != 0)
-		sysfatal("pthread_mutex_unlock: %s", error());
+	int r;
+
+	if((r = pthread_mutex_unlock(l)) != 0)
+		sysfatal("pthread_mutex_unlock: %s", strerror(r));
 }
