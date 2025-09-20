@@ -318,3 +318,13 @@ typedef struct fa {
 extern int	runetochar(char *str, unsigned int *c);
 #endif
 #include "proto.h"
+
+#ifndef VERSION
+#define	rlock(x)
+#define	runlock(x)
+#define	wlock(x)
+#define	wunlock(x)
+#define	initrwlock(x)
+#else
+extern RWLock tlock;
+#endif

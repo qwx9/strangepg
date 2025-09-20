@@ -21,6 +21,9 @@ struct Pool{
 	size_t last;	/* before release */
 };
 static Pool frozen, temp;
+#ifdef VERSION
+static RWLock lock;
+#endif
 
 static inline void clear(Pool *p)
 {
@@ -74,11 +77,13 @@ static inline uschar *alloc(size_t n, int istemp)
 	Pool *p;
 
 	p = istemp ? &temp : &frozen;
+	wlock(&lock);
 	s = p->tail;
 	if(s + n >= p->end)
 		s = grow(p, n);
 	assert(p->end - p->tail >= n);
 	p->tail += n + 7 & ~7;
+	wunlock(&lock);
 	return s;
 }
 
@@ -100,6 +105,7 @@ void initpool(void)
 {
 	init(&frozen);
 	init(&temp);
+	initrwlock(&lock);
 }
 
 void cleanpool(void)

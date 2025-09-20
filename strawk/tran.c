@@ -145,9 +145,7 @@ Array *makesymtab(int n)	/* make a new symbol table */
 	ap->nelem = 0;
 	ap->size = n;
 	ap->tab = tp;
-#ifdef VERSION
 	initrwlock(&ap->lock);
-#endif
 	return(ap);
 }
 
@@ -416,9 +414,7 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 		FATAL("BUG: rehashing ptr array");
 	nsz = GROWTAB * tp->size;
 	np = (Cell **) CALLOC(nsz, sizeof(*np));
-#ifdef VERSION
 	wlock(&tp->lock);
-#endif
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp; cp = op) {
 			op = cp->cnext;
@@ -430,9 +426,7 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 	free(tp->tab);
 	tp->tab = np;
 	tp->size = nsz;
-#ifdef VERSION
 	wunlock(&tp->lock);
-#endif
 }
 
 Cell *lookup(const char *s, Array *tp)	/* look for s in tp */
@@ -443,19 +437,13 @@ Cell *lookup(const char *s, Array *tp)	/* look for s in tp */
 	if(tp->type != 0)
 		FATAL("BUG: lookup in ptr array");
 	h = hash(s, tp->size);
-#ifdef VERSION
 	rlock(&tp->lock);
-#endif
 	for (p = tp->tab[h]; p != NULL; p = p->cnext)
 		if (strcmp(s, p->nval) == 0){
-#ifdef VERSION
 			runlock(&tp->lock);
-#endif
 			return(p);	/* found it */
 		}
-#ifdef VERSION
 	runlock(&tp->lock);
-#endif
 	return(NULL);			/* not found */
 }
 
@@ -964,6 +952,7 @@ int compileawk(int argc, char **argv)
 	compile_time = COMPILING;
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	initrwlock(&tlock);
 	initpool();
 	catchfpe();
 	yyin = NULL;

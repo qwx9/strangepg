@@ -77,6 +77,10 @@ static Cell	retcell		={ OJUMP, JRET, NUM, 0, 0, {.i=0}, NULL };
 Cell	*jret	= &retcell;
 static Cell	tempcell	={ OCELL, CTEMP, DONTFREE, 0, EMPTY, {.i=0}, NULL };
 
+#ifdef VERSION
+RWLock tlock;
+#endif
+
 TNode	*curnode = NULL;	/* the node being executed, for debugging */
 
 /* buffer memory management */
@@ -894,6 +898,7 @@ Cell *gettemp(int type)	/* get a tempcell */
 {	int i;
 	Cell *x;
 
+	wlock(&tlock);
 	if (!tmps) {
 		tmps = (Cell *) tempalloc(100 * sizeof(*tmps));
 		for (i = 1; i < 100; i++)
@@ -902,6 +907,7 @@ Cell *gettemp(int type)	/* get a tempcell */
 	}
 	x = tmps;
 	tmps = x->cnext;
+	wunlock(&tlock);
 	*x = tempcell;
 	x->tval |= type;
 	return(x);
