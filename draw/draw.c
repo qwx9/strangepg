@@ -522,15 +522,17 @@ waitforit(void)
 void
 reqdraw(int r)
 {
-	static ulong df, rf;
+	static ulong df, rf, orf;
 
 	DPRINT(Debugdraw, "reqdraw %#x df %#lx rf %#lx ", r, df, rf);
 	switch(r){
+	case Reqnone:
+		if(rf == 0)
+			break;
 	case Reqfreeze:
 	case Reqthaw:
 	case Reqrefresh:
 	case Reqredraw:
-		wakedrawup();
 		df |= r;
 		if(nbsendul(drawc, df) == 1)
 			df = 0;
@@ -542,9 +544,13 @@ reqdraw(int r)
 	case Reqshape:
 	case Reqshallowdraw:
 	case Reqsleep:
-		rf |= r;
-		if(nbsendul(rendc, rf) == 1)
-			rf = 0;
+		if((orf & r) == 0 || rendc->queue->size == 0){
+			rf |= r;
+			orf = rf;
+			if(nbsendul(rendc, rf) == 1)
+				rf = 0;
+		}
+		wakedrawup();
 		break;
 	default:
 		warn("reqdraw: unknown request %#x\n", r);

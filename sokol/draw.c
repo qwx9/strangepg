@@ -197,7 +197,7 @@ renderscene(void)
 void
 wakedrawup(void)
 {
-	DPRINT(Debugdraw, "wake up the fup");
+	DPRINT(Debugdraw, "wake the fup");
     sapp_input_wait(false);
 }
 
@@ -205,13 +205,23 @@ wakedrawup(void)
 void
 frame(void)
 {
-	int snooze, r, f;
+	int n, snooze;
+	ulong r, f;
 	vlong t;
 	static vlong t0;
 
-	r = snooze = 0;
-	while((f = nbrecvul(rendc)) != 0)
+	n = snooze = 0;
+	r = 0;
+	while((f = nbrecvul(rendc)) != 0){
 		r |= f;
+		n++;
+	}
+	if(n >= 8){
+		DPRINT(Debugdraw, "frame: flushing additional pending events");
+		reqdraw(Reqnone);
+		while((f = nbrecvul(rendc)) != 0)
+			r |= f;
+	}
 	DPRINT(Debugdraw, "frame: %#x", r);
 	if(r != 0){
 		if(r & Reqsleep)

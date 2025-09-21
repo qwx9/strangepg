@@ -121,6 +121,7 @@ enum{
 	Reqfreeze = 1<<29,		/* ignore all orders until signaled */
 	Reqsleep = 1<<30,		/* force renderer to wait for events */
 	Reqstop = 1<<31,		/* cease all activity and operations */
+	Reqnone = 0,			/* dummy event */
 };
 
 s64int	getvedge(ioff);
