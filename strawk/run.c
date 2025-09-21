@@ -2216,6 +2216,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	int t, oawkw;
 	short type;
 	char *buf, *olex, *oeval;
+	Array *ap;
 	TNode *nextarg, *orunner;
 
 	t = ptoi(a[0]);
@@ -2234,9 +2235,12 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	nextarg = a[1]->nnext;
 	switch (t) {
 	case FLENGTH:
-		if (isarr(x))
-			u = ((Array *) x->sval)->nelem;	/* GROT.  should be function*/
-		else
+		if (isarr(x)) {
+			ap = (Array *)x->sval;
+			rlock(&ap->lock);
+			u = ap->nelem;
+			runlock(&ap->lock);
+		} else
 			u = u8_strlen(getsval(x));
 		break;
 	case FINT:

@@ -157,13 +157,14 @@ void freesymtab(Cell *ap, int nuke)	/* free a symbol table */
 
 	if (!isarr(ap))
 		return;
-	else if (isptr(ap)){	/* FIXME: shouldn't happen */
+	else if (isptr(ap)){
 		FREE(ap->sval);
 		return;
 	}
 	tp = (Array *) ap->sval;
 	if (tp == NULL)
 		return;
+	wlock(&tp->lock);
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp != NULL; cp = temp) {
 			if ((cp->tval & CON) == 0){
@@ -179,7 +180,9 @@ void freesymtab(Cell *ap, int nuke)	/* free a symbol table */
 	}
 	if (tp->nelem != 0)
 		WARNING("can't happen: inconsistent element count freeing %s", ap->nval);
+	wunlock(&tp->lock);
 	if(nuke){
+		nukerwlock(&tp->lock);
 		FREE(tp->tab);
 		FREE(tp);
 	}
@@ -194,6 +197,7 @@ void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
 	if (isptr(ap))	/* FIXME: shouldn't happen */
 		return;
 	tp = (Array *) ap->sval;
+	wlock(&tp->lock);
 	h = hash(s, tp->size);
 	for (p = tp->tab[h]; p != NULL; prev = p, p = p->cnext)
 		if (strcmp(s, p->nval) == 0) {
@@ -204,12 +208,13 @@ void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
 			if ((p->tval & CON) == 0){
 				if (freeable(p))
 					xfree(p->sval);
-				free(p->nval);
+				FREE(p->nval);
 			}
-			free(p);
+			FREE(p);
 			tp->nelem--;
-			return;
+			break;
 		}
+	wunlock(&tp->lock);
 }
 
 Cell *setsym(const char *n, const char *s, Array *tp)
@@ -385,12 +390,13 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 		p->tval |= DONTFREE;
 	p->csub = CUNK;
 	p->ctype = OCELL;
-	tp->nelem++;
-	if (tp->nelem > FULLTAB * tp->size)
+	wlock(&tp->lock);
+	if (++tp->nelem > FULLTAB * tp->size)
 		rehash(tp);
 	h = hash(n, tp->size);
 	p->cnext = tp->tab[h];
 	tp->tab[h] = p;
+	wunlock(&tp->lock);
 	DPRINTF("setsymtab set %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
 		(void*)p, p->nval, p->sval, p->val.i, p->val.f, p->tval);
 	return(p);
@@ -414,7 +420,6 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 		FATAL("BUG: rehashing ptr array");
 	nsz = GROWTAB * tp->size;
 	np = (Cell **) CALLOC(nsz, sizeof(*np));
-	wlock(&tp->lock);
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp; cp = op) {
 			op = cp->cnext;
@@ -426,7 +431,6 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 	free(tp->tab);
 	tp->tab = np;
 	tp->size = nsz;
-	wunlock(&tp->lock);
 }
 
 Cell *lookup(const char *s, Array *tp)	/* look for s in tp */
@@ -436,8 +440,8 @@ Cell *lookup(const char *s, Array *tp)	/* look for s in tp */
 
 	if(tp->type != 0)
 		FATAL("BUG: lookup in ptr array");
-	h = hash(s, tp->size);
 	rlock(&tp->lock);
+	h = hash(s, tp->size);
 	for (p = tp->tab[h]; p != NULL; p = p->cnext)
 		if (strcmp(s, p->nval) == 0){
 			runlock(&tp->lock);

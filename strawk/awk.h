@@ -326,6 +326,7 @@ extern int	runetochar(char *str, unsigned int *c);
 #define	wlock(x)
 #define	wunlock(x)
 #define	initrwlock(x)
+#define	nukerwlock(x)
 #else
 extern RWLock tlock;
 #endif
