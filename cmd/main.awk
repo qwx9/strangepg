@@ -315,17 +315,18 @@ function nodeinfostr(i,	a, s){
 	}
 	return s
 }
-function selinfostr(	i, l, n, m, s){
+function selinfostr(	x, i, l, n, m, s){
 	if(length(selected) == 0)
 		return ""
 	# very deliberate and assuming nodes for now
 	if(length(selected) == 1)
 		for(i in selected)
-			return nodeinfostr(i)
+			return "Selected: " nodeinfostr(selected[i])
 	l = 0
 	s = ""
 	n = m = 0
-	for(i in selected){
+	for(x in selected){
+		i = selected[x]
 		l += LN[i]
 		if(m < 5){
 			m = length(s)
@@ -346,10 +347,12 @@ function nodeinfo(i,	name, s){
 	s = "Node: " nodeinfostr(i)
 	info(s)
 }
-function deselect(	i){
+function deselect(	x, i){
 	selinfo = ""
-	for(i in selected)
+	for(x in selected){
+		i = selected[x]
 		CL[i] = CL[i]
+	}
 	delete selected
 }
 function deselectnodebyid(i,	col){
@@ -406,12 +409,12 @@ function selectnode(name){
 #	deselect()
 #}
 # not deselecting
-function expand(name,	i){
+function expand(name,	x, i){
 	if(name != ""){
 		expand1(id[i])
 	}else if(length(selected) > 0){
 		for(i in selected)
-			expand1(i)
+			expand1(selected[i])
 	}else
 		expandall()
 	commit()
@@ -426,7 +429,7 @@ function explode(d,	i){
 	if(d == "" || float(d) <= 0)
 		d = 8.0
 	for(i in selected)
-		explode1(i, d)
+		explode1(selected[i], d)
 	redraw()
 }
 function groupby(tag, incl, cm,	acc){
