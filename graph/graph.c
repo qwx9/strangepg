@@ -220,5 +220,5 @@ setnodecolor(size_t id, Value v)
 		return;
 	r = rnodes + idx;
 	setcolor(r->col, setdefalpha(v.u));
-	reqdraw(Reqrefresh);
+	reqdraw(Reqshallowdraw);
 }

@@ -321,7 +321,6 @@ focusobj(void)
 	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
 	mouseselect(focused, 0);
 	resetselbox(view.w, view.h);
-	reqdraw(Reqrefresh);
 	focused = -1;
 }
 
