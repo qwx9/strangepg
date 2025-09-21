@@ -15,7 +15,7 @@ enum{
 extern int noreset;	// FIXME: flag
 
 extern char *awkprog;
-extern int infd[2], outfd[2];
+extern int infd[2], outfd[2], eoutfd[2];
 
 int	selectnodebyidx(ioff, int);
 void	dragselection(float, float, void(*)(ioff, float, float));

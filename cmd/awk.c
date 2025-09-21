@@ -8,7 +8,7 @@
 #include "strawk/awkgram.tab.h"
 
 /* [0] is read, [1] is write to cater to windows' _pipe */
-int infd[2] = {-1, -1}, outfd[2] = {-1, -1};
+int infd[2] = {-1, -1}, outfd[2] = {-1, -1}, eoutfd[2] = {-1, -1};
 
 const Keyword keywords[] = {	/* keep sorted: binary searched */
 	{ "BEGIN",	XBEGIN,		XBEGIN },
@@ -84,7 +84,7 @@ awk(void *)
 
 	if((awkstdin = fdopen(infd[0], "rb")) == NULL
 	|| (awkstdout = fdopen(outfd[1], "wb")) == NULL
-	|| (awkstderr = fdopen(outfd[1], "wb")) == NULL)
+	|| (awkstderr = fdopen(eoutfd[1], "wb")) == NULL)
 		sysfatal("awk: %s", error());
 	dbg = (debug & Debugstrawk) != 0;
 	quiet = status & FSquiet || (debug & Debuginfo) == 0;	/* debug set later */
@@ -99,7 +99,7 @@ awk(void *)
 int
 initrepl(void)
 {
-	if(pipe(infd) < 0 || pipe(outfd) < 0)
+	if(pipe(infd) < 0 || pipe(outfd) < 0 || pipe(eoutfd))
 		return -1;
 	initext();
 	newthread(awk, nil, nil, nil, "strawk", mainstacksize);

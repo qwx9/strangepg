@@ -22,6 +22,8 @@ killcmd(void)
 	cmdfs = nil;
 	close(outfd[1]);
 	outfd[1] = -1;
+	close(eoutfd[1]);
+	eoutfd[1] = -1;
 	close(infd[1]);
 	infd[1] = -1;
 	close(sysfd(0));
@@ -151,7 +153,7 @@ nexttok(char *s, char **end)
 }
 
 static void
-readcmd(char *s)
+readcmd(char *s, int err)
 {
 	int m, req;
 	char *fld[8], *e;
@@ -159,10 +161,9 @@ readcmd(char *s)
 	req = 0;
 	e = s;
 	while((s = nexttok(e, &e)) != nil){
-		if(s[1] != 0 && s[1] != '\t'){
-			/* heuristic based on strawk/lib.c... */
-			if(s[0] == ' ' || strncmp(s, "strawk:", 7) == 0)
-				logerr(va("error: %s\n", s));
+		if(err || s[1] != 0 && s[1] != '\t'){
+			if(err)
+				logerr(va("%s\n", s));
 			else
 				logmsg(va("%s\n", s));
 			continue;
@@ -257,20 +258,22 @@ readcmd(char *s)
 }
 
 static void
-readcproc(void *)
+readcproc(void *arg)
 {
+	int fd;
 	char *s;
 	File *f;
 
-	if((f = fdopenfs(outfd[0], OREAD)) == nil)
+	fd = (intptr)arg;
+	if((f = fdopenfs(fd, OREAD)) == nil)
 		sysfatal("readcproc: %s", error());
 	while((s = readline(f)) != nil){
-		DPRINT(Debugcmd, "< [%d][%s]", f->len, s);
+		DPRINT(Debugcmd, "<%d [%d][%s]", fd == outfd[0] ? 1 : 2, f->len, s);
 		if(f->trunc){
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
 		}
-		readcmd(s);
+		readcmd(s, fd == eoutfd[0]);
 	}
 	freefs(f);
 }
@@ -310,6 +313,7 @@ initcmd(void)
 	}
 	if(infd[1] >= 0 && (cmdfs = fdopenfs(infd[1], OWRITE)) == nil)
 		sysfatal("initcmd: %s", error());
-	newthread(readcproc, nil, nil, nil, "readawk", mainstacksize);
+	newthread(readcproc, nil, (void *)(intptr)outfd[0], nil, "readawk", mainstacksize);
+	newthread(readcproc, nil, (void *)(intptr)eoutfd[0], nil, "readeawk", mainstacksize);
 	return 0;
 }
