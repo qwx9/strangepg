@@ -181,6 +181,7 @@ enum{
 	FFLOAT = 15,
 	FNRAND = 16,
 	FBYTES = 17,
+	FTYPEOF = 18,
 };
 typedef struct Keyword {
 	const char *word;

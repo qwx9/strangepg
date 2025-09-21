@@ -2214,6 +2214,7 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 	Cell *x, *y;
 	Awknum u = 0, tmp;
 	int t, oawkw;
+	short type;
 	char *buf, *olex, *oeval;
 	TNode *nextarg, *orunner;
 
@@ -2301,6 +2302,19 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		awknwarn = oawkw;
 		fflush(awkstdout);
 		fflush(awkstderr);
+		break;
+	case FTYPEOF:
+		type = x->tval;
+		tempfree(x);
+		x = gettemp(STR);
+		switch(type & (NUM|STR|FLT)){
+		case STR|NUM: /* wet floor */
+		case NUM: u = 1; break;
+		case STR|NUM|FLT: /* wet floor */
+		case NUM|FLT: u = 2; break;
+		case STR: u = 3; break;
+		default: FATAL("argument of unknown type %o", type);
+		}
 		break;
 	default:	/* can't happen */
 		FATAL("illegal function type %d", t);
