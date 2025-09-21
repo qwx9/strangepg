@@ -255,8 +255,16 @@ function readcsv(f){
 	else
 		deferred[++nd] = "f\t" f "\n"
 }
+function checkselected(	i){
+	for(i in selected)
+		if(typeof(selected[i]) == 3 && selected[i] == "")
+			delete selected[i]
+}
 function checknodeid(i){
-	# FIXME: test id in node
+	if(i < 0 || i >= length(node)){
+		print "E\id out of bounds: " i
+		return 0
+	}
 	return 1
 }
 function checknodename(name){
@@ -457,30 +465,22 @@ function groupby(tag, incl, cm,	acc){
 function quit(){
 	print "!"
 }
-# too complicated if nested, and temporary anyway; would ideally expand
-# other tags into tag[i]
-function subexpr(s, v, fn,	i, pred){
-	i = match(s, "\][ 	]*=[^=]")
-	# error check: i not 0; only sub expression up to } or ; etc
-	pred = substr(s, 1, i-1)
-	if(pred !~ /[^a-zA-Z0-9" \t]/ \
-	&& pred !~ /[^ \t]+[ \t]+in[ \t]+[^ \t]+/ \
-	&& pred !~ /^[ \t]*i[ \t]*$/)
-		return
+crm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
+	n = index($0, "[")
+	v = substr($0, 1, n - 1)
+	s = substr($0, n + 1)
+	n = match(s, "\][ \t]*=[^=]")
+	pred = substr(s, 1, n-1)
 	s = substr(s, RSTART+RLENGTH-1)
-	if(fn != "")
-		$0 = "for(i in " v ") if(" pred "){ " fn "(i, " s ")}"
-	else if(pred ~ /^[ \t]*i[ \t]*$/)
+	# nested i won't be recognized either
+	if(pred ~ /^[ \t]*i[ \t]*$/)
 		$0 = "for(i in " v "){ " v "[i]=" s "}"
-	else
+	else if(pred !~ /^[ \t]*("[^"]+"|[a-zA-Z0-9][a-zA-Z0-9_]*|[a-zA-Z0-9][a-zA-Z0-9_]*\[["a-zA-Z0-9_ \t]+\])[ \t]*$/)
 		$0 = "for(i in " v ") if(" pred "){ " v "[i]=" s "}"
 }
-crm114 && /^[	 ]*[A-Za-z][A-Za-z0-9 ]*\[.*\] *= */{
-	i = index($0, "[")
-	v = substr($0, 1, i - 1)
-	s = substr($0, i + 1)
-	subexpr(s, v)
-}
 {
+	ns = length(selected)
 	eval("{" $0 "}")
+	if(ns != length(selected) && length(selected) != 0)
+		checkselected()
 }
