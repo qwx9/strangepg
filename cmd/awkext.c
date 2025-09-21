@@ -14,29 +14,45 @@
 
 QLock buflock;
 
+/* FIXME: have upfn use Cell as well */
+void
+deselectnode(Cell *cp)	/* deletion hook, do not call directly */
+{
+	ioff id, idx;
+	Value v;
+
+	if((cp->tval & (NUM|STR)) == STR)
+		return;
+	id = getival(cp);
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	v.u = core.colors[idx];
+	setnodecolor(id, v);
+}
+
 int
-selectnodebyidx(ioff idx, int toggle)
+selectnodebyidx(ioff idx, int multi, int toggle)
 {
 	ioff id;
 	char buf[64];
-	Cell *cp;
 	Value v;
 
 	if((id = getrealid(idx)) < 0)
 		return -1;
 	snprint(buf, sizeof buf, "%d", id);
-	v.i = id;
-	cp = setsymtab(buf, EMPTY, v, CON|NUM, core.sel);
-	if(cp->nval != buf){
-		if(toggle){
-			cp = lookup("selected", symtab);	/* FIXME */
-			freeelem(cp, buf);
+	if(lookup(buf, core.sel) == nil){	/* needs fast path for drag */
+		v.i = id;
+		setsymtab(buf, EMPTY, v, NUM, core.sel);
+		if(!multi && !toggle){
+			pushcmd("reselectnode(%d)", id);
+			flushcmd();
 		}
-		return 0;
+		return 1;
+	}else if(toggle){
+		pushcmd("toggleselect(%d)", id);
+		flushcmd();
 	}
-	cp->nval = estrdup(buf);
-	cp->tval &= ~CON;
-	return 1;
+	return 0;
 }
 
 void
@@ -50,6 +66,7 @@ dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 	Array *ap;
 
 	ap = core.sel;
+	rlock(&ap->lock);
 	for(i=0; i<ap->size; i++){
 		for(cp=ap->tab[i]; cp!=nil; cp=cp->cnext){
 			//v.u = strtoull(cp->nval, nil, 10);
@@ -61,6 +78,7 @@ dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 			fn(idx, Δx, Δy);
 		}
 	}
+	runlock(&ap->lock);
 }
 
 void

@@ -305,8 +305,7 @@ function findnode(name,	i){
 	i = id[name]
 	expand1(i)
 	commit(1)
-	resetcols()
-	selectnodebyid(i)
+	reselectnode(i)
 	print "N", i
 }
 # FIXME: cache it?
@@ -355,53 +354,56 @@ function nodeinfo(i,	name, s){
 	s = "Node: " nodeinfostr(i)
 	info(s)
 }
-function deselect(	x, i){
-	selinfo = ""
-	for(x in selected){
-		i = selected[x]
-		CL[i] = CL[i]
-	}
-	delete selected
-}
 function deselectnodebyid(i,	col){
-	if(!checknodeid(i))
+	if(!checknodeid(i) || !(i in selected))
 		return
-	if(!(i in selected)){
-		print "E\tdeselect: not selected: " i
-		return
-	}
-	if(length(selected) == 1){
-		deselect()
-		return
-	}
 	delete selected[i]
-	selinfo = selinfostr()
-	CL[i] = CL[i]
 }
-function deselectnode(name,	i){
-	if(!checknodename(name))
+function selectnodebyid(i){
+	if(!checknodeid(i) || i in selected)
 		return
-	deselectnodebyid(id[name])
+	selected[i] = int(i)
 }
 function showselected(){
 	selinfo = selinfostr()
 	refresh()
 }
-function selectnodebyid(i, noshow){
-	if(!checknodeid(i) || i in selected)
-		return
-	selected[i] = int(i)
-	if(!noshow)
-		showselected()
+function deselect(	x, i){
+	selinfo = ""
+	delete selected
 }
 function selectall(i){
-	for(i in LN)
-		selectnodebyid(i, 1)
+	for(i in node)
+		selectnodebyid(i)
+	showselected()
+}
+function deselectnode(name,	i){
+	if(!checknodename(name))
+		return
+	deselectnodebyid(id[name])
+	showselected()
 }
 function selectnode(name){
 	if(!checknodename(name))
 		return
-	selectnodebyid(id[name], 1)	# FIXME
+	selectnodebyid(id[name])
+	showselected()
+}
+function reselectnode(i){
+	if(!checknodeid(i))
+		return
+	if(length(selected) > 1 || !(i in selected))
+		deselect()
+	if(!(i in selected))
+		selected[i] = int(i)
+}
+function toggleselect(i){
+	if(!checknodeid(i))
+		return
+	if(i in selected)
+		deselectnodebyid(i)
+	else
+		selectnodebyid(i)
 }
 # FIXME: can't be variadic, unless in C
 #function collapse(i){

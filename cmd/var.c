@@ -471,6 +471,7 @@ initvars(void)	/* called within strawk */
 	setsymtab("CL", "CL", ZV, STR|CON, core.ptrs);
 	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 	core.sel = initset("selected");
+	hookdel(core.sel, deselectnode);
 	autoattachfn = autoattach;
 	qunlock(&buflock);
 }

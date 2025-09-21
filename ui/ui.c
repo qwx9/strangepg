@@ -148,7 +148,7 @@ dragselect(int x, int y)
 			if(u.i >= 0){
 				if((idx = u.i) == oid)
 					continue;
-				if(selectnodebyidx(idx, 0) <= 0)
+				if(selectnodebyidx(idx, 1, 0) <= 0)
 					continue;
 				highlightnode(idx);
 				oid = idx;
@@ -161,7 +161,7 @@ dragselect(int x, int y)
 			if(u.i >= 0){
 				if((idx = u.i) == oid)
 					continue;
-				if(selectnodebyidx(idx, 0) <= 0)
+				if(selectnodebyidx(idx, 1, 0) <= 0)
 					continue;
 				highlightnode(idx);
 				oid = idx;
@@ -283,7 +283,7 @@ mousehover(int x, int y)
 }
 
 static int
-mouseselect(ioff idx, int multi)
+mouseselect(ioff idx, int multi, int toggle)
 {
 	int new;
 
@@ -291,7 +291,7 @@ mouseselect(ioff idx, int multi)
 		return 0;
 	if(idx != -1){
 		if((idx & 1UL<<31) == 0){
-			if((new = selectnodebyidx(idx, multi)) < 0){
+			if((new = selectnodebyidx(idx, multi, toggle)) < 0){
 				DPRINT(Debugui, "mouseselect: %s", error());
 				return 0;
 			}
@@ -302,7 +302,7 @@ mouseselect(ioff idx, int multi)
 			;
 		}
 		return 1;
-	}else if(!multi){
+	}else if(!multi && !toggle){
 		pushcmd("deselect()");
 		flushcmd();
 		selstr[0] = 0;
@@ -319,7 +319,7 @@ focusobj(void)
 		return;
 	r = rnodes + focused;
 	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
-	mouseselect(focused, 0);
+	mouseselect(focused, 0, 0);
 	resetselbox(view.w, view.h);
 	focused = -1;
 }
@@ -373,10 +373,11 @@ mouseevent(float x, float y, float Δx, float Δy)
 	if(m == Mlmb){
 		if(omod == 0){
 			resetselbox(x, y);
-			mouseselect(shown, mod & (Mshift|Mctrl));
+			mouseselect(shown, mod & Mshift, mod & Mctrl);
 		}else if(omod == Mlmb && (Δx != 0.0f || Δy != 0.0f)){
 			if(selectionsize() == 0
-			|| selbox.x2 - selbox.x1 > 0 || selbox.y2 - selbox.y1 > 0)
+			|| selbox.x2 - selbox.x1 > 0 || selbox.y2 - selbox.y1 > 0
+			|| mod & Mshift)
 				dragselect(x, y);
 			else
 				mousedrag(Δx, Δy);
