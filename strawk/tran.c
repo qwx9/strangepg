@@ -167,6 +167,8 @@ void freesymtab(Cell *ap, int nuke)	/* free a symbol table */
 	wlock(&tp->lock);
 	for (i = 0; i < tp->size; i++) {
 		for (cp = tp->tab[i]; cp != NULL; cp = temp) {
+			if(tp->delfn != NULL)	/* lock is still held! */
+				tp->delfn(cp);
 			if ((cp->tval & CON) == 0){
 				xfree(cp->nval);
 				if (freeable(cp))
@@ -201,6 +203,8 @@ void freeelem(Cell *ap, const char *s)	/* free elem s from ap (i.e., ap["s"] */
 	h = hash(s, tp->size);
 	for (p = tp->tab[h]; p != NULL; prev = p, p = p->cnext)
 		if (strcmp(s, p->nval) == 0) {
+			if(tp->delfn != NULL)	/* lock is still held! */
+				tp->delfn(p);
 			if (prev == NULL)	/* 1st one */
 				tp->tab[h] = p->cnext;
 			else			/* middle somewhere */

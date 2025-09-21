@@ -98,6 +98,7 @@ extern	void	dfree(void *, const char *);
 extern	Cell	*dummyptrsym(Cell *);
 extern	Array	*attach(char *, Array *, void *, size_t, int, void (*)(size_t, Value));
 extern	void	reattach(Array *, void *, size_t);
+extern	void	hookdel(Array *, void (*)(Cell *));
 
 extern	TNode	*exptostat(TNode *);
 extern	TNode	*node1(int, TNode *);

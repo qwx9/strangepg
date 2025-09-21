@@ -120,6 +120,7 @@ typedef struct Array {		/* symbol table array */
 	int		type;		/* (ptr) type of variable or (non-ptr) 0 */
 	struct Array	*ids;		/* (ptr) label to index table */
 	void	(*upfn)(size_t, Value);	/* (ptr) update hook */
+	void	(*delfn)(Cell *);		/* element deletion hook */
 	size_t	nelem;		/* elements in table right now */
 	size_t	size;		/* size of tab */
 	Cell	**tab;		/* hash table pointers */

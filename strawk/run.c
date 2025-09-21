@@ -523,6 +523,11 @@ void reattach(Array *ap, void *buf, size_t nel)
 	ap->nelem = nel;
 }
 
+void hookdel(Array *ap, void (*fn)(Cell *))
+{
+	ap->delfn = fn;
+}
+
 Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
 	Cell *x;
