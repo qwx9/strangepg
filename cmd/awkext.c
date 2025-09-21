@@ -131,7 +131,7 @@ fnexpand1(Cell *x)
 
 	id = getival(x);	/* cnode id */
 	if(expand(id) < 0)
-		logerr(va("expand %d: %s\n", id, error()));
+		DPRINT(Debugcoarse, "expand1 %d: %s", id, error());
 }
 
 /* erst die falafel, dann der wein */
@@ -219,6 +219,7 @@ fnexportct(Cell *x)
 		FATAL("invalid file path: %s", s);
 	if(exportct(s) < 0)
 		FATAL("%s", error());
+	logmsg("exportcoarse: done\n");
 }
 
 /* FIXME: fs: fsprint()/fseprint() functions or sth */
