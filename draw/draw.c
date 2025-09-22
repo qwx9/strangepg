@@ -26,7 +26,7 @@ Channel *rendc, *ctlc;
 int drawstate;
 
 static Channel *drawc;
-static RLine raxes[3], rselbox[4];
+static RLine raxes[6], rselbox[4];
 
 static void
 initstatic(void)
@@ -54,7 +54,18 @@ initstatic(void)
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Czaxis]);
 	setcolor(a.col2, theme[Czaxis]);
-	*r = a;
+	*r++ = a;
+	setcolor(r->col1, theme[Cxaxis]);
+	setcolor(r->col2, theme[Cxaxis]);
+	r->pos1[3] = r->pos2[3] = 1.0f;
+	r++;
+	setcolor(r->col1, theme[Cyaxis]);
+	setcolor(r->col2, theme[Cyaxis]);
+	r->pos1[3] = r->pos2[3] = 1.0f;
+	r++;
+	setcolor(r->col1, theme[Czaxis]);
+	setcolor(r->col2, theme[Czaxis]);
+	r->pos1[3] = r->pos2[3] = 1.0f;
 	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
 		r->pos1[2] = r->pos2[2] = view.center.Z;
 		r->pos1[3] = r->pos2[3] = 1.0f;
@@ -111,9 +122,38 @@ drawedge(REdge *r, RNode *u, RNode *v, int urev, int vrev)
 static int
 drawaxes(int n)
 {
+	float o[4];
+	RLine *r, *s;
+	HMM_Vec3 v;
+
 	dygrow(rlines, n + nelem(raxes));
-	memcpy(rlines + n, raxes, sizeof raxes);
-	return nelem(raxes);
+	r = s = rlines + n;
+	memcpy(r, raxes, sizeof raxes);
+	r += 3;
+	o[0] = view.center.X;
+	o[1] = view.center.Y;
+	o[2] = view.center.Z;
+	o[3] = 1.0f;
+	memcpy(r->pos1, o, sizeof o);
+	v = HMM_AddV3(view.center, HMM_MulV3F(view.up, 20.0f));
+	r->pos2[0] = v.X;
+	r->pos2[1] = v.Y;
+	r->pos2[2] = v.Z;
+	r++;
+	memcpy(r->pos1, o, sizeof o);
+	v = HMM_AddV3(view.center, HMM_MulV3F(view.right, 20.0f));
+	r->pos2[0] = v.X;
+	r->pos2[1] = v.Y;
+	r->pos2[2] = v.Z;
+	r++;
+	memcpy(r->pos1, o, sizeof o);
+	v = HMM_AddV3(view.center, HMM_MulV3F(view.front, 20.0f));
+	r->pos2[0] = v.X;
+	r->pos2[1] = v.Y;
+	r->pos2[2] = v.Z;
+	r++;
+	assert(r == rlines + n + nelem(raxes));
+	return r - s;
 }
 
 static intptr
