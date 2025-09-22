@@ -105,10 +105,6 @@ rotzview(float x, float y, float Δx, float Δy)
 	HMM_Vec3 o;
 	HMM_Quat q;
 
-	Δx /= view.w;
-	Δy /= view.h;
-	Δx *= 2.0f * view.Δeye.Z * view.ar * view.tfov;
-	Δy *= 2.0f * view.Δeye.Z * view.tfov;
 	if(x < 0.5f * view.w)
 		Δy = -Δy;
 	if(y < 0.5f * view.h)
