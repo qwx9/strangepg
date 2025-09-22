@@ -38,10 +38,9 @@ pandraw(float Δx, float Δy)
 		Δy /= view.h;
 		Δx *= 2.0f * view.Δeye.Z * view.ar * view.tfov;
 		Δy *= 2.0f * view.Δeye.Z * view.tfov;
-		view.center.X += Δx;
-		view.center.Y -= Δy;
-		view.eye.X += Δx;
-		view.eye.Y -= Δy;
+		o = HMM_RotateV3Q(HMM_V3(Δx, -Δy, 0.0f), view.rot);
+		view.center = HMM_AddV3(view.center, o);
+		view.eye = HMM_AddV3(view.eye, o);
 		updateview();
 	}else{
 		Δx *= HMM_DegToRad * 0.4f;
@@ -82,32 +81,47 @@ worldview(HMM_Vec3 v)
 void
 moveview(float Δx, float Δy)
 {
-	HMM_Vec3 v;
+	HMM_Vec3 v, d;
 
 	Δx *= HMM_DegToRad;
 	Δy *= HMM_DegToRad;
 	v = HMM_AddV3(HMM_MulV3F(view.front, Δy), HMM_MulV3F(view.right, Δx));
 	v = HMM_AddV3(view.center, v);
-	worldview(v);
+
+	view.center = v;
+	d = HMM_MulV3F(view.front, 10.0f);
+	v = HMM_SubV3(v, d);
+	view.eye = v;
+	view.Δeye = d;
+	zoomdraw(-0.1f, 0.0f, 0.0f);
+	updateview();
 }
 
+/* FIXME: angle only a hack, not really correct */
 void
-rotzview(float Δx, float Δy)
+rotzview(float x, float y, float Δx, float Δy)
 {
 	float Δ;
 	HMM_Vec3 o;
 	HMM_Quat q;
 
-	/* FIXME: should be circular motion around center */
-	Δ = 0.1 * -(Δx + Δy) / 2;
+	Δx /= view.w;
+	Δy /= view.h;
+	Δx *= 2.0f * view.Δeye.Z * view.ar * view.tfov;
+	Δy *= 2.0f * view.Δeye.Z * view.tfov;
+	if(x < 0.5f * view.w)
+		Δy = -Δy;
+	if(y < 0.5f * view.h)
+		Δx = -Δx;
+	Δ = -0.5f * (Δx - Δy);
 	Δ *= HMM_DegToRad;
 	q = HMM_QFromAxisAngle_RH(view.front, Δ);
-	o = view.center;
 	view.rot = HMM_MulQ(q, view.rot);
+	o = view.Δeye;
 	view.eye = HMM_AddV3(HMM_RotateV3Q(HMM_SubV3(view.eye, o), q), o);
+	view.center = HMM_AddV3(HMM_RotateV3Q(HMM_SubV3(view.center, o), q), o);
 	view.right = HMM_RotateV3Q(view.right, q);
 	view.up = HMM_RotateV3Q(view.up, q);
-	view.front = HMM_RotateV3Q(view.front, q);
 	updateview();
 }
 

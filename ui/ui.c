@@ -332,7 +332,6 @@ focusnode(ioff id)
 	reqdraw(Reqfocus);
 }
 
-/* FIXME: rotate with Mmmb */
 int
 mouseevent(float x, float y, float Δx, float Δy)
 {
@@ -390,8 +389,8 @@ mouseevent(float x, float y, float Δx, float Δy)
 	}else if(m == Mmmb){
 		if(drawing.flags & DF3d)
 			moveview(Δx, Δy);
-		else
-			rotzview(Δx, Δy);
+		else if(Δx != 0.0f || Δy != 0.0f)
+			rotzview(x, y, Δx, Δy);
 	}else if(m == (Mlmb | Mrmb))
 		zoom(-Δx, -Δy);
 nope:
