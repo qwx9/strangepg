@@ -81,19 +81,17 @@ worldview(HMM_Vec3 v)
 void
 moveview(float Δx, float Δy)
 {
-	HMM_Vec3 v, d;
+	float d;
+	HMM_Vec3 v;
 
-	Δx *= HMM_DegToRad;
-	Δy *= HMM_DegToRad;
-	v = HMM_AddV3(HMM_MulV3F(view.front, Δy), HMM_MulV3F(view.right, Δx));
-	v = HMM_AddV3(view.center, v);
-
-	view.center = v;
-	d = HMM_MulV3F(view.front, 10.0f);
-	v = HMM_SubV3(v, d);
-	view.eye = v;
-	view.Δeye = d;
-	zoomdraw(-0.1f, 0.0f, 0.0f);
+	d = HMM_LenV3(view.Δeye);
+	Δx /= view.w;
+	Δy /= view.h;
+	Δx *= 2.0f * d * view.ar * view.tfov;
+	Δy *= 2.0f * d * view.tfov;
+	v = HMM_AddV3(HMM_MulV3F(view.right, -Δx), HMM_MulV3F(view.front, -Δy));
+	view.eye = HMM_AddV3(view.eye, v);
+	view.center = HMM_AddV3(view.center, v);
 	updateview();
 }
 
