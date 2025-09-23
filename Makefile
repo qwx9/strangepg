@@ -185,23 +185,25 @@ ifeq ($(TARGET),Unix)
 	endif
 else ifeq ($(TARGET),Win64)
 	PROGRAM:= $(PROGRAM).exe
-	PREFIX?= /usr/local
 	CPPFLAGS+= -pthread -D_XOPEN_SOURCE=500
 	CPPFLAGS+= -Iwin64
 	CFLAGS+= -mwin32 -mwindows
 	ifeq ($(OS),Cygwin)
+		PREFIX?= /usr
 		CPPFLAGS+= -DSOKOL_GLCORE
 		LDLIBS+= -lkernel32 -luser32 -lshell32 -lgdi32 -lopengl32
 	else
+		PREFIX?= ""
 		# FIXME
 		CC?= x86_64-w64-mingw32-gcc-posix
 		CFLAGS+= -mthreads
 		CPPFLAGS+= -DSOKOL_D3D11
+		OBJ+=\
+			win64/sys.o\
+
 	endif
 	LDFLAGS+= -static
 	LDLIBS+= -lkernel32 -luser32 -lshell32 -ldxgi -ld3d11 -lole32 -lgdi32 -Wl,-Bstatic -lpthread
-	OBJ+=\
-		win64/sys.o\
 
 else ifeq ($(TARGET),MacOS)
 	PREFIX?= /usr/local
@@ -222,7 +224,11 @@ else
 	$(error unknown target)
 endif
 
-BINDIR:= $(PREFIX)/bin
+ifneq ($(PREFIX),"")
+	BINDIR:= $(PREFIX)/bin
+else
+	BINDIR:= .
+endif
 BINTARGET:= $(PROGRAM)
 ALLTARGETS:=\
 	$(BINTARGET)\
@@ -247,7 +253,7 @@ $(BINTARGET):	$(OBJ)
 install: $(ALLTARGETS) dirinstall
 	test -d $(BINDIR) || install -d -m755 $(BINDIR)
 	for i in $(ALLTARGETS); do \
-		install -m755 $$i $(BINDIR); \
+		test -z $(PREFIX) || install -m755 $$i $(BINDIR); \
 	done
 
 uninstall: $(ALLTARGETS)
