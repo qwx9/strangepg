@@ -75,7 +75,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AEHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-c FILE] FILE [CMD..]\n", argv0);
+	warn("usage: %s [-AEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]\n", argv0);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -97,7 +97,8 @@ help(void)
 		"-W             Do not suppress warning messages\n"
 		"ALG may be one of:\n"
 		" fr            Parallelized variant of Fruchterman-Reingold (default)\n"
-		" 3d            Experimental 3d version of the above\n",
+		" 3d            Experimental 3d version of the above\n" \
+		"CMD is a literal and valid strawk command to be queued\n",
 			Maxsz, Maxthic, Nodesz, Ptsz
 	);
 	quit();
@@ -106,7 +107,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-AEHMWZbhqvw] [-f FILE] [-l ALG] [-n FILE] [-t N] [-c FILE] FILE", argv0);
+	sysfatal("usage: %s [-AEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]", argv0);
 }
 
 static char **
