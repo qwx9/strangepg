@@ -264,7 +264,8 @@ readline(File *f)
 	/* previous line unterminated, longer than size of buffer */
 	while(f->trunc)
 		readfrag(f);
-	f->foff = sysftell(f);
+	if(f->path != nil)	/* will assume this is a pipe */
+		f->foff = tellfs(f);
 	f->nr++;
 	f->nf = 0;
 	f->toksz = 0;
