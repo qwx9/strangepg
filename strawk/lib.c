@@ -394,7 +394,7 @@ void fldbld(void)	/* create fields from current record */
 		*fr = 0;
 	} else if ((sep = *inputFS) == 0) {	/* new: FS="" => 1 char/field */
 		for (i = 0; *r != '\0'; ) {
-			char buf[10];
+			char buf[32];
 			i++;
 			if (i > nfields)
 				growfldtab(i);
