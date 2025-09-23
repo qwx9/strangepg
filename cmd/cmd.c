@@ -303,9 +303,8 @@ initstdin(void)
 }
 
 int
-initcmd(void)
+initawk(void)
 {
-	initqlock(&cmdlock);
 	if(initrepl() < 0){
 		logerr(va("initcmd: failed: %s\n", error()));
 		gottagofast = 1;
@@ -316,4 +315,10 @@ initcmd(void)
 	newthread(readcproc, nil, (void *)(intptr)outfd[0], nil, "readawk", mainstacksize);
 	newthread(readcproc, nil, (void *)(intptr)eoutfd[0], nil, "readeawk", mainstacksize);
 	return 0;
+}
+
+void
+initcmd(void)
+{
+	initqlock(&cmdlock);
 }

@@ -39,4 +39,5 @@ void	pushcmd(char*, ...);
 int	sysinitcmd(void);
 void	initstdin(void);
 int	initrepl(void);
-int	initcmd(void);
+int	initawk(void);
+void	initcmd(void);

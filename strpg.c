@@ -49,6 +49,7 @@ load(Input *files)
 	}
 	flushcmd();
 	dyfree(files);
+	USED(files);
 }
 
 static void
@@ -221,11 +222,12 @@ main(int argc, char **argv)
 
 	initsys();
 	initlog();
+	initcmd();
 	files = nil;
 	ds = nil;
 	d = parseargs(argc, argv, &files, &ds);
 	initrand();
-	initcmd();	/* fork repl before starting other threads */
+	initawk();	/* fork repl before starting other threads */
 	initlayout();
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
