@@ -518,6 +518,7 @@ Array *attach(char *name, Array *ids, void *buf, size_t nel, int type, void (*up
 	ap->upfn = upfn;
 	ap->tab = (Cell **)buf;
 	cp->sval = (char *)ap;
+	initrwlock(&ap->lock);
 	return ap;
 }
 
