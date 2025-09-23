@@ -18,15 +18,13 @@ QLock buflock;
 void
 deselectnode(Cell *cp)	/* deletion hook, do not call directly */
 {
-	ioff id, idx;
+	ioff id;
 	Value v;
 
 	if((cp->tval & (NUM|STR)) == STR)
 		return;
 	id = getival(cp);
-	if((idx = getnodeidx(id)) < 0)
-		return;
-	v.u = core.colors[idx];
+	v.u = core.colors[id];
 	setnodecolor(id, v);
 }
 
