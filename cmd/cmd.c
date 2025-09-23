@@ -12,7 +12,6 @@ static QLock cmdlock;
 void
 killcmd(void)
 {
-	/* FIXME: potential deadlock on exit from the other functions? */
 	qlock(&cmdlock);	/* completely prevent acquisition of dead cmdfs */
 	if(cmdfs == nil){
 		qunlock(&cmdlock);
@@ -26,7 +25,6 @@ killcmd(void)
 	eoutfd[1] = -1;
 	close(infd[1]);
 	infd[1] = -1;
-	close(sysfd(0));
 	qunlock(&cmdlock);
 }
 
@@ -171,9 +169,6 @@ readcmd(char *s, int err)
 		switch(*s){
 		case 0:
 			return;
-		case '!':
-			quit();
-			break;
 		case 'D':
 			req |= Reqredraw;
 			continue;
@@ -287,6 +282,8 @@ readstdin(void *)
 	if((fd = sysfd(0)) < 0)
 		sysfatal("readstdin: %s", error());
 	while((n = read(fd, buf, sizeof buf - 1)) > 0){
+		if(cmdfs == nil)
+			break;
 		if(n < sizeof buf - 1)
 			buf[n++] = '\n';
 		buf[n] = 0;

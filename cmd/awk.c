@@ -94,6 +94,7 @@ awk(void *)
 	compileawk(nelem(args), args);
 	initvars();
 	runawk();
+	quit();
 }
 
 /* use [1] on our side, [0] on awk side */

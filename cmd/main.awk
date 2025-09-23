@@ -465,7 +465,7 @@ function groupby(tag, incl, cm,	acc){
 	delete acc
 }
 function quit(){
-	print "!"
+	exit
 }
 crm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
 	n = index($0, "[")
