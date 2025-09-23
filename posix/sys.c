@@ -140,6 +140,32 @@ dupfd(int oldfd, int newfd)
 }
 
 char *
+smprint(char *fmt, ...)
+{
+	usize n;
+	char c, *f, *p, *a;
+	va_list arg;
+
+	va_start(arg, fmt);
+	for(n=0, f=fmt; (c=*f)!=0; f++, n++){
+		if(c != '%')
+			continue;
+		switch(c = *(++f)){
+		case 0: f--; break;
+		case '%': break;
+		case 's': a = va_arg(arg, char*); n += strlen(a); break;
+		default: n += 64; break;	/* FIXME: kludge */
+		}
+	}
+	va_end(arg);
+	p = emalloc(n);
+	va_start(arg, fmt);
+	vsnprintf(p, n, fmt, arg);
+	va_end(arg);
+	return p;
+}
+
+char *
 estrdup(char *s)
 {
 	char *p;

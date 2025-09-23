@@ -8,6 +8,7 @@ void	vawarn(char*, va_list);
 void	vadebug(char*, char*, va_list);
 void	initlog(void);
 char*	error(void);
+char*	smprint(char*, ...);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
