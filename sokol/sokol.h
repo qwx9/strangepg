@@ -15,7 +15,8 @@ struct Render{
 	int pickflip;	/* non-gl: flip y for mouse picking (kludge) */
 	sg_pass_action clearscreen;
 	sg_pass_action clearpick;
-	sg_attachments pickimg;
+	sg_view pickvw;
+	sg_view depthvw;
 	sg_pipeline nodepipe;
 	sg_pipeline offscrnodepipe;
 	sg_pipeline edgepipe;

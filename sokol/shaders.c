@@ -126,19 +126,33 @@ setnodeshape(int arrow)
 		if(drawing.flags & DF3d){
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowv3d),
+				.usage = {
+					.vertex_buffer = true,
+					.immutable = true,
+				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-				.type = SG_BUFFERTYPE_INDEXBUFFER,
 				.data = SG_RANGE(arrowi3d),
+				.usage = {
+					.index_buffer = true,
+					.immutable = true,
+				},
 			}),
 			render.nnodev = nelem(arrowi3d);
 		}else{
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowv),
+				.usage = {
+					.vertex_buffer = true,
+					.immutable = true,
+				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-				.type = SG_BUFFERTYPE_INDEXBUFFER,
 				.data = SG_RANGE(arrowi),
+				.usage = {
+					.index_buffer = true,
+					.immutable = true,
+				},
 			}),
 			render.nnodev = nelem(arrowi);
 		}
@@ -146,19 +160,33 @@ setnodeshape(int arrow)
 		if(drawing.flags & DF3d){
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadv3d),
+				.usage = {
+					.vertex_buffer = true,
+					.immutable = true,
+				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-				.type = SG_BUFFERTYPE_INDEXBUFFER,
 				.data = SG_RANGE(quadi3d),
+				.usage = {
+					.index_buffer = true,
+					.immutable = true,
+				},
 			}),
 			render.nnodev = nelem(quadi3d);
 		}else{
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadv),
+				.usage = {
+					.vertex_buffer = true,
+					.immutable = true,
+				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-				.type = SG_BUFFERTYPE_INDEXBUFFER,
 				.data = SG_RANGE(quadi),
+				.usage = {
+					.index_buffer = true,
+					.immutable = true,
+				},
 			}),
 			render.nnodev = nelem(quadi);
 		}
@@ -171,22 +199,30 @@ initfb(int w, int h)
 	view.w = sapp_width();
 	view.h = sapp_height();
 	pickfb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
+		.usage = {
+			.color_attachment = true,
+			.immutable = true,
+		},
 		.width = w,
 		.height = h,
 		.pixel_format = SG_PIXELFORMAT_R32UI,
 		.sample_count = 1,
 	});
 	zfb = sg_make_image(&(sg_image_desc){
-		.render_target = true,
+		.usage = {
+			.depth_stencil_attachment = true,
+			.immutable = true,
+		},
 		.width = w,
 		.height = h,
 		.pixel_format = SG_PIXELFORMAT_DEPTH,
 		.sample_count = 1,
 	});
-	render.pickimg = sg_make_attachments(&(sg_attachments_desc){
-		.colors[0].image = pickfb,
-		.depth_stencil.image = zfb,
+	render.pickvw = sg_make_view(&(sg_view_desc){
+		.color_attachment.image = pickfb,
+	});
+	render.depthvw = sg_make_view(&(sg_view_desc){
+		.depth_stencil_attachment.image = zfb,
 	});
 	render.pickfb = emalloc(w * h * sizeof *render.pickfb);
 }
@@ -197,7 +233,8 @@ resize(void)
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
 	free(render.pickfb);
-	sg_destroy_attachments(render.pickimg);
+	sg_destroy_view(render.pickvw);
+	sg_destroy_view(render.depthvw);
 	initfb(sapp_width(), sapp_height());
 }
 
@@ -210,7 +247,10 @@ setupnodes(int threedee)
 		.vertex_buffers = {
 			[1] = sg_make_buffer(&(sg_buffer_desc){
 				.size = dylen(rnodes) * sizeof *rnodes,
-				.usage = SG_USAGE_STREAM,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
 			}),
 		},
 	};
@@ -339,7 +379,10 @@ setupedges(void)
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){
 				.size = dylen(redges) * sizeof *redges,
-				.usage = SG_USAGE_STREAM,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
 			}),
 		},
 	};
@@ -417,7 +460,10 @@ setuplines(void)
 		.vertex_buffers = {
 			[0] = sg_make_buffer(&(sg_buffer_desc){
 				.size = n * sizeof *rlines,
-				.usage = SG_USAGE_STREAM,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
 			}),
 		},
 	};

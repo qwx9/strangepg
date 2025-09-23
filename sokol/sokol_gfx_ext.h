@@ -308,7 +308,7 @@ void sgx_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pi
 
 void sgx_query_image_pixels(sg_image img_id, void* pixels) {
     SOKOL_ASSERT(img_id.id != SG_INVALID_ID);
-    _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+    _sg_image_t* img = _sg_lookup_image(img_id.id);
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
     _sgx_gl_query_image_pixels(img, pixels);
@@ -321,7 +321,7 @@ void sgx_query_image_pixels(sg_image img_id, void* pixels) {
 
 uint32_t sgx_query_image_pixel(int x, int y, sg_image img_id) {
     SOKOL_ASSERT(img_id.id != SG_INVALID_ID);
-    _sg_image_t* img = _sg_lookup_image(&_sg.pools, img_id.id);
+    _sg_image_t* img = _sg_lookup_image(img_id.id);
     SOKOL_ASSERT(img);
 #if defined(_SOKOL_ANY_GL)
     return _sgx_gl_query_image_pixel(x, y, img);

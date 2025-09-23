@@ -91,7 +91,10 @@ renderoffscreen(void)
 	CLK0(clk);
 	sg_begin_pass(&(sg_pass){
 		.action = render.clearpick,
-		.attachments = render.pickimg,
+		.attachments = {
+			.colors[0] = render.pickvw,
+			.depth_stencil = render.depthvw,
+		},
 	});
 	if((n = ndedges) >= 1){
 		sg_apply_pipeline(render.offscredgepipe);
@@ -153,7 +156,10 @@ resizebuf(void)
 		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
 		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 			.size = dylen(redges) * sizeof *redges,
-			.usage = SG_USAGE_STREAM,
+			.usage = {
+				.vertex_buffer = true,
+				.stream_update = true,
+			},
 		});
 	}
 	n = MAX(1, dylen(rnodes));
@@ -163,7 +169,10 @@ resizebuf(void)
 		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
 		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
 			.size = n * sizeof *rnodes,
-			.usage = SG_USAGE_STREAM,
+			.usage = {
+				.vertex_buffer = true,
+				.stream_update = true,
+			},
 		});
 	}
 }
