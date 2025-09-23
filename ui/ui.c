@@ -88,10 +88,11 @@ keyevent(Rune r, int down)
 	case Kleft: pan(-view.w / 4.0f, 0.0f); break;
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
-	case Kesc: resetprompt(); reqdraw(Reqresetview); break;
-	case 'r': reqlayout(Lreset); break;
-	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
+	case Kesc: reqdraw(Reqresetview); break;
 	case 'a': reqdraw(Reqshape); break;
+	case 'l': if(mod & Mctrl) resetprompt(); break;
+	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
+	case 'r': reqlayout(Lreset); break;
 	case '\n': prompt(r); break;
 	}
 	return 0;
