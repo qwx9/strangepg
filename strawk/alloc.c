@@ -48,11 +48,21 @@ static inline void init(Pool *p)
 	clear(p);
 }
 
+/* if one or more next slots are too small, we'll allocate
+ * them all until we get to a sufficiently big one;  even
+ * so this should rarely happen and smaller sizes are far
+ * more likely to be reused */
 static inline uschar *grow(Pool *p, size_t n)
 {
 	uschar *s;
 
-	if(p->slot < p->nslot){
+	while(p->sz < n){
+		p->sz *= 2;
+		p->slot++;
+		if(p->slot >= p->nslot)
+			break;
+	}
+	if(p->sz >= n && p->slot < p->nslot){
 		s = p->pool[p->slot++];
 		if(p->slot <= p->last)
 			memset(s, 0, p->sz);
