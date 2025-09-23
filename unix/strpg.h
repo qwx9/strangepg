@@ -61,7 +61,7 @@ extern char *argv0;
 				_argc = 0;\
 				while(_argc = *_args++)\
 				switch(_argc)
-#define	ARGEND		SET(_argt);USED((_argt,_argc,_args));}USED((argv, argc));
+#define	ARGEND		SET(_argt);USED(_argt);USED(_argc);USED(_args);}USED(argv);USED(argc);
 #define	ARGF()		(_argt=_args, _args="",\
 				(*_argt? _argt: argv[1]? (argc--, *++argv): 0))
 #define	EARGF(x)	(_argt=_args, _args="",\
