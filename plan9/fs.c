@@ -67,10 +67,11 @@ syswstatlen(File *f, vlong n)
 	return 0;
 }
 
-vlong
+int
 sysseek(File *f, vlong off)
 {
-	return Bseek(f->aux, off, 0);
+	Bseek(f->aux, off, 0);
+	return 0;
 }
 
 vlong

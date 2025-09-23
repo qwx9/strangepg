@@ -1,3 +1,5 @@
+#define	_FILE_OFFSET_BITS	64	/* explicit for non-linux */
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

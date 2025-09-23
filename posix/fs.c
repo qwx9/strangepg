@@ -84,16 +84,22 @@ syswstatlen(File *f, vlong n)
 	return 0;
 }
 
-vlong
+int
 sysseek(File *f, vlong off)
 {
-	return fseek(f->aux, off, 0);
+	return fseeko(f->aux, off, 0);
 }
 
 vlong
 sysftell(File *f)
 {
-	return ftell(f->aux);
+	off_t n;
+
+	if((n = ftello(f->aux)) < 0){
+		warn("sysftell: %s\n", error());
+		return -1;
+	}
+	return n;
 }
 
 void

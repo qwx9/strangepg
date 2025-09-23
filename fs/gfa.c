@@ -45,6 +45,7 @@ readnodetags(Aux *a, File *f)
 			werrstr("readnodetags: missing node indexed at %d\n", id);
 			return -1;
 		}
+		DPRINT(Debugmeta, "readnodetags: [%d] off=%lld", id, off);
 		if(seekfs(f, off) < 0)
 			warn("readnodetags: %s\n", error());
 		if(readline(f) == nil)
@@ -83,8 +84,11 @@ readedgetags(Aux *a, File *f)
 	if(status & FSnoetags)
 		return 0;
 	for(nerr=nwarn=0, id=0, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++){
-		if((off = *o) < 0)
+		if((off = *o) < 0){
+			DPRINT(Debugmeta, "readedgetags: [%d] off=%lld, skipping", id, off);
 			continue;
+		}
+		DPRINT(Debugmeta, "readedgetags: [%d] off=%lld", id, off);
 		if(seekfs(f, off) < 0)
 			warn("readedgetags: %s\n", error());
 		if(readline(f) == nil)

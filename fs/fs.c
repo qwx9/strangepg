@@ -19,7 +19,7 @@ freefs(File *f)
 	free(f);
 }
 
-vlong
+int
 seekfs(File *f, vlong off)
 {
 	assert(f->aux != nil);
