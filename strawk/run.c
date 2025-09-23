@@ -164,8 +164,7 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 {				/* a[0] = BEGIN, a[1] = body, a[2] = END */
 	Cell *x;
 
-	// FIXME: setjmp and eval here
-	if (setjmp(env) != 0)
+	if (evalstr == NULL && setjmp(env) != 0)
 		goto ex;
 	if (a[0]) {		/* BEGIN */
 		x = execute(a[0]);
@@ -197,7 +196,7 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 		}
 	}
   ex:
-	if (setjmp(env) != 0)	/* handles exit within END */
+	if (evalstr == NULL && setjmp(env) != 0)	/* handles exit within END */
 		goto ex1;
 	if (a[2]) {		/* END */
 		x = execute(a[2]);
@@ -2306,10 +2305,8 @@ Cell *bltin(TNode **a, int n)	/* builtin functions. a[0] is type, a[1] is arg li
 		evalstr = lexprog;
 		evalfrm++;
 		yyparse();
-		if(setjmp(evalenv) >= 0){
-			y = execute(runnerup);
-			tempfree(y);
-		}
+		if(setjmp(evalenv) == 0)
+			run(runnerup);
 		evalfrm--;
 		if(awknwarn > 0)
 			fprintf(awkstderr, "suppressed %d warnings\n", awknwarn);
