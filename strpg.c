@@ -7,18 +7,14 @@
 #include "ui.h"
 #include "strawk/awk.h"
 
-extern int dbg;	/* FIXME: arg parsing happens after strawk is launched */
-
 int status;
 int gottagofast = 0;	/* FIXME: turn into flag, etc. */
 
-/* FIXME: doesn't need to be a global */
 typedef struct Input Input;
 struct Input{
 	int type;
 	char *path;
 };
-static Input *files;
 
 void
 quit(void)
@@ -27,10 +23,12 @@ quit(void)
 }
 
 static void
-load(void)
+load(Input *files)
 {
 	Input *in, *end;
 
+	if(files == nil)
+		return;
 	for(in=files, end=in+dylen(files); in!=end; in++){
 		switch(in->type){
 		/* defer anything that must be loaded after the graph(s) */
@@ -54,18 +52,16 @@ load(void)
 }
 
 static void
-pushfile(char *file, int type)
+pushfile(Input **files, char *file, int type)
 {
 	Input in;
 
-	if(file == nil || type == FFdead || type >= FFnil){
-		warn("invalid input file\n");
-		return;
-	}
+	if(file == nil || type == FFdead || type >= FFnil)
+		sysfatal("invalid input file %s of type %d", file, type);
 	if(access(file, AREAD) < 0)
 		sysfatal("could not load file %s: %s", file, error());
 	in = (Input){type, file};
-	dypush(files, in);
+	dypush(*files, in);
 }
 
 static void
@@ -114,7 +110,7 @@ usage(void)
 }
 
 static char **
-parseargs(int argc, char **argv)
+parseargs(int argc, char **argv, Input **files, char ***defer)
 {
 	int type;
 	char *s;
@@ -150,10 +146,9 @@ parseargs(int argc, char **argv)
 			debug |= Debugperf;
 		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
-		else if(strcmp(s, "strawk") == 0){
+		else if(strcmp(s, "strawk") == 0)
 			debug |= Debugstrawk;
-			dbg = 1;
-		}else if(strcmp(s, "ui") == 0)
+		else if(strcmp(s, "ui") == 0)
 			debug |= Debugui;
 		else{
 			warn("unknown debug component %s\n", s);
@@ -166,8 +161,8 @@ parseargs(int argc, char **argv)
 	case 'W': debug |= Debuginfo; quiet = 0; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;
-	case 'c': pushfile(EARGF(usage()), FFcsv); break;
-	case 'f': pushfile(EARGF(usage()), FFlayout); break;
+	case 'c': pushfile(files, EARGF(usage()), FFcsv); break;
+	case 'f': pushfile(files, EARGF(usage()), FFlayout); break;
 	case 'h': help(); break;
 	case 'l':
 		s = EARGF(usage());
@@ -179,12 +174,13 @@ parseargs(int argc, char **argv)
 			sysfatal("unknown layout type");
 		break;
 	case 'n':
-		pushcmd("layfile=\"%s\"", EARGF(usage()));
+		s = smprint("layfile=\"%s\"", EARGF(usage()));
+		dypush(*defer, s);
 		drawing.flags |= DFnope;
 		break;
 	case 'q': status |= FSquiet; break;
 	case 'r':
-		pushfile(EARGF(usage()), FFctab);
+		pushfile(files, EARGF(usage()), FFctab);
 		status |= FSlockedctab;	/* prevent rebuilding it */
 		break;
 	case 's':
@@ -211,7 +207,7 @@ parseargs(int argc, char **argv)
 	}ARGEND
 	if(*argv == nil)
 		help();
-	pushfile(*argv++, type);
+	pushfile(files, *argv++, type);
 	return argv;
 }
 
@@ -219,22 +215,29 @@ parseargs(int argc, char **argv)
 int
 main(int argc, char **argv)
 {
-	char **d;
+	char **d, **dp, **ds;
+	Input *files;
 
 	initsys();
 	initlog();
+	files = nil;
+	ds = nil;
+	d = parseargs(argc, argv, &files, &ds);
 	initrand();
 	initcmd();	/* fork repl before starting other threads */
 	initlayout();
-	d = parseargs(argc, argv);
-	/* FIXME: shouldn't we hold off of loading any draw/render shit until
-	 * after we're done validating, configuring and loading? */
 	initdrw();	/* load default drawing state before files override it */
 	initfs();
-	load();
+	if(ds != nil){
+		dypush(ds, nil);
+		deferred(ds);
+		for(dp=ds; *dp!=nil; dp++)
+			free(*dp);
+		dyfree(ds);
+	}
+	load(files);
 	if(drawing.flags & DFnope || debug & Debugload)
 		exportforever();
-	/* FIXME: view stuff doesn't belong in ui any more */
 	initview();
 	initui();
 	waitforit();
