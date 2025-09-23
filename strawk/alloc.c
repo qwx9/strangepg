@@ -19,14 +19,15 @@ struct Pool{
 	size_t slot;
 	size_t nslot;
 	size_t last;	/* before release */
+	#ifdef VERSION
+	RWLock lock;
+	#endif
 };
 static Pool frozen, temp;
-#ifdef VERSION
-static RWLock lock;
-#endif
 
 static inline void clear(Pool *p)
 {
+	wlock(&p->lock);
 	p->sz = POOLSZ;
 	if(p->slot == 1)
 		memset(p->pool[0], 0, p->tail - p->pool[0]);
@@ -34,6 +35,7 @@ static inline void clear(Pool *p)
 	p->slot = 0;
 	p->tail = p->pool[p->slot++];
 	p->end = p->tail + p->sz;
+	wunlock(&p->lock);
 }
 
 static inline void init(Pool *p)
@@ -42,6 +44,7 @@ static inline void init(Pool *p)
 	|| (p->pool[0] = calloc(1, POOLSZ)) == NULL)
 		FATAL("calloc: out of memory");
 	p->nslot = 1;
+	initrwlock(&p->lock);
 	clear(p);
 }
 
@@ -77,13 +80,13 @@ static inline uschar *alloc(size_t n, int istemp)
 	Pool *p;
 
 	p = istemp ? &temp : &frozen;
-	wlock(&lock);
+	wlock(&p->lock);
 	s = p->tail;
 	if(s + n >= p->end)
 		s = grow(p, n);
 	assert(p->end - p->tail >= n);
 	p->tail += n + 7 & ~7;
-	wunlock(&lock);
+	wunlock(&p->lock);
 	return s;
 }
 
@@ -105,7 +108,6 @@ void initpool(void)
 {
 	init(&frozen);
 	init(&temp);
-	initrwlock(&lock);
 }
 
 void cleanpool(void)

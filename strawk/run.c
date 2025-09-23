@@ -175,9 +175,11 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			FATAL("illegal break, continue, next or nextfile from BEGIN");
 		tempfree(x);
 		fflush(awkstdout);
-		if(evalfrm <= 1){
+		if(evalfrm == 0){
+			wlock(&tlock);
 			tmps = NULL;
 			cleanpool();
+			wunlock(&tlock);
 		}
 	}
 	if (a[1] || a[2]){
@@ -186,9 +188,11 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 			if (isexit(x))
 				break;
 			tempfree(x);
-			if(evalfrm <= 1){
+			if(evalfrm == 0){
+				wlock(&tlock);
 				tmps = NULL;
 				cleanpool();
+				wunlock(&tlock);
 			}
 		}
 	}
@@ -893,10 +897,14 @@ void tfree(Cell *a)	/* free a tempcell */
 		DPRINTF("freeing %s %s %o\n", NN(a->nval), NN(a->sval), a->tval);
 		xfree(a->sval);
 	}
-	if (a == tmps)
-		FATAL("tempcell list is curdled");
+	wlock(&tlock);
+	if (a == tmps) {
+		wunlock(&tlock);
+		FATAL("tempcell list is curdled");	/* FIXME: *really* fatal (wrt eval) */
+	}
 	a->cnext = tmps;
 	tmps = a;
+	wunlock(&tlock);
 }
 
 Cell *gettemp(int type)	/* get a tempcell */
