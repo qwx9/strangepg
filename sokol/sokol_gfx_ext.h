@@ -79,7 +79,7 @@ static void _sgx_gl_query_pixels(int x, int y, int w, int h, bool origin_top_lef
 }
 
 static uint32_t _sgx_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
-	union { uint8_t b[4]; uint32_t i; } u;
+    union { uint8_t b[4]; uint32_t i; } u;
     GLuint oldFbo = 0;
     static GLuint newFbo = 0;
     const GLenum gl_format = _sg_gl_teximage_format(img->cmn.pixel_format);
@@ -95,13 +95,13 @@ static uint32_t _sgx_gl_query_image_pixel(int x, int y, _sg_image_t* img) {
     glBindFramebuffer(GL_FRAMEBUFFER, oldFbo);
     //glDeleteFramebuffers(1, &newFbo);
     _SG_GL_CHECK_ERROR();
-	return u.i;
+    return u.i;
 }
 
 static void _sgx_gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userparam) {
 #ifdef SOKOL_GLCORE
-	fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s",
-		severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
+    fprintf(stderr, "[%#x:%#x] %s GL_CALLBACK: %s",
+        severity, type, type == GL_DEBUG_TYPE_ERROR ? "GL ERROR" : "", message);
 #endif
 }
 
@@ -131,7 +131,6 @@ static void _sgx_d3d11_query_image_pixels(_sg_image_t* img, void* pixels) {
     SOKOL_ASSERT(_sg.d3d11.ctx);
     SOKOL_ASSERT(img->d3d11.tex2d);
     HRESULT hr;
-    _SOKOL_UNUSED(hr);
 
     // create staging texture
     ID3D11Texture2D* staging_tex = NULL;
@@ -166,7 +165,17 @@ static void _sgx_d3d11_query_image_pixels(_sg_image_t* img, void* pixels) {
     SOKOL_ASSERT(SUCCEEDED(hr));
 
     // copy the data into the desired buffer, converting pixels to the desired format at the same time
-    memcpy(pixels, msr.pData, img->cmn.width * img->cmn.height * 4);
+    const int sw = msr.RowPitch;
+    const int dw = img->cmn.width * 4;
+    unsigned char *d = pixels;
+    unsigned char *s = msr.pData;
+    const unsigned char *e = d + dw * img->cmn.height;
+    while(d < e) {
+        memcpy(d, s, dw);
+        s += sw;
+        d += dw;
+    }
+    assert(d == e);
 
     // unmap the texture
     _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0);
@@ -326,14 +335,14 @@ uint32_t sgx_query_image_pixel(int x, int y, sg_image img_id) {
 #if defined(_SOKOL_ANY_GL)
     return _sgx_gl_query_image_pixel(x, y, img);
 #else
-	return 0;
+    return 0;
 #endif
 }
 
 void sgx_enable_debug_log(void) {
 #ifdef SOKOL_GLCORE
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(_sgx_gl_debug_callback, 0);
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(_sgx_gl_debug_callback, 0);
 #endif
 }
 
