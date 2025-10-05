@@ -48,6 +48,7 @@ enum{
 	GFdrawme = 1<<1,
 	GFarmed = 1<<2,
 	GFfrozen = 1<<3,
+	GFctarmed = 1<<4,
 };
 struct Graph{
 	int flags;

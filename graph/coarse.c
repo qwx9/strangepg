@@ -22,7 +22,6 @@ struct Adj{
 };
 
 KHASHL_SET_INIT(KH_LOCAL, edgeset, es, u64int, kh_hash_uint64, kh_eq_generic)
-KHASHL_MAP_INIT(KH_LOCAL, degmap, dg, ioff, uint, kh_hash_uint32, kh_eq_generic)
 
 static int ncoarsed;
 static ioff *expnodes;
@@ -40,7 +39,7 @@ getnodeidx(ioff id)
 {
 	ioff idx;
 
-	if(cnodes == nil)
+	if((graph.flags & GFctarmed) == 0)
 		return id;
 	if(id < 0 || id >= nnodes){
 		werrstr("out of bounds cnode id: %d > %d", id, nnodes-1);
@@ -61,7 +60,7 @@ exportct(char *path)
 	File *fs;
 	CNode *U, *UE;
 
-	if(cnodes == nil){	/* FIXME: build it? */
+	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
 		werrstr("no tree yet");
 		return -1;
 	}
@@ -311,7 +310,7 @@ uncoarsen(void)
 		werrstr("nothing to do");
 		return -2;
 	}
-	if(cnodes == nil){
+	if((graph.flags & GFctarmed) == 0){
 		werrstr("no coarsening tree");
 		return -1;
 	}
@@ -395,7 +394,7 @@ expand(ioff i)
 	ioff j, n, nid;
 	CNode *U, *V;
 
-	if(cnodes == nil){
+	if((graph.flags & GFctarmed) == 0){
 		werrstr("no coarsening tree");
 		return -1;
 	}else if(i < 0 || i >= nnodes){
@@ -444,7 +443,7 @@ expandall(void)
 	ioff m, l, i, e;
 	Node *u, *ue;
 
-	if(cnodes == nil){
+	if((graph.flags & GFctarmed) == 0){
 		DPRINT(Debugcoarse, "expandall: nothing to expand");
 		return;
 	}
@@ -481,7 +480,7 @@ coarsen(void)
 		werrstr("nothing to do");
 		return -2;
 	}
-	if(cnodes == nil){
+	if((graph.flags & GFctarmed) == 0){
 		werrstr("no coarsening tree");
 		return -1;
 	}
@@ -629,24 +628,6 @@ commit(int quiet)
 	return 0;
 }
 
-static inline CNode *
-top(CNode *U)
-{
-	while(U->parent != -1)
-		U = cnodes + U->parent;
-	return U;
-}
-
-static inline CNode *
-lastchild(CNode *U)
-{
-	int j;
-
-	for(j=U->child, U=nil; j!=-1; j=U->sibling)
-		U = cnodes + j;
-	return U;
-}
-
 /* inactive node implies its entire subtree is inactive; we have to reset
  * lengths here because of the way we're storing it... */
 static inline int
@@ -789,6 +770,7 @@ collapseup(ioff *ids)
 	return 0;
 }
 
+/* FIXME: assert? */
 ioff *
 collapseall(void)
 {
@@ -830,160 +812,115 @@ pushcollapseop(ioff id, ioff *ids)
 	return ids;
 }
 
-/* FIXME: at what point do we use vlong instead of ioff? separate
- * functions based on nnodes? at least detect it and bail */
-
-/* size of this node's current neighborhood; assumed used only during ct
- * construction, ie. u->id == U->idx */
-static inline int
-cdegree(CNode *U, ioff i)	/* external adjacencies only */
+static void
+reallyinitcoarse(void)
 {
-	int n;
-	ioff j, *e, *ee;
-	CNode *V;
+	voff i;
+	ssize n;
+	CNode *U, *UE;
+	Node *u;
 
-	/* FIXME: we should really compute an edge set instead and
-	 * corresponding degrees, this isn't correct */
-	for(n=0, e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
-		j = *e >> 2;
-		V = cnodes + j;
-		if(j == i)
-			continue;
-		V = top(V);
-		if(j == i)
-			continue;
-		n++;
+	nnodes = dylen(nodes);
+	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
+		U->idx = i;
+		U->eoff = u->eoff;
+		U->nedges = u->nedges;
+		U->flags = 0;
 	}
-	return n;
-}
-
-static int
-cmp_dscdeg(const void *a, const void *b)
-{
-	int da, db;
-	ioff i, j;
-
-	i = *(ioff *)a;
-	da = cdegree(cnodes + i, i);
-	j = *(ioff *)b;
-	db = cdegree(cnodes + j, j);
-	return da > db ? -1 : da < db ? 1 : 0;
-}
-static int
-cmp_ascdeg(const void *a, const void *b)
-{
-	int da, db;
-	ioff i, j;
-
-	i = *(ioff *)a;
-	da = cdegree(cnodes + i, i);
-	j = *(ioff *)b;
-	db = cdegree(cnodes + j, j);
-	return da < db ? -1 : da > db ? 1 : 0;
-}
-
-/* note: sum in and out degree and don't count self-edges */
-static inline void
-sort_dscdeg(ioff *buf, vlong n)
-{
-	qsort(buf, n, sizeof *buf, cmp_dscdeg);
-}
-static inline void
-sort_ascdeg(ioff *buf, vlong n)
-{
-	qsort(buf, n, sizeof *buf, cmp_ascdeg);
-}
-
-static inline void
-sort_fisheryates(ioff *buf, vlong n)	/* FIXME: verify */
-{
-	ioff t, k, *x, *p, *e;
-
-	for(p=buf, e=p+n; p<e-1; p++, n--){
-		k = xnrand(n);
-		x = p + k;
-		if(x == p)
-			continue;
-		t = *p;
-		*p = *x;
-		*x = t;
-	}
-}
-
-/* passed uninitialized */
-void
-sort(ioff *buf, vlong n, int type)
-{
-	switch(type){
-	case Srandom: sort_fisheryates(buf, n); break;
-	case Sascdeg: sort_ascdeg(buf, n); break;
-	case Sdscdeg: sort_dscdeg(buf, n); break;
-	default: sysfatal("sort: unknown type %d", type);
-	}
+	nedges = dylen(edges);
+	free(cedges);
+	n = nedges * sizeof *cedges;
+	cedges = emalloc(n);
+	memcpy(cedges, edges, n);
+	graph.flags |= GFctarmed;
 }
 
 /* FIXME: avoid the duplication of these buffers from fs */
 int
 initcoarse(void)
 {
-	ioff i;
-	ssize n;
-	CNode *U, *E;
+	voff i;
+	CNode *U, *UE;
 	Node *u;
 
-	if(cnodes != nil){
+	if(graph.flags & GFctarmed){
 		werrstr("coarsening already initialized");
 		return -1;
 	}
 	nnodes = dylen(nodes);
-	n = nnodes;
-	cnodes = emalloc(n * sizeof *cnodes);
-	for(i=0, u=nodes, U=cnodes, E=U+n; U<E; U++, u++, i++){
+	cnodes = emalloc(nnodes * sizeof *cnodes);
+	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
 		U->idx = i;
-		U->eoff = u->eoff;
-		U->nedges = u->nedges;
+		U->eoff = -1;
 		U->parent = U->child = U->sibling = -1;
 	}
 	nedges = dylen(edges);
-	n = nedges * sizeof *edges;
-	cedges = emalloc(n);
-	memcpy(cedges, edges, n);
 	return 0;
 }
 
-/* FIXME: split up + benchmark vs. qsort */
+/* FIXME: ugly overloading */
+static inline CNode *
+top(CNode *U)
+{
+	CNode *T;
+
+	T = U->eoff != -1 ? cnodes + U->eoff : U;
+	while(T->parent != -1)
+		T = cnodes + T->parent;
+	if(T != U)
+		U->eoff = T - cnodes;
+	return T;
+}
+
+static inline CNode *
+lastchild(CNode *U)
+{
+	int j;
+	CNode *C;
+
+	j = U->idx != U - cnodes ? U->idx : U->child;
+	for(C=cnodes + j; j!=-1; j=C->sibling)
+		C = cnodes + j;
+	U->idx = C - cnodes;
+	return C;
+}
+
+/* FIXME: split up */
 static Adj *
-sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
+sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 {
 	uint d;
 	ioff i, j, nn, n, m, w, o, *op, *off, *offof, *e, *ee, *ep, *tp, *te, *totals;
 	ssize sz;
 	u64int uv;
 	vlong t;
-	Adj *adj, *adje, *a;
-	CNode *U, *UE;
-	khint_t k, kk;
+	Adj *a, *adj;
+	CNode *U;
+	Node *u, *ue;
+	khint_t kk;
 
 	USED(type);
 	nn = 0;
 	totals = nil;	/* degree d frequency count */
 	t = μsec();
-	if(deg == nil){
-		for(U=cnodes, UE=U+nnodes; U<UE; U++){
-			d = U->nedges;
-			dygrow(totals, d);
-			totals[d]++;
-		}
-		nn = nnodes;
-	}else{
-		kh_foreach(deg, k){
-			U = cnodes + kh_key(deg, k);
-			U->flags &= ~FCNvisited;
-			d = kh_val(deg, k);
+	if(eset == nil){
+		for(u=nodes, ue=u+dylen(u); u<ue; u++){
+			d = u->nedges;
 			dygrow(totals, d);
 			totals[d]++;
 			nn++;
 		}
+	}else{
+		for(a=*adjp; a<adje; a=(Adj*)(a->adj + a->deg)){
+			U = cnodes + a->u;
+			U->flags = 0;
+			if((d = U->nedges) == 0)
+				continue;
+			dygrow(totals, d);
+			totals[d]++;
+			nn++;
+		}
+		free(*adjp);
 	}
 	TIME("sortedges", "occurrence counting", t);
 	if(nn == 0){
@@ -1007,8 +944,8 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 	adj = emalloc(sz);
 	adje = (Adj *)((uchar *)adj + sz);
 	if(eset == nil){
-		for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
-			d = U->nedges;
+		for(i=0, u=nodes, ue=u+nn; u<ue; u++, i++){
+			d = u->nedges;
 			a = (Adj *)((ioff *)(adj + totals[d]) + off[d]);
 			DPRINTS(Debugcoarse, "d=%d id=%d total %d off %d p %zd",
 				d, i, totals[d], off[d], (uchar*)a-(uchar*)adj);
@@ -1016,9 +953,9 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 			totals[d]++;
 			a->u = i;
 			a->deg = d;
-			for(ep=a->adj, e=cedges+U->eoff, ee=e+U->nedges; e<ee; e++){
+			for(ep=a->adj, e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 				DPRINTN(Debugcoarse, " → [%zd] %zd",
-					(uchar *)ep-(uchar *)adj, e-cedges+U->eoff);
+					(uchar *)ep-(uchar *)adj, e-edges+u->eoff);
 				*ep++ = *e >> 2;
 			}
 			DPRINTN(Debugcoarse, "\n");
@@ -1042,9 +979,8 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 			if(i == j)
 				continue;
 			DPRINTS(Debugcoarse, "uv %d,%d: i=%d", i, j, i);
-			k = dg_get(deg, i);
-			assert(k != kh_end(deg));
-			d = kh_val(deg, k);
+			d = cnodes[i].nedges;
+			assert(d != 0);
 			o = off[d];
 			DPRINTN(Debugcoarse, " d=%d off[d]=%d", d, o);
 			if(offof[i] == 0){	/* avoid preinitializing by incrementing... */
@@ -1057,9 +993,8 @@ sortedges(Adj **adjp, edgeset *eset, degmap *deg, int type)
 				a = (Adj *)((uchar *)adj + offof[i] - 1);
 			a->adj[a->deg++] = j;
 			DPRINTN(Debugcoarse, " :: j=%d", j);
-			k = dg_get(deg, j);
-			assert(k != kh_end(deg));
-			d = kh_val(deg, k);
+			d = cnodes[j].nedges;
+			assert(d != 0);
 			o = off[d];
 			DPRINTN(Debugcoarse, " d=%d off[d]=%d\n", d, o);
 			if(offof[j] == 0){
@@ -1091,15 +1026,12 @@ int
 buildct(void)
 {
 	int abs;
-	uint d;
 	u64int uv;
-	vlong t;
-	ioff i, j, *e, *ee;
+	vlong t, tt;
+	ioff i, j, m, *e, *ee;
 	edgeset *eset;
-	degmap *deg;
 	Adj *adj, *adje, *a;
-	CNode *U, *UE, *V, *C;
-	khint_t k;
+	CNode *U, *V, *C;
 
 	if(status & FSlockedctab){
 		if(cnodes != nil)
@@ -1116,20 +1048,20 @@ buildct(void)
 	TIME("buildct", "initcoarse", t);
 	adje = sortedges(&adj, nil, nil, Sascdeg);	/* FIXME: weird api */
 	TIME("buildct", "sortedges", t);
-	deg = nil;
 	eset = nil;
+	m = nedges;
 	while(adje > adj){
-		if(deg != nil){
-			dg_clear(deg);
+		if(eset != nil)
 			es_clear(eset);
-		}else{
-			if((deg = dg_init()) == nil
-			|| (eset = es_init()) == nil)
+		else{
+			if((eset = es_init()) == nil)
 				sysfatal("buildct: %s", error());
+			es_resize(eset, m);
 		}
 		for(a=adj; a<adje; a=(Adj*)e){
 			i = a->u;
 			U = cnodes + i;
+			U->nedges = 0;
 			DPRINTS(Debugcoarse, "node %d d=%d %d %d %d ",
 				i, a->deg, U->parent, U->child, U->sibling);
 			U = top(U);
@@ -1164,30 +1096,21 @@ buildct(void)
 				}
 				uv = (uvlong)i << 32 | j;
 				es_put(eset, uv, &abs);
-				/* FIXME: not the actual degree count */
-				if(abs && V->parent != i){
-					k = dg_get(deg, i);
-					if(k == kh_end(deg)){
-						d = 1;
-						k = dg_put(deg, i, &abs);
-					}else
-						d = kh_val(deg, k) + 1;
-					kh_val(deg, k) = d;
-				}
+				if(abs && V->parent != i)
+					U->nedges++;
 			}
 			U->flags |= FCNvisited;	/* leave alone until next iteration */
 		}
+		tt = μsec();
+		adje = sortedges(&adj, adje, eset, Sascdeg);
+		TIME("buildct", "sortedges", tt);
 		TIME("buildct", "round", t);
-		free(adj);
-		adje = sortedges(&adj, eset, deg, Sascdeg);
-		TIME("buildct", "sortedges", t);
 	}
 	es_destroy(eset);
-	dg_destroy(deg);
 	free(adj);
-	for(U=cnodes, UE=U+nnodes; U<UE; U++)	/* FIXME */
-		U->flags &= ~FCNvisited;
+	reallyinitcoarse();
 	TIME("buildct", "cleanup", t);
 	logmsg("coarsening table built.\n");
+	graph.flags |= GFctarmed;
 	return 0;
 }

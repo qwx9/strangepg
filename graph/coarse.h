@@ -10,7 +10,7 @@ enum{
 struct CNode{
 	ioff idx;		/* correspondence in visible nodes[] */
 	ioff eoff;
-	ioff nedges;
+	ioff nedges;	/* FIXME: get rid of it and use next eoff? */
 	ioff parent;
 	ioff child;
 	ioff sibling;
