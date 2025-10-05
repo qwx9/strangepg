@@ -401,6 +401,7 @@ loadgfa1(void *arg)
 	t = μsec();
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
+	TIME("loadgfa1", "readgfa", t);
 	if(status & FSdontmindme){	/* FIXME: do this more cleanly, forking elsewhere */
 		initnodes(&a);	/* FIXME: wasteful + offset allocs and other shit */
 		initedges(&a);
@@ -414,7 +415,6 @@ loadgfa1(void *arg)
 	}
 	pushcmd("loadbatch()");
 	flushcmd();
-	TIME("loadgfa1", "readgfa", t);
 	logmsg("loadgfa: initializing graph...\n");
 	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
 	TIME("loadgfa1", "mkgraph", t);
