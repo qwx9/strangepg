@@ -887,16 +887,18 @@ lastchild(CNode *U)
 
 /* FIXME: split up */
 static Adj *
-sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
+sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof, int type)
 {
+	int abs;
 	uint d;
-	ioff i, j, nn, n, m, w, o, *op, *off, *offof, *e, *ee, *ep, *tp, *te, *totals;
+	ioff i, j, nn, n, m, w, o, *op, *off, *e, *ee, *ep, *tp, *te, *totals;
 	ssize sz;
 	u64int uv;
 	vlong t;
 	Adj *a, *adj;
-	CNode *U;
+	CNode *U, *V;
 	Node *u, *ue;
+	edgeset *es;
 	khint_t kk;
 
 	USED(type);
@@ -904,6 +906,7 @@ sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 	totals = nil;	/* degree d frequency count */
 	t = μsec();
 	if(eset == nil){
+		es = nil;
 		for(u=nodes, ue=u+dylen(u); u<ue; u++){
 			d = u->nedges;
 			dygrow(totals, d);
@@ -911,11 +914,37 @@ sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 			nn++;
 		}
 	}else{
+		if((es = *eset) != nil)
+			es_clear(es);
+		else{
+			if((es = es_init()) == nil)
+				sysfatal("buildct: %s", error());
+			es_resize(es, nedges);
+			*eset = es;
+		}
+		for(a=*adjp; a<adje; a=(Adj*)e){
+			U = top(cnodes + a->u);
+			i = U - cnodes;
+			for(e=ep=a->adj, ee=e+a->deg; e<ee; e++){
+				V = top(cnodes + *e);
+				if(V == U)
+					continue;
+				j = V - cnodes;
+				uv = i < j ? (uvlong)i << 32 | j : (uvlong)j << 32 | i;
+				es_put(es, uv, &abs);
+				if(abs){
+					U->nedges++;
+					V->nedges++;
+				}
+			}
+		}
 		for(a=*adjp; a<adje; a=(Adj*)(a->adj + a->deg)){
-			U = cnodes + a->u;
+			i = a->u;
+			U = cnodes + i;
 			U->flags = 0;
 			if((d = U->nedges) == 0)
 				continue;
+			offof[i] = -1;
 			dygrow(totals, d);
 			totals[d]++;
 			nn++;
@@ -943,7 +972,7 @@ sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 	sz = nn * sizeof *adj + m * sizeof adj->u;
 	adj = emalloc(sz);
 	adje = (Adj *)((uchar *)adj + sz);
-	if(eset == nil){
+	if(es == nil){
 		for(i=0, u=nodes, ue=u+nn; u<ue; u++, i++){
 			d = u->nedges;
 			a = (Adj *)((ioff *)(adj + totals[d]) + off[d]);
@@ -968,45 +997,41 @@ sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 			}
 		}
 	}else{
-		/* FIXME: SLOW */
-		offof = emalloc(nnodes * sizeof *offof);
-		kh_foreach(eset, kk){
-			uv = kh_key(eset, kk);
+		kh_foreach(es, kk){
+			uv = kh_key(es, kk);
 			i = uv >> 32;
-			j = uv & 0x7fffffff;
-			i = top(cnodes + i) - cnodes;	/* FIXME: should be always the same */
-			j = top(cnodes + j) - cnodes;
-			if(i == j)
-				continue;
+			j = uv & 0xffffffffU;
 			DPRINTS(Debugcoarse, "uv %d,%d: i=%d", i, j, i);
 			d = cnodes[i].nedges;
-			assert(d != 0);
+			assert(d > 0);
+			assert(d < dylen(totals));
 			o = off[d];
 			DPRINTN(Debugcoarse, " d=%d off[d]=%d", d, o);
-			if(offof[i] == 0){	/* avoid preinitializing by incrementing... */
+			if(offof[i] == -1){
 				a = (Adj *)((ioff *)(adj + totals[d]) + o);
 				off[d] += d;
 				totals[d]++;
-				offof[i] = (uchar *)a - (uchar *)adj + 1;
+				offof[i] = (uchar *)a - (uchar *)adj;
 				a->u = i;
 			}else
-				a = (Adj *)((uchar *)adj + offof[i] - 1);
+				a = (Adj *)((uchar *)adj + offof[i]);
 			a->adj[a->deg++] = j;
 			DPRINTN(Debugcoarse, " :: j=%d", j);
 			d = cnodes[j].nedges;
-			assert(d != 0);
+			assert(d > 0);
+			assert(d < dylen(totals));
 			o = off[d];
 			DPRINTN(Debugcoarse, " d=%d off[d]=%d\n", d, o);
-			if(offof[j] == 0){
+			if(offof[j] == -1){
 				a = (Adj *)((ioff *)(adj + totals[d]) + o);
 				off[d] += d;
 				totals[d]++;
-				offof[j] = (uchar *)a - (uchar *)adj + 1;
+				offof[j] = (uchar *)a - (uchar *)adj;
 				a->u = j;
 			}else
-				a = (Adj *)((uchar *)adj + offof[j] - 1);
+				a = (Adj *)((uchar *)adj + offof[j]);
+			a->adj[a->deg++] = i;
 		}
-		free(offof);
 		if(debug & Debugcoarse){
 			for(i=0, a=adj; a<adje; a=(Adj*)e, i++){
 				DPRINT(Debugcoarse, "adj[%d] off=%zd id=%d d=%d",
@@ -1025,10 +1050,8 @@ sortedges(Adj **adjp, Adj *adje, edgeset *eset, int type)
 int
 buildct(void)
 {
-	int abs;
-	u64int uv;
-	vlong t, tt;
-	ioff i, j, m, *e, *ee;
+	vlong t, tt, t0;
+	ioff i, j, *e, *ee, *coff;
 	edgeset *eset;
 	Adj *adj, *adje, *a;
 	CNode *U, *V, *C;
@@ -1042,22 +1065,17 @@ buildct(void)
 	}else
 		status |= FSlockedctab;
 	logmsg("building coarsening table...\n");
-	t = μsec();
+	t = t0 = μsec();
 	if(initcoarse() < 0)
 		return -1;
 	TIME("buildct", "initcoarse", t);
-	adje = sortedges(&adj, nil, nil, Sascdeg);	/* FIXME: weird api */
-	TIME("buildct", "sortedges", t);
+	adj = nil;
 	eset = nil;
-	m = nedges;
+	coff = emalloc(nnodes * sizeof *coff);
+	adje = sortedges(&adj, nil, nil, coff, Sascdeg);
+	TIME("buildct", "sortedges", t);
 	while(adje > adj){
-		if(eset != nil)
-			es_clear(eset);
-		else{
-			if((eset = es_init()) == nil)
-				sysfatal("buildct: %s", error());
-			es_resize(eset, m);
-		}
+		tt = t = μsec();
 		for(a=adj; a<adje; a=(Adj*)e){
 			i = a->u;
 			U = cnodes + i;
@@ -1094,22 +1112,20 @@ buildct(void)
 					}
 					C = V;
 				}
-				uv = (uvlong)i << 32 | j;
-				es_put(eset, uv, &abs);
-				if(abs && V->parent != i)
-					U->nedges++;
 			}
 			U->flags |= FCNvisited;	/* leave alone until next iteration */
 		}
-		tt = μsec();
-		adje = sortedges(&adj, adje, eset, Sascdeg);
+		TIME("buildct", "node merging", tt);
+		adje = sortedges(&adj, adje, &eset, coff, Sascdeg);
 		TIME("buildct", "sortedges", tt);
 		TIME("buildct", "round", t);
 	}
 	es_destroy(eset);
 	free(adj);
+	free(coff);
 	reallyinitcoarse();
 	TIME("buildct", "cleanup", t);
+	TIME("buildct", "total", t0);
 	logmsg("coarsening table built.\n");
 	graph.flags |= GFctarmed;
 	return 0;
