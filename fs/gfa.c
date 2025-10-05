@@ -401,6 +401,17 @@ loadgfa1(void *arg)
 	t = μsec();
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
+	if(status & FSdontmindme){	/* FIXME: do this more cleanly, forking elsewhere */
+		initnodes(&a);	/* FIXME: wasteful + offset allocs and other shit */
+		initedges(&a);
+		edges_destroy(a.edges);
+		dyfree(a.nodeoff);
+		dyfree(a.edgeoff);
+		dyfree(a.length);
+		dyfree(a.degree);
+		freefs(f);
+		return;
+	}
 	pushcmd("loadbatch()");
 	flushcmd();
 	TIME("loadgfa1", "readgfa", t);

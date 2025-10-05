@@ -955,20 +955,25 @@ getarg(int *argc, char ***argv, const char *msg)
 	}
 }
 
+void inittran(void)
+{
+	initrwlock(&tlock);
+	initpool();
+	symtab = makesymtab(NSYMTAB/NSYMTAB);
+	syminit();
+}
+
 int compileawk(int argc, char **argv)
 {
+	inittran();
 	compile_time = COMPILING;
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
-	initrwlock(&tlock);
-	initpool();
 	catchfpe();
 	yyin = NULL;
 	cmdname = argv[0];
 	lexprog = argv[1];
-	symtab = makesymtab(NSYMTAB/NSYMTAB);
 	recinit(recsize);
-	syminit();
 	arginit(0, NULL);
 	yyparse();
 	if (errorflag == 0)

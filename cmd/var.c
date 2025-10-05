@@ -453,6 +453,8 @@ void
 initvars(void)	/* called within strawk */
 {
 	inittag("id", RO, &core.ids);
+	if(status & FSdontmindme)
+		return;
 	inittag("STR", RO|STR, &core.strs);
 	inittag("ATTACHED", RO|STR, &core.ptrs);
 	inittag("EATTACHED", RO|STR, &core.eptrs);

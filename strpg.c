@@ -5,6 +5,7 @@
 #include "layout.h"
 #include "fs.h"
 #include "ui.h"
+#include "graph.h"
 #include "strawk/awk.h"
 
 int status;
@@ -42,7 +43,7 @@ load(Input *files)
 			pushcmd("readctab(\"%s\")", in->path);
 			break;
 		default:
-			if(loadfs(in->path, in->type) < 0)
+			if(loadfs(in->path, in->type, status & FSdontmindme) < 0)
 				sysfatal("could not load file %s: %s", in->path, error());
 			break;
 		}
@@ -91,6 +92,7 @@ help(void)
 		"-v             Print version and exit\n"
 		"-w             Do not wait for all files to load to start layouting\n"
 		"-A             Disable transparency (for performance)\n"
+		"-C             Compute coarsening tree and exit\n"
 		"-E             Disable loading edge tags\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
@@ -108,7 +110,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-AEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]", argv0);
+	sysfatal("usage: %s [-ACEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]", argv0);
 }
 
 static char **
@@ -120,6 +122,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	type = FFgfa;
 	ARGBEGIN{
 	case 'A': drawing.flags |= DFnoalpha; break;
+	case 'C': status |= FSdontmindme; drawing.flags |= DFnope; break;
 	case 'D':
 		s = EARGF(usage());
 		if(strcmp(s, "all") == 0)
@@ -226,11 +229,17 @@ main(int argc, char **argv)
 	files = nil;
 	ds = nil;
 	d = parseargs(argc, argv, &files, &ds);
+	initfs();
 	initrand();
-	initawk();	/* fork repl before starting other threads */
+	initawk();	/* fork repl before starting other threads */	/* FIXME: -C */
+	if(status & FSdontmindme){
+		load(files);
+		if(buildct() < 0)
+			sysfatal("buildct: %s", error());
+		quit();
+	}
 	initlayout();
 	initdrw();	/* load default drawing state before files override it */
-	initfs();
 	if(ds != nil){
 		dypush(ds, nil);
 		deferred(ds);

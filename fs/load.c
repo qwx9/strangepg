@@ -6,7 +6,7 @@
 static Filefmt *fftab[FFnil];
 
 int
-loadfs(char *path, int type)
+loadfs(char *path, int type, int direct)
 {
 	Filefmt *ff;
 
@@ -20,7 +20,12 @@ loadfs(char *path, int type)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	newthread(ff->load, nil, estrdup(path), nil, ff->name, mainstacksize);
+	if(path != nil)
+		path = estrdup(path);
+	if(direct)
+		ff->load(path);
+	else
+		newthread(ff->load, nil, path, nil, ff->name, mainstacksize);
 	return 0;
 }
 

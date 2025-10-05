@@ -101,6 +101,11 @@ awk(void *)
 int
 initrepl(void)
 {
+	if(status & FSdontmindme){
+		inittran();
+		initvars();
+		return 0;
+	}
 	if(pipe(infd) < 0 || pipe(outfd) < 0 || pipe(eoutfd))
 		return -1;
 	initext();

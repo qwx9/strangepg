@@ -89,6 +89,7 @@ enum{
 	FSlockedctab = 1<<0,
 	FSquiet = 1<<1,
 	FSnoetags = 1<<2,
+	FSdontmindme = 1<<3,
 };
 extern int status;
 

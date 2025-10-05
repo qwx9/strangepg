@@ -103,5 +103,5 @@ int	seekfs(File*, vlong);
 vlong	tellfs(File*);
 void	closefs(File*);
 void	freefs(File*);
-int	loadfs(char*, int);
+int	loadfs(char*, int, int);
 void	initfs(void);

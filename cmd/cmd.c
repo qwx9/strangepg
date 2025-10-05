@@ -221,7 +221,7 @@ readcmd(char *s, int err)
 		case 'f':
 			if(m != 1)
 				goto invalid;
-			if(loadfs(fld[0], FFcsv) < 0)
+			if(loadfs(fld[0], FFcsv, 0) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
 				req |= Reqredraw;
@@ -243,7 +243,7 @@ readcmd(char *s, int err)
 		case 't':
 			if(m != 1)
 				goto invalid;
-			if(loadfs(fld[0], FFctab) < 0)
+			if(loadfs(fld[0], FFctab, 0) < 0)
 				warn("readcmd: readctab %s: %s\n", fld[0], error());
 			break;
 		}
@@ -307,6 +307,8 @@ initawk(void)
 		gottagofast = 1;
 		return -1;
 	}
+	if(status & FSdontmindme)
+		return 0;
 	if(infd[1] >= 0 && (cmdfs = fdopenfs(infd[1], OWRITE)) == nil)
 		sysfatal("initcmd: %s", error());
 	newthread(readcproc, nil, (void *)(intptr)outfd[0], nil, "readawk", mainstacksize);

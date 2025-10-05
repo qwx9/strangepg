@@ -125,6 +125,7 @@ extern	Cell	*(*proctab[])(TNode **, int);
 extern	int	ptoi(void *);
 extern	TNode	*itonp(int);
 
+extern	void	inittran(void);
 extern	void	syminit(void);
 extern	void	arginit(int, char **);
 extern	Array	*makesymtab(int);
