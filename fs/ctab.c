@@ -6,8 +6,6 @@
 #include "coarse.h"
 
 /* FIXME: errors here cause shit to hang after gfa is loaded, ie no draw */
-/* FIXME: move buildct here and start it automatically once nodes are loaded if
- * no ctab is scheduled for load */
 
 static inline int
 getval(char *s, ioff *ip)
@@ -31,7 +29,7 @@ loadct(void *arg)
 	CNode *U, *UE;
 
 	path = arg;
-	if(cnodes != nil){
+	if(graph.flags & GFctarmed){
 		logerr(va("loadctab %s: coarsening table already initialized\n", path));
 		return;
 	}
@@ -74,14 +72,15 @@ loadct(void *arg)
 		werrstr("too few records in ctab, %zd < %zd", U-cnodes, UE-cnodes);
 		r = -1;
 	}
+	graph.flags |= GFctarmed;
 	pushcmd("cmd(\"FHJ142\")");	/* signal needed to continue, error or no */
 	flushcmd();
 	if(r < 0)
 		logerr(va("loadctab %s: %s, line %d\n", path, error(), f->nr));
 	else
 		logmsg("loadctab: done\n");
-	free(f);
 	free(path);
+	freefs(f);
 }
 
 static Filefmt ff = {
