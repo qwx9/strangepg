@@ -18,6 +18,7 @@ int	errstr(char*, uint);
 vlong	μsec(void);
 void	lsleep(vlong);
 void	sysquit(void);
+void	giveup(void);
 void	quit(void);
 void	initsys(void);
 

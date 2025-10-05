@@ -108,6 +108,17 @@ killthread(Thread *th)
 }
 
 void
+giveup(void)
+{
+	int r;
+	pthread_t p;
+
+	p = pthread_self();
+	if((r = pthread_cancel(p)) != 0)
+		sysfatal("pthread_cancel: %s", strerror(r));
+}
+
+void
 initqlock(QLock *l)
 {
 	int r;
