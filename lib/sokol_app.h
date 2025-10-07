@@ -3953,6 +3953,15 @@ _SOKOL_PRIVATE void _sapp_wgpu_create_device_and_swapchain(void) {
     }
     #undef _SAPP_WGPU_MAX_REQUESTED_FEATURES
 
+    WGPULimits adapterLimits = WGPU_LIMITS_INIT;
+    wgpuAdapterGetLimits(_sapp.wgpu.adapter, &adapterLimits);
+
+    WGPULimits requiredLimits = WGPU_LIMITS_INIT;
+    requiredLimits.maxColorAttachments = adapterLimits.maxColorAttachments;
+    requiredLimits.maxSampledTexturesPerShaderStage = adapterLimits.maxSampledTexturesPerShaderStage;
+    requiredLimits.maxStorageBuffersPerShaderStage = adapterLimits.maxStorageBuffersPerShaderStage;
+    requiredLimits.maxStorageTexturesPerShaderStage = adapterLimits.maxStorageTexturesPerShaderStage;
+
     WGPURequestDeviceCallbackInfo cb_info;
     _sapp_clear(&cb_info, sizeof(cb_info));
     cb_info.mode = _sapp_wgpu_callbackmode();
@@ -3962,6 +3971,7 @@ _SOKOL_PRIVATE void _sapp_wgpu_create_device_and_swapchain(void) {
     _sapp_clear(&dev_desc, sizeof(dev_desc));
     dev_desc.requiredFeatureCount = cur_feature_index;
     dev_desc.requiredFeatures = requiredFeatures;
+    dev_desc.requiredLimits = &requiredLimits;
     dev_desc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
     dev_desc.deviceLostCallbackInfo.callback = _sapp_wgpu_device_lost_cb;
     dev_desc.uncapturedErrorCallbackInfo.callback = _sapp_wgpu_uncaptured_error_cb;
@@ -4707,6 +4717,30 @@ _SOKOL_PRIVATE void _sapp_macos_set_icon(const sapp_icon_desc* icon_desc, int nu
     CGImageRelease(cg_img);
 }
 
+_SOKOL_PRIVATE void _sapp_macos_frame(void) {
+    // NOTE: DO NOT call _sapp_macos_update_dimensions() function from within the
+    // frame callback (at least when called from MTKView's drawRect function).
+    // This will trigger a chicken-egg situation that triggers a
+    // Metal validation layer error about different render target sizes.
+    _sapp_timing_measure(&_sapp.timing);
+    #if defined(_SAPP_ANY_GL)
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&_sapp.gl.framebuffer);
+    #endif
+    @autoreleasepool {
+        #if defined(SOKOL_WGPU)
+        _sapp_wgpu_frame();
+        #else
+        _sapp_frame();
+        #endif
+    }
+    #if defined(_SAPP_ANY_GL)
+    [[_sapp.macos.view openGLContext] flushBuffer];
+    #endif
+    if (_sapp.quit_requested || _sapp.quit_ordered) {
+        [_sapp.macos.window performClose:nil];
+    }
+}
+
 @implementation _sapp_macos_app_delegate
 - (void)applicationDidFinishLaunching:(NSNotification*)aNotification {
     _SOKOL_UNUSED(aNotification);
@@ -4941,36 +4975,14 @@ _SOKOL_PRIVATE void _sapp_macos_set_icon(const sapp_icon_desc* icon_desc, int nu
 #if defined(SOKOL_WGPU)
 - (void)displayLinkFired:(id)sender {
     _SOKOL_UNUSED(sender);
-    _sapp_timing_measure(&_sapp.timing);
-    @autoreleasepool {
-        _sapp_wgpu_frame();
-    }
-    if (_sapp.quit_requested || _sapp.quit_ordered) {
-        [_sapp.macos.window performClose:nil];
-    }
+    _sapp_macos_frame();
 }
-#endif
-
+#else
 - (void)drawRect:(NSRect)rect {
     _SOKOL_UNUSED(rect);
-    #if defined(SOKOL_WGPU)
-        // should never be called
-        return;
-    #endif
-    #if defined(_SAPP_ANY_GL)
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&_sapp.gl.framebuffer);
-    #endif
-    _sapp_timing_measure(&_sapp.timing);
-    @autoreleasepool {
-        _sapp_frame();
-    }
-    #if defined(_SAPP_ANY_GL)
-    [[_sapp.macos.view openGLContext] flushBuffer];
-    #endif
-    if (_sapp.quit_requested || _sapp.quit_ordered) {
-        [_sapp.macos.window performClose:nil];
-    }
+    _sapp_macos_frame();
 }
+#endif
 
 - (BOOL)isOpaque {
     return YES;
@@ -8157,9 +8169,6 @@ _SOKOL_PRIVATE void _sapp_win32_timing_measure(void) {
             HRESULT hr = _sapp_dxgi_GetFrameStatistics(_sapp.d3d11.swap_chain, &dxgi_stats);
             if (SUCCEEDED(hr)) {
                 if (dxgi_stats.SyncRefreshCount != _sapp.d3d11.sync_refresh_count) {
-                    if ((_sapp.d3d11.sync_refresh_count + 1) != dxgi_stats.SyncRefreshCount) {
-                        _sapp_timing_discontinuity(&_sapp.timing);
-                    }
                     _sapp.d3d11.sync_refresh_count = dxgi_stats.SyncRefreshCount;
                     LARGE_INTEGER qpc = dxgi_stats.SyncQPCTime;
                     const uint64_t now = (uint64_t)_sapp_int64_muldiv(qpc.QuadPart - _sapp.timing.timestamp.win.start.QuadPart, 1000000000, _sapp.timing.timestamp.win.freq.QuadPart);
