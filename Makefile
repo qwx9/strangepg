@@ -85,17 +85,21 @@ ifdef DEBUG
 			 -Wredundant-decls -Wshadow -Wstack-protector \
 			 -Wvariadic-macros
 else
-	#CPPFLAGS+= -DNDEBUG
-	CFLAGS+= -g -flto
+	CPPFLAGS+= -DNDEBUG
+	CFLAGS+= -flto
 	LDFLAGS+= -flto
 	ifeq ($(CC), clang)
-		CFLAGS+= -Wno-c2x-extensions
+		CFLAGS+= -glldb -Wno-c2x-extensions
 	else
-		CFLAGS+= -Wno-discarded-qualifiers
+		CFLAGS+= -ggdb -Wno-discarded-qualifiers
 	endif
 	CFLAGS+= -Wno-incompatible-pointer-types -Wno-ignored-qualifiers \
 			 -Wno-unused-result -Wno-unused-function -Wno-unused-value \
 			 -Wno-format-nonliteral
+endif
+ifdef PROF
+	CFLAGS+= -pg
+	LDFLAGS+= -pg
 endif
 
 LDFLAGS?=

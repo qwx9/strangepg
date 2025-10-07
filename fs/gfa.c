@@ -123,14 +123,13 @@ readedgetags(Aux *a, File *f)
 static void
 initedges(Aux *a)
 {
-	ioff off, nn, ne, x, u, v;
+	ioff off, ne, x, u, v;
 	Node *n;
 	u64int e;
 	edgeset *h;
 	khint_t k;
 
 	h = a->edges;
-	nn = a->nnodes;
 	ne = kh_size(h);
 	x = dylen(redges);	/* mooltigraph */
 	dyresize(redges, x + ne);
@@ -140,7 +139,7 @@ initedges(Aux *a)
 		e = kh_key(h, k);
 		u = e >> 32 & 0x7fffffff;
 		v = e >> 2 & 0x3fffffff;
-		assert(u < nn && v < nn);
+		assert(u < a->nnodes && v < a->nnodes);
 		n = nodes + u;
 		off = n->eoff + n->nedges++;
 		assert(off >= 0 && off < ne);
