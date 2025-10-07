@@ -248,8 +248,13 @@ EM_JS(void, slog_js_log, (uint32_t level, const char* c_str), {
 })
 #endif
 
+extern int debug;
+
 SOKOL_API_IMPL void slog_func(const char* tag, uint32_t log_level, uint32_t log_item, const char* message, uint32_t line_nr, const char* filename, void* user_data) {
     _SOKOL_UNUSED(user_data);
+
+	if (debug == 0 && log_level > 1)
+		return;
 
     const char* log_level_str;
     switch (log_level) {
@@ -301,7 +306,7 @@ SOKOL_API_IMPL void slog_func(const char* tag, uint32_t log_level, uint32_t log_
         str = _slog_append("\n\t", str, end);
         str = _slog_append(message, str, end);
     }
-    str = _slog_append("\n\n", str, end);
+    str = _slog_append("\n", str, end);
     if (0 == log_level) {
         str = _slog_append("ABORTING because of [panic]\n", str, end);
         (void)str;
