@@ -118,7 +118,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 	extern HType *prefix##_init2(void *km); \
 	extern void prefix##_destroy(HType *h); \
 	extern void prefix##_clear(HType *h); \
-	extern khint_t prefix##_getp(const HType *h, const khkey_t *key); \
+	extern khint_t prefix##_getp(HType *h, const khkey_t *key); \
 	extern int prefix##_resize(HType *h, khint_t new_n_buckets); \
 	extern khint_t prefix##_putp(HType *h, const khkey_t *key, int *absent); \
 	extern void prefix##_del(HType *h, khint_t k);
@@ -148,7 +148,7 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 	}
 
 #define __KHASHL_IMPL_GET(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
-	SCOPE khint_t prefix##_getp_core(const HType *h, const khkey_t *key, khint_t hash) { \
+	SCOPE khint_t prefix##_getp_core(HType *h, const khkey_t *key, khint_t hash) { \
 		khint_t i, last, n_buckets, mask; \
 		if (h->keys == 0) return 0; \
 		rlock(&h->l); \
@@ -165,8 +165,8 @@ static kh_inline khint_t __kh_h2b(khint_t hash, khint_t bits) { return hash * 26
 		runlock(&h->l); \
 		return !__kh_used(h->used, i)? n_buckets : i; \
 	} \
-	SCOPE khint_t prefix##_getp(const HType *h, const khkey_t *key) { return prefix##_getp_core(h, key, __hash_fn(*key)); } \
-	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { return prefix##_getp_core(h, &key, __hash_fn(key)); }
+	SCOPE khint_t prefix##_getp(HType *h, const khkey_t *key) { return prefix##_getp_core(h, key, __hash_fn(*key)); } \
+	SCOPE khint_t prefix##_get(HType *h, khkey_t key) { return prefix##_getp_core(h, &key, __hash_fn(key)); }
 
 #define __KHASHL_IMPL_RESIZE(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE int prefix##_resize(HType *h, khint_t new_n_buckets) { \
@@ -370,7 +370,7 @@ typedef struct {
 	SCOPE HType *prefix##_init2(void *km) { return prefix##_s_init2(km); } \
 	SCOPE void prefix##_destroy(HType *h) { prefix##_s_destroy(h); } \
 	SCOPE void prefix##_resize(HType *h, khint_t new_n_buckets) { prefix##_s_resize(h, new_n_buckets); } \
-	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_s_bucket_t t; t.key = key; return prefix##_s_getp(h, &t); } \
+	SCOPE khint_t prefix##_get(HType *h, khkey_t key) { HType##_s_bucket_t t; t.key = key; return prefix##_s_getp(h, &t); } \
 	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_s_del(h, k); } \
 	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_s_bucket_t t; t.key = key; return prefix##_s_putp(h, &t, absent); } \
 	SCOPE void prefix##_clear(HType *h) { prefix##_s_clear(h); }
@@ -384,7 +384,7 @@ typedef struct {
 	SCOPE HType *prefix##_init2(void *km) { return prefix##_m_init2(km); } \
 	SCOPE void prefix##_destroy(HType *h) { prefix##_m_destroy(h); } \
 	SCOPE void prefix##_resize(HType *h, khint_t new_n_buckets) { prefix##_m_resize(h, new_n_buckets); } \
-	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_m_bucket_t t; t.key = key; return prefix##_m_getp(h, &t); } \
+	SCOPE khint_t prefix##_get(HType *h, khkey_t key) { HType##_m_bucket_t t; t.key = key; return prefix##_m_getp(h, &t); } \
 	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_m_del(h, k); } \
 	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_m_bucket_t t; t.key = key; return prefix##_m_putp(h, &t, absent); } \
 	SCOPE void prefix##_clear(HType *h) { prefix##_m_clear(h); }
