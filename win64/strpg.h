@@ -12,6 +12,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <strings.h>
+#include <stdnoreturn.h>
 
 /* u.h */
 //#define nil		((void*)0)
@@ -123,7 +124,7 @@ enum{
 #include "lib/khashl.h"
 
 void	werrstr(char*, ...);
-void	sysfatal(char*, ...);
+noreturn void	sysfatal(char*, ...);
 
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);
