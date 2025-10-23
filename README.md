@@ -462,15 +462,6 @@ Additional settings:
 
 - `-b` sets the obligatory dark theme.
 - `-q` disables echoing log messages to standard output.
-- `-w` enables gottagofast mode:
-begin layouting before all files are fully loaded.
-Normally, because it's unknown ahead of time if there are tags
-in the input GFA files or additional files (CSVs, etc.)
-that may influence layouting,
-layouting only begins when it is safe to assume that everything is ready.
-This option completely ignores all of this
-and instead signals layouting to begin immediately after all nodes and
-edges have been created.
 - `-E` disable loading edge tags: mostly for saving memory if those won't be used.
 - `-W` disables suppressing warnings:
 redundant edges and such are discarded, but printing warnings about this

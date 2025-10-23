@@ -94,7 +94,6 @@ enum{
 extern int status;
 
 extern int debug;
-extern int gottagofast;	/* FIXME: state flag */
 extern char logbuf[], lastmsg[3][64], iserrmsg[3];
 extern int nlog, logsz;
 extern int onscreen;	/* FIXME: state flag */

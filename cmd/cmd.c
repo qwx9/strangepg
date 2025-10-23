@@ -311,7 +311,6 @@ initawk(void)
 {
 	if(initrepl() < 0){
 		logerr(va("initcmd: failed: %s\n", error()));
-		gottagofast = 1;
 		return -1;
 	}
 	if(status & FSdontmindme)

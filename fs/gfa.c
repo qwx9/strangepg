@@ -436,12 +436,6 @@ loadgfa1(void *arg)
 	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
 	TIME("loadgfa1", "mkgraph", t);
 	printgraph();
-	/* FIXME: always send two signals, one after topo is loaded and one
-	 * after everything is done, and let strawk decide what to do */
-	if(gottagofast){	/* FIXME: very much unsafe, won't work with csv, etc. */
-		pushcmd("cmd(\"OPL753\")");	/* load what we have and start layouting */
-		flushcmd();					/* awk must be in on it or it won't work */
-	}
 	logmsg("loadgfa: reading node tags...\n");
 	if(d)
 		t = μsec();
@@ -450,7 +444,7 @@ loadgfa1(void *arg)
 	TIME("loadgfa1", "readnodetags", t);
 	dyfree(a.nodeoff);
 	dyfree(a.nreclen);
-	if(!gottagofast && (debug & Debugload) == 0){
+	if((debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
 	}

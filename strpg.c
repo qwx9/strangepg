@@ -9,7 +9,8 @@
 #include "strawk/awk.h"
 
 int status;
-int gottagofast = 0;	/* FIXME: turn into flag, etc. */
+
+static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -77,7 +78,7 @@ deferred(char **argv)
 static void
 help(void)
 {
-	warn("usage: %s [-AEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]\n", argv0);
+	warn("usage: %s %s\n", argv0, usestr);
 	warn(
 		"-b             White-on-black color theme\n"
 		"-c FILE        Load tags from csv FILE\n"
@@ -90,7 +91,6 @@ help(void)
 		"-s LEN WIDE    Set node length and width (max: %.1f %.1f, default: %.1f %.1f)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
-		"-w             Do not wait for all files to load to start layouting\n"
 		"-A             Disable transparency (for performance)\n"
 		"-C             Compute coarsening tree and exit\n"
 		"-E             Disable loading edge tags\n"
@@ -110,7 +110,7 @@ help(void)
 static void
 usage(void)
 {
-	sysfatal("usage: %s [-ACEHMWZbhqvw] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]", argv0);
+	sysfatal("usage: %s %s", argv0, usestr);
 }
 
 static char **
@@ -207,7 +207,6 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 'v':
 		print(VERSION "\n");
 		quit();
-	case 'w': gottagofast = 1; break;
 	default: usage();
 	}ARGEND
 	if(*argv == nil)

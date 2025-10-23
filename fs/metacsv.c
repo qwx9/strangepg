@@ -100,8 +100,6 @@ loadcsv(void *arg)
 	splitfs(f, ',');
 	if((tags = csvheader(f, &wait)) == nil)
 		goto end;
-	if(gottagofast)
-		wait = 0;
 	if(!wait && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
