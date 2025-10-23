@@ -70,7 +70,7 @@ vadebug(char *type, char *fmt, va_list arg)
 	va_end(arg);
 }
 
-void
+noreturn void
 sysfatal(char *fmt, ...)
 {
 	va_list arg;

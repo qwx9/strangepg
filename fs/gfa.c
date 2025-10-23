@@ -23,6 +23,8 @@ struct Aux{
 	ushort *degree;
 	vlong *nodeoff;
 	vlong *edgeoff;
+	int *nreclen;
+	int *ereclen;
 	ioff nnodes;
 	ioff nedges;
 };
@@ -30,30 +32,30 @@ struct Aux{
 static int
 readnodetags(Aux *a, File *f)
 {
-	int nerr, nwarn;
+	int nerr, nwarn, *lp;
 	char *s;
 	ioff id;
 	vlong off, *o, *oe;
 
-	for(nerr=nwarn=0, id=0, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++){
+	for(nerr=nwarn=0, id=0, lp=a->nreclen, o=a->nodeoff, oe=o+dylen(o); o<oe; o++, id++, lp++){
 		if((off = *o) < 0){
-			DPRINT(Debugmeta, "readnodetags: [%d] off=%lld, skipping", id, off);
+			DPRINT(Debugmeta, "readnodetags: [%s:%d] off=%lld, skipping",
+				getname(id), id, off);
 			continue;
 		/* missing S records will have uninitialized offsets and parsing
 		 * will fail since offset 0 won't correspond to a tag */
 		}else if(off == 0){
-			werrstr("readnodetags: missing node indexed at %d\n", id);
+			werrstr("missing node %s [%d]", getname(id), id);
 			return -1;
 		}
-		DPRINT(Debugmeta, "readnodetags: [%d] off=%lld", id, off);
-		if(seekfs(f, off) < 0)
-			warn("readnodetags: %s\n", error());
-		if(readline(f) == nil)
-			sysfatal("readnodetags: %s", error());
+		DPRINT(Debugmeta, "readnodetags: [%s:%d] off=%lld",
+			getname(id), id, off);
+		if(readlineat(f, *lp, off) < 0)
+			sysfatal("readlineat: %s", error());
 		while((s = nextfield(f)) != nil){
-			DPRINT(Debugmeta, "readnodetags: [%d] %s", id, s);
+			DPRINT(Debugmeta, "new tag: %s", s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
-				warn("invalid segment tag \"%s\"\n", s);
+				warn("segment %s: invalid tag \"%s\"\n", getname(id), s);
 				if(nerr++ > 10){
 					werrstr("too many errors");
 					return -1;
@@ -62,7 +64,8 @@ readnodetags(Aux *a, File *f)
 			}
 			s[2] = 0;
 			if(settag(s, id, s[3], s+5) < 0){
-				DPRINT(Debuginfo, "readnodetags: line %d: %s", f->nr, error());
+				DPRINT(Debuginfo, "segment %s tag %s: %s",
+					getname(id), s, error());
 				nwarn++;
 			}
 			nerr = 0;
@@ -76,31 +79,29 @@ readnodetags(Aux *a, File *f)
 static int
 readedgetags(Aux *a, File *f)
 {
-	int nerr, nwarn;
+	int nerr, nwarn, *lp;
 	char *s;
 	ioff id;
 	vlong off, *o, *oe;
 
 	if(status & FSnoetags)
 		return 0;
-	for(nerr=nwarn=0, id=0, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++){
+	for(nerr=nwarn=0, id=0, lp=a->ereclen, o=a->edgeoff, oe=o+dylen(o); o<oe; o++, id++, lp++){
 		if((off = *o) < 0){
 			DPRINT(Debugmeta, "readedgetags: [%d] off=%lld, skipping", id, off);
 			continue;
 		}
 		DPRINT(Debugmeta, "readedgetags: [%d] off=%lld", id, off);
-		if(seekfs(f, off) < 0)
-			warn("readedgetags: %s\n", error());
-		if(readline(f) == nil)
-			sysfatal("readedgetags: %s", error());
+		if(readlineat(f, *lp, off) < 0)
+			sysfatal("readlineat: %s", error());
 		if((s = nextfield(f)) == nil)
-			sysfatal("readedgetags: bug: short read, line %d", f->nr);
+			sysfatal("readedgetags: bug: short read, off=%lld", off);
 		if(strcmp(s, "*") != 0)
 			setedgetag("cigar", id, 'Z', s);
 		while((s = nextfield(f)) != nil){
-			DPRINT(Debugmeta, "readedgetags: [%d] %s", id, s);
+			DPRINT(Debugmeta, "new tag: %s", s);
 			if(f->toksz < 5 || s[2] != ':' || s[4] != ':' || f->toksz > 128){
-				warn("invalid edge tag \"%s\"\n", s);
+				warn("edge [%d]: invalid edge tag \"%s\"\n", id, s);
 				if(nerr++ > 10){
 					werrstr("too many errors");
 					return -1;
@@ -109,7 +110,7 @@ readedgetags(Aux *a, File *f)
 			}
 			s[2] = 0;
 			if(setedgetag(s, id, s[3], s+5) < 0){
-				DPRINT(Debuginfo, "readedgetags: line %d: %s", f->nr, error());
+				DPRINT(Debuginfo, "readedgetags: %s", error());
 				nwarn++;
 			}
 			nerr = 0;
@@ -144,7 +145,7 @@ initedges(Aux *a)
 		off = n->eoff + n->nedges++;
 		assert(off >= 0 && off < ne);
 		x = v << 2 | e & 3;
-		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
+		DPRINT(Debuggraph, "map %d%c%d%c → edge[%d]=%08x",
 			u, e&1?'-':'+', v, e&2?'-':'+', off, x);
 		edges[off] = x;
 		if(u == v)
@@ -153,7 +154,7 @@ initedges(Aux *a)
 		off = n->eoff + n->nedges++;
 		assert(off >= 0 && off < ne);
 		x = u << 2 | (e >> 1 & 1 | e << 1 & 2) ^ 3;
-		DPRINT(Debugfs, "map %d%c%d%c → edge[%d]=%08x",
+		DPRINT(Debuggraph, "map %d%c%d%c → edge[%d]=%08x",
 			v, e&2?'+':'-', u, e&1?'+':'-', off, x);
 		edges[off] = x;
 	}
@@ -208,7 +209,7 @@ pushnode(Aux *a, char *s)
 
 	if((id = pushname(s)) == a->nnodes){
 		a->nnodes++;
-		DPRINT(Debugfs, "node \"%s\" → %d", s, id);
+		DPRINT(Debuggraph, "node \"%s\" → %d", s, id);
 	}
 	return id;
 }
@@ -217,12 +218,15 @@ pushnode(Aux *a, char *s)
 static inline int
 readnode(Aux *a, File *f)
 {
-	int id, r, w;
+	int l, id, r, w;
 	vlong off;
 	char *s;
 
 	r = 0;
-	s = nextfield(f);
+	if((s = nextfield(f)) == nil){
+		werrstr("truncated S record");
+		return -2;
+	}
 	id = pushnode(a, s);
 	if(id < a->nnodes-1 && id < dylen(a->nodeoff) && a->nodeoff[id] != 0){
 		werrstr("duplicate S record");
@@ -243,11 +247,18 @@ readnode(Aux *a, File *f)
 		r = -2;
 		w = 0;
 	}
-	if(nextfield(f) != nil)
+	if(nextfield(f) != nil){
 		off = f->foff;
-	else
+		skipline(f);
+		l = f->foff - off;
+	}else{
 		off = -1LL;
+		l = 0;
+	}
+	DPRINT(Debuggraph, "readnode: pushed node %d off=%lld len=%d",
+		id, off, w);
 	dypushat(a->nodeoff, id, off);
+	dypushat(a->nreclen, id, l);
 	dypushat(a->length, id, w);
 	return r;
 }
@@ -256,7 +267,7 @@ readnode(Aux *a, File *f)
 static inline int
 readedge(Aux *a, File *f)
 {
-	int i, j, abs;
+	int l, i, j, abs;
 	ioff x, u, v;
 	vlong off;
 	u64int id;
@@ -279,10 +290,14 @@ readedge(Aux *a, File *f)
 	v = pushnode(a, fld[2]);
 	i = *fld[1] == '+' ? 0 : 1;
 	j = *fld[3] == '+' ? 0 : 1;
-	if(nextfield(f) != nil)
+	if(nextfield(f) != nil){
 		off = f->foff;
-	else
+		skipline(f);
+		l = f->foff - off;
+	}else{
 		off = -1LL;
+		l = 0;
+	}
 	/* precedence rule: always flip edge st. u < v or u is forward if self edge */
 	if(u > v || u == v && i == 1)
 		id = (u64int)v << 32 | u << 2 | (i << 1 | j) ^ 3;
@@ -294,10 +309,11 @@ readedge(Aux *a, File *f)
 		werrstr("duplicate edge, ignored");
 		return -1;
 	}
-	DPRINT(Debugfs, "edge \"%s%c,%s%c\" → %d%c%d%c",
+	DPRINT(Debuggraph, "edge \"%s%c,%s%c\" → %d%c%d%c",
 		fld[0], *fld[1], fld[2], *fld[3],
 		u, i?'-':'+', v, j?'-':'+');
 	dypush(a->edgeoff, off);
+	dypush(a->ereclen, l);
 	x = MAX(u, v);
 	dygrow(a->degree, x);
 	a->degree[u]++;
@@ -407,6 +423,8 @@ loadgfa1(void *arg)
 		edges_destroy(a.edges);
 		dyfree(a.nodeoff);
 		dyfree(a.edgeoff);
+		dyfree(a.nreclen);
+		dyfree(a.ereclen);
 		dyfree(a.length);
 		dyfree(a.degree);
 		freefs(f);
@@ -431,6 +449,7 @@ loadgfa1(void *arg)
 		sysfatal("loadgfa: readnodetags: %s", error());
 	TIME("loadgfa1", "readnodetags", t);
 	dyfree(a.nodeoff);
+	dyfree(a.nreclen);
 	if(!gottagofast && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
 		flushcmd();
@@ -448,6 +467,7 @@ loadgfa1(void *arg)
 	flushcmd();
 	logmsg("loadgfa: done\n");
 	dyfree(a.edgeoff);
+	dyfree(a.ereclen);
 	freefs(f);
 	USED(t);
 }

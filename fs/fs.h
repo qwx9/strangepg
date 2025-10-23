@@ -5,20 +5,23 @@ typedef struct Filefmt Filefmt;
  * leave one chance to save it */
 enum{
 	Readsz = IOUNIT,
+	FFSeof = 1<<0,
 };
 struct File{
 	char *path;
 	void *aux;
 	char buf[2 * Readsz + 1];
-	char *end;	/* end of current read */
-	int len;
-	int trunc;
-	vlong foff;	/* current token file offset*/
+	char flags;
+	char sep;	/* FS (ascii) */
+	int cur;	/* current start in read */
+	int next;	/* next EOL in read */
+	int end;	/* read end */
+	int toksep;	/* current token offset sep in read */
+	vlong toksz;/* cumulated token length */
+	char *tok;	/* if tokenizing, end of current token */
+	vlong foff;	/* current token file offset */
 	int nr;		/* current line number */
 	int nf;		/* current field number */
-	char *tok;	/* if tokenizing, end of current token */
-	int toksz;
-	char sep;
 };
 
 struct Filefmt{
@@ -42,8 +45,9 @@ Filefmt*	regcsv(void);
 Filefmt*	regctab(void);
 int	readchar(File*);
 char*	nextfield(File*);
-char*	readfrag(File*);
+int	skipline(File*);
 char*	readline(File*);
+int	readlineat(File*, int, vlong);
 void	splitfs(File*, char);
 void	regfs(Filefmt*);
 

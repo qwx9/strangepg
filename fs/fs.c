@@ -19,15 +19,7 @@ freefs(File *f)
 	free(f);
 }
 
-int
-seekfs(File *f, vlong off)
-{
-	assert(f->aux != nil);
-	f->trunc = 0;
-	f->foff = off;
-	return sysseek(f, off);
-}
-
+/* FIXME: nuke */
 int
 setsizefs(File *f, vlong sz)
 {
@@ -59,15 +51,25 @@ readfs(File *f, void *buf, int n)
 {
 	int m;
 
-	assert(f->aux != nil && buf != nil);
+	if(buf == nil){
+		if(n >= sizeof f->buf)
+			panic("readfs: bug: buffer overflow %d > %d", n, sizeof f->buf);
+		if(f->cur + n >= sizeof f->buf)
+			f->cur = 0;
+		buf = f->buf + f->cur;
+	}else
+		f->cur = 0;
 	if((m = sysread(f, buf, n)) < 0){
 		if(debug & Debugtheworld)
 			panic("readfs: short read %d not %d: %s", m, n, error());
 		sysfatal("readfs: short read %d not %d: %s", m, n, error());
 	}
+	f->end = f->cur + m;
+	f->next = -1;
 	return m;
 }
 
+/* FIXME: unbuffered, use .buf */
 /* ugh */
 int
 get8(File *f, u8int *v)
@@ -198,79 +200,333 @@ tellfs(File *f)
 	return sysftell(f);
 }
 
-static inline char *
-terminate(File *f, char *cur, char *end)
-{
-	f->toksz += end - cur;
-	*end++ = 0;
-	f->tok = end;
-	return cur;
-}
-
-char *
-nextfield(File *f)
-{
-	int n;
-	char *s, *t, *p;
-
-	f->foff += f->toksz;
-	if(f->nf++ > 0)
-		f->foff++;	/* sep */
-	s = f->tok;
-	n = f->end - s;
-	f->toksz = 0;
-	if(n <= 0)
-		return nil;
-	if((t = memchr(s, f->sep, n)) != nil)
-		return terminate(f, s, t);
-	else if(!f->trunc)	/* EOL */
-		return terminate(f, s, s + n);
-	p = f->end - f->len - n;
-	memmove(p, s, n);
-	if((s = readfrag(f)) == nil)
-		goto err;
-	else if((t = memchr(s, f->sep, f->len)) != nil)
-		return terminate(f, p, t);
-	else if(!f->trunc)	/* EOL */
-		return terminate(f, p, s + f->len);
-	/* field is longer than the read size, giving up for this one */
-	f->toksz += f->end - p;
-	while(f->trunc){
-		if((s = readfrag(f)) == nil)
-			goto err;
-		else if((t = memchr(s, f->sep, f->len)) != nil){
-			terminate(f, s, t);
-			return nil;
-		}else
-			f->toksz += f->len;
-	}
-	f->tok = s + f->len;	/* EOL */
-	return nil;
-err:
-	f->tok = f->end;
-	f->toksz = 0;
-	return nil;
-}
-
 void
 splitfs(File *f, char sep)
 {
 	f->sep = sep;
 }
 
+static inline void
+skiptonext(File *f)
+{
+	f->foff += f->next - f->cur + 1;
+	f->cur = f->next + 1;
+	f->next = -1;
+}
+
+static inline void
+skiptoeol(File *f)
+{
+	f->foff += f->next - f->cur;
+	f->cur = f->next;
+}
+
+static inline void
+skipfrag(File *f)
+{
+	f->foff += f->end - f->cur;
+	f->cur = f->end;
+}
+
+static inline void
+skipfield(File *f)
+{
+	int n;
+
+	n = f->toksep - f->cur + 1;
+	f->foff += n;
+	f->cur += n;
+}
+
+int
+seekfs(File *f, vlong off)
+{
+	assert(f->aux != nil);
+	DPRINT(Debugfs, "seek to %lld", off);
+	if(sysseek(f, off) < 0)
+		return -1;
+	f->flags = 0;
+	f->next = -1;
+	f->tok = nil;
+	f->toksz = 0;
+	f->cur = f->end = 0;
+	f->foff = off;
+	return 0;
+}
+
+static inline int
+slurp(File *f, int sz)
+{
+	int n;
+	char *s;
+
+	DPRINTN(Debugfs, "[slurp: ");
+	s = f->buf + f->cur;
+	if((n = f->end - f->cur) > 0 && f->cur > 0){
+		DPRINTN(Debugfs, "moving back %d bytes; ", n);
+		memmove(f->buf, s, n);
+	}
+	f->cur = 0;
+	f->end = n;
+	s = f->buf + n;
+	if((n = sysread(f, s, sz)) < 0){
+		DPRINTN(Debugfs, "read error: %s]", error());
+		return -1;
+	}else if(n == 0){
+		f->flags |= FFSeof;
+		DPRINTN(Debugfs, "at eof; ");
+	}
+	DPRINTN(Debugfs, "read %d bytes]", n);
+	f->end += n;
+	return 0;
+}
+
+static inline int
+geteol(File *f, char *s, int n)
+{
+	char *t;
+
+	DPRINTN(Debugfs, "[geteol: ");
+	if(n <= 0){
+		DPRINTN(Debugfs, "at eol]");
+		f->next = f->end;
+		return 0;
+	}
+	if((t = memchr(s, '\n', n)) == nil){
+		if(f->flags & FFSeof){
+			DPRINTN(Debugfs, "at eof]");
+			f->next = f->end;
+			return 0;
+		}
+		DPRINTN(Debugfs, "truncated]");
+		f->next = -1;
+		return -1;
+	}
+	f->next = t - s + f->cur;
+	DPRINTN(Debugfs, "in %d bytes]", f->next - f->cur);
+	return 0;
+}
+
+static inline char *
+terminate(File *f, char *s, char *e)
+{
+	*e = 0;
+	f->toksz = e - s;
+	f->toksep = f->cur + f->toksz;
+	f->tok = s;
+	DPRINTN(Debugfs, "len=%d]", f->toksz);
+	return s;
+}
+
+static inline char *
+getsep(File *f)
+{
+	int n;
+	char *s, *t;
+
+	DPRINTN(Debugfs, "[getsep: ");
+	s = f->buf + f->cur;
+	if(f->next != -1){
+		if((n = f->next - f->cur) == 0)
+			return terminate(f, s, s);
+	}else
+		n = f->end - f->cur;
+	if((t = memchr(s, f->sep, n)) != nil)
+		return terminate(f, s, t);
+	if(f->next != -1)
+		return terminate(f, s, f->buf + f->next);
+	DPRINTN(Debugfs, "no sep]");
+	return nil;
+}
+
+char *
+nextfield(File *f)
+{
+	int n;
+	vlong m;
+	char *s;
+
+	if(f->end - f->cur <= 0){
+		warn("BUG: nextfield without readline\n");
+		return nil;
+	}
+	if(f->nf++ > 0)
+		skipfield(f);
+	DPRINTS(Debugfs, "%#p:%d,%d nextfield %d:%d:%d: ",
+		f, f->nr, f->nf, f->cur, f->next, f->end);
+	if(f->next != -1 && f->cur >= f->next){
+		DPRINTN(Debugfs, "eol\n");
+		return nil;
+	}
+	if((s = getsep(f)) != nil){
+		DPRINTN(Debugfs, "\n");
+		return s;
+	}
+	for(m=0;;){
+		n = f->end - f->cur;
+		if(n > Readsz){
+			DPRINTN(Debugfs, "; skipping %d bytes ", Readsz);
+			m += Readsz;
+			f->foff += Readsz;
+			f->cur += Readsz;
+		}
+		if(slurp(f, Readsz) < 0)
+			return nil;
+		s = f->buf + f->cur;
+		n = f->end - f->cur;
+		geteol(f, s, n);
+		if((s = getsep(f)) != nil)
+			break;
+	}
+	f->toksz += m;
+	DPRINTN(Debugfs, " actual len=%d\n", f->toksz);
+	return s;
+}
+
+static inline int
+startline(File *f)
+{
+	int n;
+	char *s;
+
+	DPRINTN(Debugfs, "[startline: ");
+	s = f->buf + f->cur;
+	if((n = f->end - f->cur) > 0){
+		if(geteol(f, s, n) >= 0)
+			return 0;
+		if(n > Readsz){
+			DPRINTN(Debugfs, "enough buffered]");
+			return 0;
+		}
+	}
+	DPRINTN(Debugfs, "not enough buffered; ");
+	if(slurp(f, Readsz) < 0)
+		return -1;
+	if((n = f->end - f->cur) == 0){
+		DPRINTN(Debugfs, "eof]");
+		return -1;
+	}
+	s = f->buf + f->cur;
+	geteol(f, s, n);
+	DPRINTN(Debugfs, "]");
+	return 0;
+}
+
+int
+skipline(File *f)
+{
+	int n;
+	char *s;
+
+	DPRINTS(Debugfs, "%#p:%d skipline %d:%d:%d: ",
+		f, f->nr+1, f->cur, f->next, f->end);
+	while(f->next == -1){
+		if((n = f->end - f->cur) > Readsz){
+			DPRINTN(Debugfs, "; skipping %d bytes ", Readsz);
+			f->foff += Readsz;
+			f->cur += Readsz;
+		}
+		if(slurp(f, Readsz) < 0)
+			return -1;
+		n = f->end - f->cur;
+		s = f->buf + f->cur;
+		if(geteol(f, s, n) < 0)
+			skipfrag(f);
+	}
+	skiptoeol(f);
+	DPRINTN(Debugfs, "now at %lld\n", f->foff);
+	return 0;
+}
+
+static inline int
+skiprest(File *f)
+{
+	int n;
+	char *s;
+
+	DPRINTN(Debugfs, "[skiprest");
+	while(f->next == -1){
+		if((n = f->end - f->cur) > Readsz){
+			DPRINTN(Debugfs, "; skipping %d bytes ", Readsz);
+			f->foff += Readsz;
+			f->cur += Readsz;
+		}
+		if(slurp(f, Readsz) < 0)
+			return -1;
+		n = f->end - f->cur;
+		s = f->buf + f->cur;
+		if(geteol(f, s, n) < 0)
+			skipfrag(f);
+	}
+	skiptonext(f);
+	DPRINTN(Debugfs, "]");
+	return 0;
+}
+
 char *
 readline(File *f)
 {
-	/* previous line unterminated, longer than size of buffer */
-	while(f->trunc)
-		readfrag(f);
-	if(f->path != nil)	/* will assume this is a pipe */
-		f->foff = tellfs(f);
-	f->nr++;
+	DPRINTS(Debugfs, "%#p:%d readline %d:%d:%d: ",
+		f, f->nr+1, f->cur, f->next, f->end);
+	if(f->cur < f->end && skiprest(f) < 0)
+		return nil;
+	if(startline(f) < 0)
+		return nil;
+	f->nr++;	/* makes sense until we seek backwards */
 	f->nf = 0;
+	f->tok = nil;
+	f->toksz = f->next != -1 ? f->next - f->cur : 0;
+	DPRINTN(Debugfs, "\n");
+	return f->buf + f->cur;	/* unterminated */
+}
+
+int
+readlineat(File *f, int m, vlong off)
+{
+	int n, blk;
+	vlong o;
+
+	assert(m <= Readsz);
+	DPRINT(Debugfs, "%#p readlineat %d:%d:%d: %d bytes at %lld (Δ %lld)",
+		f, f->cur, f->next, f->end, m, off, off - f->foff);
+	o = off - f->foff;
+	n = f->end - f->cur;
+	if(o > 0 && o <= n){
+		f->cur += o;
+		f->foff += o;
+		n -= o;
+		if(n < m){
+			if(n > 0)
+				off += n;
+			if(sysseek(f, off) < 0)
+				return -1;
+		}
+		blk = o <= Readsz/2 ? Readsz/2 : m;
+	}else{
+		if(sysseek(f, off) < 0)
+			return -1;
+		f->cur = f->end = 0;
+		f->foff = off;
+		f->flags = 0;
+		if(o < 0)
+			o = -o;
+		blk = o <= Readsz/16 ? Readsz/16 : m;
+	}
+	n = f->end - f->cur;
+	while(n < m){
+		if(f->flags & FFSeof){
+			m = n;
+			break;
+		}
+		if(slurp(f, blk) < 0)
+			return -1;
+		n = f->end - f->cur;
+	}
+	f->next = f->cur + m;
+	f->nf = 0;
+	f->tok = nil;
 	f->toksz = 0;
-	f->tok = readfrag(f);
-	return f->tok;
+	return 0;
 }
 
 File *
@@ -283,8 +539,10 @@ openfs(char *path, int mode)
 		free(f);
 		return nil;
 	}
-	f->sep = '\t';
+	DPRINT(Debugfs, "openfs %s: %#p", path, f);
 	f->path = estrdup(path);
+	f->sep = '\t';
+	f->next = -1;
 	return f;
 }
 
@@ -298,6 +556,8 @@ fdopenfs(int fd, int mode)
 		free(f);
 		return nil;
 	}
+	DPRINT(Debugfs, "fdopenfs %d: %#p", fd, f);
 	f->sep = '\t';
+	f->next = -1;
 	return f;
 }

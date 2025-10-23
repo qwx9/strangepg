@@ -256,18 +256,25 @@ static void
 readcproc(void *arg)
 {
 	int fd;
-	char *s;
+	char *s, *e;
 	File *f;
 
 	fd = (intptr)arg;
 	if((f = fdopenfs(fd, OREAD)) == nil)
 		sysfatal("readcproc: %s", error());
 	while((s = readline(f)) != nil){
-		DPRINT(Debugcmd, "<%d [%d][%s]", fd == outfd[0] ? 1 : 2, f->len, s);
-		if(f->trunc){
+		if(s == nil){
+			warn("readcproc: %s\n", error());
+			continue;
+		}
+		e = s + f->toksz;
+		if(e == s || e - s >= Readsz){
 			warn("readcproc: discarding abnormally long awk line");
 			continue;
 		}
+		*e = 0;
+		DPRINT(Debugcmd, "<%d [%d][%s]",
+			fd == outfd[0] ? 1 : 2, f->toksz, s);
 		readcmd(s, fd == eoutfd[0]);
 	}
 	freefs(f);

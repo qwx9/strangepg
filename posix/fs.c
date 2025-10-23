@@ -2,52 +2,35 @@
 #include "fs.h"
 #include <sys/stat.h>
 
-static char*
-modestr(int omode)
-{
-	char *mode;
-
-	mode = "nein";
-	switch(omode){
-	case OREAD: mode = "rb"; break;
-	case OWRITE: mode = "wb"; break;
-	case ORDWR: mode = "w+b"; break;
-	default: sysfatal("sysopen: unknown file mode");
-	}
-	return mode;
-}
-
 void
 sysclose(File *f)
 {
-	fclose(f->aux);
-	f->aux = nil;
+	int fd;
+
+	if((fd = (intptr)f->aux) < 0)
+		return;
+	close(fd);
+	fd = -1;
+	f->aux = (void *)(intptr)fd;
 }
 
 int
-sysopen(File *f, char *path, int omode)
+sysfdopen(File *f, int fd, int)
 {
-	char *mode;
-	FILE *bf;
-
-	mode = modestr(omode);
-	if((bf = fopen(path, mode)) == NULL)
-		return -1;
-	f->aux = bf;
+	f->aux = (void *)(intptr)fd;
 	return 0;
 }
 
 int
-sysfdopen(File *f, int fd, int omode)
+sysopen(File *f, char *path, int flags)
 {
-	FILE *bf;
-	char *mode;
+	int fd;
 
-	mode = modestr(omode);
-	if((bf = fdopen(fd, mode)) == NULL)
+	if(flags & OWRITE)
+		flags |= OTRUNC;	/* FIXME: not for ORDWR? */
+	if((fd = open(path, flags, 0644)) < 0)
 		return -1;
-	f->aux = bf;
-	return 0;
+	return sysfdopen(f, fd, 0);
 }
 
 int
@@ -62,21 +45,20 @@ sysfd(int which)
 }
 
 void
-sysflush(File *f)
+sysflush(File *)
 {
-	assert(f->aux != nil);
-	fflush(f->aux);
 }
 
 /* there has to be a better wstat equivalent than this */
 int
 syswstatlen(File *f, vlong n)
 {
-	FILE *bf;
+	int fd;
 	struct stat st;
 
-	bf = f->aux;
-	fstat(fileno(bf), &st);
+	if((fd = (intptr)f->aux) < 0)
+		return 0;
+	fstat(fd, &st);
 	if(n <= st.st_size)
 		return 0;
 	sysseek(f, n);
@@ -87,21 +69,29 @@ syswstatlen(File *f, vlong n)
 int
 sysseek(File *f, vlong off)
 {
-	return fseeko(f->aux, off, 0);
+	int fd;
+
+	if((fd = (intptr)f->aux) < 0)
+		return 0;
+	if(lseek(fd, off, SEEK_SET) < 0)
+		return -1;
+	return 0;
 }
 
 vlong
 sysftell(File *f)
 {
+	int fd;
 	off_t n;
 
-	if((n = ftello(f->aux)) < 0){
-		warn("sysftell: %s\n", error());
+	if((fd = (intptr)f->aux) < 0)
+		return 0;
+	if((n = lseek(fd, 0, SEEK_CUR)) < 0)
 		return -1;
-	}
 	return n;
 }
 
+/* FIXME: error check in callers */
 void
 sysremove(char *path)
 {
@@ -126,9 +116,11 @@ sysmktmp(void)
 int
 syswrite(File *f, void *buf, int n)
 {
-	int m;
+	int fd, m;
 
-	if((m = fwrite(buf, 1, n, f->aux)) != n)
+	if((fd = (intptr)f->aux) < 0)
+		return 0;
+	if((m = write(fd, buf, n)) != n)
 		return -1;
 	return m;
 }
@@ -136,47 +128,9 @@ syswrite(File *f, void *buf, int n)
 int
 sysread(File *f, void *buf, int n)
 {
-	int m;
+	int fd;
 
-	m = fread(buf, 1, n, f->aux);
-	if(ferror((FILE*)f->aux))
-		return -1;
-	else
-		return m;
-}
-
-/* this sucks in plan9 and in sucks in posix and linux: we can't use
- * getline(2) because it reads the entire line and reallocs the read
- * buffer, which defeats our purpose;  we have to use fgets(2)
- * instead, which doesn't handle NULs in input and doesn't give read
- * length information */
-/* FIXME: get rid of this, just use fread instead */
-char *
-readfrag(File *f)
-{
-	int n, m;
-	char *s;
-
-	assert(f != nil && f->aux != nil);
-	f->len = 0;
-	if(f->trunc)
-		f->trunc = 0;
-	s = (char *)f->buf + Readsz;
-	if(fgets(s, Readsz, f->aux) == NULL)
-		return nil;
-	n = strlen(s);
-	/* handle NULs in input */
-	while(n < Readsz - 1 && (n < 1 || s[n-1] != '\n')){
-		s[n] = '\x15';	/* nak */
-		m = strlen(s + n);
-		assert(m > 0);
-		n += m;
-	}
-	if(s[n-1] == '\n')
-		s[--n] = 0;
-	else
-		f->trunc = 1;
-	f->len = n;
-	f->end = s + n;
-	return s;
+	if((fd = (intptr)f->aux) < 0)
+		return 0;
+	return read(fd, buf, n);
 }

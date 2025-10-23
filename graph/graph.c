@@ -24,8 +24,8 @@ printgraph(void)
 	DPRINT(Debuggraph, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
 	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
-		DPRINT(Debuggraph, "[%d] id=%d off=%d ne=%d",
-			i, u->id, u->eoff, u->nedges);
+		DPRINT(Debuggraph, "[%d] id=%d eoff=%d ne=%d ln=%d",
+			i, u->id, u->eoff, u->nedges, u->length);
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;
 			j = x >> 2;
