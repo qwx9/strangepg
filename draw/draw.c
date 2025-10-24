@@ -201,6 +201,12 @@ resetvedges(void)
 			*wp++ = w;
 		}
 	}
+	/* FIXME: wrong initialization in buildct/loadct */
+	if(wp - vedges < n){
+		n = wp - vedges;
+		dyresize(vedges, n);
+		dyresize(redges, n);
+	}
 }
 
 void

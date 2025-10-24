@@ -233,8 +233,7 @@ main(int argc, char **argv)
 	initawk();	/* fork repl before starting other threads */	/* FIXME: -C */
 	if(status & FSdontmindme){
 		load(files);
-		if(buildct() < 0)
-			sysfatal("buildct: %s", error());
+		/* FIXME: export */
 		quit();
 	}
 	initlayout();

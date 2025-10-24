@@ -130,10 +130,8 @@ initedges(Aux *a)
 	edgeset *h;
 	khint_t k;
 
+	nedges += a->nedges;
 	h = a->edges;
-	ne = kh_size(h);
-	x = dylen(redges);	/* mooltigraph */
-	dyresize(redges, x + ne);
 	ne = a->nedges + dylen(edges);
 	dyresize(edges, ne);
 	kh_foreach(h, k){
@@ -169,6 +167,7 @@ initnodes(Aux *a)
 	vlong nn;
 	Node *n, *ne;
 
+	nnodes += a->nnodes;
 	nn = dylen(nodes);	/* for mooltigraph */
 	if(nn > 0){
 		n = nodes + nn - 1;
@@ -176,7 +175,6 @@ initnodes(Aux *a)
 	}else
 		off = 0;
 	dyresize(nodes, (nn + a->nnodes));
-	dyresize(rnodes, (nn + a->nnodes));
 	l = a->length;
 	dp = a->degree;
 	for(i=nn, n=nodes+nn, ne=n+a->nnodes; n<ne; n++, i++){
@@ -185,21 +183,6 @@ initnodes(Aux *a)
 		n->length = *l++;
 		off += *dp++;
 	}
-}
-
-/* FIXME: mooltigraph: can preprocess the gfas in parallel, then
- * once all threads are done, we can join everything here; we 
- * can use common stuff if we add locks; else we just have to load
- * gfas sequentially */
-static void
-mkgraph(Aux *a)
-{
-	initnodes(a);
-	fixtabs(a->nnodes, a->length, a->degree);
-	initedges(a);
-	edges_destroy(a->edges);
-	if(newlayout(-1) < 0)
-		warn("initgraph: %s\n", error());
 }
 
 static ioff
@@ -404,6 +387,7 @@ opengfa(Aux *a, char *path)
 	return f;
 }
 
+/* FIXME: -C: alternate loader avoiding special cases and extra allocs */
 static void
 loadgfa1(void *arg)
 {
@@ -417,10 +401,10 @@ loadgfa1(void *arg)
 	if((f = opengfa(&a, arg)) == nil || readgfa(&a, f) < 0)
 		sysfatal("loadgfa: %s", error());
 	TIME("loadgfa1", "readgfa", t);
-	if(status & FSdontmindme){	/* FIXME: do this more cleanly, forking elsewhere */
-		initnodes(&a);	/* FIXME: wasteful + offset allocs and other shit */
-		initedges(&a);
-		edges_destroy(a.edges);
+	initnodes(&a);
+	initedges(&a);
+	edges_destroy(a.edges);
+	if(status & FSdontmindme){
 		dyfree(a.nodeoff);
 		dyfree(a.edgeoff);
 		dyfree(a.nreclen);
@@ -428,13 +412,17 @@ loadgfa1(void *arg)
 		dyfree(a.length);
 		dyfree(a.degree);
 		freefs(f);
-		return;
 	}
+	if((debug & Debugload) == 0)
+		initct();
+	if(status & FSdontmindme)
+		return;
+	fixtabs(a.nnodes, a.length, a.degree);
 	pushcmd("loadbatch()");
 	flushcmd();
-	logmsg("loadgfa: initializing graph...\n");
-	mkgraph(&a);		/* batch initialize nodes and edges from indexes */
-	TIME("loadgfa1", "mkgraph", t);
+	if(newlayout(-1) < 0)
+		warn("initgraph: %s\n", error());
+	TIME("loadgfa1", "graph initialization", t);
 	printgraph();
 	logmsg("loadgfa: reading node tags...\n");
 	if(d)
@@ -444,22 +432,19 @@ loadgfa1(void *arg)
 	TIME("loadgfa1", "readnodetags", t);
 	dyfree(a.nodeoff);
 	dyfree(a.nreclen);
-	if((debug & Debugload) == 0){
-		pushcmd("cmd(\"FHJ142\")");
-		flushcmd();
-	}
+	pushcmd("cmd(\"FGD135\")");
+	flushcmd();
 	logmsg("loadgfa: reading edge tags...\n");
 	if(d)
 		t = μsec();
-	/* FIXME: nothing is loaded besides overlap */
 	if(readedgetags(&a, f) < 0)
 		sysfatal("loadgfa: readedgetags: %s", error());
 	TIME("loadgfa1", "readedgetags", t);
+	logmsg("loadgfa: done\n");
 	pushcmd("loadbatch()");
 	if(debug & Debugload)
-		pushcmd("cmd(\"FJJ142\")");
+		pushcmd("cmd(\"OPL753\")");
 	flushcmd();
-	logmsg("loadgfa: done\n");
 	dyfree(a.edgeoff);
 	dyfree(a.ereclen);
 	freefs(f);

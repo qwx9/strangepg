@@ -16,7 +16,7 @@
 /* FIXME: quoting? */
 
 static char **
-csvheader(File *f, int *wait)
+csvheader(File *f, int *wait, int *nwarn)
 {
 	int r;
 	char c, w, *p, *s, **tags;
@@ -56,16 +56,20 @@ csvheader(File *f, int *wait)
 		}
 		for(p--; *p=='_'; p--)
 			*p = 0;
-		/* don't wait for csv to load if there are  no layout tags */
+		/* don't wait for csv to load if there are no special tags */
 		if(cistrncmp(s, "color", 5) == 0){
 			s = "CL";
 			r = 1;
+			w = 1;
 		}else if(strlen(s) == 2
-		&& (s[0] == 'f' && (s[1] == 'x' || s[1] == 'y' || s[1] == 'z')
+		&& (s[0] == 'C' && s[1] == 'L'
+		|| s[0] == 'f' && (s[1] == 'x' || s[1] == 'y' || s[1] == 'z')
 		|| s[1] == '0' && (s[0] == 'x' || s[0] == 'y' || s[0] == 'z')))
-			w++;
-		if(r)
+			w = 1;
+		if(r){
 			DPRINT(Debuginfo, "loadcsv: tag renamed to \"%s\"", s);
+			(*nwarn)++;
+		}
 		p = estrdup(s);
 		dypush(tags, p);
 	}
@@ -84,7 +88,7 @@ csvheader(File *f, int *wait)
 static void
 loadcsv(void *arg)
 {
-	int r, nf, nr, wait;
+	int r, nf, nr, wait, nwarn;
 	char *s, *path, *tag, **tags, name[512];
 	File *f;
 
@@ -97,8 +101,9 @@ loadcsv(void *arg)
 	}
 	r = -1;
 	nr = 0;
+	nwarn = 0;
 	splitfs(f, ',');
-	if((tags = csvheader(f, &wait)) == nil)
+	if((tags = csvheader(f, &wait, &nwarn)) == nil)
 		goto end;
 	if(!wait && (debug & Debugload) == 0){
 		pushcmd("cmd(\"FHJ142\")");
@@ -118,24 +123,25 @@ loadcsv(void *arg)
 				break;
 			}
 			tag = tags[nf-1];
-			if(setnamedtag(tag, name, s) < 0)
+			if(setnamedtag(tag, name, s) < 0){
 				DPRINT(Debuginfo, "loadcsv: line %d: %s", f->nr, error());
+				nwarn++;
+			}
 		}
 		nr++;
 	}
 	r = 0;
 end:
+	if(wait || debug & Debugload){
+		pushcmd("cmd(\"FHJ142\")");
+		flushcmd();
+	}
 	if(r < 0)
 		logerr(va("loadcsv %s: %s\n", path, error()));
 	else
 		logmsg(va("loadcsv: done, read %d records\n", nr));
-	if(debug & Debugload)
-		pushcmd("cmd(\"FJJ142\")");
-	else if(wait)
-		pushcmd("cmd(\"FHJ142\")");
-	else
-		pushcmd("loadbatch()");
-	flushcmd();
+	if(nwarn > 0 && (debug & Debuginfo) == 0)
+		warn("loadcsv: suppressed %d warning messages (use -W to display them)\n", nwarn);
 	for(nf=0; nf<dylen(tags); nf++)
 		free(tags[nf]);
 	dyfree(tags);

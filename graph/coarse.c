@@ -25,6 +25,7 @@ KHASHL_SET_INIT(KH_LOCAL, edgeset, es, u64int, kh_hash_uint64, kh_eq_generic)
 
 static int ncoarsed;
 static ioff *expnodes;
+static QLock tablock;
 
 enum{
 	Srandom,
@@ -45,9 +46,15 @@ getnodeidx(ioff id)
 		werrstr("out of bounds cnode id: %d > %d", id, nnodes-1);
 		return -1;
 	}
+	/* FIXME: fugly */
+	if(!canqlock(&tablock)){
+		werrstr("coarsening in progress");
+		return -1;
+	}
 	idx = cnodes[id].idx;
 	if(idx >= dylen(nodes))
 		panic("out of bounds node idx: %d > %d", idx, dylen(nodes)-1);
+	qunlock(&tablock);
 	return idx;
 }
 
@@ -354,6 +361,7 @@ uncoarsen(void)
 		}
 	}
 	TIME("uncoarsen", "collecting inner edges", t);
+	qlock(&tablock);
 	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
 		lsleep(1000);
 	TIME("uncoarsen", "wait for green light", t);
@@ -370,6 +378,7 @@ uncoarsen(void)
 		if(u >= nodes + nn)
 			spawn(cnodes[U->parent].idx);
 	}
+	qunlock(&tablock);
 	assert(dylen(nodes) == dylen(rnodes));
 	free(deg);
 	TIME("uncoarsen", "regenerate offsets and rnodes", t);
@@ -469,7 +478,7 @@ expandall(void)
 int
 coarsen(void)
 {
-	ioff x, j, off, ne, ne2, *e, *ee, *deg, *d;
+	ioff x, nn, j, off, ne, ne2, *e, *ee, *deg, *d;
 	vlong t;
 	edgeset *eset;
 	Node *u, *ue, *v, *up;
@@ -485,7 +494,8 @@ coarsen(void)
 		return -1;
 	}
 	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
-	freezeworld();
+	if(graph.flags & GFarmed)
+		freezeworld();
 	if(dylen(nodes) == nnodes && dylen(edges) == nedges){
 		DPRINT(Debugcoarse, "current graph: %d nodes, %d edges", nnodes, nedges);
 	}else{
@@ -496,7 +506,7 @@ coarsen(void)
 	if((eset = es_init()) == nil)
 		sysfatal("coarsen: %s", error());
 	DPRINT(Debugcoarse, "assigning new top node slots...");
-	for(off=0, r=rp=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
+	for(off=0, u=nodes, ue=u+dylen(u); u<ue; u++){
 		if(u->flags & FNalias){
 			DPRINT(Debugcoarse, "> skipping aliased rnode %zd (→%d)", u-nodes, u->id);
 			continue;
@@ -504,9 +514,8 @@ coarsen(void)
 		DPRINT(Debugcoarse, "> store node[%03d] = %d", off, u->id);
 		U = cnodes + u->id;
 		U->idx = off++;
-		*rp = *r;
-		rp++;
 	}
+	nn = off;
 	TIME("coarsen", "assign slot", t);
 	deg = emalloc(dylen(nodes) * sizeof *deg);
 	DPRINT(Debugcoarse, "storing frontier edgeset...");
@@ -557,7 +566,8 @@ coarsen(void)
 	DPRINT(Debugcoarse, "kept %d/%d unique edges, /%d adj", ne, dylen(edges), ne2);
 	TIME("coarsen", "save unique edges", t);
 	DPRINT(Debugcoarse, "new nodes[]:");
-	for(d=deg, off=0, u=up=nodes; u<ue; u++){
+	qlock(&tablock);	/* FIXME: hacks */
+	for(d=deg, off=0, r=rp=rnodes, u=up=nodes; u<ue; u++, r++){
 		if(u->flags & FNalias)
 			continue;
 		*up = *u;
@@ -567,6 +577,8 @@ coarsen(void)
 			up-nodes, up->eoff, *d);
 		off += *d++;
 		up++;
+		if(rp != nil)
+			*rp++ = *r;
 	}
 	assert(off == ne2);
 	free(deg);
@@ -576,16 +588,17 @@ coarsen(void)
 	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
 		lsleep(1000);
 	TIME("coarsen", "wait for green light", t);
-	x = rp - rnodes;
-	assert(x == dylen(nodes) - ncoarsed);
-	dyresize(rnodes, x);
-	dyresize(nodes, x);
+	assert(nn == dylen(nodes) - ncoarsed);
+	dyresize(rnodes, nn);
+	dyresize(nodes, nn);
 	dyresize(edges, ne2);
 	dyresize(redges, ne);
+	qunlock(&tablock);
 	TIME("coarsen", "shrink arrays", t);
 	regenedges(eset, ne, ne2);
 	TIME("coarsen", "restore edges", t);
-	thawworld();
+	if(graph.flags & GFarmed)
+		thawworld();
 	es_destroy(eset);
 	logmsg(va("graph after coarsening: %d (%d) nodes, %d (%d) edges\n",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
@@ -725,19 +738,19 @@ collapsedown(ioff *ids)
 /* FIXME: rename collapse*() functions to something less confusing */
 /* when collapsing entire graph, do it bottom-up until a threshold is reached */
 int
-collapseup(ioff *ids)
+collapseup(ioff *ids, ssize max)
 {
 	int j, r;
-	ioff m, n, k, l, i, *p, *pp, *pe;
+	ioff m, n, k, i, *p, *pp, *pe;
 	CNode *U, *V;
 
 	n = dylen(nodes);
-	l = 0.5 * n;
+	if(max <= 0)
+		max = 0.5 * n;
 	m = dylen(ids);
-	//l = 0.5 * m;
-	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %d nodes", m, dylen(nodes), l);
+	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %d nodes", m, n, max);
 	r = 1;
-	while(n > l && m > 0){	/* seems ok to only check once per round */
+	while(n > max && m > 0){	/* seems ok to only check once per round */
 		for(p=pp=ids, pe=ids+m; p<pe; p++){
 			i = *p;
 			U = cnodes + i;
@@ -764,7 +777,7 @@ collapseup(ioff *ids)
 		}
 		m = pp - ids;
 		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%d ratio %.2f thresh %d queued %d",
-			r, n, dylen(nodes), (double)n/(pe-ids), l, m);
+			r, n, dylen(nodes), (double)n/(pe-ids), max, m);
 		r++;
 	}
 	return 0;
@@ -813,6 +826,23 @@ pushcollapseop(ioff id, ioff *ids)
 }
 
 static void
+collapseupto(int n)
+{
+	ioff *ids;
+
+	ids = collapseall();	/* FIXME: yuck */
+	if(collapseup(ids, n) < 0)
+		sysfatal("collapseup: %s", error());
+	dyfree(ids);
+	drawing.flags |= DFiwasfrozentoday;
+	switch(coarsen()){
+	case -2: DPRINT(Debuginfo, "coarsen: %s", error()); break;
+	case -1: sysfatal("coarsen: %s", error()); break;
+	}
+	drawing.flags &= ~DFiwasfrozentoday;
+}
+
+static void
 reallyinitcoarse(void)
 {
 	voff i;
@@ -820,14 +850,12 @@ reallyinitcoarse(void)
 	CNode *U, *UE;
 	Node *u;
 
-	nnodes = dylen(nodes);
 	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
 		U->idx = i;
 		U->eoff = u->eoff;
 		U->nedges = u->nedges;
 		U->flags = 0;
 	}
-	nedges = dylen(edges);
 	free(cedges);
 	n = nedges * sizeof *cedges;
 	cedges = emalloc(n);
@@ -847,14 +875,12 @@ initcoarse(void)
 		werrstr("coarsening already initialized");
 		return -1;
 	}
-	nnodes = dylen(nodes);
 	cnodes = emalloc(nnodes * sizeof *cnodes);
 	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
 		U->idx = i;
 		U->eoff = -1;
 		U->parent = U->child = U->sibling = -1;
 	}
-	nedges = dylen(edges);
 	return 0;
 }
 
@@ -1047,8 +1073,8 @@ sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof, int type)
 	return adje;
 }
 
-int
-buildct(void)
+static void
+buildct(void *)
 {
 	vlong t, tt, t0;
 	ioff i, j, *e, *ee, *coff;
@@ -1056,18 +1082,10 @@ buildct(void)
 	Adj *adj, *adje, *a;
 	CNode *U, *V, *C;
 
-	if(status & FSlockedctab){
-		if(cnodes != nil)
-			return 0;
-		warn("FIXME buildct: collapse request before ctab loaded\n");
-		werrstr("ctab not yet ready");
-		return -1;
-	}else
-		status |= FSlockedctab;
 	logmsg("building coarsening table...\n");
 	t = t0 = μsec();
 	if(initcoarse() < 0)
-		return -1;
+		sysfatal("buildct: %s", error());
 	TIME("buildct", "initcoarse", t);
 	adj = nil;
 	eset = nil;
@@ -1123,10 +1141,47 @@ buildct(void)
 	es_destroy(eset);
 	free(adj);
 	free(coff);
+	if(status & FSdontmindme){
+		TIME("buildct", "cleanup", t);	/* FIXME: cleaner */
+		TIME("buildct", "total", t0);
+		logmsg("coarsening table built.\n");
+		return;
+	}
 	reallyinitcoarse();
 	TIME("buildct", "cleanup", t);
 	TIME("buildct", "total", t0);
-	logmsg("coarsening table built.\n");
 	graph.flags |= GFctarmed;
-	return 0;
+	logmsg("coarsening table built.\n");
+	pushcmd("cmd(\"HGI234\")");
+	flushcmd();
+}
+
+/* must be done after node lengths are loaded, ie. after node tags,
+ * preferably on the awk thread to avoid confusion */
+void
+armgraph(void)
+{
+	if(dylen(nodes) > 10000){	/* FIXME: constant */
+		logmsg("collapsing graph...\n");
+		collapseupto(10000);
+	}else{
+		dyresize(rnodes, nnodes);
+		dyresize(redges, nedges);	/* FIXME: wrong number */
+	}
+	graph.flags |= GFarmed;
+}
+
+/* FIXME: assumes single graph loaded; instead of calling this in
+ * fs/gfa, signal awk and have it start this if no other graph files
+ * are to be loaded */
+void
+initct(void)
+{
+	if(status & FSlockedctab)	/* FIXME: rename: FSctabloaded */
+		return;
+	status |= FSlockedctab;
+	if((status & FSdontmindme) == 0)
+		newthread(buildct, nil, nil, nil, "buildct", mainstacksize);
+	else
+		buildct(nil);
 }

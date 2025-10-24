@@ -7,11 +7,14 @@ int	coarsen(void);
 int	uncoarsen(void);
 int	commit(int);
 int	expand(ioff);
-int	collapseup(ioff*);
+int	collapseup(ioff*, ssize);
 int	collapsedown(ioff*);
 ioff*	collapseall(void);
 ioff*	pushcollapseop(ioff, ioff*);
-int	buildct(void);
+void	armgraph(void);
+void	initct(void);
 
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
+
+extern ioff nnodes, nedges;		/* totals */

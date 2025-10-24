@@ -35,6 +35,7 @@ printgraph(void)
 	}
 }
 
+/* FIXME: protect while rnodes == nil? maybe queue commands up? */
 void
 explode(ioff id, float Δ)
 {
@@ -62,6 +63,7 @@ getrealid(ioff idx)
 	return nodes[idx].id;
 }
 
+/* FIXME: none of these take coarsening into account */
 static inline void
 setz0(Node *u, float f)
 {
@@ -199,11 +201,13 @@ setnodelength(size_t id, Value v)
 	if((idx = getnodeidx(id)) < 0)
 		return;
 	u = nodes + idx;
+	/* FIXME: wrong place to check, this should check the
+	 * LN table, nodes might already be collapsed by now */
 	if(u->length != 0){
 		if(u->length == v.u)
 			return;
 		else	/* FIXME: will be handled by ro values */
-			warn("LN[%s]: conflicting value %llu not %lld\n",
+			DPRINT(Debuginfo, "LN[%s]: conflicting value %llu not %lld\n",
 				getname(id), v.u, u->length);
 	}
 	updatenodelength(idx, v.u);
@@ -217,6 +221,8 @@ setnodecolor(size_t id, Value v)
 
 	DPRINT(Debugawk, "set CL[%s] ← %08zx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
+		return;
+	if(rnodes == nil)	/* FIXME: come up with a better way */
 		return;
 	r = rnodes + idx;
 	setcolor(r->col, setdefalpha(v.u));

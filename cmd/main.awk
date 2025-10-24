@@ -189,71 +189,100 @@ BEGIN{
 	default[n++] = paleviolet
 	default[n++] = cyan
 	OFS = "\t"
+	Fgraph = 1<<0	# FIXME: make awk2c a preprocessor in awk,
+	Fctab = 1<<1	#   then replace these as constants?
+	Fflayout = 1<<2
+	Ffctab = 1<<3
+	Ffcsv = 1<<4
+	Fdie = 1<<5
+	Fcrm114 = 1<<15
 }
 function setdefcols(	n, i){
-	if((n = length(default)) <= 0){
-		print "E", "no colors to hand"
-		return
-	}
+	n = length(default)
 	for(i in CL)
 		if(!(i in CL))
 			CL[i] = default[i % n]
+		else
+			CL[i] = CL[i]
 }
+# FIXME: CL changes currently are still destructive, would be
+# nice to be able to actually reset them to the initial values
 function resetcols(	i){
 	deselect()
 	for(i in CL)
 		CL[i] = CL[i]
 }
-function cmd(code){
-	if(code == "FHJ142"){	# wing to proceed to targets
-		if(++fnr == nd + 1)
-			cmd("FGD135")
-		else{
-			print deferred[fnr]
-			loadbatch()
-		}
-	}else if(code == "FJJ142"){	# mission completed, returning
-		die = 1
-		cmd("FHJ142")
-	}else if(code == "OPL753"){	# wing to contact base immediately
+function cmd(code,	i){
+	if(code == "OPL753"){		# wing to contact base immediately
+		flags |= Fdie
+		if(flags & Ffctab == 0)
+			flags |= Fctab
+	}else if(code == "FGG138"){	# wing report mission completed
+		#if(flags & Fcrm114 == 0)
+		#	nd--
+	}else if(code == "JIK485"){	# mission completed returning
+		if(flags & Fcrm114 == 0)
+			nd--
 		loadbatch()
-		if(!crm114)
-			setdefcols()
-		print "R"
-		crm114 = 1
+	}else if(code == "FHJ142"){	# wing to proceed to targets
+		if(flags & Fcrm114 == 0)
+			nd--
+		loadbatch()
+	}else if(code == "HGI234"){	# wing holding at fail safe point
+		flags |= Fctab
+		if(flags & (Fcrm114|Ffctab) == Ffctab)
+			nd--
 	}else if(code == "FGD135"){	# wing attack plan R
-		if(crm114 || fnr < nd + 1)
-			return
-		crm114 = 1
+		flags |= Fgraph
+		nd = length(deferred)
+		for(i in deferred)
+			print deferred[i]
+		delete deferred
 		loadbatch()
-		setdefcols()
-		if(die)
+	}
+	if(nd <= 0 && flags & (Fcrm114|Fgraph|Fctab) == (Fgraph|Fctab)){
+		loadbatch()
+		if(flags & Fdie)
 			quit()
-		print (noreset ? "r" : "R")
+		arm()
+		# must be done after arming rnodes
+		if(length(layout) > 0){
+			flags |= Fflayout
+			for(i=1; i<=length(layout); i++)
+				print "i\t" layout[i] "\n"
+			delete layout
+		}
+		setdefcols()
+		flags |= Fcrm114
+		print (flags & Fflayout ? "r" : "R")
 	}
 }
 function exportlayout(f){
 	print "o", f
 }
 function importlayout(f){
-	if(crm114 == 1)
+	if(flags & Fcrm114)
 		print "i", f
 	else{
-		deferred[++nd] = "i\t" f "\n"
-		noreset = 1
+		layout[length(layout)+1] = f
+		flags |= Fflayout
 	}
 }
 function readctab(f){
-	if(crm114 == 1)
+	if(flags & Fcrm114)
 		print "t", f
-	else
-		deferred[++nd] = "t\t" f "\n"
+	else{
+		deferred[length(deferred)+1] = "t\t" f "\n"
+		flags |= Ffctab
+	}
 }
 function readcsv(f){
-	if(crm114 == 1)
+	if(flags & Fcrm114)
 		print "f", f
-	else
-		deferred[++nd] = "f\t" f "\n"
+	else{
+		deferred[length(deferred)+1] = "f\t" f "\n"
+		flags |= Ffcsv
+	}
 }
 function checkselected(	i){
 	for(i in selected)
@@ -467,7 +496,7 @@ function groupby(tag, incl, cm,	acc){
 function quit(){
 	exit
 }
-crm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
+flags & Fcrm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
 	n = index($0, "[")
 	v = substr($0, 1, n - 1)
 	s = substr($0, n + 1)

@@ -174,13 +174,10 @@ fncollapse(Cell *x, TNode *nextarg)
 	Cell *c;
 	Array *a;
 
-	t = μsec();
-	if(buildct() < 0)	/* FIXME: do this asynchronously after mkgraph or import? */
-		FATAL("collapse: %s", error());
-	TIME("collapse", "buildct", t);
 	all = 0;
 	ops = nil;
 	/* FIXME: most of this doesn't need to be C */
+	t = μsec();
 	if(nextarg != nil){
 		if((id = getid(getsval(x))) < 0)
 			FATAL("%s", error());
@@ -206,7 +203,7 @@ fncollapse(Cell *x, TNode *nextarg)
 		}
 	}
 	TIME("collapse", "collect", t);
-	r = all ? collapseup(ops) : collapsedown(ops);
+	r = all ? collapseup(ops, -1) : collapsedown(ops);
 	dyfree(ops);
 	if(r < 0)
 		FATAL("collapse: %s", error());
@@ -301,6 +298,12 @@ fnexportsvg(Cell *x)
 		FATAL("%s", error());
 }
 
+static void
+fnarm(void)
+{
+	armgraph();
+}
+
 /* NOTE: careful with FATAL in functions that may be part of scripts */
 /* FIXME: stricter error checking and recovery */
 Cell *
@@ -316,6 +319,7 @@ addon(TNode **a, int)
 	ret = gettemp(NUM);
 	setival(ret, 0);
 	switch(t){
+	case AARM: fnarm(); break;
 	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
 	case ACOMMIT: fncommit(x); break;
 	case AEXPAND1: fnexpand1(x); break;

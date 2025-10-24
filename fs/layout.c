@@ -54,10 +54,7 @@ importlayout(char *path)
 		ns++;
 	}
 	DPRINT(Debugfs, "importlayout: imported %d/%d positions", ns, nr);
-	if(debug & Debugload)
-		pushcmd("cmd(\"FJJ142\")");
-	else
-		pushcmd("cmd(\"FHJ142\")");
+	pushcmd("cmd(\"FGG138\")");
 	flushcmd();
 	if(x > 0 && x < sizeof buf){
 		werrstr("unexpected EOF: truncated input");

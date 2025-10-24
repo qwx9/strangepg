@@ -1,4 +1,5 @@
 enum{
+	AARM,
 	ACOLLAPSE,
 	ACOMMIT,
 	AEXPAND1,

@@ -153,10 +153,10 @@ nexttok(char *s, char **end)
 static void
 readcmd(char *s, int err)
 {
-	int m, req;
+	int m, r;
 	char *fld[8], *e;
 
-	req = 0;
+	r = 0;
 	e = s;
 	while((s = nexttok(e, &e)) != nil){
 		if(err || s[1] != 0 && s[1] != '\t'){
@@ -170,24 +170,22 @@ readcmd(char *s, int err)
 		case 0:
 			return;
 		case 'D':
-			req |= Reqredraw;
+			r = 1;
 			continue;
 		case 'E':
 			logerr(va("error: %s\n", s+2));
 			continue;
 		case 'R':
-			graph.flags |= GFarmed;
 			if(reqlayout(Lreset))
 				warn("readcmd: reqlayout: %s\n", error());
-			req |= Reqredraw;
+			r = 1;
 			continue;
 		case 'r':
-			graph.flags |= GFarmed;
 			if(drawing.flags & DFnope){
 				if(reqlayout(Lstart))
 					warn("readcmd: reqlayout: %s\n", error());
 			}else
-				req |= Reqredraw;
+				r = 1;
 			continue;
 		case 'U':	/* FIXME: kludge (see awkext) */
 			pushcmd("deselect()");
@@ -224,7 +222,7 @@ readcmd(char *s, int err)
 			if(loadfs(fld[0], FFcsv, 0) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
-				req |= Reqredraw;
+				r = 1;
 			break;
 		case 'i':
 			if(m != 1)
@@ -232,7 +230,7 @@ readcmd(char *s, int err)
 			if(importlayout(fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
-				req |= Reqredraw;
+				r = 1;
 			break;
 		case 'o':
 			if(m != 1)
@@ -248,8 +246,8 @@ readcmd(char *s, int err)
 			break;
 		}
 	}
-	if(req != 0)
-		reqdraw(req);	/* FIXME: arg is not a mask but just an enum */
+	if(r)
+		reqdraw(Reqredraw);
 }
 
 static void
@@ -267,9 +265,10 @@ readcproc(void *arg)
 			warn("readcproc: %s\n", error());
 			continue;
 		}
-		e = s + f->toksz;
-		if(e == s || e - s >= Readsz){
-			warn("readcproc: discarding abnormally long awk line");
+		if((e = s + f->toksz) == s)
+			continue;
+		if(e - s >= 2*Readsz){
+			warn("readcproc: discarding abnormally long awk line (%zd)\n", e-s);
 			continue;
 		}
 		*e = 0;

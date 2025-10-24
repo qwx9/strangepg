@@ -3,6 +3,7 @@
 #include "threads.h"
 #include "drw.h"
 #include "cmd.h"
+#include "graph.h"
 #include "coarse.h"
 
 /* FIXME: errors here cause shit to hang after gfa is loaded, ie no draw */
@@ -24,6 +25,7 @@ static void
 loadct(void *arg)
 {
 	int r;
+	usize n;
 	char *s, *path;
 	File *f;
 	CNode *U, *UE;
@@ -73,7 +75,12 @@ loadct(void *arg)
 		r = -1;
 	}
 	graph.flags |= GFctarmed;
-	pushcmd("cmd(\"FHJ142\")");	/* signal needed to continue, error or no */
+	/* FIXME */
+	n = dylen(nodes);
+	dyresize(rnodes, n);
+	n = dylen(edges);	/* FIXME: wrong */
+	dyresize(redges, n);
+	pushcmd("cmd(\"HGI234\")");	/* signal needed to continue, error or no */
 	flushcmd();
 	if(r < 0)
 		logerr(va("loadctab %s: %s, line %d\n", path, error(), f->nr));

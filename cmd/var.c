@@ -136,7 +136,7 @@ mktab(Cell *cp, char type)
 	default: panic("mktab: unknown type %o\n", type);
 	}
 	if(cp->tval & UNS){	/* FIXME: hack */
-		n = dylen(edges);
+		n = nedges;
 		ptrs = core.eptrs;
 	}else{
 		n = dylen(core.labels);
