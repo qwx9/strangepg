@@ -314,7 +314,7 @@ terminate(File *f, char *s, char *e)
 	f->toksz = e - s;
 	f->toksep = f->cur + f->toksz;
 	f->tok = s;
-	DPRINTN(Debugfs, "len=%d]", f->toksz);
+	DPRINTN(Debugfs, "len=%lld]", f->toksz);
 	return s;
 }
 
@@ -379,7 +379,7 @@ nextfield(File *f)
 			break;
 	}
 	f->toksz += m;
-	DPRINTN(Debugfs, " actual len=%d\n", f->toksz);
+	DPRINTN(Debugfs, " actual len=%lld\n", f->toksz);
 	return s;
 }
 
@@ -421,7 +421,7 @@ skipline(File *f)
 	DPRINTS(Debugfs, "%#p:%d skipline %d:%d:%d: ",
 		f, f->nr+1, f->cur, f->next, f->end);
 	while(f->next == -1){
-		if((n = f->end - f->cur) > Readsz){
+		if(f->end - f->cur > Readsz){
 			DPRINTN(Debugfs, "; skipping %d bytes ", Readsz);
 			f->foff += Readsz;
 			f->cur += Readsz;
