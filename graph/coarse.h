@@ -9,7 +9,7 @@ enum{
  * done asynchronously already */
 struct CNode{
 	ioff idx;		/* correspondence in visible nodes[] */
-	ioff eoff;
+	ioff eoff;		/* FIXME: should be voff to allow 1e9 */
 	ioff nedges;	/* FIXME: get rid of it and use next eoff? */
 	ioff parent;
 	ioff child;
@@ -18,6 +18,5 @@ struct CNode{
 };
 extern CNode *cnodes;	/* immutable */
 extern ioff *cedges;	/* immutable */
-extern ioff nnodes, nedges;	/* FIXME: rename */
 
 int	initcoarse(void);
