@@ -88,8 +88,8 @@ help(void)
 		"-E             Disable loading edge tags\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
-		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"-W             Do not suppress warning messages\n"
+		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"
 		" fr            Parallelized variant of Fruchterman-Reingold (default)\n"
 		" 3d            Experimental 3d version of the above\n" \
