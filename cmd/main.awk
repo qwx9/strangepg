@@ -244,6 +244,11 @@ function cmd(code,	i){
 		loadbatch()
 		if(flags & Fdie)
 			quit()
+		if(length(deferredexpr) != 0){
+			for(i=1; i<=length(deferredexpr); i++)
+				eval("{"deferredexpr[i]"}")
+			delete deferredexpr
+		}
 		arm()
 		# must be done after arming rnodes
 		if(length(layout) > 0){
@@ -508,6 +513,13 @@ flags & Fcrm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
 		$0 = "for(i in " v "){ " v "[i]=" s "}"
 	else if(pred !~ /^[ \t]*("[^"]+"|[a-zA-Z0-9][a-zA-Z0-9_]*|[a-zA-Z0-9][a-zA-Z0-9_]*\[["a-zA-Z0-9_ \t]+\])[ \t]*$/)
 		$0 = "for(i in " v ") if(" pred "){ " v "[i]=" s "}"
+}
+$1 == "defer"{
+	if(flags & Fcrm114)
+		next
+	$1 = ""
+	deferredexpr[length(deferredexpr)+1] = $0
+	next
 }
 {
 	ns = length(selected)

@@ -108,6 +108,29 @@ pushcmd(char *fmt, ...)
 	sendcmd(sb);
 }
 
+void
+defercmds(char **s)
+{
+	if(s == nil || *s == nil)
+		return;
+	while(*s != nil)
+		pushcmd("defer %s", *s++);
+	flushcmd();
+}
+
+void
+pushcmds(char **s, int n)
+{
+	if(s == nil || n == 0)
+		return;
+	while(n-- > 0){
+		pushcmd(*s);
+		free(*s);
+		s++;
+	}
+	flushcmd();
+}
+
 /* FIXME: remove */
 /* usable once topology has been loaded */
 static inline ioff

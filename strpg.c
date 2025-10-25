@@ -68,14 +68,6 @@ pushfile(Input **files, char *file, int type)
 }
 
 static void
-deferred(char **argv)
-{
-	while(*argv != nil)
-		pushcmd(*argv++);
-	flushcmd();
-}
-
-static void
 help(void)
 {
 	warn("usage: %s %s\n", argv0, usestr);
@@ -219,7 +211,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 int
 main(int argc, char **argv)
 {
-	char **d, **dp, **ds;
+	char **d, **ds;
 	Input *files;
 
 	initsys();
@@ -238,20 +230,18 @@ main(int argc, char **argv)
 	}
 	initlayout();
 	initdrw();	/* load default drawing state before files override it */
+	/* FIXME: two levels of deferred commands */
 	if(ds != nil){
-		dypush(ds, nil);
-		deferred(ds);
-		for(dp=ds; *dp!=nil; dp++)
-			free(*dp);
+		pushcmds(ds, dylen(ds));
 		dyfree(ds);
 	}
+	defercmds(d);
 	load(files);
 	if(drawing.flags & DFnope || debug & Debugload)
 		exportforever();
 	initview();
 	initui();
 	waitforit();
-	deferred(d);
 	initstdin();
 	evloop();
 	quit();
