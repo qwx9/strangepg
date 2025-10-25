@@ -255,6 +255,7 @@ mousehover(int x, int y)
 		ioff i;
 		u32int u;
 	} u;
+	RNode *r;
 
 	DPRINT(Debugui, "mousehover %d,%d win [%d,%d]", x, y, view.w, view.h);
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
@@ -278,6 +279,11 @@ mousehover(int x, int y)
 			return -1;
 		}
 		pushcmd("nodeinfo(%d)", id);
+		if(debug & Debugui){
+			r = rnodes + idx;
+			DPRINT(Debugui, "idx=%d id=%d %f,%f,%f", idx, id,
+				r->pos[0], r->pos[1], r->pos[2]);
+		}
 	}
 	flushcmd();
 	return u.i;
