@@ -775,9 +775,11 @@ collapseup(ioff *ids, ssize max)
 			}else
 				*pp++ = i;	/* try again on next round */
 		}
+		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%d ratio %.2f thresh %d queued %zd",
+			r, n, dylen(nodes), (double)n/(pe-ids), max, pp - ids);
+		if(m == pp - ids)
+			break;
 		m = pp - ids;
-		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%d ratio %.2f thresh %d queued %d",
-			r, n, dylen(nodes), (double)n/(pe-ids), max, m);
 		r++;
 	}
 	return 0;
@@ -792,8 +794,10 @@ collapseall(void)
 
 	ids = nil;
 	assert(cnodes != nil);
-	for(u=nodes, ue=u+dylen(nodes); u<ue; u++)
-		dypush(ids, u->id);
+	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
+		if((u->flags & FNfixed) == 0)
+			dypush(ids, u->id);
+	}
 	DPRINT(Debugcoarse, "collapseall: pulled %d leaves out of %d nodes", dylen(ids), dylen(nodes));
 	return ids;
 }
