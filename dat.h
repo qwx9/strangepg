@@ -1,4 +1,3 @@
-typedef struct Vertex Vertex;
 typedef struct Graph Graph;
 typedef struct Node Node;
 typedef struct Layout Layout;
@@ -11,15 +10,6 @@ typedef struct Thread Thread;
 typedef	s32int	ioff;
 typedef s32int	voff;	/* FIXME */
 
-struct Vertex{
-	float x;
-	float y;
-	float z;
-};
-
-/* FIXME: FNinit* and pos0 are only used in new() for layouting,
- * they shouldn't be here; length is also only rarely used; have
- * a 3rd ds for this */
 enum{
 	FNfixedx = 1<<0,
 	FNfixedy = 1<<1,
@@ -36,8 +26,7 @@ struct Node{
 	ioff id;
 	uchar flags;
 	vlong length;
-	Vertex pos0;	/* FIXME: shouldn't be here, only query */
-	ioff eoff;
+	ioff eoff;		/* FIXME: get rid of this or nedges */
 	ioff nedges;
 };
 extern Node *nodes;	/* visible only */

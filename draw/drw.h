@@ -40,6 +40,7 @@ struct Drawing{
 	Range xbound;
 	Range ybound;
 	Range zbound;
+	float mid[3];
 	float nodesz;
 	float fatness;
 	uvlong frames;	/* FIXME: remove after fixing scheduling */

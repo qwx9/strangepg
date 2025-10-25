@@ -63,113 +63,118 @@ getrealid(ioff idx)
 	return nodes[idx].id;
 }
 
-/* FIXME: none of these take coarsening into account */
 static inline void
-setz0(Node *u, float f)
+setx0(ioff idx, int fixed, float f)
 {
-	u->flags |= FNinitz;
-	u->pos0.z = f;
-	if(f < drawing.zbound.min)
-		drawing.zbound.min = f;
-	if(f > drawing.zbound.max)
-		drawing.zbound.max = f;
-}
+	Node *u;
+	RNode *r;
 
-static inline void
-sety0(Node *u, float f)
-{
-	u->flags |= FNinity;
-	u->pos0.y = f;
-	if(f < drawing.ybound.min)
-		drawing.ybound.min = f;
-	if(f > drawing.ybound.max)
-		drawing.ybound.max = f;
-}
-
-static inline void
-setx0(Node *u, float f)
-{
-	u->flags |= FNinitx;
-	u->pos0.x = f;
+	u = nodes + idx;
+	u->flags |= fixed ? FNfixedx | FNinitx : FNinitx;
 	if(f < drawing.xbound.min)
 		drawing.xbound.min = f;
 	if(f > drawing.xbound.max)
 		drawing.xbound.max = f;
+	if(rnodes == nil)
+		return;
+	r = rnodes + idx;
+	r->pos[0] = f - drawing.mid[0];
 }
 
-void
-setnodeinitz(size_t id, Value v)
+static inline void
+sety0(ioff idx, int fixed, float f)
 {
-	ioff idx;
 	Node *u;
+	RNode *r;
 
-	if((idx = getnodeidx(id)) < 0)
-		return;
 	u = nodes + idx;
-	setz0(u, v.f);
+	u->flags |= fixed ? FNfixedy | FNinity : FNinity;
+	if(f < drawing.ybound.min)
+		drawing.ybound.min = f;
+	if(f > drawing.ybound.max)
+		drawing.ybound.max = f;
+	if(rnodes == nil)
+		return;
+	r = rnodes + idx;
+	r->pos[1] = f - drawing.mid[1];
 }
 
-void
-setnodeinity(size_t id, Value v)
+static inline void
+setz0(ioff idx, int fixed, float f)
 {
-	ioff idx;
 	Node *u;
+	RNode *r;
 
-	if((idx = getnodeidx(id)) < 0)
-		return;
 	u = nodes + idx;
-	sety0(u, v.f);
+	u->flags |= fixed ? FNfixedz | FNinitz : FNinitz;
+	if(f < drawing.zbound.min)
+		drawing.zbound.min = f;
+	if(f > drawing.zbound.max)
+		drawing.zbound.max = f;
+	if(rnodes == nil)
+		return;
+	r = rnodes + idx;
+	r->pos[2] = f - drawing.mid[2];
 }
 
 void
 setnodeinitx(size_t id, Value v)
 {
 	ioff idx;
-	Node *u;
 
 	if((idx = getnodeidx(id)) < 0)
 		return;
-	u = nodes + idx;
-	setx0(u, v.f);
+	setx0(idx, 0, v.f);
 }
 
 void
-setnodefixedz(size_t id, Value v)
+setnodeinity(size_t id, Value v)
 {
 	ioff idx;
-	Node *u;
 
 	if((idx = getnodeidx(id)) < 0)
 		return;
-	u = nodes + idx;
-	u->flags |= FNfixedz;
-	setz0(u, v.f);
+	sety0(idx, 0, v.f);
 }
 
 void
-setnodefixedy(size_t id, Value v)
+setnodeinitz(size_t id, Value v)
 {
 	ioff idx;
-	Node *u;
 
 	if((idx = getnodeidx(id)) < 0)
 		return;
-	u = nodes + idx;
-	u->flags |= FNfixedy;
-	sety0(u, v.f);
+	setz0(idx, 0, v.f);
 }
 
 void
 setnodefixedx(size_t id, Value v)
 {
 	ioff idx;
-	Node *u;
 
 	if((idx = getnodeidx(id)) < 0)
 		return;
-	u = nodes + idx;
-	u->flags |= FNfixedx;
-	setx0(u, v.f);
+	setx0(idx, 1, v.f);
+}
+
+void
+setnodefixedy(size_t id, Value v)
+{
+	ioff idx;
+
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	sety0(idx, 1, v.f);
+}
+
+void
+setnodefixedz(size_t id, Value v)
+{
+	ioff idx;
+
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	setz0(idx, 1, v.f);
 }
 
 void

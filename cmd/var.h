@@ -12,6 +12,12 @@ struct Core{
 	Array *degree;
 	Array *color;
 	Array *sel;		/* FIXME: actually int hashset */
+	Array *fx;
+	Array *fy;
+	Array *fz;
+	Array *x0;
+	Array *y0;
+	Array *z0;
 	Cell *csel;
 };
 extern Core core;

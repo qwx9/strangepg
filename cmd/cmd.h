@@ -25,6 +25,7 @@ int	selectionsize(void);
 
 char*	getname(voff);
 voff	getid(char*);
+void	initpos(void);
 void	loadbatch(void);
 int	setedgetag(char*, voff, char, char*);
 int	settag(char*, voff, char, char*);

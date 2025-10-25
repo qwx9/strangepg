@@ -38,7 +38,7 @@ static Val *valbuf;
 char *
 getname(voff idx)
 {
-	assert(idx >= 0 && idx < dylen(core.labels));
+	assert(idx >= 0 && idx < nnodes);
 	return core.labels[idx];
 }
 
@@ -57,8 +57,79 @@ getid(char *s)
 uint
 getnodelength(voff idx)
 {
-	assert(idx >= 0 && idx < dylen(core.labels));
+	assert(idx >= 0 && idx < nnodes);
 	return *((uint *)core.length->tab + idx);
+}
+
+void
+initpos(void)
+{
+	int fixed;
+	voff id;
+	Node *u, *ue;
+	RNode *r;
+	float *fx, *fy, *fz, *x0, *y0, *z0;
+	union{
+		float f;
+		unsigned int u;
+	} m;
+
+	fx = core.fx != nil ? (float *)core.fx->tab : nil;
+	fy = core.fy != nil ? (float *)core.fy->tab : nil;
+	fz = core.fz != nil ? (float *)core.fz->tab : nil;
+	x0 = core.x0 != nil ? (float *)core.x0->tab : nil;
+	y0 = core.y0 != nil ? (float *)core.y0->tab : nil;
+	z0 = core.z0 != nil ? (float *)core.z0->tab : nil;
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
+		fixed = 0;
+		u->flags &= ~(FNfixed | FNinitpos);
+		id = u->id;
+		if(fx != nil){
+			m.f = fx[id];
+			if(m.u != UNSET){
+				u->flags |= FNfixedx | FNinitx;
+				r->pos[0] = m.f - drawing.mid[0];
+				fixed = 1;
+			}
+		}
+		if(!fixed && x0 != nil){
+			m.f = x0[id];
+			if(m.u != UNSET){
+				u->flags |= FNinitx;
+				r->pos[0] = m.f - drawing.mid[0];
+			}
+		}
+		if(fy != nil){
+			m.f = fy[id];
+			if(m.u != UNSET){
+				u->flags |= FNfixedy | FNinity;
+				r->pos[1] = m.f - drawing.mid[1];
+				fixed = 1;
+			}
+		}
+		if(!fixed && y0 != nil){
+			m.f = y0[id];
+			if(m.u != UNSET){
+				u->flags |= FNinity;
+				r->pos[1] = m.f - drawing.mid[1];
+			}
+		}
+		if(fz != nil){
+			m.f = fz[id];
+			if(m.u != UNSET){
+				u->flags |= FNfixedz | FNinitz;
+				r->pos[2] = m.f - drawing.mid[2];
+				fixed = 1;
+			}
+		}
+		if(!fixed && z0 != nil){
+			m.f = z0[id];
+			if(m.u != UNSET){
+				u->flags |= FNinitz;
+				r->pos[2] = m.f - drawing.mid[2];
+			}
+		}
+	}
 }
 
 static Array *
@@ -68,15 +139,16 @@ autoattach(Cell *cp)
 	char *tag;
 	usize n, m;
 	void *buf;
-	Array *ap;
+	Array *ap, **cap;
 	void (*fn)(size_t, Value);
 
 	cp = lookup(cp->nval, symtab);
 	assert(cp != nil);
 	fn = nil;
+	cap = nil;
 	tag = cp->nval;
 	type = cp->tval;
-	n = dylen(core.labels);
+	n = nnodes;
 	m = 0;
 	switch(type & (NUM|STR|FLT)){
 	case NUM:
@@ -93,19 +165,21 @@ autoattach(Cell *cp)
 	if(strlen(tag) == 2){
 		if(tag[0] == 'f')
 			switch(tag[1]){
-			case 'x': fn = setnodefixedx; break;
-			case 'y': fn = setnodefixedy; break;
-			case 'z': fn = setnodefixedz; break;
+			case 'x': fn = setnodefixedx; cap = &core.fx; break;
+			case 'y': fn = setnodefixedy; cap = &core.fy; break;
+			case 'z': fn = setnodefixedz; cap = &core.fz; break;
 			}
 		else if(tag[1] == '0')
 			switch(tag[0]){
-			case 'x': fn = setnodeinitx; break;
-			case 'y': fn = setnodeinity; break;
-			case 'z': fn = setnodeinitz; break;
+			case 'x': fn = setnodeinitx; cap = &core.x0; break;
+			case 'y': fn = setnodeinity; cap = &core.y0; break;
+			case 'z': fn = setnodeinitz; cap = &core.z0; break;
 			}
 	}
 	ap = attach(tag, core.ids, buf, n, type, fn);
 	setsymtab(tag, tag, ZV, STR|CON, core.ptrs);
+	if(cap != nil)
+		*cap = ap;
 	return ap;
 }
 
@@ -118,7 +192,7 @@ mktab(Cell *cp, char type)
 	char *tag;
 	void *buf;
 	void (*fn)(size_t, Value);
-	Array *ap, *ids, *ptrs;
+	Array *ap, **cap, *ids, *ptrs;
 
 	ap = (Array *)cp->sval;
 	if(isptr(cp) && ap != (Array *)EMPTY)
@@ -127,6 +201,7 @@ mktab(Cell *cp, char type)
 	m = 0;
 	atype = 0;
 	fn = nil;
+	cap = nil;
 	tag = cp->nval;
 	switch(type){
 	case Tint: m = sizeof(s32int); atype = NUM; break;
@@ -139,21 +214,21 @@ mktab(Cell *cp, char type)
 		n = nedges;
 		ptrs = core.eptrs;
 	}else{
-		n = dylen(core.labels);
+		n = nnodes;
 		ids = core.ids;
 		ptrs = core.ptrs;
 		if(strlen(tag) == 2){
 			if(tag[0] == 'f')
 				switch(tag[1]){
-				case 'x': fn = setnodefixedx; break;
-				case 'y': fn = setnodefixedy; break;
-				case 'z': fn = setnodefixedz; break;
+				case 'x': fn = setnodefixedx; cap = &core.fx; break;
+				case 'y': fn = setnodefixedy; cap = &core.fy; break;
+				case 'z': fn = setnodefixedz; cap = &core.fz; break;
 				}
 			else if(tag[1] == '0')
 				switch(tag[0]){
-				case 'x': fn = setnodeinitx; break;
-				case 'y': fn = setnodeinity; break;
-				case 'z': fn = setnodeinitz; break;
+				case 'x': fn = setnodeinitx; cap = &core.x0; break;
+				case 'y': fn = setnodeinity; cap = &core.y0; break;
+				case 'z': fn = setnodeinitz; cap = &core.z0; break;
 				}
 		}
 	}
@@ -162,6 +237,8 @@ mktab(Cell *cp, char type)
 		memset(buf, 0xfe, n * m);
 	ap = attach(tag, ids, buf, n, atype, fn);
 	setsymtab(tag, tag, ZV, STR|CON, ptrs);
+	if(cap != nil)
+		*cap = ap;
 	return ap;
 }
 
@@ -356,7 +433,7 @@ settag(char *tag, voff id, char ttype, char *val)
 	TVal v;
 
 	DPRINT(Debugawk, "settag %s[%s] = %s", tag, getname(id), val);
-	assert(id >= 0 && id < dylen(core.labels));
+	assert(id >= 0 && id < nnodes);
 	cp = setsymtab(tag, NULL, ZV, 0, symtab);
 	r = tagtype(val, ttype, &type);
 	type = vartype(val, type, &v, cp);
@@ -391,20 +468,20 @@ pushname(char *s)
 }
 
 void
-fixtabs(voff nnodes, int *lenp, ushort *degp)
+fixtabs(voff nn, int *lenp, ushort *degp)
 {
 	/* FIXME: resizable for mooltigraph? */
 	assert(core.length == nil && core.degree == nil);
-	dyresize(lenp, nnodes);
-	dyresize(degp, nnodes);
-	dyresize(core.labels, nnodes);
-	dyresize(core.colors, nnodes);
-	memset(core.colors, 0xfe, nnodes * sizeof *core.colors);
+	dyresize(lenp, nn);
+	dyresize(degp, nn);
+	dyresize(core.labels, nn);
+	dyresize(core.colors, nn);
+	memset(core.colors, 0xfe, nn * sizeof *core.colors);
 	/* FIXME: make it RO after loading? */
-	core.length = attach("LN", core.ids, lenp, nnodes, NUM|USG, setnodelength);
-	core.degree = attach("degree", core.ids, degp, nnodes, RO|NUM|P16|USG, nil);
-	core.label = attach("node", core.ids, core.labels, nnodes, RO|STR, nil);
-	core.color = attach("CL", core.ids, core.colors, nnodes, NUM|USG, setnodecolor);
+	core.length = attach("LN", core.ids, lenp, nn, NUM|USG, setnodelength);
+	core.degree = attach("degree", core.ids, degp, nn, RO|NUM|P16|USG, nil);
+	core.label = attach("node", core.ids, core.labels, nn, RO|STR, nil);
+	core.color = attach("CL", core.ids, core.colors, nn, NUM|USG, setnodecolor);
 }
 
 static inline Array *
