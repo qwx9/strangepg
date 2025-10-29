@@ -175,7 +175,7 @@ void freesymtab(Cell *ap, int nuke)	/* free a symbol table */
 					xfree(cp->sval);
 			}
 			temp = cp->cnext;	/* avoids freeing then using */
-			free(cp);
+			FREE(cp);
 			tp->nelem--;
 		}
 		tp->tab[i] = NULL;
@@ -432,7 +432,7 @@ void rehash(Array *tp)	/* rehash items in small table into big one */
 			np[nh] = cp;
 		}
 	}
-	free(tp->tab);
+	FREE(tp->tab);
 	tp->tab = np;
 	tp->size = nsz;
 }
