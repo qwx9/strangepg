@@ -435,19 +435,6 @@ function toggleselect(i){
 	else
 		selectnodebyid(i)
 }
-# FIXME: can't be variadic, unless in C
-#function collapse(i){
-#	if(i != ""){
-#		if(!checknodeid(i))
-#			return
-#		collapse1(i)
-#	}else{
-#		for(i in selected)
-#			collapse1(i)
-#	}
-#	commit()
-#	deselect()
-#}
 function expand(name, full,	x, i){
 	if(name != ""){
 		expand1(id[i], !!full)

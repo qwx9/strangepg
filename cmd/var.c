@@ -36,10 +36,17 @@ struct Val{
 static Val *valbuf;
 
 char *
-getname(voff idx)
+getname(voff id)
 {
-	assert(idx >= 0 && idx < nnodes);
-	return core.labels[idx];
+	assert(id >= 0 && id < nnodes);
+	return core.labels[id];
+}
+
+u32int
+getnodecolor(voff id)
+{
+	assert(id >= 0 && id < nnodes);
+	return core.colors[id];
 }
 
 voff
@@ -55,10 +62,10 @@ getid(char *s)
 }
 
 uint
-getnodelength(voff idx)
+getnodelength(voff id)
 {
-	assert(idx >= 0 && idx < nnodes);
-	return *((uint *)core.length->tab + idx);
+	assert(id >= 0 && id < nnodes);
+	return *((uint *)core.length->tab + id);
 }
 
 void

@@ -239,6 +239,8 @@ spawn(ioff i, ioff p)
 	*rp = r;
 	DPRINT(Debugcoarse, "spawn rnode at %f,%f,%f from parent idx=%d",
 		r.pos[0], r.pos[1], r.pos[2], p);
+	if(resetcolor(i) < 0)
+		DPRINT(Debugcoarse, "resetcolor: %s", error());
 }
 
 static void
@@ -449,20 +451,11 @@ expand(ioff i, int all)
 	}
 	nid = dylen(nodes) + dylen(expnodes);
 	U = cnodes + i;
-	if(U->idx == -1){
-		for(V=U, j=U->parent; j!=-1; j=V->parent){	/* check first */
-			V = cnodes + j;
-			if(V->idx != -1)
-				break;
-		}
-		if(V == U || V->idx == -1){
-			werrstr("%d has no visible parent??", i);
-			return -1;
-		}
-		for(j=i;; j=V->parent){		/* push U and hidden parents */
-			V = cnodes + j;
-			nid = unhide(V, j, nid);
-		}
+	for(j=U->parent; j!=-1; j=V->parent){	/* hidden parents */
+		V = cnodes + j;
+		if(V->idx != -1)
+			break;
+		nid = unhide(V, j, nid);
 	}
 	nid = unhideall(U, i, nid, all ? -1 : 1);
 	return 0;

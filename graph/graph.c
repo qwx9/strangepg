@@ -233,3 +233,18 @@ setnodecolor(size_t id, Value v)
 	setcolor(r->col, setdefalpha(v.u));
 	reqdraw(Reqshallowdraw);
 }
+
+int
+resetcolor(ioff idx)
+{
+	voff id;
+	RNode *r;
+
+	if((id = getrealid(idx)) < 0)
+		return -1;
+	assert(idx >= 0 && idx < dylen(rnodes));
+	r = rnodes + idx;
+	setcolor(r->col, setdefalpha(getnodecolor(id)));
+	reqdraw(Reqshallowdraw);
+	return 0;
+}
