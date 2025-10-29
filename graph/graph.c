@@ -212,7 +212,7 @@ setnodelength(size_t id, Value v)
 		if(u->length == v.u)
 			return;
 		else	/* FIXME: will be handled by ro values */
-			DPRINT(Debuginfo, "LN[%s]: conflicting value %llu not %lld\n",
+			DPRINT(Debuginfo, "LN[%s]: conflicting value %llu not %lld",
 				getname(id), v.u, u->length);
 	}
 	updatenodelength(idx, v.u);

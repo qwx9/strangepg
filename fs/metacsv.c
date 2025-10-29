@@ -65,6 +65,11 @@ csvheader(File *f, int *wait, int *nwarn)
 		|| s[0] == 'f' && (s[1] == 'x' || s[1] == 'y' || s[1] == 'z')
 		|| s[1] == '0' && (s[0] == 'x' || s[0] == 'y' || s[0] == 'z')))
 			w = 1;
+		else if(cistrncmp(s, "length", 5) == 0){
+			s = "LN";
+			r = 1;
+			w = 1;
+		}
 		if(r){
 			DPRINT(Debuginfo, "loadcsv: tag renamed to \"%s\"", s);
 			(*nwarn)++;
