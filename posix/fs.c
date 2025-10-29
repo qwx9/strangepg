@@ -26,8 +26,8 @@ sysopen(File *f, char *path, int flags)
 {
 	int fd;
 
-	if(flags & OWRITE)
-		flags |= OTRUNC;	/* FIXME: not for ORDWR? */
+	if(flags & (ORDWR|OWRITE))
+		flags |= O_CREAT | O_TRUNC;	/* FIXME: not for ORDWR? */
 	if((fd = open(path, flags, 0644)) < 0)
 		return -1;
 	return sysfdopen(f, fd, 0);

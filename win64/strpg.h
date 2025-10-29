@@ -46,8 +46,6 @@ typedef uint64_t u64int;
 #define	OREAD	O_RDONLY
 #define	OWRITE	O_WRONLY
 #define ORDWR	O_RDWR
-#define OCREAT	(O_CREAT|O_TRUNC)
-#define	OTRUNC	O_TRUNC
 #define AEXIST	F_OK
 #define AREAD	R_OK
 #define IOUNIT	(1<<16)
