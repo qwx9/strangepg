@@ -119,7 +119,7 @@ new_(int nuke, int is3d)
 		}
 		if((flags & FNinitx) == 0){
 			if(flags & FNorphan)
-				r->pos[0] = mid[0] - xfrand() * (2.0f * var[0]);
+				r->pos[0] = mid[0] - xfrand() * 0.5f * var[0];
 			else if(nosphere){
 				l = var[0];
 				r->pos[0] = (l - xfrand() * (2.0f * l)) / (l / f);
@@ -130,7 +130,7 @@ new_(int nuke, int is3d)
 		}
 		if((flags & FNinity) == 0){
 			if(flags & FNorphan)
-				r->pos[1] = mid[1] - xfrand() * (2.0f * var[1]);
+				r->pos[1] = mid[1] - xfrand() * 0.5f * var[1];
 			else if(nosphere){
 				l = var[1];
 				r->pos[1] = (l - xfrand() * (2.0f * l)) / (l / f);
