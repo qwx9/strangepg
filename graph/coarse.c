@@ -406,10 +406,38 @@ uncoarsen(void)
 	return 0;
 }
 
-int
-expand(ioff i)
+static inline ioff
+unhide(CNode *U, ioff i, ioff nid)
 {
-	ioff j, n, nid;
+	if(U->idx != -1)
+		return nid;
+	U->idx = nid++;
+	dypush(expnodes, i);
+	DPRINT(Debugcoarse, "unhide: adding id=%d idx=%d", i, U->idx);
+	return nid;
+}
+
+static inline ioff
+unhideall(CNode *U, ioff i, ioff nid, int nlevels)
+{
+	if(nlevels-- == 0)	/* negative = no limit */
+		return nid;
+	nid = unhide(U, i, nid);
+	if((i = U->child) != -1)
+		nid = unhideall(cnodes + i, i, nid, nlevels);
+	for(i=U->sibling; i!=-1; i=U->sibling){
+		U = cnodes + i;
+		nid = unhide(U, i, nid);
+		if((i = U->child) != -1)
+			nid = unhideall(cnodes + i, i, nid, nlevels);
+	}
+	return nid;
+}
+
+int
+expand(ioff i, int all)
+{
+	ioff j, nid;
 	CNode *U, *V;
 
 	if((graph.flags & GFctarmed) == 0){
@@ -419,8 +447,8 @@ expand(ioff i)
 		werrstr("out of bounds %d > %d", i, nnodes);
 		return -1;
 	}
-	U = cnodes + i;
 	nid = dylen(nodes) + dylen(expnodes);
+	U = cnodes + i;
 	if(U->idx == -1){
 		for(V=U, j=U->parent; j!=-1; j=V->parent){	/* check first */
 			V = cnodes + j;
@@ -433,25 +461,10 @@ expand(ioff i)
 		}
 		for(j=i;; j=V->parent){		/* push U and hidden parents */
 			V = cnodes + j;
-			if(V->idx != -1)
-				break;
-			V->idx = nid++;
-			DPRINT(Debugcoarse, "expand: %d: push self and parent: %d idx=%d", i, j, V->idx);
-			dypush(expnodes, j);
+			nid = unhide(V, j, nid);
 		}
 	}
-	for(n=0, j=U->child; j!=-1; j=V->sibling){
-		V = cnodes + j;
-		if(V->idx != -1)
-			continue;
-		V->idx = nid + n++;
-		DPRINT(Debugcoarse, "expand: %d: push child %d idx=%d", i, j, V->idx);
-		dypush(expnodes, j);
-	}
-	if(n == 0){
-		DPRINT(Debugcoarse, "expand: %d: no inactive children", i);
-		return 0;
-	}
+	nid = unhideall(U, i, nid, all ? -1 : 1);
 	return 0;
 }
 
@@ -468,13 +481,13 @@ expandall(void)
 	m = dylen(nodes);
 	l = 1.5 * m;
 	for(u=nodes, ue=u+dylen(nodes); u<ue; u++)
-		expand(u->id);
+		expand(u->id, 0);	/* FIXME: just use unhideall from tops */
 	e = dylen(expnodes);
 	m += e;
 	i = 0;
 	while(m < l){
 		for(; i<e; i++, m++)
-			expand(expnodes[i]);
+			expand(expnodes[i], 0);	/* FIXME */
 		e = dylen(expnodes);
 		if(i == e)
 			break;

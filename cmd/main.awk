@@ -338,7 +338,7 @@ function findnode(name,	i){
 	if(!checknodename(name))
 		return
 	i = id[name]
-	expand1(i)
+	expand1(i, 0)
 	commit(1)
 	reselectnode(i)
 	print "N", i
@@ -453,13 +453,12 @@ function toggleselect(i){
 #	commit()
 #	deselect()
 #}
-# not deselecting
-function expand(name,	x, i){
+function expand(name, full,	x, i){
 	if(name != ""){
-		expand1(id[i])
+		expand1(id[i], !!full)
 	}else if(length(selected) > 0){
 		for(i in selected)
-			expand1(selected[i])
+			expand1(selected[i], !!full)
 	}else
 		expandall()
 	commit()

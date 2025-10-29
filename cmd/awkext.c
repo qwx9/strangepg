@@ -140,14 +140,23 @@ fnrefresh(void)
 	reqdraw(Reqshallowdraw);
 }
 
-static void
-fnexpand1(Cell *x)
+static TNode *
+fnexpand1(Cell *x, TNode *next)
 {
 	ioff id;
+	int full;
 
 	id = getival(x);	/* cnode id */
-	if(expand(id) < 0)
+	full = 0;
+	if(next != nil){
+		x = execute(next);
+		full = getival(x) != 0;
+		tempfree(x);
+		next = next->nnext;
+	}
+	if(expand(id, full) < 0)
 		DPRINT(Debugcoarse, "expand1 %d: %s", id, error());
+	return next;
 }
 
 /* erst die falafel, dann der wein */
@@ -322,7 +331,7 @@ addon(TNode **a, int)
 	case AARM: fnarm(); break;
 	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
 	case ACOMMIT: fncommit(x); break;
-	case AEXPAND1: fnexpand1(x); break;
+	case AEXPAND1: nextarg = fnexpand1(x, nextarg); break;
 	case AEXPANDALL: expandall(); break;
 	case AEXPLODE1: nextarg = fnexplode1(x, nextarg); break;
 	case AEXPORTCOARSE: fnexportct(x); break;
