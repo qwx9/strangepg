@@ -217,17 +217,26 @@ newedge(ioff i, ioff j, ioff e, edgeset *eset)
 }
 
 static inline void
-spawn(ioff p)
+spawn(ioff i, ioff p)
 {
-	RNode r;
+	CNode *P;
+	RNode r, *rp;
 
+	if(p >= i){
+		P = cnodes + cnodes[nodes[p].id].parent;
+		assert(P->idx != -1);
+		spawn(p, P->idx);
+	}
+	rp = rnodes + i;
+	if(rp->pos[0] != 0.0f || rp->pos[1] != 0.0f || rp->pos[2] != 0.0f)
+		return;
 	/* FIXME: might need more jitter */
 	r = rnodes[p];
 	r.pos[0] += 0.5 - xfrand();
 	r.pos[1] += 0.5 - xfrand();
 	if(drawing.flags & DF3d)
 		r.pos[2] += 0.5 - xfrand();	/* FIXME: ? */
-	dypush(rnodes, r);
+	*rp = r;
 	DPRINT(Debugcoarse, "spawn rnode at %f,%f,%f from parent idx=%d",
 		r.pos[0], r.pos[1], r.pos[2], p);
 }
@@ -366,20 +375,20 @@ uncoarsen(void)
 		lsleep(1000);
 	TIME("uncoarsen", "wait for green light", t);
 	dyresize(nodes, nn + nnew);
+	dyresize(rnodes, nn + nnew);
 	memcpy(nodes + nn, unew, nnew * sizeof *nodes);
 	free(unew);
-	for(off=0, d=deg, u=nodes, ue=u+nn+nnew; u<ue; u++){
+	for(i=off=0, d=deg, u=nodes, ue=u+nn+nnew; u<ue; u++, i++){
 		u->eoff = off;
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
 		U = cnodes + u->id;
 		if(getnodelength(u->id) > 0)
 			updatenodelength(u - nodes, sublength(U));
-		if(u >= nodes + nn)
-			spawn(cnodes[U->parent].idx);
+		if(i >= nn)
+			spawn(i, cnodes[U->parent].idx);
 	}
 	qunlock(&tablock);
-	assert(dylen(nodes) == dylen(rnodes));
 	free(deg);
 	TIME("uncoarsen", "regenerate offsets and rnodes", t);
 	dyresize(edges, off);
@@ -1168,7 +1177,7 @@ armgraph(void)
 	if(dylen(nodes) > 10000){	/* FIXME: constant */
 		logmsg("collapsing graph...\n");
 		collapseupto(10000);
-	}else{
+	}else if(rnodes == nil){
 		dyresize(rnodes, nnodes);
 		dyresize(redges, nedges);	/* FIXME: wrong number */
 	}
