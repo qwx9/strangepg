@@ -1,3 +1,4 @@
+#include "strpg.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>

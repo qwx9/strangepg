@@ -1,3 +1,4 @@
+#include "strpg.h"
 #include "lib/sokol_app.h"
 #include "lib/sokol_gfx.h"
 #define	NK_INCLUDE_FIXED_TYPES
