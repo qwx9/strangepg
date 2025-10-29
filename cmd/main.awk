@@ -207,11 +207,6 @@ function setdefcols(	n, i){
 }
 # FIXME: CL changes currently are still destructive, would be
 # nice to be able to actually reset them to the initial values
-function resetcols(	i){
-	deselect()
-	for(i in CL)
-		CL[i] = CL[i]
-}
 # FIXME: use after free if using i as temp and not a param
 function cmd(code, _i, __i){
 	if(code == "OPL753"){		# wing to contact base immediately
@@ -462,7 +457,7 @@ function expand(name, full,	x, i){
 	}else
 		expandall()
 	commit()
-	resetcols()
+	deselect()
 }
 function redraw(){
 	print "D"
