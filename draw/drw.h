@@ -32,6 +32,7 @@ enum{
 	DFnolayout = 1<<12,
 	DFfreeze = 1<<13,
 	DFrecalclen = 1<<14,
+	DFarmed = 1<<15,
 	DFiwasfrozentoday = DFnodraw | DFnorend | DFnolayout,
 };
 struct Drawing{

@@ -503,8 +503,7 @@ coarsen(void)
 		return -1;
 	}
 	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
-	if(graph.flags & GFarmed)
-		freezeworld();
+	freezeworld();
 	if(dylen(nodes) == nnodes && dylen(edges) == nedges){
 		DPRINT(Debugcoarse, "current graph: %d nodes, %d edges", nnodes, nedges);
 	}else{
@@ -606,8 +605,7 @@ coarsen(void)
 	TIME("coarsen", "shrink arrays", t);
 	regenedges(eset, ne, ne2);
 	TIME("coarsen", "restore edges", t);
-	if(graph.flags & GFarmed)
-		thawworld();
+	thawworld();
 	es_destroy(eset);
 	logmsg(va("graph after coarsening: %d (%d) nodes, %d (%d) edges\n",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
@@ -847,12 +845,10 @@ collapseupto(int n)
 	if(collapseup(ids, n) < 0)
 		sysfatal("collapseup: %s", error());
 	dyfree(ids);
-	drawing.flags |= DFiwasfrozentoday;
 	switch(coarsen()){
 	case -2: DPRINT(Debuginfo, "coarsen: %s", error()); break;
 	case -1: sysfatal("coarsen: %s", error()); break;
 	}
-	drawing.flags &= ~DFiwasfrozentoday;
 }
 
 static void

@@ -503,6 +503,8 @@ drawproc(void *)
 	resizenodes();
 	resetvedges();
 	initstatic();
+	drawing.flags &= ~DFiwasfrozentoday;
+	drawing.flags |= DFarmed;	/* FIXME: better way? */
 	go = 1;
 	for(;;){
 		if((r = recvul(drawc)) == 0)
@@ -538,6 +540,8 @@ drawproc(void *)
 void
 freezeworld(void)
 {
+	if((drawing.flags & DFarmed) == 0)
+		return;
 	drawing.flags |= DFfreeze;
 	reqlayout(Lfreeze);
 	reqdraw(Reqfreeze);
@@ -546,6 +550,8 @@ freezeworld(void)
 void
 thawworld(void)
 {
+	if((drawing.flags & DFarmed) == 0)
+		return;
 	if((drawing.flags & DFnorend) == 0)
 		drawing.flags |= DFnorend;	/* FIXME: or we might miss resizebuf() */
 	resizenodes();	/* layout depends on lengths */
@@ -608,7 +614,7 @@ reqdraw(int r)
 void
 initdrw(void)
 {
-	drawing.flags |= DFstalelen | DFrecalclen;
+	drawing.flags |= DFstalelen | DFrecalclen | DFiwasfrozentoday;
 	settheme();
 	/* FIXME: this chan implementation SUCKS */
 	if((drawc = chancreate(sizeof(ulong), 8)) == nil

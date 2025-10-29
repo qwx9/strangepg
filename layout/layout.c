@@ -117,7 +117,7 @@ sac(void *)
 				if(graph.flags & GFfrozen){
 					drawing.flags |= DFnolayout;
 					continue;
-				}else
+				}else if(drawing.flags & DFarmed)	/* FIXME: better way? */
 					drawing.flags &= ~DFnolayout;
 				if((graph.flags & GFdrawme) == 0)
 					break;

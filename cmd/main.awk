@@ -212,7 +212,8 @@ function resetcols(	i){
 	for(i in CL)
 		CL[i] = CL[i]
 }
-function cmd(code,	i){
+# FIXME: use after free if using i as temp and not a param
+function cmd(code, _i, __i){
 	if(code == "OPL753"){		# wing to contact base immediately
 		flags |= Fdie
 		if(flags & Ffctab == 0)
@@ -235,8 +236,8 @@ function cmd(code,	i){
 	}else if(code == "FGD135"){	# wing attack plan R
 		flags |= Fgraph
 		nd = length(deferred)
-		for(i in deferred)
-			print deferred[i]
+		for(_i in deferred)
+			print deferred[_i]
 		delete deferred
 		loadbatch()
 	}
@@ -244,20 +245,20 @@ function cmd(code,	i){
 		loadbatch()
 		if(flags & Fdie)
 			quit()
-		if(length(deferredexpr) != 0){
-			for(i=1; i<=length(deferredexpr); i++)
-				eval("{"deferredexpr[i]"}")
+		arm()
+		setdefcols()	# FIXME: until rnodes are gone
+		if(length(deferredexpr) != 0){	# FIXME: after arm because of rnodes
+			for(_i=1; _i<=length(deferredexpr); _i++)
+				eval("{"deferredexpr[_i]"}")
 			delete deferredexpr
 		}
-		arm()
 		# must be done after arming rnodes
 		if(length(layout) > 0){
 			flags |= Fflayout
-			for(i=1; i<=length(layout); i++)
-				print "i\t" layout[i] "\n"
+			for(_i=1; _i<=length(layout); _i++)
+				print "i\t" layout[_i] "\n"
 			delete layout
 		}
-		setdefcols()
 		flags |= Fcrm114
 		print (flags & Fflayout ? "r" : "R")
 	}
@@ -388,7 +389,7 @@ function nodeinfo(i,	name, s){
 	s = "Node: " nodeinfostr(i)
 	info(s)
 }
-function deselectnodebyid(i,	col){
+function deselectnodebyid(i){
 	if(!checknodeid(i) || !(i in selected))
 		return
 	delete selected[i]
@@ -501,7 +502,7 @@ function groupby(tag, incl, cm,	acc){
 function quit(){
 	exit
 }
-flags & Fcrm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
+function longform(){
 	n = index($0, "[")
 	v = substr($0, 1, n - 1)
 	s = substr($0, n + 1)
@@ -514,10 +515,15 @@ flags & Fcrm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
 	else if(pred !~ /^[ \t]*("[^"]+"|[a-zA-Z0-9][a-zA-Z0-9_]*|[a-zA-Z0-9][a-zA-Z0-9_]*\[["a-zA-Z0-9_ \t]+\])[ \t]*$/)
 		$0 = "for(i in " v ") if(" pred "){ " v "[i]=" s "}"
 }
+flags & Fcrm114 && /^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/{
+	longform()
+}
 $1 == "defer"{
 	if(flags & Fcrm114)
 		next
 	$1 = ""
+	if(/^[A-Za-z0-9_ \t]+\[.+\][ \t]*=[^=]/)
+		longform()
 	deferredexpr[length(deferredexpr)+1] = $0
 	next
 }
