@@ -43,19 +43,18 @@ csvheader(File *f, int *wait, int *nwarn)
 				continue;
 			}
 			if(p == s){
+				/* FIXME: just cut it short here? */
 				if(!isalpha(c)){
 					werrstr("loadcsv: invalid tag name \"%s\" in header", s);
 					return nil;
 				}
-			}else if(!isalnum(c)){
+			}else if(!isalnum(c) && c != '_'){
 				*p = 0;
 				r = 1;
 				logmsg(va("loadcsv: truncating tag name \"%s\" on invalid character \'%c\'\n", s, c));
 				break;
 			}
 		}
-		for(p--; *p=='_'; p--)
-			*p = 0;
 		/* don't wait for csv to load if there are no special tags */
 		if(cistrncmp(s, "color", 5) == 0){
 			s = "CL";
