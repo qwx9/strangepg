@@ -70,9 +70,8 @@ worldview(HMM_Vec3 v)
 	}else{
 		view.center = v;
 		d = HMM_MulV3F(view.front, 10.0f);
-		v = HMM_SubV3(v, d);
-		view.eye = v;
-		view.Δeye = d;
+		view.eye = HMM_AddV3(HMM_RotateV3Q(v, view.rot), d);
+		view.Δeye = HMM_SubV3(view.eye, view.center);
 		zoomdraw(-0.1f, 0.0f, 0.0f);
 	}
 	updateview();
