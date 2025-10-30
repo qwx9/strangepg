@@ -163,7 +163,7 @@ autoattach(Cell *cp)
 	case NUM|FLT:
 	case STR|NUM|FLT: m = sizeof(float); type &= ~STR; break;
 	case STR: m = sizeof(char *); type &= ~(NUM|FLT); break;
-	default: panic("autoattach %s: invalid type %o", tag, type & (NUM|STR|FLT));
+	default: die("autoattach %s: invalid type %o", tag, type & (NUM|STR|FLT));
 	}
 	cp->tval = type & ~UND;
 	buf = emalloc(n * m);
@@ -215,7 +215,7 @@ mktab(Cell *cp, char type)
 	case Tuint: m = sizeof(u32int); atype = NUM | USG; break;
 	case Tfloat: m = sizeof(float); atype = NUM | FLT; break;
 	case Tstring: m = sizeof(char*); atype = STR; break;
-	default: panic("mktab: unknown type %o\n", type);
+	default: die("mktab: unknown type %o\n", type);
 	}
 	if(cp->tval & UNS){	/* FIXME: hack */
 		n = nedges;
@@ -262,7 +262,7 @@ set(Cell *tp, voff id, char type, TVal v)
 	case Tuint: setival(cp, v.u); break;
 	case Tfloat: setfval(cp, v.f); break;
 	case Tstring: setsval(cp, v.s, 0); break;
-	default: panic("set: unknown type %o\n", type);
+	default: die("set: unknown type %o\n", type);
 	}
 	tempfree(cp);	/* FIXME: race with run.c */
 }
@@ -368,7 +368,7 @@ vartype(char *val, char type, TVal *vp, Cell *cp)
 						return Tint;
 					}
 					break;
-				default: panic("numeric vartype %d: can\'t happen", type);
+				default: die("numeric vartype %d: can\'t happen", type);
 				}
 			}else if(c == 'e' || c == 'E' || c == '.'){
 				v.f = strtof(s, &p);

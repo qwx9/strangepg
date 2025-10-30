@@ -77,7 +77,7 @@ warn(char *fmt, ...)
 }
 
 void
-panic(char *fmt, ...)
+die(char *fmt, ...)
 {
 	va_list arg;
 

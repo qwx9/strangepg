@@ -34,7 +34,7 @@ writefs(File *f, void *buf, int n)
 	assert(f->aux != nil && buf != nil);
 	if((m = syswrite(f, buf, n)) != n){
 		if(debug & Debugtheworld)
-			panic("writefs: short write %d not %d: %s", m, n, error());
+			die("writefs: short write %d not %d: %s", m, n, error());
 		sysfatal("writefs: short write %d not %d: %s", m, n, error());
 	}
 	return 0;
@@ -53,7 +53,7 @@ readfs(File *f, void *buf, int n)
 
 	if(buf == nil){
 		if(n >= sizeof f->buf)
-			panic("readfs: bug: buffer overflow %d > %d", n, sizeof f->buf);
+			die("readfs: bug: buffer overflow %d > %d", n, sizeof f->buf);
 		if(f->cur + n >= sizeof f->buf)
 			f->cur = 0;
 		buf = f->buf + f->cur;
@@ -61,7 +61,7 @@ readfs(File *f, void *buf, int n)
 		f->cur = 0;
 	if((m = sysread(f, buf, n)) < 0){
 		if(debug & Debugtheworld)
-			panic("readfs: short read %d not %d: %s", m, n, error());
+			die("readfs: short read %d not %d: %s", m, n, error());
 		sysfatal("readfs: short read %d not %d: %s", m, n, error());
 	}
 	f->end = f->cur + m;
@@ -446,7 +446,7 @@ skiprest(File *f)
 
 	DPRINTN(Debugfs, "[skiprest");
 	while(f->next == -1){
-		if((n = f->end - f->cur) > Readsz){
+		if(f->end - f->cur > Readsz){
 			DPRINTN(Debugfs, "; skipping %d bytes ", Readsz);
 			f->foff += Readsz;
 			f->cur += Readsz;

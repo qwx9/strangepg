@@ -12,7 +12,7 @@ char*	smprint(char*, ...);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
-void	panic(char*, ...);
+void	die(char*, ...);
 void	errmsg(char*, ...);
 int	errstr(char*, uint);
 vlong	μsec(void);

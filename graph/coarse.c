@@ -53,7 +53,7 @@ getnodeidx(ioff id)
 	}
 	idx = cnodes[id].idx;
 	if(idx >= dylen(nodes))
-		panic("out of bounds node idx: %d > %d", idx, dylen(nodes)-1);
+		die("out of bounds node idx: %d > %d", idx, dylen(nodes)-1);
 	qunlock(&tablock);
 	return idx;
 }
@@ -97,7 +97,7 @@ checkcnode(CNode *U)
 	DPRINT(Debugcoarse, "checkcnode: id=%zd %d %d %d idx=%d",
 		U - cnodes, U->parent, U->child, U->sibling, U->idx);
 	if(U->flags & FCNvisited)
-		panic("check: cycle detected or flags dirty id=%zd idx=%d",
+		die("check: cycle detected or flags dirty id=%zd idx=%d",
 			U - cnodes, U->idx);
 	U->flags |= FCNvisited;
 }
@@ -114,7 +114,7 @@ checkbranch(CNode *U)
 	for(j=U->sibling; j!=-1; j=V->sibling){
 		V = cnodes + j;
 		if(V->parent != U->parent)
-			panic("check: broken parent link of %d to %d not %zd",
+			die("check: broken parent link of %d to %d not %zd",
 				j, V->parent, U->parent);
 		checkcnode(V);
 		if((j = V->child) != -1)
@@ -136,13 +136,13 @@ checkctree(void)
 	}
 	for(i=0, U=cnodes; U<UE; U++, i++){
 		if((U->flags & FCNvisited) == 0)
-			panic("check: unvisited cnode %zd %d %d %d idx=%d",
+			die("check: unvisited cnode %zd %d %d %d idx=%d",
 				i, U->parent, U->child, U->sibling, U->idx);
 		U->flags &= ~FCNvisited;
 		if(U->parent != -1){
 			V = cnodes + U->parent;
 			if(V->child == -1)
-				panic("check: broken parent %zd of %zd, no children",
+				die("check: broken parent %zd of %zd, no children",
 					U->parent, i);
 			V = cnodes + V->child;
 			while(V != U){
@@ -151,16 +151,16 @@ checkctree(void)
 					break;
 			}
 			if(V != U)
-				panic("check: broken child list of %d missing child %d",
+				die("check: broken child list of %d missing child %d",
 					U->parent, i);
 		}
 		if(U->idx != -1){
 			if(U->idx < 0 || U->idx >= dylen(nodes))
-				panic("check: %d node index %d out of range (0-%d)",
+				die("check: %d node index %d out of range (0-%d)",
 					i, U->idx, dylen(nodes));
 			u = nodes + U->idx;
 			if(u->id != i)
-				panic("check: broken node link %d not %d idx=%d",
+				die("check: broken node link %d not %d idx=%d",
 					u->id, i, U->idx);
 		}
 	}
@@ -177,7 +177,7 @@ checktree(void)
 	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
 		U = cnodes + u->id;
 		if(u - nodes != U->idx)
-			panic("check: [0] node %zd ≠ idx %d of cnode %d",
+			die("check: [0] node %zd ≠ idx %d of cnode %d",
 				u-nodes, U->idx, U-cnodes);
 	}
 	checkctree();
@@ -262,14 +262,14 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 		v = nodes + (uint)(uv >> 2 & 0x3fffffff);
 		DPRINT(Debugcoarse, "> edge[%d/%d]: %d%c,%d%c → %zd,%zd [%#08x]", n, m, u->id, x&1?'-':'+', v->id, x&2?'-':'+', u-nodes, v-nodes, uv);
 		if(u < nodes || u >= nodes+dylen(nodes))
-			panic("oob: u %#p %d/%d id %llx", u, u-nodes, dylen(nodes), uv);
+			die("oob: u %#p %d/%d id %llx", u, u-nodes, dylen(nodes), uv);
 		assert((u->flags & FNalias) == 0);
 		edges[u->eoff+u->nedges++] = x;
 		if(u == v)	/* the mirror is what we just added */
 			continue;
 		n++;
 		if(v < nodes || v >= nodes+dylen(nodes))
-			panic("oob: v %#p %d/%d id %llx", v, v-nodes, dylen(nodes), uv);
+			die("oob: v %#p %d/%d id %llx", v, v-nodes, dylen(nodes), uv);
 		assert((v->flags & FNalias) == 0);
 		x = uv >> 30 & 0xfffffffcULL | (uv >> 1 & 1 | uv << 1 & 2) ^ 3;
 		edges[v->eoff+v->nedges++] = x;
@@ -555,7 +555,7 @@ coarsen(void)
 			if(V->idx == -1){
 				V = activetop(V);
 				if(V != U && V->idx == -1)
-					panic("edge %d%c,%d%c (%zd,%zd): V %d %d/%d/%d can't be inactive and an orphan",
+					die("edge %d%c,%d%c (%zd,%zd): V %d %d/%d/%d can't be inactive and an orphan",
 						u-nodes, x&1?'-':'+', j, x&2?'-':'+',
 						U-cnodes, V-cnodes, V->idx, V->parent, V->child, V->sibling);
 				DPRINT(Debugcoarse, "> external edge to collapsed node %d%c,%d%c (%zd,%zd)",
