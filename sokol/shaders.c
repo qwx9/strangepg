@@ -314,7 +314,7 @@ setupnodes(int threedee)
 				},
 			},
 		},
-		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 	});
 	sh = sg_make_shader((threedee ? node_idx3d_shader_desc : node_idx_shader_desc)(sg_query_backend()));
 	render.offscrnodepipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -417,7 +417,7 @@ setupedges(void)
 				},
 			},
 		},
-		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 	});
 	sh = sg_make_shader(edge_idx_shader_desc(sg_query_backend()));
 	render.offscredgepipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -501,7 +501,7 @@ setuplines(void)
 				},
 			},
 		},
-		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 	});
 	render.nlinev = 2;
 }

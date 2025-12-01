@@ -22,7 +22,7 @@ enum{
 	DFdrawlabels = 1<<2,
 	DFnodepth = 1<<3,
 	DFstalelen = 1<<4,
-	DFmsaa = 1<<5,
+	DFnomsaa = 1<<5,
 	DFhidpi = 1<<6,
 	DFnope = 1<<7,
 	DF3d = 1<<8,

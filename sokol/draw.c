@@ -303,7 +303,7 @@ evloop(void)
 		.frame_cb = frame,
 		.cleanup_cb = cleanup,
 		.event_cb = event,
-		.sample_count = drawing.flags & DFmsaa ? 4 : 1,
+		.sample_count = drawing.flags & DFnomsaa ? 1 : 4,
 		.enable_clipboard = true,
 		.window_title = "strangepg",
 		.icon.sokol_default = true,

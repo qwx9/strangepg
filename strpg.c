@@ -86,8 +86,8 @@ help(void)
 		"-A             Disable transparency (for performance)\n"
 		"-C             Compute coarsening tree and exit\n"
 		"-E             Disable loading edge tags\n"
-		"-H             Enable Hi-DPI mode\n"
-		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
+		"-H             Enable Hi-DPI mode (OSX only)\n"
+		"-M             Disable 4x multisample anti-aliasing (MSAA)\n"
 		"-T MAX         Set autocollapse threshold to MAX nodes (default: 7.5k, disable: 0)\n"
 		"-W             Do not suppress warning messages\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
@@ -155,7 +155,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 		break;
 	case 'E': status |= FSnoetags; break;
 	case 'H': drawing.flags |= DFhidpi; break;
-	case 'M': drawing.flags |= DFmsaa; break;
+	case 'M': drawing.flags |= DFnomsaa; break;
 	case 'T':
 		maxrnodes = strtol(EARGF(usage()), &s, 10);
 		if(maxrnodes < 0 || *s != 0){
