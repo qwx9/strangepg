@@ -1005,42 +1005,73 @@ Default (`defgrp`).
 ## Coarsening
 
 One of the main features of strangepg is that it's built for scalability from the ground up.
-To cope with large graphs, it computes a so called coarsening tree for each connected component,
+Huge graphs are difficult to layout and render,
+yet with millions of nodes individual ones are hardly discernible and even often overdrawn by others.
+The overall (macroscopic) structure of the graph is more informative than individual nodes.
+It makes sense to instead simplify the drawing ("zoom out") and only load addition detail ("zoom in")
+at specific regions of interest.
+
+To cope with large graphs, strangepg thus computes a so called coarsening tree for each connected component,
 which establishes a way to __collapse__ (ie. merge) nodes with one another to simplify the graph.
 Conceptually, a coarsening tree is akin to a hierarchy of merges,
 where the leaves are the fully uncoarsened (__expanded__) graph.
-Adjacent nodes are merged together into new "supernodes" which represent all collapsed nodes underneath them.
+In the illustrations below, the trees are shown with the leaves at the top and the root at the bottom.
+Adjacent nodes in the original graph are merged together into new "supernodes" in the tree
+which represent all collapsed nodes above them.
 On screen, a single collapse replaces the selected nodes with their parent supernode,
 which now represents all leaf nodes in its coarsening subtree.
-A series of collapses simplify the graph by replacing large sets of nodes by representative supernodes,
+A series of collapses simplify the graph by replacing large sets of nodes by their representative supernodes,
 while removing now redundant edges.
-Each component can be reduced to a single "top" supernode.
+Each component can be reduced down to a single "root" supernode.
 
 <p align="center"><img src=".pics/supernodes.png"/></p>
 
 This hierarchy essentially consitutes "zoom levels".
 
 For efficiency, one of the main ideas in strangepg is to avoid creating supernodes entirely
-by instead reusing one of the nodes to be collapsed as a representative "parent" node.
+by instead reusing one of the nodes to be collapsed as a representative "parent" node:
 
 <p align="center"><img src=".pics/parents.png"/></p>
 
-By default, strangepg will compute coarsening trees and autocollapse the input graph
-down to less than 7.5k visible nodes.
-This allows for fast loading times and visualizing the macroscopic structure of the graph
-without resorting to lengthy layouting.
+To summarize, the coarsening tree supplements the original graph
+by providing an order in which nodes can be collapsed together to simplify it.
+
+__By default, strangepg will compute coarsening trees and autocollapse the input graph
+down to less than 7.5k visible nodes.__
 The maximum threshold can be changed to `N` nodes with the `-T N` parameter,
 and autocollapsing can be entirely disabled with `-T 0`.
 Currently, if the graph exceeds 2 million nodes, autocollapsing is forced
 because of a limitation in the renderer.
 
-Parts of the graph can be collapsed or expanded at will with the following commands
-(see [Graph manipulation](#graph-manipulation) above):
+Parts of the graph can then be collapsed or expanded at will with the following commands
+(see [Graph manipulation](#graph-manipulation) above),
+depending on whether nodes have been selected with the mouse or not.
+
+Empty selection:
+```awk
+collapse()       globally "zoom out" by one level
+expand()         globally "zoom in" by one level
+```
+
+One or more nodes selected:
+```awk
+collapse()       collapse selected nodes if possible
+expand()         expand selected nodes if there's anything to expand
+```
+
+Those functions accept arguments:
+```awk
+collapse(label)  collapse by one level given node if possible
+expand(label)    expand by one level given node if collapsed
+expand(label, 1) expand given node's entire subtree if possible
+expand("", 1)    fully expand selected subtrees if possible
+```
+
+The `findnode` function can be used to look a node up by label
+and expand it if not visible:
 
 ```awk
-collapse()       collapse selection or globally "dezoom" by one level if nothing selected
-expand()         expand selection or globally "zoom" by one level if nothing selected
-findnode(label)	 focus on a given node, expanding it if necessary
+findnode(label)  expand and focus on given node
 ```
 
 The coarsening table may be computed once and for all then saved to file,
