@@ -15,9 +15,6 @@ u64int *vedges;	/* FIXME: check if we could store id's in robj with SG_VERTEXFOR
 ssize ndnodes, ndedges, ndlines;
 Drawing drawing = {
 	.length = {0.0f, 0.0f},
-	.xbound = {0.0f, 0.0f},
-	.ybound = {0.0f, 0.0f},
-	.zbound = {0.0f, 0.0f},
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
 };
@@ -213,7 +210,7 @@ void
 resizenodes(void)
 {
 	vlong n;
-	double l, k, Δ, min, max;
+	double l, k, Δ, min, max, rmin, rmax;
 	RNode *r, *re;
 	Node *u, *ue;
 
@@ -231,23 +228,38 @@ resizenodes(void)
 		drawing.length = (Range){min, max};
 	}
 	drawing.flags &= ~(DFstalelen | DFrecalclen);
-	if(drawing.length.min < 1.0)
-		drawing.length.min = 1.0;
-	if(drawing.length.max < drawing.length.min)
-		drawing.length.max = drawing.length.min;
-	if((Δ = drawing.length.max - drawing.length.min) < 1.0){
+	if((min = drawing.length.min) < 1.0)
+		min = 1.0;
+	if((max = drawing.length.max) < min)
+		max = min;
+	if((Δ = max - min) <= 0)
 		Δ = 1.0;
-		min = max = drawing.nodesz;
+	if(Δ > Maxsz - Minsz){
+		rmin = Minsz;
+		rmax = Maxsz;
 	}else{
-		min = Minsz;
-		max = Maxsz;
+		if(min >= Maxsz || max >= Maxsz){
+			rmax = Maxsz;
+			rmin = rmax - Δ;
+		}else if(min < Minsz || max < Minsz || max < min){
+			rmin = Minsz;
+			rmax = rmin + Δ;
+		}else{
+			rmax = max;
+			rmin = min;
+		}
 	}
-	k = Minsz * log(2) / Δ;
+	if((rmax -= rmin) <= 0.0)
+		rmax = 1.0;
+	if(drawing.nodesz != 1.0){
+		rmin *= drawing.nodesz;
+		rmax *= drawing.nodesz;
+	}
+	k = log(2) / Δ;
 	for(u=nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
-		l = u->length - drawing.length.min;
-		if(l < 1.0)
-			l = 1.0;
-		r->len = min + (max - min) * ((exp(k * l) - 1) / (exp(k * Δ) - 1));
+		if((l = u->length - min) < 0)
+			l = 0;
+		r->len = rmin + rmax * (exp(k * l) - 1);	/* / (exp(k * Δ) - 1) == 1 */
 	}
 }
 

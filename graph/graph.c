@@ -71,10 +71,6 @@ setx0(ioff idx, int fixed, float f)
 
 	u = nodes + idx;
 	u->flags |= fixed ? FNfixedx | FNinitx : FNinitx;
-	if(f < drawing.xbound.min)
-		drawing.xbound.min = f;
-	if(f > drawing.xbound.max)
-		drawing.xbound.max = f;
 	if(rnodes == nil)
 		return;
 	r = rnodes + idx;
@@ -89,10 +85,6 @@ sety0(ioff idx, int fixed, float f)
 
 	u = nodes + idx;
 	u->flags |= fixed ? FNfixedy | FNinity : FNinity;
-	if(f < drawing.ybound.min)
-		drawing.ybound.min = f;
-	if(f > drawing.ybound.max)
-		drawing.ybound.max = f;
 	if(rnodes == nil)
 		return;
 	r = rnodes + idx;
@@ -107,10 +99,6 @@ setz0(ioff idx, int fixed, float f)
 
 	u = nodes + idx;
 	u->flags |= fixed ? FNfixedz | FNinitz : FNinitz;
-	if(f < drawing.zbound.min)
-		drawing.zbound.min = f;
-	if(f > drawing.zbound.max)
-		drawing.zbound.max = f;
 	if(rnodes == nil)
 		return;
 	r = rnodes + idx;

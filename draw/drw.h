@@ -9,7 +9,7 @@ typedef struct Range Range;
 #define	Nodesz	1.0f
 #define	Ptsz	1.0f
 #define	Minsz	0.5f
-#define	Maxsz	40.0f
+#define	Maxsz	50.0f
 #define	Maxthic	128.0f
 
 struct Range{
@@ -38,9 +38,6 @@ enum{
 struct Drawing{
 	int flags;
 	Range length;
-	Range xbound;
-	Range ybound;
-	Range zbound;
 	float mid[3];
 	float nodesz;
 	float fatness;

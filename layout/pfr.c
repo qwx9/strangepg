@@ -4,13 +4,11 @@
 #include "cmd.h"
 
 enum{
-	W = 1024,
-	H = 1024,
-	Area = W * H,
+	DIM = 1024,
 };
 
-#define	C	(drawing.nodesz * Minsz / Maxsz)
-#define Tolerance	0.005f
+#define	C	(drawing.nodesz / (Maxsz - Minsz))
+#define Tolerance	0.100f
 
 typedef struct Aux Aux;
 struct Aux{
@@ -19,53 +17,29 @@ struct Aux{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.99985f * (t))
-#define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.0001f)
-#define	Δ3(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.0001f)
+#define	cool(t)	(0.999985 * (t))
+#define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.000001)
+#define	Δ3(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.000001)
 
 static void *
 init(void)
 {
-	float dim[2];
 	Aux *aux;
 
-	if(drawing.xbound.min < drawing.xbound.max)
-		dim[0] = (drawing.xbound.max - drawing.xbound.min) / 2.0f;
-	else
-		dim[0] = W;
-	if(drawing.ybound.min < drawing.ybound.max)
-		dim[1] = (drawing.ybound.max - drawing.ybound.min) / 2.0f;
-	else
-		dim[1] = H;
 	aux = emalloc(sizeof *aux);
-	aux->k = C * sqrtf(dim[0] * dim[1] / dylen(rnodes));
+	aux->k = C * sqrtf(DIM * DIM / dylen(rnodes));
 	return aux;
 }
 
 static void
-initdim(float *mid, float *var)
+initdim(float *mid, float *var, int is3d)
 {
-	if(drawing.xbound.min < drawing.xbound.max){
-		var[0] = (drawing.xbound.max - drawing.xbound.min) / 2.0f;
-		mid[0] = drawing.xbound.min + var[0];
-	}else{
-		var[0] = W;
-		mid[0] = 0;
-	}
-	if(drawing.ybound.min < drawing.ybound.max){
-		var[1] = (drawing.ybound.max - drawing.ybound.min) / 2.0f;
-		mid[1] = drawing.ybound.min + var[1];
-	}else{
-		var[1] = H;
-		mid[1] = 0;
-	}
-	if(drawing.zbound.min < drawing.zbound.max){
-		var[2] = (drawing.zbound.max - drawing.zbound.min) / 2.0f;
-		mid[2] = drawing.zbound.min + var[2];
-	}else{
-		var[2] = W;
-		mid[2] = 0;
-	}
+	var[0] = DIM;
+	mid[0] = 0;
+	var[1] = DIM;
+	mid[1] = 0;
+	var[2] = is3d ? DIM : 0.1f;
+	mid[2] = 0;
 	drawing.mid[0] = mid[0];
 	drawing.mid[1] = mid[1];
 	drawing.mid[2] = mid[2];
@@ -94,12 +68,12 @@ new_(int nuke, int is3d)
 	if(!nuke)
 		return init();
 	orphans = 0;
-	initdim(mid, var);
+	initdim(mid, var, is3d);
 	initpos();
 	f = 2.0f * drawing.nodesz;
 	θ = 0.0f;
 	z = 0.0f;	/* shut compiler up */
-	nosphere = var[0] > W || var[1] > H || var[2] > W;
+	nosphere = var[0] > var[1];
 	nn = dylen(nodes);
 	for(r=rnodes, u=nodes, ue=u+nn; u<ue; u++, r++){
 		u->flags &= ~FNorphan;
@@ -186,7 +160,8 @@ compute3d(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, z, Δx, Δy, Δz, δx, δy, δz, δ, uw, vw, Δr;
+	double t, Δx, Δy, Δz;
+	float tol, k, f, x, y, z, δx, δy, δz, δ, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
 	Node *u, *u0;
@@ -238,7 +213,7 @@ compute3d(void *arg, volatile int *stat, int i)
 				δz = v->pos[2] - z;
 				δ = Δ3(δx, δy, δz);
 				δ -= (uw + vw) / 2.0f;
-				δ += 0.0001f;
+				δ += 0.0000001f;
 				f = Fa(δ, k);
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
@@ -246,7 +221,7 @@ compute3d(void *arg, volatile int *stat, int i)
 			}
 			δ = Δ3(Δx, Δy, Δz);
 			if((fixed & FNfixedx) == 0){
-				f = MIN(t, fabsf(Δx));
+				f = MIN(t, fabs(Δx));
 				Δx = f * Δx / δ;
 				x += Δx;
 				r->pos[0] = x;
@@ -254,19 +229,21 @@ compute3d(void *arg, volatile int *stat, int i)
 					Δr = Δx;
 			}
 			if((fixed & FNfixedy) == 0){
-				f = MIN(t, fabsf(Δy));
+				f = MIN(t, fabs(Δy));
 				Δy = f * Δy / δ;
 				y += Δy;
 				r->pos[1] = y;
 				if(Δr < Δy)
 					Δr = Δy;
 			}
-			f = MIN(t, fabs(Δz));
-			Δz = f * Δz / δ;
-			z += Δz;
-			r->pos[2] = z;
-			if(Δr < Δz)
-				Δr = Δz;
+			if((fixed & FNfixedz) == 0){
+				f = MIN(t, fabs(Δz));
+				Δz = f * Δz / δ;
+				z += Δz;
+				r->pos[2] = z;
+				if(Δr < Δz)
+					Δr = Δz;
+			}
 		}
 		if(Δr < tol)
 			return 0;
@@ -287,7 +264,8 @@ compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
 	ioff *e, *ee;
-	float t, tol, k, f, x, y, Δx, Δy, δx, δy, δ, uw, vw, Δr;
+	double t, Δx, Δy;
+	float tol, k, f, x, y, δx, δy, δ, uw, vw, Δr;
 	RNode *r0, *r1, *r, *v;
 	Aux *aux;
 	Node *u, *u0;
@@ -335,7 +313,7 @@ compute(void *arg, volatile int *stat, int i)
 				δy = v->pos[1] - y;
 				δ = Δ(δx, δy);
 				δ -= (uw + vw) / 2.0f;
-				δ += 0.0001f;
+				δ += 0.0000001f;
 				f = Fa(δ, k);
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
@@ -343,7 +321,7 @@ compute(void *arg, volatile int *stat, int i)
 			δ = Δ(Δx, Δy);
 			/* limiting layouting area doesn't work well for long linear graphs */
 			if((fixed & FNfixedx) == 0){
-				f = MIN(t, fabsf(Δx));
+				f = MIN(t, fabs(Δx));
 				Δx = f * Δx / δ;
 				x += Δx;
 				r->pos[0] = x;
@@ -351,7 +329,7 @@ compute(void *arg, volatile int *stat, int i)
 					Δr = Δx;
 			}
 			if((fixed & FNfixedy) == 0){
-				f = MIN(t, fabsf(Δy));
+				f = MIN(t, fabs(Δy));
 				Δy = f * Δy / δ;
 				y += Δy;
 				r->pos[1] = y;
