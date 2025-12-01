@@ -255,7 +255,7 @@ static inline void
 faceyourfearsin3d(RNode *ru, Node *u)
 {
 	float x, y, z, Δ, Δx, Δy, Δz;
-	float c, s, t;
+	double c, s, t;
 	ioff *i, *ie;
 	u32int e;
 	RNode *rv;
@@ -296,7 +296,7 @@ faceyourfearsin3d(RNode *ru, Node *u)
 		}
 	}
 	a = HMM_V3(1.0f, 0.0f, 0.0f);
-	if(c != 0.0f || s != 0.0f || t != 0.0f)	/* edge case: choose one side */
+	if(c != 0.0 || s != 0.0 || t != 0.0)	/* edge case: choose one side */
 		b = HMM_V3(c, s, t);
 	b = HMM_NormV3(b);
 	q = HMM_QFromNormPair(a, b);
@@ -310,7 +310,7 @@ static inline void
 faceyourfears(RNode *ru, Node *u)
 {
 	float x, y, Δ, Δx, Δy;
-	float c, s;
+	double c, s;
 	ioff *i, *ie;
 	u32int e;
 	RNode *rv;
@@ -345,7 +345,7 @@ faceyourfears(RNode *ru, Node *u)
 		}
 	}
 	a = HMM_V3(1.0f, 0.0f, 0.0f);
-	if(c != 0.0f || s != 0.0f)	/* edge case: choose one side */
+	if(c != 0.0 || s != 0.0)	/* edge case: choose one side */
 		b = HMM_V3(c, s, 0.0f);
 	b = HMM_NormV3(b);
 	q = HMM_QFromNormPair(a, b);
@@ -358,15 +358,17 @@ faceyourfears(RNode *ru, Node *u)
 static intptr
 drawnodes(void)
 {
+	int is3d;
 	Node *n, *e;
 	RNode *r;
 
-	if(drawing.flags & DF3d)
-		for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
+	is3d = drawing.flags & DF3d;
+	for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++){
+		if(is3d)
 			faceyourfearsin3d(r, n);
-	else
-		for(r=rnodes, n=nodes, e=n+dylen(n); n<e; n++, r++)
+		else
 			faceyourfears(r, n);
+	}
 	return r - rnodes;
 }
 
