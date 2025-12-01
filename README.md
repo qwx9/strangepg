@@ -18,6 +18,10 @@ While it currently supports only GFA files as input,
 it will in future be extended to support other formats (GraphML, DOT, Newick, etc)
 and types of trees (Newick for phylogenetic trees, etc.).
 
+strangepg automatically collapses the loaded graph down to less than 7.5k nodes at startup.
+See [Coarsening](#coarsening) section for more details.
+A paper on the tool is in preparation.
+
 <p align="center"><img src=".pics/strangelove.png"/></p>
 
 _Note: this is a work in progress and under heavy development;
@@ -62,6 +66,7 @@ Thanks!_
   + [Format notes](#format-notes)
   + [On colors](#on-colors)
   + [Color palettes](#color-palettes)
+- [Coarsening](#coarsening)
 - [Example applications](#example-applications)
   + [Conga line: linear layout in GFA segments order](#conga-line-linear-layout-in-gfa-segments-order)
   + [Random coordinates](#random-coordinates)
@@ -75,51 +80,47 @@ Thanks!_
 
 ## Features
 
-- Scaling to arbitrarily large graphs via coarsening; expanding/retracting parts of the graph on-demand with the mouse or object lookups and commands.
-- Layouting, rendering, drawing to the screen and handling user interface, file loading, graph manipulation
-all in separate and independent threads to reduce any waiting time to a minimum;
-immediate output and interaction whenever possible.
-- Layouting is in real time and can be interrupted or influenced by moving nodes; it can be saved to or loaded from a file as a final result or an initial/reproducible state, hence guiding/improving previous layouts is possible; tags such as color can be changed at any time.
+- Scaling to arbitrarily large graphs via coarsening; expanding/retracting parts of the graph on-demand.
+- Layouting in real time, interruptible and can be manipulated live by moving nodes manually;
+it can be saved to or loaded from a file as a final result or an initial/reproducible state,
+hence guiding/improving previous layouts is possible.
+- One of if not the fastest GFAv1 file loading implementations without preprocessing;
+no assumptions about order, node labels, sequences or tags.
+- Lowest memory usage yet fastest processing speed compared to existing software.
 - High performance graphics with modern and efficient renderer.
-- Some of the fastest GFA loading, by splitting topology from sequence/tags in separate passes;
-no assumptions about ordering, type of labels (strings or integers) or tags.
-- Console with an embedded graph manipulation language based on GFA tags.
-- Any tags, including user-defined ones, can be loaded from the GFA file,
-CSV files and in the prompt; automatic coloring if one is included.
-- Custom layouting (albeit currently primitive) via special tags and a generic force-directed layout in 2D or 3D space.
+- High reactivity and fast feedback, reducing waiting times to a minimum.
+- Supports loading tags from CSV files or live via commands;
+user-defined tags can be created at any time.
+- Embedded programming language allowing complex interactions via all tags, presented as tables.
+- Layouting constraints via special tags, enabling linear and other types of layouts;
+layouting in 2D or 3D space.
 - Written from scratch in C with almost no dependencies: easy and fast to build;
-highly modular, extensible and cross-platform by design
-(note: code including bundled header-only libs is as portable as possible and supports multiple backends,
-but it still needs to be actually ported).
+highly modular, extensible and cross-platform by design.
 
-Without coarsening, the current layouting algorithm while a parallelized and slightly improved version of the classic Fruchterman-Reingold __[1]__ force-directed algorithm,
-is still slow for 10k+ node graphs.
-It will however be adequate for a coarsened graph since it only ever works on whatever is currently loaded;
-other algorithms (SGD2, FM3, etc.) could later be implemented as well.
-Right now, because layouting is parallelized, in real-time and can be interacted with,
-not that much is left to make it more useful in practice.
+Layouting is a parallelized hybrid version of the classic Fruchterman-Reingold __[1]__ force-directed algorithm,
+which is still slow for 10k+ nodes.
 
 Near finished:
 - Offline coarsening and easy import/export of partial graph
-- Finish external memory implementation
-- Alignment visualization
+- External memory implementation and hooks
 - Annotations, overlays
 - Path handling: highlighting, coloring
 - Manpage
+- Improved rendering
 
 Near future:
+- Expanding/collapsing parts of the graph automatically based on view and using the mouse
 - Better generic layouts with hooks for user-specific scenarios: fix circular, add spherical, etc.
 - Better UI; macros as user-defined buttons
 - Newick format and phylogenetic tree layouts
 - Additional capabilities in the graph language
+- Alignment visualization
 
 Future:
 - Edge bundling
 - Prettier graphs: node/line thickness and curvature
 - More user-friendly layout specification/implementation
-- Further graphics performance improvements if warranted
 - Multiple graph handling
-- GBZ support
 
 Released under the terms of the MIT license.
 
@@ -162,11 +163,39 @@ Load layout from a file named some.lay
 strangepg -f some.lay some.gfa
 ```
 
+Increase node width by a factor of 3: 
+```bash
+strangepg -s 1 3 some.gfa
+```
+
 Compute a layout offline, ie. non-interactively and without graphics, writing snapshots to a file:
 ```bash
 strangepg -n some.lay some.gfa
 # resuming from snapshot:
 strangepg -f some.lay -n some.lay some.gfa
+```
+
+Queue strawk commands to execute as soon as the graph is ready to render:
+```bash
+strangepg some.gfa 'groupby("SN")' 'findnode("s42")'
+```
+
+Read commands from a file:
+```bash
+cat <<EOF >cmd.txt	# bash heredoc
+> groupby("SN")
+> findnode("s42")
+> EOF
+strangepg some.gfa <cmd.txt
+```
+
+Append commands in a script:
+```bash
+#!/bin/sh
+strangepg $@ \
+	some.gfa \
+	'groupby("SN")' \
+	'findnode("s42")'
 ```
 
 <p align="center"><img src=".pics/rna.png"/></p>
@@ -739,9 +768,10 @@ Color a node in red:
 CL["s1"] = red
 ```
 
-Color nodes with labels matching a regular expression:
+Color nodes with labels matching a regular expression
+(see [strawk document](strawk.md) for further details):
 ```awk
-CL[i ~ /chr13/] = green
+CL[node[i] ~ /chr13/] = green
 ```
 
 Color nodes with sequence length > 50:
@@ -972,6 +1002,52 @@ Default (`defgrp`).
 `paired`.
 
 
+## Coarsening
+
+One of the main features of strangepg is that it's built for scalability from the ground up.
+To cope with large graphs, it computes a so called coarsening tree for each connected component,
+which establishes a way to __collapse__ (ie. merge) nodes with one another to simplify the graph.
+Conceptually, a coarsening tree is akin to a hierarchy of merges,
+where the leaves are the fully uncoarsened (__expanded__) graph.
+Adjacent nodes are merged together into new "supernodes" which represent all collapsed nodes underneath them.
+On screen, a single collapse replaces the selected nodes with their parent supernode,
+which now represents all leaf nodes in its coarsening subtree.
+A series of collapses simplify the graph by replacing large sets of nodes by representative supernodes,
+while removing now redundant edges.
+Each component can be reduced to a single "top" supernode.
+
+<p align="center"><img src=".pics/supernodes.png"/></p>
+
+This hierarchy essentially consitutes "zoom levels".
+
+For efficiency, one of the main ideas in strangepg is to avoid creating supernodes entirely
+by instead reusing one of the nodes to be collapsed as a representative "parent" node.
+
+<p align="center"><img src=".pics/parents.png"/></p>
+
+By default, strangepg will compute coarsening trees and autocollapse the input graph
+down to less than 7.5k visible nodes.
+This allows for fast loading times and visualizing the macroscopic structure of the graph
+without resorting to lengthy layouting.
+The maximum threshold can be changed to `N` nodes with the `-T N` parameter,
+and autocollapsing can be entirely disabled with `-T 0`.
+Currently, if the graph exceeds 2 million nodes, autocollapsing is forced
+because of a limitation in the renderer.
+
+Parts of the graph can be collapsed or expanded at will with the following commands
+(see [Graph manipulation](#graph-manipulation) above):
+
+```awk
+collapse()       collapse selection or globally "dezoom" by one level if nothing selected
+expand()         expand selection or globally "zoom" by one level if nothing selected
+findnode(label)	 focus on a given node, expanding it if necessary
+```
+
+The coarsening table may be computed once and for all then saved to file,
+but currently this is under development.
+Navigation is currently quite janky but is being improved.
+
+
 ## Example applications
 
 One of the goals of strangepg is to enable experimentation with layouting.
@@ -1073,14 +1149,10 @@ strangepg \
 
 Major bugs:
 - Coarsening does not update strawk tables.
-- Layouting is slow and larger graphs show up as a ball at the center of the screen:
-this is the initial state for any of the layouting algorithms,
-but because it is shown in real time and the algorithms currently used being slow
-(improvements underway), the initial plot looks... underwhelming.
 - Graphs are not re-centered or locked to the center of the screen;
 either the algorithm should compensate for random movements beyond what the FR
 algorithm does, or it should be translated to the center of the screen, or
-the screen to the center of the graph.
+the screen to the center of the graph, or a node pinned to the center.
 - Edges are ugly and are 1 pixel-wide lines, making them difficult to select.
 - Self-edges aren't drawn well. An `a+a+` edge will appear as a line inside the node,
 and a `a+a-` edge will be a dot at the end of the node (in read direction).
@@ -1091,16 +1163,17 @@ not sure what and how to fix.
 directly through the terminal emulator.
 - DirectX: mouse picking code is buggy and can crash the application near startup.
 - Fatal errors in strawk are not always handled gracefully and may result in broken state.
+- The renderer may crash with a GL error if trying to draw too many objects (tens of millions).
 
 Less major bugs:
 - Blinking nodes due to renderer's lack of reordering of nodes for correct alpha blending.
-- "Spinning" nodes due to an edge case in average angle computation.
 - The selection box is a kludge and is stupidly resource-heavy.
 - The selection box currently only works in one direction.
 - The renderer is fairly efficient, but it could be made an order of magnitude faster.
-- (pfr*) Layouting ignores nodes with no adjacencies; would be better to
+- Layouting ignores nodes with no adjacencies; would be better to
 place them on better fixed locations as well.
 - The text boxes suck, a lot. Nuklear doesn't handle edit boxes much.
+- Layouting algorithm could be made faster.
 - ... and many more!
 
 
