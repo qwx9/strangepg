@@ -20,3 +20,5 @@ int	resetcolor(ioff);
 
 /* FIXME: should be voff or usize */
 extern ioff nnodes, nedges;		/* totals */
+
+extern int maxrnodes;

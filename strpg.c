@@ -10,7 +10,7 @@
 
 int status;
 
-static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] FILE [CMD..]";
+static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-T max] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -88,6 +88,7 @@ help(void)
 		"-E             Disable loading edge tags\n"
 		"-H             Enable Hi-DPI mode\n"
 		"-M             Enable 4x multisample anti-aliasing (MSAA)\n"
+		"-T MAX         Set autocollapse threshold to MAX nodes (default: 7.5k, disable: 0)\n"
 		"-W             Do not suppress warning messages\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
 		"ALG may be one of:\n"
@@ -155,6 +156,13 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 'E': status |= FSnoetags; break;
 	case 'H': drawing.flags |= DFhidpi; break;
 	case 'M': drawing.flags |= DFmsaa; break;
+	case 'T':
+		maxrnodes = strtol(EARGF(usage()), &s, 10);
+		if(maxrnodes < 0 || *s != 0){
+			warn("invalid collapse threshold\n");
+			usage();
+		}
+		break;
 	case 'W': debug |= Debuginfo; quiet = 0; break;
 	case 'Z': drawing.flags |= DFnodepth; break;
 	case 'b': drawing.flags |= DFhaxx0rz; break;

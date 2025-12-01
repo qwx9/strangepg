@@ -13,6 +13,7 @@
 CNode *cnodes;
 ioff *cedges;
 ioff nnodes, nedges;
+int maxrnodes = 7500;
 
 typedef struct Adj Adj;
 struct Adj{
@@ -1176,9 +1177,15 @@ buildct(void *)
 void
 armgraph(void)
 {
-	if(dylen(nodes) > 10000){	/* FIXME: constant */
+	ssize n;
+
+	n = dylen(nodes);
+	if(maxrnodes > 0 && n > maxrnodes){
 		logmsg("collapsing graph...\n");
-		collapseupto(10000);
+		collapseupto(maxrnodes);
+	}else if(n > 2000000){	/* FIXME: fix renderer first */
+		logmsg("collapsing graph (too large)...\n");
+		collapseupto(2000000);
 	}else if(rnodes == nil){
 		dyresize(rnodes, nnodes);
 		dyresize(redges, nedges);	/* FIXME: wrong number */
