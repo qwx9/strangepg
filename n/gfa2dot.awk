@@ -2,12 +2,14 @@
 BEGIN{ print "digraph x {" }
 #BEGIN{ print "graph x {" }
 $1 == "S"{
-	s[$2] = ++ns
-	print ns, "[shape=box]"
+	#s[$2] = ++ns
+	print $2, "[shape=box]"
 }
 $1 == "L"{
-	u = s[$2]
-	v = s[$4]
+	#u = s[$2]
+	#v = s[$4]
+	u = $2
+	v = $4
 	#print u, "--", v
 	if($3 == "+" && $5 == "+")
 		print u, "->", v

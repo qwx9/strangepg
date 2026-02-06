@@ -36,13 +36,10 @@ function wrsegs(	i, m, t){
 	for(i=1; i<=N; i++)
 		print "S", i, "*" t
 }
-function wrlink(left, right, ldir, rdir){
-	print "L", left, ldir, right, rdir, "0M"
-}
 function newlink(n){
 	right = n
 	rdir = rand() < pi ? "-" : "+"
-	wrlink(left, right, ldir, rdir)
+	print "L", left, ldir, right, rdir, "0M"
 	left = right
 	ldir = rdir
 }
