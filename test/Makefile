@@ -161,6 +161,7 @@ OBJ:=$(patsubst %.c,%.o,$(wildcard *.c))
 DEPS:=$(patsubst %.o,%.d,$(OBJ) $(COMMON))
 
 ALLTARGETS:=\
+	fs_read\
 	fs_gfa\
 	fs_gfa_kcache\
 	fs_gfa_em\
@@ -174,6 +175,9 @@ ALLTARGETS:=\
 	fs_em_11\
 	fs_em_12\
 	fs_em_13\
+
+fs_read:	fs_read.o ../fs/fs.o ../posix/fs.o $(COMMON)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
 fs_gfa:	fs_gfa.o ../fs/fs.o ../posix/fs.o $(COMMON)
 	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
