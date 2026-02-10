@@ -47,12 +47,30 @@ jobs:
         overwrite: true
     - name: test
       run: ./strangepg -D load -D fs -D graph test/frag10.gfa
+  mac86:
+    name: mac
+    strategy:
+      matrix:
+        os: [macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: build
+      run: make -j 3
+    - name: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: strangepg-${{ matrix.os }}
+        path: strangepg
+        overwrite: true
+    - name: test
+      run: ./strangepg -D load -D fs -D graph test/frag10.gfa
   win64:
     name: win64
     strategy:
       matrix:
         #os: [windows-2022, windows-2019]
-        os: [windows-latest]
+        os: [windows-2022, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
