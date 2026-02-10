@@ -495,12 +495,13 @@ int
 coarsen(void)
 {
 	ioff x, nn, j, off, ne, ne2, *e, *ee, *deg, *d;
-	vlong t;
+	vlong t, t0;
 	edgeset *eset;
 	Node *u, *ue, *v, *up;
 	RNode *r, *rp;
 	CNode *U, *V;
 
+	t0 = μsec();
 	if(ncoarsed == 0){
 		werrstr("nothing to do");
 		return -2;
@@ -619,6 +620,7 @@ coarsen(void)
 	ncoarsed = 0;
 	printgraph();
 	checktree();
+	TIME("coarsen", "total", t0);
 	return 0;
 }
 
