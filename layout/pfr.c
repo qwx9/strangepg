@@ -17,7 +17,7 @@ struct Aux{
 
 #define Fa(x, k)	((x) * (x) / (k))
 #define Fr(x, k)	((k) * (k) / (x))
-#define	cool(t)	(0.999985 * (t))
+#define	cool(t)	(0.999875 * (t))
 #define	Δ(x, y)	(sqrtf((x) * (x) + (y) * (y)) + 0.000001)
 #define	Δ3(x, y, z)	(sqrtf((x) * (x) + (y) * (y) + (z) * (z)) + 0.000001)
 
