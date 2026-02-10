@@ -205,6 +205,8 @@ Cell *program(TNode **a, int n)	/* execute an awk program */
 		tempfree(x);
 	}
   ex1:
+	fflush(awkstdout);
+	fflush(awkstderr);
 	return(True);
 }
 
