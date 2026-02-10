@@ -295,10 +295,12 @@ static void _sgx_mtl_query_image_pixels(_sg_image_t* img, void* pixels) {
     _sgx_mtl_encode_texture_pixels(0, 0, mtl_src_texture.width, mtl_src_texture.height, true, mtl_src_texture, pixels);
 }
 
+#ifdef nope
 static void _sgx_mtl_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {
     id<CAMetalDrawable> mtl_drawable = (__bridge id<CAMetalDrawable>)sapp_metal_get_current_drawable();
     _sgx_mtl_encode_texture_pixels(x, y, w, h, origin_top_left, mtl_drawable.texture, pixels);
 }
+#endif
 
 #endif
 
@@ -311,7 +313,7 @@ void sgx_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pi
 #elif defined(SOKOL_D3D11)
 //    _sgx_d3d11_query_pixels(x, y, w, h, origin_top_left, pixels);
 #elif defined(SOKOL_METAL)
-    _sgx_mtl_query_pixels(x, y, w, h, origin_top_left, pixels);
+//    _sgx_mtl_query_pixels(x, y, w, h, origin_top_left, pixels);
 #endif
 }
 
