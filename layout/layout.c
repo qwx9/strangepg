@@ -50,11 +50,14 @@ static void
 sac(void *)
 {
 	ulong x;
+	vlong t;
 	int nidle;
 	Layout *l;
 	Channel **cp, **ce;
 
 	nidle = 0;
+	if(debug & Debugperf)
+		t = μsec();
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
@@ -121,6 +124,7 @@ sac(void *)
 					drawing.flags &= ~DFnolayout;
 				if((graph.flags & GFdrawme) == 0)
 					break;
+				TIME("layout", "total", t);
 				logmsg("layout: done.\n");
 				if(drawing.flags & DFnope){
 					pushcmd("exportlayout(layfile)");
@@ -153,6 +157,8 @@ sac(void *)
 		}
 		DPRINT(Debuglayout, "sac: launch f=%d", l->flags);
 		l->flags = 0;
+		if(debug & Debugperf)
+			t = μsec();
 		for(cp=txc, ce=cp+nlaythreads; cp<ce; cp++)
 			sendp(*cp, l);
 		nidle = 0;
