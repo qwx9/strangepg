@@ -10,7 +10,7 @@
 
 int status;
 
-static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-T max] FILE [CMD..]";
+static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -36,6 +36,9 @@ load(Input *files)
 		/* defer anything that must be loaded after the graph(s) */
 		case FFcsv:
 			pushcmd("readcsv(\"%s\")", in->path);
+			break;
+		case FFodgilayout:
+			pushcmd("importodgilayout(\"%s\")", in->path);
 			break;
 		case FFlayout:
 			pushcmd("importlayout(\"%s\")", in->path);
@@ -88,6 +91,7 @@ help(void)
 		"-E             Disable loading edge tags\n"
 		"-H             Enable Hi-DPI mode (OSX only)\n"
 		"-M             Disable 4x multisample anti-aliasing (MSAA)\n"
+		"-O FILE        Load ODGI layout output from FILE\n"
 		"-T MAX         Set autocollapse threshold to MAX nodes (default: 7.5k, disable: 0)\n"
 		"-W             Do not suppress warning messages\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
@@ -109,10 +113,11 @@ usage(void)
 static char **
 parseargs(int argc, char **argv, Input **files, char ***defer)
 {
-	int type;
+	int type, maxr;
 	char *s;
 
 	type = FFgfa;
+	maxr = maxrnodes;
 	ARGBEGIN{
 	case 'A': drawing.flags |= DFnoalpha; break;
 	case 'C': status |= FSdontmindme; drawing.flags |= DFnope; break;
@@ -156,9 +161,14 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 'E': status |= FSnoetags; break;
 	case 'H': drawing.flags |= DFhidpi; break;
 	case 'M': drawing.flags |= DFnomsaa; break;
+	case 'O':
+		pushfile(files, EARGF(usage()), FFodgilayout);
+		if(maxr == maxrnodes)
+			maxr = 0;
+		break;
 	case 'T':
-		maxrnodes = strtol(EARGF(usage()), &s, 10);
-		if(maxrnodes < 0 || *s != 0){
+		maxr = strtol(EARGF(usage()), &s, 10);
+		if(maxr < 0 || *s != 0){
 			warn("invalid collapse threshold\n");
 			usage();
 		}
@@ -211,6 +221,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	}ARGEND
 	if(*argv == nil)
 		help();
+	maxrnodes = maxr;
 	pushfile(files, *argv++, type);
 	return argv;
 }

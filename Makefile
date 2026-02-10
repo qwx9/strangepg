@@ -138,6 +138,7 @@ OBJ:=\
 	fs/layout.o\
 	fs/load.o\
 	fs/metacsv.o\
+	fs/odgi.o\
 	fs/svg.o\
 	graph/coarse.o\
 	graph/graph.o\

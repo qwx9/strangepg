@@ -14,6 +14,8 @@ ioff*	pushcollapseop(ioff, ioff*);
 void	armgraph(void);
 void	initct(void);
 
+uint	getnodelength(voff);
+
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
 int	resetcolor(ioff);

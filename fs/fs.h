@@ -36,6 +36,7 @@ enum{
 	FFgfa,
 	FFcsv,
 	FFlayout,
+	FFodgilayout,
 	FFctab,
 	FFnil,
 };
@@ -51,6 +52,7 @@ int	readlineat(File*, int, vlong);
 void	splitfs(File*, char);
 void	regfs(Filefmt*);
 
+int	importodgilayout(char*);
 int	importlayout(char*);
 int	exportlayout(char*);
 int	exportsvg(char*);

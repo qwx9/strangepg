@@ -219,6 +219,7 @@ readcmd(char *s, int err)
 		case 'N':
 		case 'f':
 		case 'i':
+		case 'j':
 		case 'o':
 		case 't':
 			break;
@@ -254,6 +255,14 @@ readcmd(char *s, int err)
 				goto invalid;
 			if(importlayout(fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
+			if(graph.flags & GFarmed)
+				r = 1;
+			break;
+		case 'j':
+			if(m != 1)
+				goto invalid;
+			if(importodgilayout(fld[0]) < 0)
+				warn("readcmd: importodgilayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
 				r = 1;
 			break;

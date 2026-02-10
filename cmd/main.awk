@@ -251,7 +251,7 @@ function cmd(code, _i, __i){
 		if(length(layout) > 0){
 			flags |= Fflayout
 			for(_i=1; _i<=length(layout); _i++)
-				print "i\t" layout[_i] "\n"
+				print layout[_i]
 			delete layout
 		}
 		flags |= Fcrm114
@@ -265,7 +265,15 @@ function importlayout(f){
 	if(flags & Fcrm114)
 		print "i", f
 	else{
-		layout[length(layout)+1] = f
+		layout[length(layout)+1] = "i\t" f "\n"
+		flags |= Fflayout
+	}
+}
+function importodgilayout(f){
+	if(flags & Fcrm114)
+		print "j", f
+	else{
+		layout[length(layout)+1] = "j\t" f "\n"
 		flags |= Fflayout
 	}
 }

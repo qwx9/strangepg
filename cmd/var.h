@@ -29,7 +29,6 @@ void	setnodefixedz(size_t, Value);
 void	setnodefixedy(size_t, Value);
 void	setnodefixedx(size_t, Value);
 void	updatenodelength(ioff, uint);
-uint	getnodelength(voff);
 void	setnodelength(size_t, Value);
 void	setnodecolor(size_t, Value);
 void	deselectnode(Cell*);
