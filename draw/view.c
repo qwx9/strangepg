@@ -13,7 +13,7 @@ updateview(void)
 	view.Δeye = HMM_SubV3(view.eye, view.center);
 	view.zoom = HMM_Len(view.Δeye);
 	view.ar = (float)view.w / view.h;
-	proj = HMM_Perspective_RH_NO(view.fov, view.ar, 0.01f, 20000.0f);
+	proj = HMM_Perspective_RH_NO(view.fov, view.ar, Near, Far);
 	vw = HMM_LookAt_RH(view.eye, view.center, view.up);
 	view.mvp = HMM_MulM4(proj, vw);
 	drawstate |= DSstalepick | DSmoving;

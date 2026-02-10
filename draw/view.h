@@ -17,6 +17,9 @@ struct View{
 };
 extern View view;
 
+#define	Near	0.01f
+#define	Far		50000.0f
+
 #define	ZV	HMM_V3(0.0f, 0.0f, 0.0f)
 
 void	zoomdraw(float, float, float);
