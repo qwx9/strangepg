@@ -893,6 +893,7 @@ initcoarse(void)
 		werrstr("coarsening already initialized");
 		return -1;
 	}
+	initqlock(&tablock);
 	cnodes = emalloc(nnodes * sizeof *cnodes);
 	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
 		U->idx = i;
