@@ -95,7 +95,10 @@ awk(void *)
 	compileawk(nelem(args), args);
 	initvars();
 	runawk();
-	quit();
+	/* FIXME: control flow problem: don't call quit() from
+	 * here or we may double-free from exit handlers; we
+	 * should have a quit message passed to one recv point
+	 * instead */
 }
 
 /* use [1] on our side, [0] on awk side */

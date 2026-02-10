@@ -192,6 +192,8 @@ readcmd(char *s, int err)
 		switch(*s){
 		case 0:
 			return;
+		case 'Q':
+			quit();
 		case 'D':
 			r = 1;
 			continue;

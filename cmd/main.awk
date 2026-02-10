@@ -481,6 +481,7 @@ function groupby(tag, incl, cm,	acc){
 	delete acc
 }
 function quit(){
+	print "Q"
 	exit
 }
 function longform(){
