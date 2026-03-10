@@ -36,13 +36,12 @@ loadct(void *arg)
 		return;
 	}
 	if(initcoarse() < 0){
-		logerr(va("loadctab %s: %s\n", error()));
+		logerr(va("loadctab %s: %s\n", path, error()));
 		return;
 	}
 	DPRINT(Debugfs, "loadctab %s", path);
 	if((f = openfs(path, OREAD)) == nil){
 		logerr(va("loadctab %s: %s\n", path, error()));
-		free(path);	/* FIXME: are we forgetting to free this in other impls? */
 		return;
 	}
 	for(r=0, U=cnodes, UE=U+nnodes;; U++){
@@ -86,7 +85,6 @@ loadct(void *arg)
 		logerr(va("loadctab %s: %s, line %d\n", path, error(), f->nr));
 	else
 		logmsg("loadctab: done\n");
-	free(path);
 	freefs(f);
 }
 

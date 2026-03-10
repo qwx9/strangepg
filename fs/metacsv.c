@@ -100,7 +100,6 @@ loadcsv(void *arg)
 	DPRINT(Debugfs, "loadcsv %s", path);
 	if((f = openfs(path, OREAD)) == nil){
 		logerr(va("loadcsv %s: %s\n", path, error()));
-		free(path);
 		return;
 	}
 	r = -1;
@@ -149,9 +148,7 @@ end:
 	for(nf=0; nf<dylen(tags); nf++)
 		free(tags[nf]);
 	dyfree(tags);
-	USED(tags);
 	freefs(f);
-	free(path);
 }
 
 static Filefmt ff = {

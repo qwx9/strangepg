@@ -381,7 +381,6 @@ opengfa(Aux *a, char *path)
 	if((f = openfs(path, OREAD)) == nil)
 		return nil;
 	logmsg(va("loadgfa: processing file: %s...\n", path));
-	free(path);
 	if((a->edges = edges_init()) == nil)
 		sysfatal("opengfa: %s", error());
 	return f;

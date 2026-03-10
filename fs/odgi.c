@@ -16,7 +16,7 @@ readhdr(File *f)
 {
 	int n;
 
-	if(readline(f) < 0)
+	if(readline(f) == nil)
 		return -1;
 	n = 0;
 	while(nextfield(f) != nil)
@@ -143,7 +143,7 @@ importodgilayout(char *path)
 			ctop = *cp;
 		nc++;
 	}
-	DPRINT(Debugfs, "importodgilayout: imported %d/%d positions", nc, nr/2);
+	DPRINT(Debugfs, "importodgilayout: imported %d/%lld positions", nc, nr/2);
 	/* have to scale everything by constant factor,
 	 * won't work otherwise since we don't move adjacent nodes */
 	rf = MAX(ctop.x.max - ctop.x.min, ctop.y.max - ctop.y.min);

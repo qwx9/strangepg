@@ -5,6 +5,12 @@
 
 static Filefmt *fftab[FFnil];
 
+static void
+cleanup(void *path)
+{
+	free(path);
+}
+
 int
 loadfs(char *path, int type, int direct)
 {
@@ -25,7 +31,7 @@ loadfs(char *path, int type, int direct)
 	if(direct)
 		ff->load(path);
 	else
-		newthread(ff->load, nil, path, nil, ff->name, mainstacksize);
+		newthread(ff->load, cleanup, path, path, ff->name, mainstacksize);
 	return 0;
 }
 

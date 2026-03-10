@@ -10,7 +10,7 @@ int
 exportsvg(char *path)
 {
 	char buf[1024], tail[256], *p;
-	float c, s, l, w, θ, dim[4] = {9999.0f, 9999.0f, 0.0f, 0.0f};
+	float c, s, w, θ, dim[4] = {9999.0f, 9999.0f, 0.0f, 0.0f};
 	u32int col;
 	RNode *r, *re;
 	REdge *e, *ee;
