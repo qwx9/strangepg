@@ -22,6 +22,10 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include <stdio.h>
 #include <string.h>
 #ifndef _PLAN9_SOURCE
@@ -34,10 +38,6 @@ THIS SOFTWARE.
 #include <limits.h>
 #include <math.h>
 #include <setjmp.h>
-#ifdef VERSION
-#include "strpg.h"
-#include "threads.h"
-#endif
 #include "awk.h"
 
 extern int u8_nextlen(const char *s);

@@ -22,6 +22,10 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -37,10 +41,6 @@ THIS SOFTWARE.
 #include <time.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#ifdef VERSION
-#include "strpg.h"
-#include "threads.h"
-#endif
 #include "awk.h"
 #include AWKTAB
 

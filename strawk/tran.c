@@ -22,16 +22,16 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include <stdio.h>
 #include <math.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 #include <locale.h>
-#ifdef VERSION
-#include "strpg.h"
-#include "threads.h"
-#endif
 #include "awk.h"
 #include AWKTAB
 

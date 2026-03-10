@@ -24,15 +24,15 @@ THIS SOFTWARE.
 
 /* lasciate ogne speranza, voi ch'intrate. */
 
+#ifdef VERSION
+#include "strpg.h"
+#include "threads.h"
+#endif
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#ifdef VERSION
-#include "strpg.h"
-#include "threads.h"
-#endif
 #include "awk.h"
 #include "ctypefn.h"
 #include AWKTAB
@@ -84,7 +84,7 @@ fa	*fatab[NFA];
 int	nfatab	= 0;	/* entries in fatab */
 
 extern int u8_nextlen(const char *s);
-extern	TNode	*alt(TNode *);
+extern	TNode	*altnode(TNode *);
 
 /* utf-8 mechanism:
 
@@ -962,7 +962,7 @@ TNode *reparse(const char *p)	/* parses regular expression pointed to by p */
 
 TNode *regexp(void)	/* top-level parse of reg expr */
 {
-	return (alt(concat(primary())));
+	return (altnode(concat(primary())));
 }
 
 TNode *primary(void)
@@ -1037,11 +1037,11 @@ TNode *concat(TNode *np)
 	return (np);
 }
 
-TNode *alt(TNode *np)
+TNode *altnode(TNode *np)
 {
 	if (rtok == OR) {
 		rtok = relex();
-		return (alt(op2(OR, np, concat(primary()))));
+		return (altnode(op2(OR, np, concat(primary()))));
 	}
 	return (np);
 }

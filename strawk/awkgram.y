@@ -23,13 +23,13 @@ THIS SOFTWARE.
 ****************************************************************/
 
 %{
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #ifdef VERSION
 #include "strpg.h"
 #include "threads.h"
 #endif
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "awk.h"
 
 void checkdup(TNode *list, Cell *item);
