@@ -173,6 +173,24 @@ dragselect(int x, int y)
 	return 0;
 }
 
+/* FIXME: use this */
+static inline HMM_Vec3
+s2w(HMM_Vec2 s)
+{
+	float d;
+	HMM_Vec3 v;
+
+	d = HMM_LenV3(view.Δeye);
+	s.X = (2.0f * s.X - view.w) / view.w;
+	s.Y = (2.0f * s.Y - view.h) / view.h;
+	s.X *= d * view.ar * view.tfov;
+	s.Y *= d * view.tfov;
+	v = HMM_V3(s.X, -s.Y, 0.0f);
+	v = HMM_RotateV3Q(v, view.rot);
+	v = HMM_AddV3(v, view.center);
+	return v;
+}
+
 static void
 drag2d(ioff idx, float Δx, float Δy)
 {
@@ -343,6 +361,7 @@ int
 mouseevent(float x, float y, float Δx, float Δy)
 {
 	int m;
+	HMM_Vec3 p;
 	static int omod = 0xcafebabe, inwin;
 
 	if(omod == 0xcafebabe){	/* first event */
@@ -350,6 +369,10 @@ mouseevent(float x, float y, float Δx, float Δy)
 		return 0;
 	}
 	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
+	if(debug & Debugdraw){
+		p = s2w(HMM_V2(x, y));
+		DPRINT(Debugdraw, "m %.2f,%.2f,%.2f\n", p.X, p.Y, p.Z);
+	}
 	m = mod & Mmask;
 	/* FIXME: clean up */
 	if(x >= promptbox.x1 && x < promptbox.x2
