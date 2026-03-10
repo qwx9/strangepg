@@ -31,16 +31,16 @@ initstatic(void)
 	RLine *r, a = {.pos1 = {0.0f, 0.0f, 0.0f, 1.0f}};
 
 	r = raxes;
-	a.pos2[0] = 200.0f * view.up.X;
-	a.pos2[1] = 200.0f * view.up.Y;
-	a.pos2[2] = 200.0f * view.up.Z;
+	a.pos2[0] = 200.0f * view.right.X;
+	a.pos2[1] = 200.0f * view.right.Y;
+	a.pos2[2] = 200.0f * view.right.Z;
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Cxaxis]);
 	setcolor(a.col2, theme[Cxaxis]);
 	*r++ = a;
-	a.pos2[0] = 200.0f * view.right.X;
-	a.pos2[1] = 200.0f * view.right.Y;
-	a.pos2[2] = 200.0f * view.right.Z;
+	a.pos2[0] = 200.0f * view.up.X;
+	a.pos2[1] = 200.0f * view.up.Y;
+	a.pos2[2] = 200.0f * view.up.Z;
 	a.pos2[3] = 1.0f;
 	setcolor(a.col1, theme[Cyaxis]);
 	setcolor(a.col2, theme[Cyaxis]);
@@ -63,6 +63,8 @@ initstatic(void)
 	setcolor(r->col1, theme[Czaxis]);
 	setcolor(r->col2, theme[Czaxis]);
 	r->pos1[3] = r->pos2[3] = 1.0f;
+	r++;
+	assert(r == raxes + nelem(raxes));
 	for(r=rselbox; r<rselbox+nelem(rselbox); r++){
 		r->pos1[2] = r->pos2[2] = view.center.Z;
 		r->pos1[3] = r->pos2[3] = 1.0f;
@@ -132,13 +134,13 @@ drawaxes(int n)
 	o[2] = view.center.Z;
 	o[3] = 1.0f;
 	memcpy(r->pos1, o, sizeof o);
-	v = HMM_AddV3(view.center, HMM_MulV3F(view.up, 20.0f));
+	v = HMM_AddV3(view.center, HMM_MulV3F(view.right, 20.0f));
 	r->pos2[0] = v.X;
 	r->pos2[1] = v.Y;
 	r->pos2[2] = v.Z;
 	r++;
 	memcpy(r->pos1, o, sizeof o);
-	v = HMM_AddV3(view.center, HMM_MulV3F(view.right, 20.0f));
+	v = HMM_AddV3(view.center, HMM_MulV3F(view.up, 20.0f));
 	r->pos2[0] = v.X;
 	r->pos2[1] = v.Y;
 	r->pos2[2] = v.Z;
@@ -482,6 +484,7 @@ static int
 drawworld(int go)
 {
 	int r;
+	vlong t;
 
 	if(graph.layout == nil)
 		return 0;
@@ -489,8 +492,11 @@ drawworld(int go)
 		ndnodes = dylen(rnodes);
 		ndedges = dylen(redges);
 	}else{
+		t = μsec();
 		ndnodes = drawnodes();
+		TIME("redraw", "drawnodes", t);
 		ndedges = drawedges();
+		TIME("redraw", "drawedges", t);
 		drawing.frames++;	/* FIXME: remove */
 	}
 	DPRINT(Debugdraw, "drawworld %zd nodes %zd edges", ndnodes, ndedges);

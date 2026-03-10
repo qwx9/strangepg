@@ -17,6 +17,9 @@ struct View{
 };
 extern View view;
 
+/* FIXME: typical values are from 0.1 to 100; must keep them as
+ * close together as possible to avoid imprecision, frustrum is
+ * mapped into a clipping volume 2 units deep */
 #define	Near	0.01f
 #define	Far		50000.0f
 

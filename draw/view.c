@@ -17,7 +17,7 @@ updateview(void)
 	vw = HMM_LookAt_RH(view.eye, view.center, view.up);
 	view.mvp = HMM_MulM4(proj, vw);
 	drawstate |= DSstalepick | DSmoving;
-	reqdraw(Reqrefresh);
+	reqdraw(Reqrefresh);	/* FIXME: not refresh, resetview or sth? */
 }
 
 void
@@ -154,5 +154,6 @@ initview(void)
 		return;
 	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);
+	view.ar = NAN;
 	resetview();
 }
