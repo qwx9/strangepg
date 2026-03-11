@@ -54,7 +54,7 @@ getnodeidx(ioff id)
 	}
 	idx = cnodes[id].idx;
 	if(idx >= dylen(nodes))
-		die("out of bounds node idx: %d > %d", idx, dylen(nodes)-1);
+		die("out of bounds node idx: %d > %zd", idx, dylen(nodes)-1);
 	qunlock(&tablock);
 	return idx;
 }
@@ -115,7 +115,7 @@ checkbranch(CNode *U)
 	for(j=U->sibling; j!=-1; j=V->sibling){
 		V = cnodes + j;
 		if(V->parent != U->parent)
-			die("check: broken parent link of %d to %d not %zd",
+			die("check: broken parent link of %d to %d not %d",
 				j, V->parent, U->parent);
 		checkcnode(V);
 		if((j = V->child) != -1)
@@ -137,13 +137,13 @@ checkctree(void)
 	}
 	for(i=0, U=cnodes; U<UE; U++, i++){
 		if((U->flags & FCNvisited) == 0)
-			die("check: unvisited cnode %zd %d %d %d idx=%d",
+			die("check: unvisited cnode %d %d %d %d idx=%d",
 				i, U->parent, U->child, U->sibling, U->idx);
 		U->flags &= ~FCNvisited;
 		if(U->parent != -1){
 			V = cnodes + U->parent;
 			if(V->child == -1)
-				die("check: broken parent %zd of %zd, no children",
+				die("check: broken parent %d of %d, no children",
 					U->parent, i);
 			V = cnodes + V->child;
 			while(V != U){
@@ -157,7 +157,7 @@ checkctree(void)
 		}
 		if(U->idx != -1){
 			if(U->idx < 0 || U->idx >= dylen(nodes))
-				die("check: %d node index %d out of range (0-%d)",
+				die("check: %d node index %d out of range (0-%zd)",
 					i, U->idx, dylen(nodes));
 			u = nodes + U->idx;
 			if(u->id != i)
@@ -178,7 +178,7 @@ checktree(void)
 	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
 		U = cnodes + u->id;
 		if(u - nodes != U->idx)
-			die("check: [0] node %zd ≠ idx %d of cnode %d",
+			die("check: [0] node %zd ≠ idx %d of cnode %zd",
 				u-nodes, U->idx, U-cnodes);
 	}
 	checkctree();
@@ -261,16 +261,16 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 		x = uv & 0xffffffff;
 		u = nodes + (uv >> 32 & 0x7fffffff);
 		v = nodes + (uint)(uv >> 2 & 0x3fffffff);
-		DPRINT(Debugcoarse, "> edge[%d/%d]: %d%c,%d%c → %zd,%zd [%#08x]", n, m, u->id, x&1?'-':'+', v->id, x&2?'-':'+', u-nodes, v-nodes, uv);
+		DPRINT(Debugcoarse, "> edge[%d/%d]: %d%c,%d%c → %zd,%zd [%#08llx]", n, m, u->id, x&1?'-':'+', v->id, x&2?'-':'+', u-nodes, v-nodes, uv);
 		if(u < nodes || u >= nodes+dylen(nodes))
-			die("oob: u %#p %d/%d id %llx", u, u-nodes, dylen(nodes), uv);
+			die("oob: u %p %zd/%zd id %llx", u, u-nodes, dylen(nodes), uv);
 		assert((u->flags & FNalias) == 0);
 		edges[u->eoff+u->nedges++] = x;
 		if(u == v)	/* the mirror is what we just added */
 			continue;
 		n++;
 		if(v < nodes || v >= nodes+dylen(nodes))
-			die("oob: v %#p %d/%d id %llx", v, v-nodes, dylen(nodes), uv);
+			die("oob: v %p %zd/%zd id %llx", v, v-nodes, dylen(nodes), uv);
 		assert((v->flags & FNalias) == 0);
 		x = uv >> 30 & 0xfffffffcULL | (uv >> 1 & 1 | uv << 1 & 2) ^ 3;
 		edges[v->eoff+v->nedges++] = x;
@@ -335,7 +335,7 @@ uncoarsen(void)
 	}
 	DPRINT(Debugcoarse, "uncoarsen: freezing draw and render...");
 	freezeworld();	/* FIXME: maybe just check for flag in draw/w/e loops */
-	DPRINT(Debugcoarse, "current graph: %d (%d) nodes, %d (%d) edges",
+	DPRINT(Debugcoarse, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
 	t = μsec();
 	nnew = dylen(expnodes);
@@ -402,7 +402,7 @@ uncoarsen(void)
 	es_destroy(eset);
 	TIME("uncoarsen", "regenerating edges", t);
 	thawworld();
-	logmsg(va("graph after expansion: %d (%d) nodes, %d (%d) edges\n",
+	logmsg(va("graph after expansion: %zd (%zd) nodes, %zd (%zd) edges\n",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
 	printgraph();
 	checktree();
@@ -515,7 +515,7 @@ coarsen(void)
 	if(dylen(nodes) == nnodes && dylen(edges) == nedges){
 		DPRINT(Debugcoarse, "current graph: %d nodes, %d edges", nnodes, nedges);
 	}else{
-		DPRINT(Debugcoarse, "current graph: %d/%d (%d) nodes, %d (%d/%d) edges",
+		DPRINT(Debugcoarse, "current graph: %zd/%d (%zd) nodes, %zd (%zd/%d) edges",
 			dylen(rnodes), nnodes, dylen(nodes), dylen(redges), dylen(edges), nedges);
 	}
 	t = μsec();
@@ -550,17 +550,17 @@ coarsen(void)
 			v = nodes + j;
 			V = cnodes + v->id;
 			if(U == V && (v->flags | u->flags) & FNalias){
-				DPRINT(Debugcoarse, "> prune internal edge %d%c,%d%c →%d,%d",
+				DPRINT(Debugcoarse, "> prune internal edge %zd%c,%d%c →%d,%d",
 					u-nodes, x&1?'-':'+', j, x&2?'-':'+', u->id, v->id);
 				continue;
 			}
 			if(V->idx == -1){
 				V = activetop(V);
 				if(V != U && V->idx == -1)
-					die("edge %d%c,%d%c (%zd,%zd): V %d %d/%d/%d can't be inactive and an orphan",
+					die("edge %zd%c,%d%c (%zd,%zd): V %d %d/%d/%d can't be inactive and an orphan",
 						u-nodes, x&1?'-':'+', j, x&2?'-':'+',
 						U-cnodes, V-cnodes, V->idx, V->parent, V->child, V->sibling);
-				DPRINT(Debugcoarse, "> external edge to collapsed node %d%c,%d%c (%zd,%zd)",
+				DPRINT(Debugcoarse, "> external edge to collapsed node %zd%c,%d%c (%d,%d)",
 					u-nodes, x&1?'-':'+', j, x&2?'-':'+', u->id, v->id);
 			}
 			if(newedge(U->idx, V->idx, x, eset)){
@@ -575,11 +575,11 @@ coarsen(void)
 				}
 				ne++;
 			}else
-				DPRINT(Debugcoarse, "> discard redundant edge %d%c,%d%c (%zd,%zd)",
+				DPRINT(Debugcoarse, "> discard redundant edge %zd%c,%d%c (%d,%d)",
 					u-nodes, x&1?'-':'+', j, x&2?'-':'+', u->id, v->id);
 		}
 	}
-	DPRINT(Debugcoarse, "kept %d/%d unique edges, /%d adj", ne, dylen(edges), ne2);
+	DPRINT(Debugcoarse, "kept %d/%zd unique edges, /%d adj", ne, dylen(edges), ne2);
 	TIME("coarsen", "save unique edges", t);
 	DPRINT(Debugcoarse, "new nodes[]:");
 	qlock(&tablock);	/* FIXME: hacks */
@@ -615,7 +615,7 @@ coarsen(void)
 	TIME("coarsen", "restore edges", t);
 	thawworld();
 	es_destroy(eset);
-	logmsg(va("graph after coarsening: %d (%d) nodes, %d (%d) edges\n",
+	logmsg(va("graph after coarsening: %zd (%zd) nodes, %zd (%zd) edges\n",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
 	ncoarsed = 0;
 	printgraph();
@@ -626,7 +626,7 @@ coarsen(void)
 
 /* FIXME: logmsg or just print? */
 int
-commit(int quiet)
+commit(int silent)
 {
 	int r;
 	double t;
@@ -641,7 +641,7 @@ commit(int quiet)
 		fn = uncoarsen;
 		name = "expand";
 	}else{
-		if(!quiet)
+		if(!silent)
 			logmsg("collapse/expand: no effect.\n");
 		else
 			DPRINT(Debugcoarse, "collapse/expand: no effect");
@@ -729,21 +729,21 @@ collapsedown(ioff *ids)
 	 * threshold like 10% or sth, in which case we have to use a different
 	 * function that starts from the leaves and goes up */
 	m = dylen(ids);
-	DPRINT(Debugcoarse, "collapse: %d/%d nodes", m, dylen(nodes));
+	DPRINT(Debugcoarse, "collapse: %d/%zd nodes", m, dylen(nodes));
 	for(p=ids, pe=p+m; p<pe; p++){
 		i = *p;
 		U = cnodes + i;
 		if((U->flags & FCNvisited) == 0){
-			DPRINT(Debugcoarse, "collapsedown %zd idx=%d: already collapsed", i, U->idx);
+			DPRINT(Debugcoarse, "collapsedown %d idx=%d: already collapsed", i, U->idx);
 			continue;
 		}
 		U->flags &= ~FCNvisited;
 		if(U->idx == -1){
-			DPRINT(Debugcoarse, "collapsedown %zd: already hidden", i);
+			DPRINT(Debugcoarse, "collapsedown %d: already hidden", i);
 			continue;
 		}
 		if(U->parent == -1 && U->child == -1 && U->nedges != 0){
-			warn("FIXME collapsedown: %zd idx=%d not part of coarsening tree\n", i, U->idx);
+			warn("FIXME collapsedown: %d idx=%d not part of coarsening tree\n", i, U->idx);
 			continue;
 		}
 		hidedescendants(U, -1);
@@ -764,7 +764,7 @@ collapseup(ioff *ids, ssize max)
 	if(max <= 0)
 		max = 0.5 * n;
 	m = dylen(ids);
-	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %d nodes", m, n, max);
+	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %zd nodes", m, n, max);
 	r = 1;
 	while(n > max && m > 0){	/* seems ok to only check once per round */
 		for(p=pp=ids, pe=ids+m; p<pe; p++){
@@ -791,7 +791,7 @@ collapseup(ioff *ids, ssize max)
 			}else
 				*pp++ = i;	/* try again on next round */
 		}
-		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%d ratio %.2f thresh %d queued %zd",
+		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%zd ratio %.2f thresh %zd queued %zd",
 			r, n, dylen(nodes), (double)n/(pe-ids), max, pp - ids);
 		if(m == pp - ids)
 			break;
@@ -814,7 +814,7 @@ collapseall(void)
 		if((u->flags & FNfixed) == 0)
 			dypush(ids, u->id);
 	}
-	DPRINT(Debugcoarse, "collapseall: pulled %d leaves out of %d nodes", dylen(ids), dylen(nodes));
+	DPRINT(Debugcoarse, "collapseall: pulled %zd leaves out of %zd nodes", dylen(ids), dylen(nodes));
 	return ids;
 }
 
@@ -1121,7 +1121,7 @@ buildct(void *)
 				i, a->deg, U->parent, U->child, U->sibling);
 			U = top(U);
 			i = U - cnodes;
-			DPRINTN(Debugcoarse, "⇒ [%zd] %d %d %d\n",
+			DPRINTN(Debugcoarse, "⇒ [%d] %d %d %d\n",
 				i, U->parent, U->child, U->sibling);
 			C = nil;
 			for(e=a->adj, ee=e+a->deg; e<ee; e++){

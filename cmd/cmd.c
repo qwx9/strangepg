@@ -56,7 +56,7 @@ pushcmd(char *fmt, ...)
 {
 	ioff ai;
 	double af;
-	s64int av;
+	u64int av;
 	char c, *f, sb[1024], *sp, *as;
 	va_list arg;
 
@@ -306,7 +306,7 @@ readcproc(void *arg)
 			continue;
 		}
 		*e = 0;
-		DPRINT(Debugcmd, "<%d [%d][%s]",
+		DPRINT(Debugcmd, "<%d [%lld][%s]",
 			fd == outfd[0] ? 1 : 2, f->toksz, s);
 		readcmd(s, fd == eoutfd[0]);
 	}

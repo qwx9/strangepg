@@ -54,7 +54,6 @@ load(Input *files)
 	}
 	flushcmd();
 	dyfree(files);
-	USED(files);
 }
 
 static void

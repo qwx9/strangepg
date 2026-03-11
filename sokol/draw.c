@@ -110,7 +110,7 @@ updatebuffers(int reqs)
 {
 	int n;
 
-	DPRINT(Debugrender, "updatebuffers l=%d e=%d n=%d", ndlines, ndedges, ndnodes);
+	DPRINT(Debugrender, "updatebuffers l=%zd e=%zd n=%zd", ndlines, ndedges, ndnodes);
 	if(dylen(rnodes) <= 0)
 		return;
 	if((n = ndlines) >= 1){
@@ -135,6 +135,7 @@ updatebuffers(int reqs)
 	}
 }
 
+/* FIXME: sg_make_buffer return value not checked, see lib/sokol_gfx.h */
 static void
 resizebuf(void)
 {
@@ -144,7 +145,7 @@ resizebuf(void)
 	n = MAX(1, dylen(redges));
 	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
 	if(d.size / sizeof *redges != n){
-		DPRINT(Debugrender, "redge bindings: resize %d → %zd", d.size/sizeof *redges, n);
+		DPRINT(Debugrender, "redge bindings: resize %zd → %zd", d.size/sizeof *redges, n);
 		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
 		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 			.size = dylen(redges) * sizeof *redges,
@@ -157,7 +158,7 @@ resizebuf(void)
 	n = MAX(1, dylen(rnodes));
 	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
 	if(d.size / sizeof *rnodes != n){
-		DPRINT(Debugrender, "rnode bindings: resize %d → %zd", d.size/sizeof *rnodes, n);
+		DPRINT(Debugrender, "rnode bindings: resize %zd → %zd", d.size/sizeof *rnodes, n);
 		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
 		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
 			.size = n * sizeof *rnodes,

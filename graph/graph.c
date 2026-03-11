@@ -24,7 +24,7 @@ printgraph(void)
 	DPRINT(Debuggraph, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
 		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
 	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
-		DPRINT(Debuggraph, "[%d] id=%d eoff=%d ne=%d ln=%d",
+		DPRINT(Debuggraph, "[%d] id=%d eoff=%d ne=%d ln=%lld",
 			i, u->id, u->eoff, u->nedges, u->length);
 		for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
 			x = *e;
@@ -190,7 +190,7 @@ setnodelength(size_t id, Value v)
 	ioff idx;
 	Node *u;
 
-	DPRINT(Debugawk, "set LN[%s] ← %08zx", getname(id), v.u);
+	DPRINT(Debugawk, "set LN[%s] ← %08llx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
 		return;
 	u = nodes + idx;
@@ -200,7 +200,7 @@ setnodelength(size_t id, Value v)
 		if(u->length == v.u)
 			return;
 		else	/* FIXME: will be handled by ro values */
-			DPRINT(Debuginfo, "LN[%s]: conflicting value %llu not %lld",
+			DPRINT(Debuginfo, "LN[%s]: conflicting value %lld not %lld",
 				getname(id), v.u, u->length);
 	}
 	updatenodelength(idx, v.u);
@@ -212,7 +212,7 @@ setnodecolor(size_t id, Value v)
 	ioff idx;
 	RNode *r;
 
-	DPRINT(Debugawk, "set CL[%s] ← %08zx", getname(id), v.u);
+	DPRINT(Debugawk, "set CL[%s] ← %08llx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
 		return;
 	if(rnodes == nil)	/* FIXME: come up with a better way */

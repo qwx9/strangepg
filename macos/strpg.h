@@ -19,12 +19,12 @@
 typedef	unsigned short	ushort;
 typedef	unsigned char	uchar;
 typedef unsigned int	uint;
-typedef unsigned long	ulong;
+typedef long unsigned int	ulong;
 typedef signed char	schar;
-typedef	long long	vlong;
-typedef	unsigned long long uvlong;
-typedef long long	intptr;
-typedef unsigned long long uintptr;
+typedef	long long int	vlong;
+typedef	long long unsigned int	uvlong;
+typedef intptr_t	intptr;
+typedef uintptr_t	uintptr;
 typedef	uint		Rune;
 
 typedef size_t usize;
@@ -71,8 +71,10 @@ extern char *argv0;
 
 #define	ARGC()		_argc
 
+#define VARGPOS(fp,ap)	__attribute__((__format__(__printf__,fp,ap)))
+
 int	getfields(char*, char**, int, int, char*);
-char*	seprint(char*, char*, char*, ...);
+char*	seprint(char*, char*, char*, ...)	VARGPOS(3, 4);
 char*	strecpy(char*, char*, const char*);
 
 //#define const
@@ -121,8 +123,8 @@ enum{
 #include "dynar.h"
 #include "lib/khashl.h"
 
-void	werrstr(char*, ...);
-noreturn void	sysfatal(char*, ...);
+void	werrstr(char*, ...)	VARGPOS(1, 2);
+noreturn void	sysfatal(char*, ...)	VARGPOS(1, 2);
 
 vlong	seek(int, vlong, int);
 int	create(char*, int, int);

@@ -223,8 +223,6 @@ fncollapse(Cell *x, TNode *nextarg)
 	/* strawk thread should not push commands -- but this should
 	 * be awk code anyway */
 	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
-	USED(ops);
-	USED(t);
 	return nil;
 }
 

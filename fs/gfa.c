@@ -447,7 +447,6 @@ loadgfa1(void *arg)
 	dyfree(a.edgeoff);
 	dyfree(a.ereclen);
 	freefs(f);
-	USED(t);
 }
 
 static Filefmt ff = {

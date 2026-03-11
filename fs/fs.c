@@ -53,7 +53,7 @@ readfs(File *f, void *buf, int n)
 
 	if(buf == nil){
 		if(n >= sizeof f->buf)
-			die("readfs: bug: buffer overflow %d > %d", n, sizeof f->buf);
+			die("readfs: bug: buffer overflow %d > %zd", n, sizeof f->buf);
 		if(f->cur + n >= sizeof f->buf)
 			f->cur = 0;
 		buf = f->buf + f->cur;
@@ -352,7 +352,7 @@ nextfield(File *f)
 	}
 	if(f->nf++ > 0)
 		skipfield(f);
-	DPRINTS(Debugfs, "%#p:%d,%d nextfield %d:%d:%d: ",
+	DPRINTS(Debugfs, "%p:%d,%d nextfield %d:%d:%d: ",
 		f, f->nr, f->nf, f->cur, f->next, f->end);
 	if(f->next != -1 && f->cur >= f->next){
 		DPRINTN(Debugfs, "eol\n");
@@ -418,7 +418,7 @@ skipline(File *f)
 	int n;
 	char *s;
 
-	DPRINTS(Debugfs, "%#p:%d skipline %d:%d:%d: ",
+	DPRINTS(Debugfs, "%p:%d skipline %d:%d:%d: ",
 		f, f->nr+1, f->cur, f->next, f->end);
 	while(f->next == -1){
 		if(f->end - f->cur > Readsz){
@@ -466,7 +466,7 @@ skiprest(File *f)
 char *
 readline(File *f)
 {
-	DPRINTS(Debugfs, "%#p:%d readline %d:%d:%d: ",
+	DPRINTS(Debugfs, "%p:%d readline %d:%d:%d: ",
 		f, f->nr+1, f->cur, f->next, f->end);
 	if(f->cur < f->end && skiprest(f) < 0)
 		return nil;
@@ -487,7 +487,7 @@ readlineat(File *f, int m, vlong off)
 	vlong o;
 
 	assert(m <= Readsz);
-	DPRINT(Debugfs, "%#p readlineat %d:%d:%d: %d bytes at %lld (Δ %lld)",
+	DPRINT(Debugfs, "%p readlineat %d:%d:%d: %d bytes at %lld (Δ %lld)",
 		f, f->cur, f->next, f->end, m, off, off - f->foff);
 	o = off - f->foff;
 	n = f->end - f->cur;
@@ -539,7 +539,7 @@ openfs(char *path, int mode)
 		free(f);
 		return nil;
 	}
-	DPRINT(Debugfs, "openfs %s: %#p", path, f);
+	DPRINT(Debugfs, "openfs %s: %p", path, f);
 	f->path = estrdup(path);
 	f->sep = '\t';
 	f->next = -1;
@@ -556,7 +556,7 @@ fdopenfs(int fd, int mode)
 		free(f);
 		return nil;
 	}
-	DPRINT(Debugfs, "fdopenfs %d: %#p", fd, f);
+	DPRINT(Debugfs, "fdopenfs %d: %p", fd, f);
 	f->sep = '\t';
 	f->next = -1;
 	return f;

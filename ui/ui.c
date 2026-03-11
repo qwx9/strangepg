@@ -258,9 +258,9 @@ hoveredge(ioff idx)
 	fake = nodes[i].id != i || nodes[j].id != j;
 	w = w & ~0xffffffffULL | x;
 	if(!fake)
-		pushcmd("edgeinfo(%D,%d)", w, eid);
+		pushcmd("edgeinfo(%D,%d)", (u64int)w, eid);
 	else
-		pushcmd("edgeinfo(%D)", w);
+		pushcmd("edgeinfo(%D)", (u64int)w);
 	return 0;
 }
 

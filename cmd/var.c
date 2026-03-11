@@ -281,7 +281,6 @@ loadbatch(void)
 	for(vp=vs, ve=vp+dylen(vp); vp<ve; vp++)
 		set(vp->cp, vp->id, vp->type, vp->v);
 	dyfree(vs);
-	USED(vs);
 }
 
 static inline void

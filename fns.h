@@ -1,19 +1,19 @@
-void	warn(char*, ...);
+void	warn(char*, ...)	VARGPOS(1, 2);
 void	logmsg(char*);
 void	logerr(char*);
-char*	va(char*, ...);
-void	dprintnl(int, char*, ...);
-void	dprint(int, char*, ...);
+char*	va(char*, ...)	VARGPOS(1, 2);
+void	dprintnl(int, char*, ...)	VARGPOS(2, 3);
+void	dprint(int, char*, ...)	VARGPOS(2, 3);
 void	vawarn(char*, va_list);
 void	vadebug(char*, char*, va_list);
 void	initlog(void);
 char*	error(void);
-char*	smprint(char*, ...);
+char*	smprint(char*, ...)	VARGPOS(1, 2);
 char*	estrdup(char*);
 void*	erealloc(void*, usize, usize);
 void*	emalloc(usize);
-void	die(char*, ...);
-void	errmsg(char*, ...);
+void	die(char*, ...)	VARGPOS(1, 2);
+void	errmsg(char*, ...)	VARGPOS(1, 2);
 int	errstr(char*, uint);
 vlong	μsec(void);
 void	lsleep(vlong);
@@ -73,4 +73,5 @@ void*	threadstore(void*);
 	__t = μsec(); \
 	warn("[perf] " fn ": " lab ": %.2f ms\n", (__t - (t)) / 1000.0); \
 	(t) = __t; \
+	USED(t); \
 }
