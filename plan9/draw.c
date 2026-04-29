@@ -5,6 +5,9 @@
 #include "ui.h"
 #include "threads.h"
 #include <draw.h>
+#include "lib/khashl.h"
+
+extern Channel *rendc;
 
 typedef struct FVertex FVertex;	/* FIXME: temp, interop with hmm */
 struct FVertex{
@@ -20,22 +23,33 @@ struct FVertex{
 #define zrotv(v,cosθ,sinθ)	V((v).X * (cosθ) - (v).Y * (sinθ), (v).X * (sinθ) + (v).Y * (cosθ), 0.0f)
 #define centerscalev(v)	addv(subv(mulv((v), view.zoom), view.Δeye), view.center)
 
-extern Channel *rendc;
+typedef struct Color Color;
+
+KHASHL_MAP_INIT(KH_LOCAL, Cmap, cm, u32int, Color*, kh_hash_uint32, kh_eq_generic)
 
 struct Color{
 	u32int col;
 	Image *i;
 	Image *shad;
 };
+Cmap *cmap;
 
 static Point panmax, ΔZP;
 static Rectangle viewr, statr;
 static Image *viewfb, *selfb;
-static Channel *ticc, *framec;
+static Channel *ticc;
 static QLock ticker;
 static ioff selected;	/* FIXME */
 
+static float *nodev;
+static int nnodev;
+
 #define v2p(v)	Pt((v).X, (v).Y)
+
+#define FCOL(x) ((u8int)((x)[0] * 255.0) << 24 |\
+	(u8int)((x)[1] * 255.0) << 16 |\
+	(u8int)((x)[2] * 255.0) << 8 |\
+	(u8int)((x)[3] * 255.0))
 
 static Image *
 eallocimage(Rectangle r, uint chan, int repl, uint col)
@@ -65,25 +79,21 @@ alloccolor(u32int col)
 	return c;
 }
 
-void
-setcolor(float *col, u32int v)
-{
-	col[0] = v >> 24 & 0xff;
-	col[1] = v >> 16 & 0xff;
-	col[2] = v >> 8 & 0xff;
-	col[3] = v & 0xff;
-}
-
 static Color *
-v2col(float *col)
+colorimage(u32int col)
 {
-	u32int u;
+	int abs;
+	khint_t k;
+	Color *c;
 
-	u = (int)col[0] << 24;
-	u |= (int)col[1] << 16;
-	u |= (int)col[2] << 8;
-	u |= (int)col[3];
-	return color(u);
+	k = cm_get(cmap, col);
+	if(k != kh_end(cmap))
+		return kh_val(cmap, k);
+	c = alloccolor(col);
+	k = cm_put(cmap, col, &abs);
+	assert(abs);
+	kh_val(cmap, k) = c;
+	return c;
 }
 
 Color *
@@ -95,6 +105,71 @@ newcolor(u32int v)
 void
 endmove(void)
 {
+}
+
+/* FIXME: generalize/portable code */
+void
+setnodeshape(int arrow)
+{
+	float quadv3d[] = {
+		-0.5f * drawing.nodesz,	+0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, +0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, +0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.5f * drawing.nodesz, +0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.5f * drawing.nodesz, -0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, -0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, -0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.5f * drawing.nodesz, -0.5f * drawing.fatness, +0.5f * drawing.fatness,
+	}, arrowv3d[] = {
+		-0.1f * drawing.nodesz, +0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, +0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, +0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.1f * drawing.nodesz, +0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.1f * drawing.nodesz, -0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, -0.5f * drawing.fatness, -0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz, -0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.1f * drawing.nodesz, -0.5f * drawing.fatness, +0.5f * drawing.fatness,
+		-0.5f * drawing.nodesz, -0.0f * drawing.fatness, +0.0f * drawing.fatness, /* tip */
+	}, quadv[] = {
+		-0.5f * drawing.nodesz,	-0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz,	-0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz,	+0.5f * drawing.fatness,
+		-0.5f * drawing.nodesz,	+0.5f * drawing.fatness,
+	}, arrowv[] = {
+		+0.5f * drawing.nodesz,	-0.5f * drawing.fatness,
+		-0.0f * drawing.nodesz,	-0.5f * drawing.fatness,
+		-0.0f * drawing.nodesz,	+0.5f * drawing.fatness,
+		+0.5f * drawing.nodesz,	+0.5f * drawing.fatness,
+		-0.0f * drawing.nodesz,	-1.5f * drawing.fatness,
+		-0.5f * drawing.nodesz,	-0.0f * drawing.fatness,
+		-0.0f * drawing.nodesz,	+1.5f * drawing.fatness,
+	};
+
+	if(drawing.flags & DF3d){
+		if(arrow){
+			nnodev = nelem(arrowv3d);
+			free(nodev);
+			nodev = emalloc(sizeof *arrowv3d);
+			memcpy(nodev, arrowv3d, sizeof *arrowv3d);
+		}else{
+			nnodev = nelem(quadv3d);
+			free(nodev);
+			nodev = emalloc(sizeof *quadv3d);
+			memcpy(nodev, quadv3d, sizeof *quadv3d);
+		}
+	}else{
+		if(arrow){
+			nnodev = nelem(arrowv);
+			free(nodev);
+			nodev = emalloc(sizeof *arrowv);
+			memcpy(nodev, arrowv, sizeof *arrowv);
+		}else{
+			nnodev = nelem(quadv);
+			free(nodev);
+			nodev = emalloc(sizeof *quadv);
+			memcpy(nodev, quadv, sizeof *quadv);
+		}
+	}
 }
 
 u32int
@@ -146,22 +221,7 @@ drawselected(void)
 		//e = edges + id;
 		//snprint(s, sizeof s, "E[%x] %x,%x", id, e->u, e->v);
 	}
-	string(screen, statr.min, color(theme[Ctext])->i, ZP, font, s);
-}
-
-void
-zoomdraw(float, float, float)
-{
-}
-
-void
-pandraw(float, float)
-{
-}
-
-void
-rotdraw(Vertex)
-{
+	string(screen, statr.min, colorimage(theme[Ctext])->i, ZP, font, s);
 }
 
 static void
@@ -173,7 +233,7 @@ drawlabels(void)
 	FVertex v;
 	RNode *r, *e;
 
-	c = color(theme[Ctext]);
+	c = colorimage(theme[Ctext]);
 	for(r=rnodes, e=r+dylen(r); r<e; r++){
 		v.X = r->pos[0];
 		v.Y = r->pos[1];
@@ -186,20 +246,45 @@ drawlabels(void)
 
 /* FIXME: no prior screen intersection test */
 int
-drawquad(ioff i)
+drawquad(RNode *v)
 {
-	float cθ, sθ;
-	Point p[5];
+	ioff i;
+	float *cp, *ce;
+	Point p[5];	/* FIXME: arrows */
 	Color *c;
-	FVertex pos, dir;
-	RNode *v;
+	HMM_Vec3 g, pos;
+	HMM_Vec4 m;
+	HMM_Quat q;
 
-	v = rnodes + i;
+	/* FIXME: 3d version */
+	if(drawing.flags & DF3d)
+		return -1;
+	q = HMM_Q(v->dir[0], v->dir[1], v->dir[2], v->dir[3]);
+	pos = HMM_V3(v->pos[0], v->pos[1], v->pos[2]);
+	for(i=0, cp=nodev, ce=cp+nnodev; cp<ce; cp+=2, i++){
+		g = HMM_V3(cp[0] * v->len, cp[1], 0.0f);
+		g = HMM_RotateV3Q(g, q);
+		g = HMM_AddV3(g, pos);
+		m = HMM_MulM4V4(view.mvp, HMM_V4(g.X, g.Y, g.Z, 1.0f));
+		/* FIXME: w2s, this doesn't work */
+		g = HMM_SubV3(m.XYZ, view.center);
+		g = HMM_RotateV3Q(g, HMM_InvQ(view.rot));
+		g.X /= view.zoom * view.ar * view.fov;
+		g.Y /= view.zoom * view.tfov;
+		g.X += 1.0f;
+		g.Y += 1.0f;
+		g.X /= 2.0f / view.w;
+		g.Y /= 2.0f / view.h;
+		p[i].x = g.X;
+		p[i].y = g.Y;
+	}
+	p[4] = p[0];
+	c = colorimage(FCOL(v->col));
+	/*
 	pos.X = v->pos[0];
 	pos.Y = v->pos[1];
 	dir.X = v->dir[0];
 	dir.Y = v->dir[1];
-	c = v2col(v->col);
 	cθ = dir.X;
 	sθ = dir.Y;
 	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, -drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
@@ -207,29 +292,27 @@ drawquad(ioff i)
 	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[3] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
 	p[4] = p[0];
+	*/
 	polyop(viewfb, p, nelem(p), 0, 0, 1, c->shad, ZP, SatopD);
 	fillpoly(viewfb, p, nelem(p), ~0, c->i, ZP);
-	// FIXME: ???
-	if(i >= 0){
-		poly(selfb, p, nelem(p), 0, 0, 1, i2c(i), ZP);
-		fillpoly(selfb, p, nelem(p), ~0, i2c(i), ZP);
-	}
+	i = v - rnodes;
+	poly(selfb, p, nelem(p), 0, 0, 1, i2c(i), ZP);
+	fillpoly(selfb, p, nelem(p), ~0, i2c(i), ZP);
 	return 0;
 }
 
 /* FIXME: angling */
 int
-drawbezier(ioff i)
+drawbezier(REdge *r)
 {
 	int w;
+	ioff i;
 	float Δx, Δy;
 	double θ;
 	Point p[4];
 	FVertex a, b;
 	Color *c;
-	REdge *r;
 
-	r = redges + i;
 	a.X = r->pos1[0];
 	a.Y = r->pos1[1];
 	b.X = r->pos2[0];
@@ -237,7 +320,7 @@ drawbezier(ioff i)
 	Δx = b.X - a.X;
 	Δy = b.Y - a.Y;
 	//θ = atan2(a.x - b.X, a.Y - b.Y);
-	c = color(theme[Cedge]);
+	c = colorimage(theme[Cedge]);
 	θ = atan2(Δy, Δx);
 	p[0] = v2p(centerscalev(a));
 	p[3] = v2p(centerscalev(b));
@@ -256,27 +339,35 @@ drawbezier(ioff i)
 		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
 		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, c->shad, ZP);
-	/* FIXME: ??? */
-	if(i >= 0)
-		bezier(selfb, p[0], p[1], p[2], p[3], Endsquare,
-			(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(i), ZP);
+	i = r - redges;
+	bezier(selfb, p[0], p[1], p[2], p[3], Endsquare,
+		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(i), ZP);
 	return 0;
 }
 
+/* FIXME: 3d */
 static void
-render(void)
+renderscene(void)
 {
-	ioff i;
 	Color *c;
 	RNode *r, *re;
 	REdge *e, *ee;
+	RLine *l, *le;
 
-	c = color(theme[Cbg]);
+	c = colorimage(theme[Cbg]);
 	draw(viewfb, viewfb->r, c->i, nil, ZP);
-	for(i=0,e=redges,ee=e+dylen(e); e<ee; e++, i++)
-		drawbezier(i);
-	for(i=0,r=rnodes,re=r+dylen(r); r<re; r++, i++)
-		drawquad(i);
+	/*
+	for(e=redges, ee=e+dylen(e); e<ee; e++)
+		drawbezier(e);
+	*/
+	for(r=rnodes, re=r+dylen(r); r<re; r++)
+		drawquad(r);
+	l = le = nil;
+	USED(l, le);
+	/* FIXME
+	for(l=rlines; nl>0; l++, nl--)
+		drawline(l);
+	*/
 }
 
 static void
@@ -295,12 +386,15 @@ flush(void)
 	flushimage(display, 1);
 }
 
-static void
-resetdraw(void)
+void
+resizedraw(void)
 {
-	view.w = Dx(screen->r);
-	view.h = Dy(screen->r);
-	ΔZP = Pt(-view.w/2, -view.h/2);
+	int w, h;
+
+	w = Dx(screen->r);
+	h = Dy(screen->r);
+	initscreen(w, h);
+	ΔZP = Pt(-w/2, -h/2);
 	viewr = rectaddpt(rectsubpt(screen->r, screen->r.min), ΔZP);
 	DPRINT(Debugdraw, "resetdraw %R", viewr);
 	freeimage(viewfb);
@@ -311,19 +405,47 @@ resetdraw(void)
 	statr.max = viewr.max;
 }
 
+void
+renderframe(ulong, int snooze)
+{
+	/*
+	if(redraw() >= 0)
+		renderscene();
+	else
+		warn("redraw: %s\n", error());
+	*/
+	renderscene();
+	if(graph.flags & GFdrawme)
+		reqdraw(Reqrefresh);
+	if(snooze){
+		//drawing.flags |= DFnorend;	/* for coarsening */
+		sendul(ticc, 1);
+	}
+	flush();
+}
+
+void
+wakedrawup(void)
+{
+	if(ticc == nil)
+		return;
+	nbsendul(ticc, 0);
+}
+
 static void
 rendproc(void *)
 {
+	ulong r;
+
 	for(;;){
-		if(recvul(framec) == 0)
-			break;
-		lockdisplay(display);
-		render();
-		flush();
-		unlockdisplay(display);
+		r = recvul(rendc);	/* FIXME */
+		reqdraw(r);
+		frame();
 	}
 }
 
+/* FIXME: only if shit is happening; see also: wakethefup,
+ * use lock or rendez instead of chanop */
 static void
 ticproc(void *)
 {
@@ -333,74 +455,35 @@ ticproc(void *)
 
 	t0 = μsec();
 	step = Nsec / 60.;
-	Alt a[] = {
-		{ticc, &stop, CHANRCV},
-		{nil, nil, CHANEND},
-	};
+	stop = 1;
 	for(;;){
-		switch(alt(a)){
-		case -1: return;
-		case 0:
-			if(stop){
-				a[1].op = CHANEND;
-				continue;
-			}
-			a[1].op = CHANNOBLK;
+		if(nbrecv(ticc, &stop) < 0)
 			break;
-		}
+		while(stop)
+			if(recv(ticc, &stop) < 0)
+				threadexits(nil);
 		t = μsec();
 		Δt = t - t0;
 		t0 += step * (1 + Δt / step);
 		if(Δt < step)
 			sleep((step - Δt) / Nmsec);
-		reqdraw(Reqrefresh);
-		nbsendul(framec, Reqrefresh);
-	}
-}
-
-/* FIXME */
-static void
-rendproc(void *)
-{
-	int req, stop;
-
-	/* FIXME */
-	while(recvul(rendc) != Reqredraw)
-		;
-	resetdraw();
-	newthread(rendproc, nil, nil, nil, "render", mainstacksize);
-	sendul(ticc, 0);
-	stop = 0;
-	for(;;){
-		if((req = recvul(rendc)) == 0)
-			break;
-		if((req & Reqredraw) != 0)
-			sendul(ticc, 0);
-		if((req & Reqresetdraw) != 0){
-			lockdisplay(display);
-			resetdraw();
-			unlockdisplay(display);
-		}
-		if((req & Reqresetview) != 0)
-			resetview();
-		if(req != Reqshallowdraw && (stop = !redraw(stop)))
-			sendul(ticc, 1);
-		nbsendul(framec, Reqrefresh);
+		reqdraw(Reqshallowdraw);
 	}
 }
 
 void
 initp9draw(void)
 {
+	cmap = cm_init();
+	if((ticc = chancreate(sizeof(ulong), 1)) == nil)
+		sysfatal("chancreate: %r");
 	if(initdraw(nil, nil, "strpg") < 0)
 		sysfatal("initdraw: %r");
-	display->locking = 1;
-	unlockdisplay(display);
-	view.w = Dx(screen->r);
-	view.h = Dy(screen->r);
-	if((ticc = chancreate(sizeof(ulong), 0)) == nil
-	|| (framec = chancreate(sizeof(ulong), 0)) == nil)
-		sysfatal("chancreate: %r");
+	initscreen(Dx(screen->r), Dy(screen->r));
+	reqdraw(Reqresetview);
+	resizedraw();
+	setnodeshape(0);
 	newthread(ticproc, nil, nil, nil, "tic", mainstacksize);
 	newthread(rendproc, nil, nil, nil, "draw", mainstacksize);
+	updateview();
 }

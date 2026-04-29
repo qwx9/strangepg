@@ -110,4 +110,5 @@ void
 initsys(void)
 {
 	//mainmem->flags |= POOL_NOREUSE | POOL_PARANOIA;
+	setfcr(getfcr() & ~(FPOVFL|FPUNFL|FPINVAL|FPZDIV));	/* FIXME */
 }

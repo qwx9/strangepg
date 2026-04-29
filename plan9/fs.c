@@ -1,14 +1,10 @@
 #include "strpg.h"
 #include "fs.h"
-#include <bio.h>
 
 int
-sysfdopen(File *f, int fd, int mode)
+sysfdopen(File *f, int fd, int)
 {
-	f->aux = emalloc(sizeof(Biobufhdr));	/* FIXME: danger zone */
-	/* for line parsing, extra byte to always insures 0-terminated string */
-	if(Binits(f->aux, fd, mode, (uchar*)f->buf + Readsz, Readsz) < 0)
-		return -1;
+	f->aux = (void *)(intptr)fd;
 	return 0;
 }
 
@@ -39,45 +35,48 @@ sysfd(int which)
 void
 sysclose(File *f)
 {
-	assert(f->aux != nil);
-	Bterm(f->aux);
+	int fd;
+
+	fd = (intptr)f->aux;
+	close(fd);
 	f->aux = nil;
 }
 
 void
-sysflush(File *f)
+sysflush(File *)
 {
-	assert(f->aux != nil);
-	Bflush(f->aux);
 }
 
 int
 syswstatlen(File *f, vlong n)
 {
+	int fd;
 	Dir d;
-	Biobuf *bf;
 
-	assert(f->aux != nil);
 	nulldir(&d);
 	d.length = n;
-	bf = f->aux;
-	if(dirfwstat(Bfildes(bf), &d) < 0)
+	fd = (intptr)f->aux;
+	if(dirfwstat(fd, &d) < 0)
 		return -1;
-	Bflush(bf);
 	return 0;
 }
 
 int
 sysseek(File *f, vlong off)
 {
-	Bseek(f->aux, off, 0);
-	return 0;
+	int fd;
+
+	fd = (intptr)f->aux;
+	return seek(fd, off, 0);
 }
 
 vlong
 sysftell(File *f)
 {
-	return Boffset(f->aux);
+	int fd;
+
+	fd = (intptr)f->aux;
+	return seek(fd, 0, 1);
 }
 
 /* FIXME: rename fsremove and use File*; sysremove should be in sys */
@@ -103,57 +102,17 @@ sysmktmp(void)
 int
 syswrite(File *f, void *buf, int n)
 {
-	return Bwrite(f->aux, buf, n);
+	int fd;
+
+	fd = (intptr)f->aux;
+	return write(fd, buf, n);
 }
 
 int
 sysread(File *f, void *buf, int n)
 {
-	return Bread(f->aux, buf, n);
-}
+	int fd;
 
-int
-readchar(File *f)
-{
-	int c;
-	Biobuf *bf;
-
-	bf = f->aux;
-	if((c = Bgetc(bf)) <= 0)
-		return -1;
-	return c;
-}
-
-/* FIXME: handle NULs in input? */
-/* Brdline sucks but Brdstr will choke us when lines are very long;
- * so instead of removing bio, we break Brdline. */
-char *
-readfrag(File *f)
-{
-	int l;
-	char *s;
-	Biobuf *bf;
-
-	assert(f != nil && f->aux != nil);
-	f->len = 0;
-	bf = f->aux;
-	/* hack 1: force Brdline to discard truncated line and
-	 * continue reading, which this bullshit should do itself */
-	if(f->trunc){
-		f->trunc = 0;
-		bf->icount = 0;
-	}
-	s = Brdline(bf, '\n');
-	l = Blinelen(bf);
-	if(s == nil){
-		/* hack 2: return truncated buffer as valid */
-		if(l != 0){
-			s = (char *)bf->gbuf;
-			f->trunc = 1;
-		}
-	}else if(l > 0)
-		s[--l] = 0;
-	f->len = l;
-	f->end = s + l;
-	return s;
+	fd = (intptr)f->aux;
+	return read(fd, buf, n);
 }
