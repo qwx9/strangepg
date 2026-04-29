@@ -42,6 +42,7 @@ Thanks!_
   + [Software requirements](#software-requirements)
   + [Bioconda](#bioconda)
   + [Linux](#linux)
+    . [Raspberry Pi 5 and embedded](#raspberry-pi-and-embedded)
   + [MacOS](#macos)
   + [Windows (MinGW64)](#windows-mingw64)
   + [Windows (Cygwin)](#windows-cygwin)
@@ -224,7 +225,8 @@ Intel machines with Ivy Bridge or later HD Graphics work.
 
 For arm64/aarch64, the Raspberry Pi 4 and later should work,
 but so far it's unconfirmed.
-It's confirmed to work on the Nintendo Switch (on Linux) however.
+It's confirmed to work on the Nintendo Switch (on Linux)
+and Raspberry Pi 5.
 
 #### Software requirements
 
@@ -259,7 +261,12 @@ Installing dependencies (command line for Ubuntu systems, adapt for your own):
 apt install libbsd0 libgl-dev libglvnd-dev libglx-dev libmd0 libx11-dev libxau-dev libxcb1-dev libxcursor-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev
 ```
 
-For arm64, you might also need `libegl-dev` and/or `libgles-dev`.
+For arm64 and embedded platforms, you might need `libgles-dev` and `libegl-dev` as well.
+On Raspberry Pi OS (desktop):
+
+```bash
+apt install libxi-dev libxcursor-dev libegl-dev libgles-dev
+```
 
 Building and installing strangepg:
 
@@ -293,6 +300,10 @@ EGL can be enabled as well:
 make EGL=1 -j install
 ```
 
+Multiple make variables may be specified at the same time.
+
+##### Raspberry Pi 5 and embedded
+
 strangepg can be also be built with OpenGL ES
 (implies EGL):
 
@@ -300,9 +311,9 @@ strangepg can be also be built with OpenGL ES
 make GLES=1 -j install
 ```
 
-Multiple make variables may be specified at the same time.
-
-Known to work on Ubuntu 22.04/24.04, Arch Linux and Void Linux.
+Known to work on Ubuntu 22.04/24.04,
+Raspberry Pi OS (Debian-based),
+Arch Linux and Void Linux.
 
 #### MacOS
 
