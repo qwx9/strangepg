@@ -43,6 +43,16 @@ enum{
 								(a) = nil; \
 							} \
 						}while(0)
+#define	dyclear(a)		do{ \
+							if((a) != nil) \
+								_dylen(a) = 0; \
+						}while(0)
+#define	dyprealloc(a,n)	do{ \
+							if((a) == nil || _dysz(a) != (n)){ \
+								_dyrealloc((a), (n)); \
+								_dylen(a) = 0; \
+							} \
+						}while(0)
 #define	dyresize(a,n)	do{ \
 							if((a) == nil || _dysz(a) != (n)) \
 								_dyrealloc((a), (n)); \
@@ -64,3 +74,5 @@ enum{
 							(a)[_m] = (v); \
 							_dylen(a)++; \
 						}while(0)
+#define	dypop(a)		((a) != nil && dylen(a) > 0 \
+							? (a) + --_dylen(a) : nil)
