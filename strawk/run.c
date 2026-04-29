@@ -29,9 +29,7 @@ THIS SOFTWARE.
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
-#ifndef _PLAN9_SOURCE
 #include <wctype.h>
-#endif
 #include <fcntl.h>
 #include <setjmp.h>
 #include <limits.h>

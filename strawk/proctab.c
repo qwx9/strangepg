@@ -1,8 +1,8 @@
-#include <stdio.h>
 #ifdef VERSION
 #include "strpg.h"
 #include "threads.h"
 #endif
+#include <stdio.h>
 #include "awk.h"
 #include "awkgram.tab.h"
 

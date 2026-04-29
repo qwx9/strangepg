@@ -2,22 +2,25 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <wctype.h>
 #include "awk.h"
-
-// FIXME: fix or remove
 
 wint_t
 towupper(wint_t r)
 {
-	//return toupperrune(r);
-	return toupper(r);
+	return toupperrune(r);
 }
 
 wint_t
 towlower(wint_t r)
 {
-	//return tolowerrune(r);
-	return tolower(r);
+	return tolowerrune(r);
+}
+
+int
+wctomb(char *s, wchar_t wc)
+{
+	return runetochar(s, &wc);
 }
 
 void

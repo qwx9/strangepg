@@ -132,7 +132,7 @@ static int gettok(char **pbuf, int *psz, Value *vp, short *tp)	/* get next input
 }
 
 int	word(char *);
-int	string(void);
+int	cstring(void);
 int	regexpr(void);
 bool	sc	= false;	/* true => return a } right now */
 bool	reg	= false;	/* true => return a REGEXPR now */
@@ -336,7 +336,7 @@ int yylex(void)
 			RET('(');
 
 		case '"':
-			return string();	/* BUG: should be like tran.c ? */
+			return cstring();	/* BUG: should be like tran.c ? */
 
 		default:
 			RET(c);
@@ -344,7 +344,7 @@ int yylex(void)
 	}
 }
 
-int string(void)
+int cstring(void)
 {
 	int c;
 	unsigned int n;

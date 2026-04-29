@@ -868,7 +868,7 @@ Cell *catstr(Cell *a, Cell *b) /* concatenate a and b */
 	snprintf(buf, l, "%s%s ", sa, sb);
 
 	/* FIXME: same comments as in lex.c */
-	// See string() in lex.c; a string "xx" is stored in the symbol
+	// See cstring() in lex.c; a string "xx" is stored in the symbol
 	// table as "xx ".
 	if(runnerup != NULL){
 		c = gettemp(CON|STR);
