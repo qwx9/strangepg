@@ -72,3 +72,9 @@ threadstore(void *p)
 	else
 		return th->data = p;
 }
+
+uint
+chanavail(Channel *c)
+{
+	return c->n;
+}

@@ -93,3 +93,9 @@ qunlock(QLock *l)
 	if((r = pthread_mutex_unlock(l)) != 0)
 		sysfatal("pthread_mutex_unlock: %s", strerror(r));
 }
+
+static inline uint
+chanavail(Channel *c)
+{
+	return c->queue->size;
+}
