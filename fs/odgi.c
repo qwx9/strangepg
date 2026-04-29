@@ -148,7 +148,7 @@ importodgilayout(char *path)
 	 * won't work otherwise since we don't move adjacent nodes */
 	rf = MAX(ctop.x.max - ctop.x.min, ctop.y.max - ctop.y.min);
 	rf *= 8;
-	if((rf = dylen(rnodes) / rf) > 1.0)
+	if((rf = dylen(nodes) / rf) > 1.0)
 		rf = 1.0;
 	seekfs(f, start);
 	nr = 1;

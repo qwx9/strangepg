@@ -38,9 +38,8 @@ endmove(void)
 }
 
 static void
-renderdirect(void)
+renderdirect(int nn, int ne, int nl)
 {
-	int n;
 	static Clk clk = {.lab = "renderdirect"};
 
 	CLK0(clk);
@@ -48,24 +47,24 @@ renderdirect(void)
 		.action = render.clearscreen,
 		.swapchain = sglue_swapchain(),
 	});
-	if((n = ndedges) >= 1){
+	if(nl >= 1){
+		sg_apply_pipeline(render.linepipe);
+		sg_apply_bindings(&render.linebind);
+		sg_apply_uniforms(UB_line_Vparam, &SG_RANGE(render.cam));
+		sg_draw(0, render.nlinev * nl, 1);
+	}
+	if(ne >= 1){
 		sg_apply_pipeline(render.edgepipe);
 		sg_apply_bindings(&render.edgebind);
 		sg_apply_uniforms(UB_edge_Vparam, &SG_RANGE(render.cam));
 		sg_apply_uniforms(UB_edge_Fparam, &SG_RANGE(render.edgefs));
-		sg_draw(0, render.nedgev * n, 1);
+		sg_draw(0, render.nedgev * ne, 1);
 	}
-	if((n = ndnodes) >= 1){
+	if(nn >= 1){
 		sg_apply_pipeline(render.nodepipe);
 		sg_apply_bindings(&render.nodebind);
 		sg_apply_uniforms(UB_node_Vparam, &SG_RANGE(render.cam));
-		sg_draw(0, render.nnodev, n);
-	}
-	if((n = ndlines) >= 1){
-		sg_apply_pipeline(render.linepipe);
-		sg_apply_bindings(&render.linebind);
-		sg_apply_uniforms(UB_line_Vparam, &SG_RANGE(render.cam));
-		sg_draw(0, render.nlinev * n, 1);
+		sg_draw(0, render.nnodev, nn);
 	}
 	drawui(snk_new_frame());
 	snk_render(sapp_width(), sapp_height());
@@ -75,9 +74,8 @@ renderdirect(void)
 }
 
 static void
-renderoffscreen(void)
+renderoffscreen(int nn, int ne)
 {
-	int n;
 	static Clk clk = {.lab = "renderoffscreen"};
 
 	CLK0(clk);
@@ -88,17 +86,17 @@ renderoffscreen(void)
 			.depth_stencil = render.depthvw,
 		},
 	});
-	if((n = ndedges) >= 1){
+	if(ne >= 1){
 		sg_apply_pipeline(render.offscredgepipe);
 		sg_apply_bindings(&render.edgebind);
 		sg_apply_uniforms(UB_edge_Vparam, &SG_RANGE(render.cam));
-		sg_draw(0, render.nedgev * n, 1);
+		sg_draw(0, render.nedgev * ne, 1);
 	}
-	if((n = ndnodes) >= 1){
+	if(nn >= 1){
 		sg_apply_pipeline(render.offscrnodepipe);
 		sg_apply_bindings(&render.nodebind);
 		sg_apply_uniforms(UB_node_Vparam, &SG_RANGE(render.cam));
-		sg_draw(0, render.nnodev, n);
+		sg_draw(0, render.nnodev, nn);
 	}
 	sg_end_pass();
 	CLK1(clk);
@@ -106,93 +104,150 @@ renderoffscreen(void)
 }
 
 static void
-updatebuffers(int reqs)
+staticbufs(int *nn, int *ne)
 {
 	int n;
+	sg_buffer_desc d;
 
-	DPRINT(Debugrender, "updatebuffers l=%zd e=%zd n=%zd", ndlines, ndedges, ndnodes);
-	if(dylen(rnodes) <= 0)
-		return;
-	if((n = ndlines) >= 1){
-		sg_update_buffer(render.linebind.vertex_buffers[0], &(sg_range){
-			.ptr = rlines,
-			.size = n * sizeof *rlines,
-		});
+	if((n = dylen(redges)) > 0){
+		d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
+		if(d.size / sizeof *redges < n){
+			DPRINT(Debugrender, "redge bindings: resize %zd → %d",
+				d.size/sizeof *redges, n);
+			sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
+			render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.size = n * sizeof *redges,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
+			});
+			if(sg_query_buffer_state(render.edgebind.vertex_buffers[0]) != SG_RESOURCESTATE_VALID)
+				n = 0;
+		}
 	}
-	if((reqs & (Reqrefresh|Reqredraw|Reqpickbuf)) == 0)
-		return;
-	if((n = ndedges) >= 1){
+	if(n > 0){
 		sg_update_buffer(render.edgebind.vertex_buffers[0], &(sg_range){
 			.ptr = redges,
 			.size = n * sizeof *redges,
 		});
 	}
-	if((n = ndnodes) >= 1){
+	*ne = n;
+	if((n = dylen(vnodes)) > 0){
+		d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
+		if(d.size / sizeof *vnodes != n){
+			DPRINT(Debugrender, "rnode bindings: resize %zd → %d",
+				d.size/sizeof *vnodes, n);
+			sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
+			render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+				.size = n * sizeof *vnodes,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
+			});
+			if(sg_query_buffer_state(render.nodebind.vertex_buffers[1]) != SG_RESOURCESTATE_VALID)
+				n = 0;
+		}
+	}
+	if(n > 0){
 		sg_update_buffer(render.nodebind.vertex_buffers[1], &(sg_range){
-			.ptr = rnodes,
-			.size = n * sizeof *rnodes,
+			.ptr = vnodes,
+			.size = n * sizeof *vnodes,
 		});
 	}
+	*nn = n;
 }
 
-/* FIXME: sg_make_buffer return value not checked, see lib/sokol_gfx.h */
 static void
-resizebuf(void)
+dynbufs(int *nn, int *ne)
 {
-	ssize n;
+	int n;
 	sg_buffer_desc d;
 
-	n = MAX(1, dylen(redges));
-	d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
-	if(d.size / sizeof *redges != n){
-		DPRINT(Debugrender, "redge bindings: resize %zd → %zd", d.size/sizeof *redges, n);
-		sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
-		render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-			.size = dylen(redges) * sizeof *redges,
-			.usage = {
-				.vertex_buffer = true,
-				.stream_update = true,
-			},
-		});
+	/* FIXME: maybe don't resize on every frame? only grow? */
+	sg_uninit_buffer(render.edgebind.vertex_buffers[0]);
+	sg_uninit_buffer(render.nodebind.vertex_buffers[1]);
+	if((n = dylen(redges)) > 0){
+		d = sg_query_buffer_desc(render.edgebind.vertex_buffers[0]);
+		if(d.size / sizeof *redges != n){
+			DPRINT(Debugrender, "redge bindings: resize %zd → %d", d.size/sizeof *redges, n);
+			sg_destroy_buffer(render.edgebind.vertex_buffers[0]);
+			render.edgebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.size = 0,
+				.data = {
+					.ptr = redges,
+					.size = n * sizeof *redges,
+				},
+			});
+			if(sg_query_buffer_state(render.edgebind.vertex_buffers[0]) != SG_RESOURCESTATE_VALID)
+				n = 0;
+		}
 	}
-	n = MAX(1, dylen(rnodes));
-	d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
-	if(d.size / sizeof *rnodes != n){
-		DPRINT(Debugrender, "rnode bindings: resize %zd → %zd", d.size/sizeof *rnodes, n);
-		sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
-		render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-			.size = n * sizeof *rnodes,
-			.usage = {
-				.vertex_buffer = true,
-				.stream_update = true,
-			},
-		});
+	*ne = n;
+	if((n = dylen(vnodes)) > 0){
+		d = sg_query_buffer_desc(render.nodebind.vertex_buffers[1]);
+		if(d.size / sizeof *vnodes != n){
+			DPRINT(Debugrender, "rnode bindings: resize %zd → %d", d.size/sizeof *vnodes, n);
+			sg_destroy_buffer(render.nodebind.vertex_buffers[1]);
+			render.nodebind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+				.size = 0,
+				.data = {
+					.ptr = vnodes,
+					.size = n * sizeof *vnodes,
+				},
+			});
+			if(sg_query_buffer_state(render.nodebind.vertex_buffers[1]) != SG_RESOURCESTATE_VALID)
+				n = 0;
+		}
 	}
+	*nn = n;
 }
 
 static void
-clearscreen(void)
+updatebuffers(int *nn, int *ne, int *nl)
 {
-	drawui(snk_new_frame());
-	sg_begin_pass(&(sg_pass){
-		.action = render.clearscreen,
-		.swapchain = sglue_swapchain(),
-	});
-	snk_render(sapp_width(), sapp_height());
-	sg_end_pass();
+	int n;
+	sg_buffer_desc d;
+
+	if(drawing.flags & DFnoray)
+		staticbufs(nn, ne);
+	else
+		dynbufs(nn, ne);
+	if((n = dylen(rlines)) > 0){
+		d = sg_query_buffer_desc(render.linebind.vertex_buffers[0]);
+		if(d.size / sizeof *rlines < n){
+			DPRINT(Debugrender, "rline bindings: resize %zd → %d",
+				d.size/sizeof *rlines, n);
+			sg_destroy_buffer(render.linebind.vertex_buffers[0]);
+			render.linebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+				.size = n * sizeof *rlines,
+				.usage = {
+					.vertex_buffer = true,
+					.stream_update = true,
+				},
+			});
+			if(sg_query_buffer_state(render.linebind.vertex_buffers[0]) != SG_RESOURCESTATE_VALID)
+				n = 0;
+		}
+	}
+	if(n > 0){
+		sg_update_buffer(render.linebind.vertex_buffers[0], &(sg_range){
+			.ptr = rlines,
+			.size = n * sizeof *rlines,
+		});
+	}
+	*nl = n;
 }
 
 static void
-renderscene(void)
+renderscene(int nn, int ne, int nl, int go)
 {
-	if(dylen(rnodes) <= 0){
-		clearscreen();
-		return;
-	}
+	DPRINT(Debugrender, "renderscene %d %d %d", nn, ne, nl);
 	render.cam.mvp = view.mvp;
-	if(render.caching)
-		renderoffscreen();
-	renderdirect();
+	if(nn > 0 && render.caching && go)
+		renderoffscreen(nn, ne);
+	renderdirect(nn, ne, nl);
 	sg_commit();
 }
 
@@ -203,74 +258,40 @@ wakedrawup(void)
     sapp_input_wait(false);
 }
 
-/* FIXME: promote to global code */
 void
-frame(void)
+renderframe(ulong req, int snooze)
 {
-	int n, snooze;
-	ulong r, f;
+	int go;
 	vlong t;
+	static int nn, ne, nl;
 	static vlong t0;
 
-	n = snooze = 0;
-	r = 0;
-	while((f = nbrecvul(rendc)) != 0){
-		r |= f;
-		n++;
-	}
-	if(n >= 8){
-		DPRINT(Debugdraw, "frame: flushing additional pending events");
-		reqdraw(Reqnone);
-		while((f = nbrecvul(rendc)) != 0)
-			r |= f;
-	}
-	DPRINT(Debugdraw, "frame: %#x", r);
-	if(r != 0){
-		if(r & Reqsleep)
-			snooze = 1;
-		if(r & Reqresetdraw){
-			resize();
-			updateview();
-		}
-		if(r & Reqresetview){
-			resetview();
-			updateview();
-		}
-		if(r & Reqfocus)
-			focusobj();
-		if(r & Reqshape){
-			drawing.flags ^= DFdrawarrows;
-			setnodeshape(drawing.flags & DFdrawarrows);
-		}
-	}else
-		snooze = 1;
-	switch(drawing.flags & (DFfreeze | DFnorend)){
-	case DFfreeze:
-		drawing.flags |= DFnorend;
-		/* wet floor */
-	case DFfreeze | DFnorend:
-		/* FIXME: maybe have an alt render function for eg. resizes? */
-		return;
-	case DFnorend:
-		resizebuf();
-		drawing.flags &= ~DFnorend;
-		break;
-	}
+	DPRINT(Debugrender, "renderframe %lx snooze %d", req, snooze);
+	/* FIXME: make this part of frame() in portable code? */
 	/* FIXME: set time here? or in offscreen render */
 	if((t = μsec()) - t0 >= (1000000 / 30)){	/* FIXME: tune */
 		drawstate |= DSstalepick;
 		render.caching = 1;
 		t0 = t;
 	}
-	updatebuffers(r);
-	renderscene();
-	render.caching = 0;
+	TIME("render", "wait", t);
+	if(go = drawing.flags & DFfiring){
+		lockdraw();
+		if(canlockrend()){
+			updatebuffers(&nn, &ne, &nl);
+			unlockrend();
+		}
+		unlockdraw();
+	}
+	TIME("render", "resize", t);
+	renderscene(nn, ne, nl, go);
+	TIME("render", "push", t);
+	if(go)
+		render.caching = 0;
 	if(graph.flags & GFdrawme)
 		reqdraw(Reqrefresh);
-	if(snooze){
-		drawing.flags |= DFnorend;	/* for coarsening */
+	if(snooze)
 		sapp_input_wait(true);
-	}
 }
 
 static void
@@ -283,10 +304,9 @@ init(void)
 	assert(sg_isvalid());
 	if(debug & Debugrender)
 		sgx_enable_debug_log();
+	initscreen(sapp_width(), sapp_height());
 	initgl();
 	initnk();
-	resetview();
-	updateview();
 }
 
 static void

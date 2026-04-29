@@ -18,9 +18,8 @@ uint	getnodelength(voff);
 
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
-int	resetcolor(ioff);
 
 /* FIXME: should be voff or usize */
 extern ioff nnodes, nedges;		/* totals */
 
-extern int maxrnodes;
+extern int cthresh;

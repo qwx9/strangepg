@@ -187,7 +187,7 @@ fncollapse(Cell *x, TNode *nextarg)
 	ops = nil;
 	/* FIXME: most of this doesn't need to be C */
 	t = μsec();
-	if(nextarg != nil){
+	if(x != nil && !isrec(x)){	/* FIXME: strawk/eval bug */
 		if((id = getid(getsval(x))) < 0)
 			FATAL("%s", error());
 		ops = pushcollapseop(id, ops);

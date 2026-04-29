@@ -128,8 +128,10 @@ OBJ:=\
 	cmd/awkprog.o\
 	cmd/cmd.o\
 	cmd/var.o\
+	draw/bih.o\
 	draw/color.o\
 	draw/draw.o\
+	draw/ray.o\
 	draw/view.o\
 	fs/ctab.o\
 	fs/em.o\

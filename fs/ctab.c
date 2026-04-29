@@ -25,7 +25,6 @@ static void
 loadct(void *arg)
 {
 	int r;
-	usize n;
 	char *s, *path;
 	File *f;
 	CNode *U, *UE;
@@ -74,11 +73,6 @@ loadct(void *arg)
 		r = -1;
 	}
 	graph.flags |= GFctarmed;
-	/* FIXME */
-	n = dylen(nodes);
-	dyresize(rnodes, n);
-	n = dylen(edges);	/* FIXME: wrong */
-	dyresize(redges, n);
 	pushcmd("cmd(\"HGI234\")");	/* signal needed to continue, error or no */
 	flushcmd();
 	if(r < 0)

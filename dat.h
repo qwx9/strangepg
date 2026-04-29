@@ -3,9 +3,20 @@ typedef struct Node Node;
 typedef struct Layout Layout;
 typedef struct Clk Clk;
 typedef struct Thread Thread;
+typedef union Vec3 Vec3;
 
 #pragma incomplete Layout
 #pragma incomplete Thread
+
+/* glue */
+union Vec3{
+	struct{
+		float x;
+		float y;
+		float z;
+	};
+	float p[3];
+};
 
 typedef	s32int	ioff;
 typedef s32int	voff;	/* FIXME */
@@ -20,14 +31,26 @@ enum{
 	FNorphan = 1<<6,	/* FIXME: get rid of these */
 	FNinitpos = FNinitx | FNinity | FNinitz,
 	FNfixed = FNfixedx | FNfixedy | FNfixedz | FNorphan,
-	FNalias = 1<<7,	/* FIXME: privatize */
+
+	/* FIXME: revisit ctab flags */
+	FNCalias = 1<<0,	/* FIXME: privatize */
+
+	FNDhigh = 1<<0,
+	FNDvis = 1<<1,
+
+	FNUhigh = 1<<0,
 };
 struct Node{
+	/* FIXME: updated when we also update rlen, and only then; so
+	 * maybe just compute this length on the fly from ctab */
+	vlong length;	/* collapsed length */	/* FIXME: get rid of this */
 	ioff id;
-	uchar flags;
-	vlong length;
-	ioff eoff;		/* FIXME: get rid of this or nedges */
-	ioff nedges;
+	uchar flags;	/* positional flags */
+	uchar cflags;	/* coarsening flags */
+	uchar dflags;	/* drawing flags */
+	uchar uflags;	/* ui flags */
+	ioff eoff;
+	ioff nedges;	/* FIXME: get rid of this */
 };
 extern Node *nodes;	/* visible only */
 extern ioff *edges;	/* visible only */
@@ -61,6 +84,8 @@ enum{
 	Debuginfo = 1<<12,
 	Debugstrawk = 1<<13,
 	Debugui = 1<<14,
+	Debugbih = 1<<15,
+	Debugray = 1<<16,
 	Debugtheworld = 0xffffffff,
 
 	PerfΔt = 1000000,

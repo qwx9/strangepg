@@ -96,6 +96,7 @@ dtype(int flags)
 	case 0: return nil;
 	case Debuginfo: type = "warning"; break;
 	case Debugawk: type = "awk"; break;
+	case Debugbih: type = "bih"; break;
 	case Debugcmd: type = "cmd"; break;
 	case Debugcoarse: type = "coarse"; break;
 	case Debugdraw: type = "draw"; break;
@@ -106,6 +107,7 @@ dtype(int flags)
 	case Debugload: type = "load"; break;
 	case Debugmeta: type = "meta"; break;
 	case Debugperf: type = "perf"; break;
+	case Debugray: type = "ray"; break;
 	case Debugrender: type = "render"; break;
 	case Debugstrawk: type = "strawk"; break;
 	case Debugui: type = "ui"; break;

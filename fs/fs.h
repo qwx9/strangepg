@@ -44,7 +44,6 @@ enum{
 Filefmt*	reggfa(void);
 Filefmt*	regcsv(void);
 Filefmt*	regctab(void);
-int	readchar(File*);
 char*	nextfield(File*);
 int	skipline(File*);
 char*	readline(File*);

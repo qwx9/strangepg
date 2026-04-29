@@ -112,7 +112,7 @@ resetselbox(int x, int y)
 static int
 dragselect(int x, int y)
 {
-	ioff idx, Δx, Δy, oid;
+	ioff idx, Δx, Δy;
 	struct {
 		int x1;
 		int x2;
@@ -122,7 +122,8 @@ dragselect(int x, int y)
 	union{
 		ioff i;
 		u32int u;
-	} u;
+	} b, ob;
+	Node *u;
 
 	Δx = x - selbox.x1;
 	Δy = y - selbox.y1;
@@ -140,55 +141,61 @@ dragselect(int x, int y)
 	ry.x2 = x;
 	ry.y1 = selbox.y1;
 	ry.y2 = selbox.y2;
-	oid = -1;
+	ob.i = -1;
 	selbox.x2 = x;
 	selbox.y2 = y;
 	for(x=rx.x1; x<rx.x2; x++)
 		for(y=rx.y1; y<rx.y2; y++){
-			u.u = mousepick(x, y);
-			if(u.i >= 0){
-				if((idx = u.i) == oid)
+			b.u = mousepick(x, y);
+			if(b.i < 0 || b.u == ob.u)
+				continue;
+			ob.u = b.u;
+			idx = b.i;
+			if((drawing.flags & DFnoray) == 0){
+				lockrend();
+				if(idx >= dylen(v2id)){
+					warn("dragselect: %d out of range\n", idx);
+					unlockrend();
 					continue;
-				if(selectnodebyidx(idx, 1, 0) <= 0)
-					continue;
-				highlightnode(idx);
-				oid = idx;
+				}
+				idx = v2id[idx];
+				unlockrend();
 			}
+			u = nodes + idx;
+			if(u->uflags & FNUhigh)
+				continue;
+			if(selectnodebyidx(idx, 1, 0) <= 0)
+				continue;
+			u->uflags |= FNUhigh;
 		}
 	flushcmd();
 	for(x=ry.x1; x<ry.x2; x++)
 		for(y=ry.y1; y<ry.y2; y++){
-			u.u = mousepick(x, y);
-			if(u.i >= 0){
-				if((idx = u.i) == oid)
+			b.u = mousepick(x, y);
+			if(b.i < 0 || b.u == ob.u)
+				continue;
+			ob.u = b.u;
+			idx = b.i;
+			if((drawing.flags & DFnoray) == 0){
+				lockrend();
+				if(idx >= dylen(v2id)){
+					warn("dragselect: %d out of range\n", idx);
+					unlockrend();
 					continue;
-				if(selectnodebyidx(idx, 1, 0) <= 0)
-					continue;
-				highlightnode(idx);
-				oid = idx;
+				}
+				idx = v2id[idx];
+				unlockrend();
 			}
+			u = nodes + idx;
+			if(u->uflags & FNUhigh)
+				continue;
+			if(selectnodebyidx(idx, 1, 0) <= 0)
+				continue;
+			u->uflags |= FNUhigh;
 		}
 	flushcmd();
-	reqdraw(Reqrefresh);
+	reqdraw(Reqshallowdraw);
 	return 0;
-}
-
-/* FIXME: use this */
-static inline HMM_Vec3
-s2w(HMM_Vec2 s)
-{
-	float d;
-	HMM_Vec3 v;
-
-	d = HMM_LenV3(view.Δeye);
-	s.X = (2.0f * s.X - view.w) / view.w;
-	s.Y = (2.0f * s.Y - view.h) / view.h;
-	s.X *= d * view.ar * view.tfov;
-	s.Y *= d * view.tfov;
-	v = HMM_V3(s.X, -s.Y, 0.0f);
-	v = HMM_RotateV3Q(v, view.rot);
-	v = HMM_AddV3(v, view.center);
-	return v;
 }
 
 static void
@@ -247,10 +254,8 @@ hoveredge(ioff idx)
 	ioff i, j, x, eid;
 	s64int w;
 
-	if((w = getvedge(idx)) == -1){
-		DPRINT(Debugui, "mousehover: can\'t get edge: %s", error());
-		return -1;
-	}
+	return -1;
+	/* FIXME: remove */
 	eid = w & 0x7fffffff;
 	x = edges[eid];
 	i = w >> 32;
@@ -272,26 +277,36 @@ mousehover(int x, int y)
 	union{
 		ioff i;
 		u32int u;
-	} u;
+	} b;
 	RNode *r;
 
 	DPRINT(Debugui, "mousehover %d,%d win [%d,%d]", x, y, view.w, view.h);
 	if(x < 0 || y < 0 || x >= view.w || y >= view.h)
 		return -1;
-	u.u = mousepick(x, y);
-	DPRINT(Debugui, "mousehover %d,%d: %x", x, y, u.u);
-	if(u.i == -1){
+	b.u = mousepick(x, y);
+	DPRINT(Debugui, "mousehover %d,%d: %x", x, y, b.u);
+	if(b.i == -1){
 		hoverstr[0] = 0;
 		return -1;
 	}
-	if(u.i == shown)
-		return u.i;
-	isedge = u.u & 1UL<<31;
-	idx = u.u & ~(1UL<<31);
+	if(b.i == shown)
+		return b.i;
+	isedge = b.u & 1UL<<31;
+	idx = b.u & ~(1UL<<31);
 	if(isedge){
 		if(hoveredge(idx) < 0)
 			return -1;
 	}else{
+		if((drawing.flags & DFnoray) == 0){
+			lockrend();
+			if(idx >= dylen(v2id)){
+				warn("mousehover: %d out of range\n", idx);
+				unlockrend();
+				return -1;
+			}
+			b.i = idx = v2id[idx];
+			unlockrend();
+		}
 		if((id = getrealid(idx)) < 0){
 			warn("mousehover: %s\n", error());
 			return -1;
@@ -304,13 +319,14 @@ mousehover(int x, int y)
 		}
 	}
 	flushcmd();
-	return u.i;
+	return b.i;
 }
 
 static int
 mouseselect(ioff idx, int multi, int toggle)
 {
 	int new;
+	Node *u;
 
 	if(prompting)
 		return 0;
@@ -320,8 +336,10 @@ mouseselect(ioff idx, int multi, int toggle)
 				DPRINT(Debugui, "mouseselect: %s", error());
 				return 0;
 			}
-			if(new)
-				highlightnode(idx);
+			if(new){
+				u = nodes + idx;
+				u->uflags |= FNUhigh;
+			}
 			showselection();
 		}else{	/* FIXME: edges: not appearing in this film */
 			;
@@ -371,7 +389,7 @@ mouseevent(float x, float y, float Δx, float Δy)
 	DPRINT(Debugui, "mouseevent %f,%f Δ %f,%f mod %d", x, y, Δx, Δy, mod);
 	if(debug & Debugdraw){
 		p = s2w(HMM_V2(x, y));
-		DPRINT(Debugdraw, "m %.2f,%.2f,%.2f\n", p.X, p.Y, p.Z);
+		DPRINT(Debugdraw, "m %.2f,%.2f,%.2f", p.X, p.Y, p.Z);
 	}
 	m = mod & Mmask;
 	/* FIXME: clean up */
@@ -388,12 +406,12 @@ mouseevent(float x, float y, float Δx, float Δy)
 		if(omod == Mlmb){
 			showselection();
 			resetselbox(x, y);
-			reqdraw(Reqrefresh);
+			reqdraw(Reqshallowdraw);
 		}
 		omod = 0;
 	}else if(m != Mlmb && omod == Mlmb){
 		resetselbox(x, y);
-		reqdraw(Reqrefresh);
+		reqdraw(Reqshallowdraw);
 		omod = 0;
 	}
 	if(Δx != 0.0f || Δy != 0.0f || mod != omod && omod == 0)

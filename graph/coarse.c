@@ -13,7 +13,7 @@
 CNode *cnodes;
 ioff *cedges;
 ioff nnodes, nedges;
-int maxrnodes = 7500;
+int cthresh = 7500;
 
 typedef struct Adj Adj;
 struct Adj{
@@ -26,7 +26,6 @@ KHASHL_SET_INIT(KH_LOCAL, edgeset, es, u64int, kh_hash_uint64, kh_eq_generic)
 
 static int ncoarsed;
 static ioff *expnodes;
-static QLock tablock;
 
 enum{
 	Srandom,
@@ -34,8 +33,6 @@ enum{
 	Sdscdeg,
 };
 
-/* FIXME */
-/* not thread-safe */
 ioff
 getnodeidx(ioff id)
 {
@@ -48,14 +45,14 @@ getnodeidx(ioff id)
 		return -1;
 	}
 	/* FIXME: fugly */
-	if(!canqlock(&tablock)){
+	if(!canlockdraw()){
 		werrstr("coarsening in progress");
 		return -1;
 	}
 	idx = cnodes[id].idx;
 	if(idx >= dylen(nodes))
 		die("out of bounds node idx: %d > %zd", idx, dylen(nodes)-1);
-	qunlock(&tablock);
+	unlockdraw();
 	return idx;
 }
 
@@ -218,30 +215,25 @@ newedge(ioff i, ioff j, ioff e, edgeset *eset)
 }
 
 static inline void
-spawn(ioff i, ioff p)
+spawn(ioff idx, ioff p, RNode *rs, ioff nn)
 {
 	CNode *P;
-	RNode r, *rp;
+	Node *up;
+	RNode *r, *rp;
 
-	if(p >= i){
-		P = cnodes + cnodes[nodes[p].id].parent;
+	up = nodes + p;
+	if(p >= idx){
+		P = cnodes + cnodes[up->id].parent;
 		assert(P->idx != -1);
-		spawn(p, P->idx);
+		spawn(p, P->idx, rs, nn);
 	}
-	rp = rnodes + i;
-	if(rp->pos[0] != 0.0f || rp->pos[1] != 0.0f || rp->pos[2] != 0.0f)
+	r = rs + idx - nn;
+	if(r->pos[0] != 0.0f || r->pos[1] != 0.0f || r->pos[2] != 0.0f)
 		return;
-	/* FIXME: might need more jitter */
-	r = rnodes[p];
-	r.pos[0] += 0.5 - xfrand();
-	r.pos[1] += 0.5 - xfrand();
-	if(drawing.flags & DF3d)
-		r.pos[2] += 0.5 - xfrand();	/* FIXME: ? */
-	*rp = r;
-	DPRINT(Debugcoarse, "spawn rnode at %f,%f,%f from parent idx=%d",
-		r.pos[0], r.pos[1], r.pos[2], p);
-	if(resetcolor(i) < 0)
-		DPRINT(Debugcoarse, "resetcolor: %s", error());
+	rp = p >= nn ? rs + p - nn : rnodes + p;
+	spawnrnode(r, rp, nodes[idx].id);
+	DPRINT(Debugdraw, "spawn node at %f,%f,%f from parent idx=%d",
+		r->pos[0], r->pos[1], r->pos[2], p);
 }
 
 static void
@@ -264,14 +256,14 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 		DPRINT(Debugcoarse, "> edge[%d/%d]: %d%c,%d%c → %zd,%zd [%#08llx]", n, m, u->id, x&1?'-':'+', v->id, x&2?'-':'+', u-nodes, v-nodes, uv);
 		if(u < nodes || u >= nodes+dylen(nodes))
 			die("oob: u %p %zd/%zd id %llx", u, u-nodes, dylen(nodes), uv);
-		assert((u->flags & FNalias) == 0);
+		assert((u->cflags & FNCalias) == 0);
 		edges[u->eoff+u->nedges++] = x;
 		if(u == v)	/* the mirror is what we just added */
 			continue;
 		n++;
 		if(v < nodes || v >= nodes+dylen(nodes))
 			die("oob: v %p %zd/%zd id %llx", v, v-nodes, dylen(nodes), uv);
-		assert((v->flags & FNalias) == 0);
+		assert((v->cflags & FNCalias) == 0);
 		x = uv >> 30 & 0xfffffffcULL | (uv >> 1 & 1 | uv << 1 & 2) ^ 3;
 		edges[v->eoff+v->nedges++] = x;
 	}
@@ -323,6 +315,7 @@ uncoarsen(void)
 	vlong t;
 	Node *u, *ue, *unew;
 	CNode *U, *V, *UE;
+	RNode *rs;
 	edgeset *eset;
 
 	if(expnodes == nil){
@@ -333,10 +326,8 @@ uncoarsen(void)
 		werrstr("no coarsening tree");
 		return -1;
 	}
-	DPRINT(Debugcoarse, "uncoarsen: freezing draw and render...");
-	freezeworld();	/* FIXME: maybe just check for flag in draw/w/e loops */
-	DPRINT(Debugcoarse, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
+	DPRINT(Debugcoarse, "current graph: %zd nodes %zd edges",
+		dylen(nodes), dylen(edges));
 	t = μsec();
 	nnew = dylen(expnodes);
 	nn = dylen(nodes);
@@ -373,37 +364,37 @@ uncoarsen(void)
 		}
 	}
 	TIME("uncoarsen", "collecting inner edges", t);
-	qlock(&tablock);
-	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
-		lsleep(1000);
+	DPRINT(Debugcoarse, "uncoarsen: freezing draw and render...");
+	freezeworld();
 	TIME("uncoarsen", "wait for green light", t);
 	dyresize(nodes, nn + nnew);
-	dyresize(rnodes, nn + nnew);
 	memcpy(nodes + nn, unew, nnew * sizeof *nodes);
 	free(unew);
+	rs = nil;
+	dyresize(rs, nnew);
 	for(i=off=0, d=deg, u=nodes, ue=u+nn+nnew; u<ue; u++, i++){
 		u->eoff = off;
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
 		U = cnodes + u->id;
+		/* FIXME: length setting, rmin/max etc. */
 		if(getnodelength(u->id) > 0)
 			updatenodelength(u - nodes, sublength(U));
 		if(i >= nn)
-			spawn(i, cnodes[U->parent].idx);
+			spawn(i, cnodes[U->parent].idx, rs, nn);
 	}
-	qunlock(&tablock);
 	free(deg);
-	TIME("uncoarsen", "regenerate offsets and rnodes", t);
+	TIME("uncoarsen", "regenerate offsets and nodes", t);
 	dyresize(edges, off);
 	x = kh_size(eset);
-	dyresize(redges, x);
 	TIME("uncoarsen", "resizing arrays", t);
 	regenedges(eset, x, off);
 	es_destroy(eset);
 	TIME("uncoarsen", "regenerating edges", t);
-	thawworld();
-	logmsg(va("graph after expansion: %zd (%zd) nodes, %zd (%zd) edges\n",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
+	thawworld(nn + nnew, x, rs);
+	/* FIXME: inexact due to exclusion criteria */
+	logmsg(va("graph after expansion: %zd nodes, %d edges\n",
+		dylen(nodes), x));
 	printgraph();
 	checktree();
 	return 0;
@@ -423,11 +414,12 @@ unhide(CNode *U, ioff i, ioff nid)
 static inline ioff
 unhideall(CNode *U, ioff i, ioff nid, int nlevels)
 {
-	if(nlevels-- == 0)	/* negative = no limit */
-		return nid;
 	nid = unhide(U, i, nid);
+	nlevels--;
 	if((i = U->child) != -1)
 		nid = unhideall(cnodes + i, i, nid, nlevels);
+	if(nlevels == 0)	/* negative = no limit */
+		return nid;
 	for(i=U->sibling; i!=-1; i=U->sibling){
 		U = cnodes + i;
 		nid = unhide(U, i, nid);
@@ -498,7 +490,7 @@ coarsen(void)
 	vlong t, t0;
 	edgeset *eset;
 	Node *u, *ue, *v, *up;
-	RNode *r, *rp;
+	RNode *r, *ur;
 	CNode *U, *V;
 
 	t0 = μsec();
@@ -510,21 +502,19 @@ coarsen(void)
 		werrstr("no coarsening tree");
 		return -1;
 	}
-	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
-	freezeworld();
 	if(dylen(nodes) == nnodes && dylen(edges) == nedges){
 		DPRINT(Debugcoarse, "current graph: %d nodes, %d edges", nnodes, nedges);
 	}else{
-		DPRINT(Debugcoarse, "current graph: %zd/%d (%zd) nodes, %zd (%zd/%d) edges",
-			dylen(rnodes), nnodes, dylen(nodes), dylen(redges), dylen(edges), nedges);
+		DPRINT(Debugcoarse, "current graph: %zd/%d nodes, %zd/%d edges",
+			dylen(nodes), nnodes, dylen(edges), nedges);
 	}
 	t = μsec();
 	if((eset = es_init()) == nil)
 		sysfatal("coarsen: %s", error());
 	DPRINT(Debugcoarse, "assigning new top node slots...");
 	for(off=0, u=nodes, ue=u+dylen(u); u<ue; u++){
-		if(u->flags & FNalias){
-			DPRINT(Debugcoarse, "> skipping aliased rnode %zd (→%d)", u-nodes, u->id);
+		if(u->cflags & FNCalias){
+			DPRINT(Debugcoarse, "> skipping aliased node %zd (→%d)", u-nodes, u->id);
 			continue;
 		}
 		DPRINT(Debugcoarse, "> store node[%03d] = %d", off, u->id);
@@ -549,7 +539,7 @@ coarsen(void)
 			j = x >> 2;
 			v = nodes + j;
 			V = cnodes + v->id;
-			if(U == V && (v->flags | u->flags) & FNalias){
+			if(U == V && (v->cflags | u->cflags) & FNCalias){
 				DPRINT(Debugcoarse, "> prune internal edge %zd%c,%d%c →%d,%d",
 					u-nodes, x&1?'-':'+', j, x&2?'-':'+', u->id, v->id);
 				continue;
@@ -582,9 +572,8 @@ coarsen(void)
 	DPRINT(Debugcoarse, "kept %d/%zd unique edges, /%d adj", ne, dylen(edges), ne2);
 	TIME("coarsen", "save unique edges", t);
 	DPRINT(Debugcoarse, "new nodes[]:");
-	qlock(&tablock);	/* FIXME: hacks */
-	for(d=deg, off=0, r=rp=rnodes, u=up=nodes; u<ue; u++, r++){
-		if(u->flags & FNalias)
+	for(d=deg, off=0, r=ur=rnodes, u=up=nodes; u<ue; u++, r++){
+		if(u->cflags & FNCalias)
 			continue;
 		*up = *u;
 		up->nedges = 0;
@@ -593,30 +582,27 @@ coarsen(void)
 			up-nodes, up->eoff, *d);
 		off += *d++;
 		up++;
-		if(rp != nil)
-			*rp++ = *r;
+		if(ur != nil)
+			*ur++ = *r;	/* FIXME: necessary while pos is stored in rnodes */
 	}
 	assert(off == ne2);
 	free(deg);
 	x = up - nodes;
 	assert(x == dylen(nodes) - ncoarsed);
 	TIME("coarsen", "recompute offsets", t);
-	while((drawing.flags & DFiwasfrozentoday) != DFiwasfrozentoday)
-		lsleep(1000);
+	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
+	freezeworld();
 	TIME("coarsen", "wait for green light", t);
 	assert(nn == dylen(nodes) - ncoarsed);
-	dyresize(rnodes, nn);
 	dyresize(nodes, nn);
 	dyresize(edges, ne2);
-	dyresize(redges, ne);
-	qunlock(&tablock);
 	TIME("coarsen", "shrink arrays", t);
 	regenedges(eset, ne, ne2);
 	TIME("coarsen", "restore edges", t);
-	thawworld();
+	thawworld(nn, ne, nil);
 	es_destroy(eset);
-	logmsg(va("graph after coarsening: %zd (%zd) nodes, %zd (%zd) edges\n",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges)));
+	logmsg(va("graph after coarsening: %zd nodes, %d edges\n",
+		dylen(nodes), ne));
 	ncoarsed = 0;
 	printgraph();
 	checktree();
@@ -667,9 +653,9 @@ hide(CNode *U, CNode *P)
 	if(U->idx == -1)
 		return 0;
 	u = nodes + U->idx;
-	if(u->flags & FNalias)
+	if(u->cflags & FNCalias)
 		return 0;
-	u->flags |= FNalias;
+	u->cflags |= FNCalias;
 	assert(U != P);
 	assert(P->idx != -1);
 	updatenodelength(P->idx, nodes[P->idx].length + u->length);
@@ -829,17 +815,27 @@ pushcollapseop(ioff id, ioff *ids)
 	DPRINT(Debugcoarse, "collapse %d", id);
 	assert(cnodes != nil);
 	if(id < 0 || id >= nnodes){
-		werrstr("out of bounds %d > %d", id, nnodes);
-		return nil;
+		warn("pushcollapseop: out of bounds %d > %d", id, nnodes);
+		return ids;
 	}
 	U = cnodes + id;
-	if(U->idx == -1)			/* not visible */
+	if(U->idx == -1){
+		DPRINT(Debugcoarse, "pushcollapseop: %d not visible", id);
 		return ids;
+	}
+	if(U->child == -1 && U->parent != -1){
+		DPRINT(Debugcoarse, "pushcollapseop: %d is childless, getting parent", id);
+		return pushcollapseop(U->parent, ids);
+	}
 	u = nodes + U->idx;
-	if(u->nedges == 0)			/* can't collapse */
+	if(u->nedges == 0){
+		DPRINT(Debugcoarse, "pushcollapseop: %d idx=%d has no edges", id, U->idx);
 		return ids;
-	if(U->flags & FCNvisited)	/* unset during processing */
+	}
+	if(U->flags & FCNvisited){	/* unset during processing */
+		DPRINT(Debugcoarse, "pushcollapseop: %d already seen", id);
 		return ids;
+	}
 	U->flags |= FCNvisited;		/* FIXME: poor man's hashset */
 	dypush(ids, id);
 	return ids;
@@ -850,6 +846,7 @@ collapseupto(int n)
 {
 	ioff *ids;
 
+	/* FIXME: get rid of this alloc */
 	ids = collapseall();	/* FIXME: yuck */
 	if(collapseup(ids, n) < 0)
 		sysfatal("collapseup: %s", error());
@@ -893,7 +890,6 @@ initcoarse(void)
 		werrstr("coarsening already initialized");
 		return -1;
 	}
-	initqlock(&tablock);
 	cnodes = emalloc(nnodes * sizeof *cnodes);
 	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
 		U->idx = i;
@@ -1180,18 +1176,14 @@ buildct(void *)
 void
 armgraph(void)
 {
-	ssize n;
-
-	n = dylen(nodes);
-	if(maxrnodes > 0 && n > maxrnodes){
+	/* FIXME: (soft)force -R in draw if number of nodes exceeds
+	 * a threshold */
+	if(cthresh > 0 && dylen(nodes) > cthresh){
 		logmsg("collapsing graph...\n");
-		collapseupto(maxrnodes);
-	}else if(n > 2000000){	/* FIXME: fix renderer first */
-		logmsg("collapsing graph (too large)...\n");
-		collapseupto(2000000);
-	}else if(rnodes == nil){
-		dyresize(rnodes, nnodes);
-		dyresize(redges, nedges);	/* FIXME: wrong number */
+		collapseupto(cthresh);
+	}else{
+		wlockdraw();
+		thawworld(nnodes, nedges, nil);
 	}
 	graph.flags |= GFarmed;
 }

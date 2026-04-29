@@ -167,13 +167,9 @@ mixcolors(float *cols, u32int v)
 }
 
 void
-highlightnode(ioff idx)
+highlightnode(RNode *r)
 {
-	RNode *r;
-
-	r = rnodes + idx;
 	mixcolors(r->col, theme[Chigh] >> 8);
-	reqdraw(Reqredraw);
 }
 
 void

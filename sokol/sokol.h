@@ -44,7 +44,6 @@ extern char *node_vertsh, *node_fragsh, *nodeidx_vertsh, *nodeidx_fragsh;
 extern char *edge_vertsh, *edge_fragsh, *edgeidx_vertsh, *edgeidx_fragsh;
 extern char *scr_vertsh, *scr_fragsh;
 
-void	updateview(void);
 void	resize(void);
 void	initnk(void);
 void	initgl(void);

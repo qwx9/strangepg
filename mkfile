@@ -14,8 +14,11 @@ OFILES=\
 	cmd/awkext.$O\
 	cmd/cmd.$O\
 	cmd/var.$O\
+	draw/bih.$O\
 	draw/color.$O\
 	draw/draw.$O\
+	draw/ray.$O\
+	draw/view.$O\
 	fs/ctab.$O\
 	fs/em.$O\
 	fs/fs.$O\
@@ -25,6 +28,7 @@ OFILES=\
 	fs/metacsv.$O\
 	fs/odgi.$O\
 	fs/svg.$O\
+	graph/coarse.$O\
 	graph/graph.$O\
 	layout/layout.$O\
 	layout/pfr.$O\
@@ -44,6 +48,7 @@ OFILES=\
 	strawk/run.$O\
 	strawk/lex.$O\
 	strawk/mt19937-64.$O\
+	strawk/plan9.$O\
 	ui/ui.$O\
 	util/print.$O\
 	util/rand.$O\
@@ -81,10 +86,21 @@ HFILES=\
 
 </sys/src/cmd/mkmany
 
-CFLAGS=$CFLAGS -p -D__plan9__ -D__${objtype}__ \
-	-I/sys/include/npe -Iplan9 \
-	-I. -Icmd -Idraw -Ifs -Igraph -Ilayout -Irend -Iui -Iutil \
+CFLAGS=$CFLAGS -p \
+	-D__plan9__ \
+	-D__${objtype}__ \
 	-DVERSION="$VERSION" \
+	-I/sys/include/npe \
+	-Iplan9 \
+	-I. \
+	-Icmd \
+	-Idraw \
+	-Ifs \
+	-Igraph \
+	-Ilayout \
+	-Irend \
+	-Iui \
+	-Iutil \
 
 #LDFLAGS=$LDFLAGS -p
 

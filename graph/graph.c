@@ -21,8 +21,9 @@ printgraph(void)
 
 	if((debug & Debuggraph) == 0)
 		return;
-	DPRINT(Debuggraph, "current graph: %zd (%zd) nodes, %zd (%zd) edges",
-		dylen(rnodes), dylen(nodes), dylen(redges), dylen(edges));
+	/* FIXME: inaccurate edge count */
+	DPRINT(Debuggraph, "current graph: %zd nodes, %zd edges",
+		dylen(nodes), dylen(edges));
 	for(i=0, u=nodes, ue=u+dylen(u); u<ue; u++, i++){
 		DPRINT(Debuggraph, "[%d] id=%d eoff=%d ne=%d ln=%lld",
 			i, u->id, u->eoff, u->nedges, u->length);
@@ -35,7 +36,7 @@ printgraph(void)
 	}
 }
 
-/* FIXME: protect while rnodes == nil? maybe queue commands up? */
+/* FIXME: protect while nodes == nil? maybe queue commands up? */
 void
 explode(ioff id, float Δ)
 {
@@ -66,43 +67,22 @@ getrealid(ioff idx)
 static inline void
 setx0(ioff idx, int fixed, float f)
 {
-	Node *u;
-	RNode *r;
-
-	u = nodes + idx;
-	u->flags |= fixed ? FNfixedx | FNinitx : FNinitx;
-	if(rnodes == nil)
-		return;
-	r = rnodes + idx;
-	r->pos[0] = f - drawing.mid[0];
+	nodes[idx].flags |= fixed ? FNfixedx | FNinitx : FNinitx;
+	rnodes[idx].pos[0] = f - drawing.mid[0];
 }
 
 static inline void
 sety0(ioff idx, int fixed, float f)
 {
-	Node *u;
-	RNode *r;
-
-	u = nodes + idx;
-	u->flags |= fixed ? FNfixedy | FNinity : FNinity;
-	if(rnodes == nil)
-		return;
-	r = rnodes + idx;
-	r->pos[1] = f - drawing.mid[1];
+	nodes[idx].flags |= fixed ? FNfixedy | FNinity : FNinity;
+	rnodes[idx].pos[1] = f - drawing.mid[1];
 }
 
 static inline void
 setz0(ioff idx, int fixed, float f)
 {
-	Node *u;
-	RNode *r;
-
-	u = nodes + idx;
-	u->flags |= fixed ? FNfixedz | FNinitz : FNinitz;
-	if(rnodes == nil)
-		return;
-	r = rnodes + idx;
-	r->pos[2] = f - drawing.mid[2];
+	nodes[idx].flags |= fixed ? FNfixedz | FNinitz : FNinitz;
+	rnodes[idx].pos[2] = f - drawing.mid[2];
 }
 
 void
@@ -210,29 +190,15 @@ void
 setnodecolor(size_t id, Value v)
 {
 	ioff idx;
+	Node *u;
 	RNode *r;
 
 	DPRINT(Debugawk, "set CL[%s] ← %08llx", getname(id), v.u);
 	if((idx = getnodeidx(id)) < 0)
 		return;
-	if(rnodes == nil)	/* FIXME: come up with a better way */
-		return;
+	u = nodes + idx;
+	u->uflags &= ~FNUhigh;
 	r = rnodes + idx;
 	setcolor(r->col, setdefalpha(v.u));
 	reqdraw(Reqshallowdraw);
-}
-
-int
-resetcolor(ioff idx)
-{
-	voff id;
-	RNode *r;
-
-	if((id = getrealid(idx)) < 0)
-		return -1;
-	assert(idx >= 0 && idx < dylen(rnodes));
-	r = rnodes + idx;
-	setcolor(r->col, setdefalpha(getnodecolor(id)));
-	reqdraw(Reqshallowdraw);
-	return 0;
 }

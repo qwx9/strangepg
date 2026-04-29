@@ -27,7 +27,7 @@ init(void)
 	Aux *aux;
 
 	aux = emalloc(sizeof *aux);
-	aux->k = C * sqrtf(DIM * DIM / dylen(rnodes));
+	aux->k = C * sqrtf(DIM * DIM / dylen(nodes));
 	return aux;
 }
 
@@ -118,7 +118,7 @@ new_(int nuke, int is3d)
 		}
 		if((flags & FNinitz) == 0){
 			if(!is3d || flags & FNorphan){
-				z = -0.5f + (float)(nn - (r - rnodes)) / nn;
+				z = -0.5f + (float)(nn - (u - nodes)) / nn;
 				r->pos[2] = (drawing.flags & DFnodepth) == 0
 					? 0.1f * z
 					: 0.00001f * z;
@@ -159,58 +159,63 @@ static int
 compute3d(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *e, *ee;
+	ioff n, *e, *ee;
 	double t, Δx, Δy, Δz;
 	float tol, k, f, x, y, z, δx, δy, δz, δ, uw, vw, Δr;
-	RNode *r0, *r1, *r, *v;
 	Aux *aux;
-	Node *u, *u0;
+	Node *u;
+	RNode *r0, *r, *re, *rv;
 	Clk clk = {.lab = "layiter"};
 
 	aux = arg;
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = nodes + i;
-	r0 = rnodes + i;
-	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
-		for(u=u0, r=r0; r<r1; r+=skip, u+=skip){
-			if((*stat & LFstop) != 0)
-				return 0;
+		r0 = rnodes;
+		n = dylen(r0);
+		re = r0 + n;
+		for(u=nodes+i, r=r0+i; r<re; r+=skip, u+=skip){
 			if(u->nedges == 0)
 				continue;
 			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
+			lockdraw();
+			if((*stat & LFstop) != 0){
+				unlockdraw();
+				return 0;
+			}
 			uw = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			z = r->pos[2];
 			Δx = Δy = Δz = 0.0f;
-			for(v=rnodes; v<r1; v++){
-				if(r == v)
+			for(rv=r0; rv<re; rv++){
+				if(rv == r)
 					continue;
-				δx = x - v->pos[0];
-				δy = y - v->pos[1];
-				δz = z - v->pos[2];
+				δx = x - rv->pos[0];
+				δy = y - rv->pos[1];
+				δz = z - rv->pos[2];
 				δ = Δ3(δx, δy, δz);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
 				Δz += f * δz / δ;
 			}
-			if((*stat & LFstop) != 0)
+			if((*stat & LFstop) != 0){
+				unlockdraw();
 				return 0;
+			}
 			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
-				v = rnodes + (*e >> 2);
-				vw = v->len;
-				δx = v->pos[0] - x;
-				δy = v->pos[1] - y;
-				δz = v->pos[2] - z;
+				rv = r0 + (*e >> 2);
+				vw = rv->len;
+				δx = rv->pos[0] - x;
+				δy = rv->pos[1] - y;
+				δz = rv->pos[2] - z;
 				δ = Δ3(δx, δy, δz);
 				δ -= (uw + vw) / 2.0f;
 				δ += 0.0000001f;
@@ -244,6 +249,7 @@ compute3d(void *arg, volatile int *stat, int i)
 				if(Δr < Δz)
 					Δr = Δz;
 			}
+			unlockdraw();
 		}
 		if(Δr < tol)
 			return 0;
@@ -263,54 +269,59 @@ static int
 compute(void *arg, volatile int *stat, int i)
 {
 	int fixed, skip;
-	ioff *e, *ee;
+	ioff n, *e, *ee;
 	double t, Δx, Δy;
 	float tol, k, f, x, y, δx, δy, δ, uw, vw, Δr;
-	RNode *r0, *r1, *r, *v;
 	Aux *aux;
-	Node *u, *u0;
+	Node *u;
+	RNode *r0, *r, *re, *rv;
 	Clk clk = {.lab = "layiter"};
 
 	aux = arg;
 	k = aux->k;
 	t = k;
 	tol = Tolerance * k;
-	u0 = nodes + i;
-	r0 = rnodes + i;
-	r1 = rnodes + dylen(rnodes);
 	skip = nlaythreads;
 	for(;;){
 		CLK0(clk);
 		Δr = 0;
-		for(u=u0, r=r0; r<r1; r+=skip, u+=skip){
-			if((*stat & LFstop) != 0)
-				return 0;
+		r0 = rnodes;
+		n = dylen(r0);
+		re = r0 + n;
+		for(u=nodes+i, r=r0+i; r<re; r+=skip, u+=skip){
 			if(u->nedges == 0)
 				continue;
 			fixed = u->flags & FNfixed;
 			if(fixed == FNfixed)
 				continue;
+			lockdraw();
+			if((*stat & LFstop) != 0){
+				unlockdraw();
+				return 0;
+			}
 			uw = r->len;
 			x = r->pos[0];
 			y = r->pos[1];
 			Δx = Δy = 0.0f;
-			for(v=rnodes; v<r1; v++){
-				if(r == v)
+			for(rv=r0; rv<re; rv++){
+				if(rv == r)
 					continue;
-				δx = x - v->pos[0];
-				δy = y - v->pos[1];
+				δx = x - rv->pos[0];
+				δy = y - rv->pos[1];
 				δ = Δ(δx, δy);
 				f = Fr(δ, k);
 				Δx += f * δx / δ;
 				Δy += f * δy / δ;
 			}
-			if((*stat & LFstop) != 0)
+			if((*stat & LFstop) != 0){
+				unlockdraw();
 				return 0;
+			}
 			for(e=edges+u->eoff, ee=e+u->nedges; e<ee; e++){
-				v = rnodes + (*e >> 2);
-				vw = v->len;
-				δx = v->pos[0] - x;
-				δy = v->pos[1] - y;
+				rv = r0 + (*e >> 2);
+				vw = rv->len;
+				δx = rv->pos[0] - x;
+				δy = rv->pos[1] - y;
 				δ = Δ(δx, δy);
 				δ -= (uw + vw) / 2.0f;
 				δ += 0.0000001f;
@@ -336,6 +347,7 @@ compute(void *arg, volatile int *stat, int i)
 				if(Δr < Δy)
 					Δr = Δy;
 			}
+			unlockdraw();
 		}
 		if(Δr < tol)
 			return 0;

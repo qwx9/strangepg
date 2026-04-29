@@ -56,8 +56,7 @@ sac(void *)
 	Channel **cp, **ce;
 
 	nidle = 0;
-	if(debug & Debugperf)
-		t = μsec();
+	t = μsec();
 	for(;;){
 		if((x = recvul(rxc)) == 0)
 			break;
@@ -83,11 +82,11 @@ sac(void *)
 		case Lfreeze:
 			DPRINT(Debuglayout, "sac: freeze");
 			graph.flags |= GFfrozen;
-			if(nidle == nlaythreads){
-				drawing.flags |= DFnolayout;
-				continue;
-			}
-			/* wet floor */
+			if(l != nil)
+				l->flags |= LFstop;
+			if(graph.flags & GFdrawme)
+				graph.flags |= GFlayme;
+			break;
 		case Lstop:
 			DPRINT(Debuglayout, "sac: stop");
 			if(l != nil){
@@ -98,15 +97,9 @@ sac(void *)
 		case Lthaw:
 			DPRINT(Debuglayout, "sac: thaw");
 			graph.flags &= ~GFfrozen;
-			/* FIXME: thread unsafe non-atomic accesses; should be channel
-			 * messages or just private state changes, or individual bitflags
-			 * no one else writes to */
-			drawing.flags &= ~DFnolayout;
-			if(graph.flags & (GFlayme | GFdrawme) == 0)
-				break;
 			if(l != nil)
 				l->flags |= LFclean;
-			/* wet floor */
+			break;
 		case Lstart:
 			DPRINT(Debuglayout, "sac: start");
 			graph.flags |= GFlayme;
@@ -117,11 +110,8 @@ sac(void *)
 			if(nidle > nlaythreads)
 				sysfatal("sac: phase error");
 			else if(nidle == nlaythreads && l != nil){
-				if(graph.flags & GFfrozen){
-					drawing.flags |= DFnolayout;
+				if(graph.flags & GFfrozen)
 					continue;
-				}else if(drawing.flags & DFarmed)	/* FIXME: better way? */
-					drawing.flags &= ~DFnolayout;
 				if((graph.flags & GFdrawme) == 0)
 					break;
 				TIME("layout", "total", t);
@@ -147,7 +137,7 @@ sac(void *)
 			reqdraw(Reqrefresh);
 			continue;
 		}
-		if(dylen(rnodes) < 1 || dylen(redges) < 1){
+		if(dylen(nodes) < 1 || dylen(edges) < 1){
 			warn("newlayout: nothing to layout\n");
 			continue;
 		}

@@ -10,7 +10,7 @@
 
 int status;
 
-static char usestr[] = "[-ACEHMWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
+static char usestr[] = "[-ACEHMRWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -91,6 +91,7 @@ help(void)
 		"-H             Enable Hi-DPI mode (OSX only)\n"
 		"-M             Disable 4x multisample anti-aliasing (MSAA)\n"
 		"-O FILE        Load ODGI layout output from FILE\n"
+		"-R             Enable experimental renderer (slow)\n"
 		"-T MAX         Set autocollapse threshold to MAX nodes (default: 7.5k, disable: 0)\n"
 		"-W             Do not suppress warning messages\n"
 		"-Z             Minimize node depth (z-axis) offsets in 2d layouts\n"
@@ -112,11 +113,11 @@ usage(void)
 static char **
 parseargs(int argc, char **argv, Input **files, char ***defer)
 {
-	int type, maxr;
+	int type, cth;
 	char *s;
 
 	type = FFgfa;
-	maxr = maxrnodes;
+	cth = cthresh;
 	ARGBEGIN{
 	case 'A': drawing.flags |= DFnoalpha; break;
 	case 'C': status |= FSdontmindme; drawing.flags |= DFnope; break;
@@ -126,6 +127,8 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 			debug |= Debugtheworld;
 		else if(strcmp(s, "awk") == 0)
 			debug |= Debugawk;
+		else if(strcmp(s, "bih") == 0)
+			debug |= Debugbih;
 		else if(strcmp(s, "cmd") == 0)
 			debug |= Debugcmd;
 		else if(strcmp(s, "coarse") == 0)
@@ -146,6 +149,8 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 			debug |= Debugmeta;
 		else if(strcmp(s, "perf") == 0)
 			debug |= Debugperf;
+		else if(strcmp(s, "ray") == 0)
+			debug |= Debugray;
 		else if(strcmp(s, "render") == 0)
 			debug |= Debugrender;
 		else if(strcmp(s, "strawk") == 0)
@@ -162,12 +167,15 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 'M': drawing.flags |= DFnomsaa; break;
 	case 'O':
 		pushfile(files, EARGF(usage()), FFodgilayout);
-		if(maxr == maxrnodes)
-			maxr = 0;
+		if(cth == cthresh)
+			cth = 0;
+		break;
+	case 'R':
+		drawing.flags &= ~DFnoray;
 		break;
 	case 'T':
-		maxr = strtol(EARGF(usage()), &s, 10);
-		if(maxr < 0 || *s != 0){
+		cth = strtol(EARGF(usage()), &s, 10);
+		if(cth < 0 || *s != 0){
 			warn("invalid collapse threshold\n");
 			usage();
 		}
@@ -220,7 +228,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	}ARGEND
 	if(*argv == nil)
 		help();
-	maxrnodes = maxr;
+	cthresh = cth;
 	pushfile(files, *argv++, type);
 	return argv;
 }
@@ -258,8 +266,8 @@ main(int argc, char **argv)
 	if(drawing.flags & DFnope || debug & Debugload)
 		exportforever();
 	initview();
-	initui();
 	waitforit();
+	initui();
 	initstdin();
 	evloop();
 	quit();

@@ -61,6 +61,7 @@ getid(char *s)
 		return getival(c);
 }
 
+/* FIXME: length assumed to be vlong elsewhere */
 uint
 getnodelength(voff id)
 {
@@ -87,6 +88,7 @@ initpos(void)
 	x0 = core.x0 != nil ? (float *)core.x0->tab : nil;
 	y0 = core.y0 != nil ? (float *)core.y0->tab : nil;
 	z0 = core.z0 != nil ? (float *)core.z0->tab : nil;
+	assert(dylen(rnodes) == dylen(nodes));
 	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
 		fixed = 0;
 		u->flags &= ~(FNfixed | FNinitpos);

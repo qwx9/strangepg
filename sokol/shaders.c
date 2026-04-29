@@ -21,6 +21,7 @@ u32int
 mousepick(int x, int y)
 {
 	u32int i;
+	vlong t;
 
 	if(x < 0 || x >= sapp_width() || y < 0 || y >= sapp_height()){
 		DPRINT(Debugui, "mousepick %d,%d: out of bounds", x, y);
@@ -33,8 +34,10 @@ mousepick(int x, int y)
 	DPRINT(Debugui, "mousepick %d,%d stale %d move %d",
 		x, y, drawstate & DSstalepick, drawstate & DSmoving);
 	if((drawstate & (DSstalepick | DSmoving)) == DSstalepick){
+		t = μsec();
 		sgx_query_image_pixels(pickfb, render.pickfb);
 		drawstate &= ~DSstalepick;
+		TIME("mousepick", "query", t);
 	}
 	if(render.pickflip)
 		y = sapp_height() - y;
@@ -126,32 +129,24 @@ setnodeshape(int arrow)
 		if(drawing.flags & DF3d){
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowv3d),
-				.usage = {
-					.vertex_buffer = true,
-					.immutable = true,
-				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowi3d),
 				.usage = {
 					.index_buffer = true,
-					.immutable = true,
+					.vertex_buffer = false,
 				},
 			}),
 			render.nnodev = nelem(arrowi3d);
 		}else{
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowv),
-				.usage = {
-					.vertex_buffer = true,
-					.immutable = true,
-				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(arrowi),
 				.usage = {
 					.index_buffer = true,
-					.immutable = true,
+					.vertex_buffer = false,
 				},
 			}),
 			render.nnodev = nelem(arrowi);
@@ -160,44 +155,38 @@ setnodeshape(int arrow)
 		if(drawing.flags & DF3d){
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadv3d),
-				.usage = {
-					.vertex_buffer = true,
-					.immutable = true,
-				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadi3d),
 				.usage = {
 					.index_buffer = true,
-					.immutable = true,
+					.vertex_buffer = false,
 				},
 			}),
 			render.nnodev = nelem(quadi3d);
 		}else{
 			render.nodebind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadv),
-				.usage = {
-					.vertex_buffer = true,
-					.immutable = true,
-				},
 			});
 			render.nodebind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
 				.data = SG_RANGE(quadi),
 				.usage = {
 					.index_buffer = true,
-					.immutable = true,
+					.vertex_buffer = false,
 				},
 			}),
 			render.nnodev = nelem(quadi);
 		}
 	}
+	if(sg_query_buffer_state(render.nodebind.vertex_buffers[0]) != SG_RESOURCESTATE_VALID
+	|| sg_query_buffer_state(render.nodebind.index_buffer) != SG_RESOURCESTATE_VALID)
+		sysfatal("setnodeshape: buffer allocation failed");
 }
 
 static void
 initfb(int w, int h)
 {
-	view.w = sapp_width();
-	view.h = sapp_height();
+	initscreen(w, h);
 	pickfb = sg_make_image(&(sg_image_desc){
 		.usage = {
 			.color_attachment = true,
@@ -228,7 +217,7 @@ initfb(int w, int h)
 }
 
 void
-resize(void)
+resizedraw(void)
 {
 	sg_destroy_image(pickfb);
 	sg_destroy_image(zfb);
@@ -243,17 +232,6 @@ setupnodes(int threedee)
 {
 	/* bindings for instancing + offscreen rendering: vertex buffer slot 1
 	 * is used for instance data */
-	render.nodebind = (sg_bindings){
-		.vertex_buffers = {
-			[1] = sg_make_buffer(&(sg_buffer_desc){
-				.size = dylen(rnodes) * sizeof *rnodes,
-				.usage = {
-					.vertex_buffer = true,
-					.stream_update = true,
-				},
-			}),
-		},
-	};
 	setnodeshape(0);
 	sg_shader sh = sg_make_shader((threedee ? node_s3d_shader_desc : node_s_shader_desc)(sg_query_backend()));
 	render.nodepipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -375,17 +353,6 @@ setupedges(void)
 {
 	sg_shader sh;
 
-	render.edgebind = (sg_bindings){
-		.vertex_buffers = {
-			[0] = sg_make_buffer(&(sg_buffer_desc){
-				.size = dylen(redges) * sizeof *redges,
-				.usage = {
-					.vertex_buffer = true,
-					.stream_update = true,
-				},
-			}),
-		},
-	};
 	sh = sg_make_shader(edge_s_shader_desc(sg_query_backend()));
 	render.edgepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {
@@ -451,22 +418,8 @@ setupedges(void)
 static void
 setuplines(void)
 {
-	int n;
 	sg_shader sh;
 
-	n = dylen(rlines) + 4 + 7 & ~7;
-	dygrow(rlines, n);
-	render.linebind = (sg_bindings){
-		.vertex_buffers = {
-			[0] = sg_make_buffer(&(sg_buffer_desc){
-				.size = n * sizeof *rlines,
-				.usage = {
-					.vertex_buffer = true,
-					.stream_update = true,
-				},
-			}),
-		},
-	};
 	sh = sg_make_shader(line_s_shader_desc(sg_query_backend()));
 	render.linepipe = sg_make_pipeline(&(sg_pipeline_desc){
 		.layout = {

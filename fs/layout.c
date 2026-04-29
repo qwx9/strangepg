@@ -15,14 +15,15 @@ enum{
 int
 importlayout(char *path)
 {
-	union { u32int u; float f; ioff i; } u;
+	union { u32int u; float f; ioff i; } b;
 	int x, nr, ns;
 	ioff id, idx;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r;
 
-	/* FIXME: mt-safety */
+	/* FIXME: mt-safety: maybe just have one message channel
+	 * per component, ie, draw, layout, render? */
 	reqlayout(Lstop);
 	if((fs = openfs(path, OREAD)) == nil)
 		return -1;
@@ -30,25 +31,26 @@ importlayout(char *path)
 		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
 			break;
 		p = buf;
-		u.u = GBIT32(p);
-		p += sizeof u.u;
-		id = u.i;
-		if((idx = getnodeidx(u.i)) < 0){
-			DPRINT(Debugfs, "importlayout: skipping hidden node %d", u.i);
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		id = b.i;
+		if((idx = getnodeidx(b.i)) < 0){
+			DPRINT(Debugfs, "importlayout: skipping hidden node %d", b.i);
 			continue;
 		}
-		if((r = rnodes + idx) >= rnodes + dylen(rnodes)){
+		if(idx >= dylen(nodes)){
 			DPRINT(Debugfs, "importlayout: skipping out of bounds node %d", idx);
 			continue;
 		}
-		u.u = GBIT32(p);
-		p += sizeof u.u;
-		r->pos[0] = u.f;
-		u.u = GBIT32(p);
-		p += sizeof u.u;
-		r->pos[1] = u.f;
-		u.u = GBIT32(p);
-		r->pos[2] = u.f;
+		r = rnodes + idx;
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		r->pos[0] = b.f;
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		r->pos[1] = b.f;
+		b.u = GBIT32(p);
+		r->pos[2] = b.f;
 		DPRINT(Debugfs, "importlayout: %d %d %f,%f,%f",
 			idx, id, r->pos[0], r->pos[1], r->pos[2]);
 		ns++;
@@ -66,35 +68,35 @@ importlayout(char *path)
 }
 
 /* FIXME: coarsen: same comment as above */
-/* technically rnodes are shared with all graphs */
+/* technically nodes[] is shared with all graphs */
 int
 exportlayout(char *path)
 {
-	union { u32int u; float f; ioff i; } u;
+	union { u32int u; float f; ioff i; } b;
 	int x;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r, *re;
-	Node *n;
+	Node *u;
 
 	if((fs = openfs(path, OWRITE)) == nil)
 		return -1;
 	x = 0;
-	for(n=nodes, r=rnodes, re=r+dylen(r); r<re; r++, n++){
+	for(u=nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
 		p = buf;
-		u.i = n->id;
-		PBIT32(p, u.u);
-		p += sizeof u.u;
-		u.f = r->pos[0];
-		PBIT32(p, u.u);
-		p += sizeof u.u;
-		u.f = r->pos[1];
-		PBIT32(p, u.u);
-		p += sizeof u.u;
-		u.f = r->pos[2];
-		PBIT32(p, u.u);
+		b.i = u->id;
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		b.f = r->pos[0];
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		b.f = r->pos[1];
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		b.f = r->pos[2];
+		PBIT32(p, b.u);
 		DPRINT(Debugfs, "exportlayout: %zd %d %f,%f,%f",
-			r-rnodes, n->id, r->pos[0], r->pos[1], r->pos[2]);
+			r-rnodes, u->id, r->pos[0], r->pos[1], r->pos[2]);
 		if((x = writefs(fs, buf, sizeof buf)) < 0)
 			break;
 	}

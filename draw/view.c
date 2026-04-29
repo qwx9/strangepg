@@ -3,7 +3,76 @@
 #include "drw.h"
 #include "view.h"
 
-View view;
+View view = {
+	.fov = 45.0f,
+	.ar = 1920.0f / 1080.0f,	/* dummy */
+};
+
+void
+expandbb(AABB *a, AABB *b)
+{
+	int i;
+
+	for(i=0; i<3; i++){
+		if(a->tl.p[i] > b->tl.p[i])
+			a->tl.p[i] = b->tl.p[i];
+		if(a->br.p[i] < b->br.p[i])
+			a->br.p[i] = b->br.p[i];
+	}
+}
+
+void
+intersectbb(AABB *a, AABB *b)
+{
+	int i;
+
+	for(i=0; i<3; i++){
+		if(a->tl.p[i] < b->tl.p[i])
+			a->tl.p[i] = b->tl.p[i];
+		if(a->br.p[i] > b->br.p[i])
+			a->br.p[i] = b->br.p[i];
+	}
+}
+
+static inline void
+updateviewbb(void)
+{
+	AABB b;
+	HAABB hb;
+	HMM_Vec3 pp[] = {
+		HMM_V3(-1.0f, +1.0f, +1.0f),
+		HMM_V3(+1.0f, +1.0f, +1.0f),
+		HMM_V3(+1.0f, -1.0f, -1.0f),
+		HMM_V3(-1.0f, -1.0f, -1.0f),
+		/*
+		HMM_V3(-1.0f, -1.0f, -1.0f),
+		HMM_V3(-1.0f, -1.0f, +1.0f),
+		HMM_V3(-1.0f, +1.0f, -1.0f),
+		HMM_V3(-1.0f, +1.0f, +1.0f),
+		HMM_V3(+1.0f, -1.0f, -1.0f),
+		HMM_V3(+1.0f, -1.0f, +1.0f),
+		HMM_V3(+1.0f, +1.0f, -1.0f),
+		HMM_V3(+1.0f, +1.0f, +1.0f),
+		*/
+	}, *p;
+
+	/* FIXME: easier way? two points only? */
+	for(p=pp; p<pp+nelem(pp); p++){
+		hb.TL.X = p->X * view.zoom * view.ar * view.tfov;
+		hb.TL.Y = p->Y * view.zoom * view.tfov;
+		hb.TL.Z = p->Z * view.zoom;
+		hb.TL = HMM_RotateV3Q(hb.TL, view.rot);
+		hb.TL = HMM_AddV3(hb.TL, view.center);
+		hb.BR = hb.TL;
+		if(p != pp)
+			expandbb(&b, &hb.b);
+		else
+			b = hb.b;
+	}
+	DPRINT(Debugbih, "vwbb %.2f,%.2f,%.2f %.2f,%.2f,%.2f",
+		b.tl.x, b.tl.y, b.tl.z, b.br.x, b.br.y, b.br.z);
+	view.bb = b;
+}
 
 void
 updateview(void)
@@ -11,19 +80,12 @@ updateview(void)
 	HMM_Mat4 vw, proj;
 
 	view.Δeye = HMM_SubV3(view.eye, view.center);
-	view.zoom = HMM_Len(view.Δeye);
-	view.ar = (float)view.w / view.h;
+	view.zoom = HMM_LenV3(view.Δeye);
 	proj = HMM_Perspective_RH_NO(view.fov, view.ar, Near, Far);
 	vw = HMM_LookAt_RH(view.eye, view.center, view.up);
 	view.mvp = HMM_MulM4(proj, vw);
 	drawstate |= DSstalepick | DSmoving;
-	reqdraw(Reqrefresh);	/* FIXME: not refresh, resetview or sth? */
-}
-
-void
-worldpandraw(float x, float y)
-{
-	updateview();
+	updateviewbb();
 }
 
 void
@@ -41,7 +103,6 @@ pandraw(float Δx, float Δy)
 		o = HMM_RotateV3Q(HMM_V3(Δx, -Δy, 0.0f), view.rot);
 		view.center = HMM_AddV3(view.center, o);
 		view.eye = HMM_AddV3(view.eye, o);
-		updateview();
 	}else{
 		Δx *= HMM_DegToRad * 0.4f;
 		Δy *= HMM_DegToRad * 0.4f;
@@ -53,8 +114,9 @@ pandraw(float Δx, float Δy)
 		view.right = HMM_RotateV3Q(view.right, q);
 		view.up = HMM_RotateV3Q(view.up, q);
 		view.front = HMM_RotateV3Q(view.front, q);
-		updateview();
 	}
+	updateview();
+	reqdraw(Reqrefresh);
 }
 
 void
@@ -67,6 +129,8 @@ worldview(HMM_Vec3 v)
 		view.eye = v;
 		view.center.X = v.X;
 		view.center.Y = v.Y;
+		updateview();
+		reqdraw(Reqrefresh);
 	}else{
 		view.center = v;
 		d = HMM_MulV3F(view.front, 10.0f);
@@ -74,7 +138,6 @@ worldview(HMM_Vec3 v)
 		view.Δeye = HMM_SubV3(view.eye, view.center);
 		zoomdraw(-0.1f, 0.0f, 0.0f);
 	}
-	updateview();
 }
 
 void
@@ -92,6 +155,7 @@ moveview(float Δx, float Δy)
 	view.eye = HMM_AddV3(view.eye, v);
 	view.center = HMM_AddV3(view.center, v);
 	updateview();
+	reqdraw(Reqrefresh);
 }
 
 /* FIXME: angle only a hack, not really correct */
@@ -116,6 +180,7 @@ rotzview(float x, float y, float Δx, float Δy)
 	view.right = HMM_RotateV3Q(view.right, q);
 	view.up = HMM_RotateV3Q(view.up, q);
 	updateview();
+	reqdraw(Reqrefresh);
 }
 
 void
@@ -131,6 +196,7 @@ zoomdraw(float Δ, float Δx, float Δy)
 		v = HMM_MulV3F(view.Δeye, Δ);
 		view.eye = HMM_SubV3(view.eye, v);
 		updateview();
+		reqdraw(Reqrefresh);
 	}
 }
 
@@ -148,12 +214,19 @@ resetview(void)
 }
 
 void
+initscreen(int w, int h)
+{
+	view.w = w;
+	view.h = h;
+	view.ar = (float)w / h;
+	updateview();
+}
+
+void
 initview(void)
 {
 	if(drawing.flags & DFnope)
 		return;
-	view.fov = 45.0f;
 	view.tfov = tanf(view.fov / 2);
-	view.ar = NAN;
 	resetview();
 }
