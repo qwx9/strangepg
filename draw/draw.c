@@ -722,9 +722,11 @@ thawworld(int nn, int ne, RNode *extra)
 	ioff nx;
 
 	DPRINT(Debugdraw, "thawworld");
-	if(rnodes == nil)
+	if(rnodes == nil){
+		assert(nn == dylen(nodes));
 		initrnodes();
-	dyresize(rnodes, nn);
+	}else
+		dyresize(rnodes, nn);
 	if((nx = dylen(extra)) > 0){
 		memmove(rnodes + nn - nx, extra, nx * sizeof *extra);
 		dyfree(extra);
