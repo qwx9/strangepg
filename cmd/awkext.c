@@ -14,6 +14,8 @@
 
 QLock buflock;
 
+static int	foreachsel(int);
+
 /* FIXME: have upfn use Cell as well */
 void
 deselectnode(Cell *cp)	/* deletion hook, do not call directly */
@@ -103,24 +105,6 @@ fnloadbatch(void)
 	loadbatch();
 }
 
-static TNode *
-fnexplode1(Cell *x, TNode *next)
-{
-	ioff id;
-	float Δ;
-	
-	id = getival(x);
-	if(next != nil){
-		x = execute(next);
-		Δ = getfval(x);
-		tempfree(x);
-		next = next->nnext;
-	}else
-		Δ = 8.0f;
-	explode(id, Δ);
-	return next;
-}
-
 static void
 fninfo(Cell *x)
 {
@@ -141,33 +125,90 @@ fnrefresh(void)
 }
 
 static TNode *
-fnexpand1(Cell *x, TNode *next)
+fnexplode(Cell *x, TNode *next)
 {
 	ioff id;
-	int full;
+	float Δ;
 
-	id = getival(x);	/* cnode id */
-	full = 0;
+	if(x == nil){
+		foreachsel(AEXPLODE);
+		return nil;
+	}
+	id = getival(x);
 	if(next != nil){
 		x = execute(next);
-		full = getival(x) != 0;
+		Δ = getfval(x);
 		tempfree(x);
 		next = next->nnext;
-	}
-	if(expand(id, full) < 0)
-		DPRINT(Debugcoarse, "expand1 %d: %s", id, error());
+	}else
+		Δ = 8.0f;
+	explode(id, Δ);
 	return next;
 }
 
-/* erst die falafel, dann der wein */
-static void
-fncommit(Cell *x)
+static inline void
+doexpand(Cell *x, int full)
 {
-	ioff shutup;
+	ioff id;
 
-	shutup = getival(x);
-	if(commit(shutup) < 0)
-		FATAL("%s", error());
+	id = getival(x);
+	if(expand(id, full) < 0)
+		FATAL("expand: %s", error());
+}
+
+static inline void
+docollapse(Cell *x, int full)
+{
+	ioff id;
+
+	id = getival(x);	/* cnode id */
+	if(collapse(id, full) < 0)
+		FATAL("collapse: %s", error());
+}
+
+static inline void
+commitexpand(void)
+{
+	switch(uncoarsen()){
+	case -1: FATAL("expand: %s", error()); break;
+	case -2: WARNING("expand: %s", error()); break;
+	}
+}
+
+static inline void
+commitcollapse(void)
+{
+	switch(coarsen()){
+	case -1: FATAL("collapse: %s", error()); break;
+	case -2: WARNING("collapse: %s", error()); break;
+	}
+	/* strawk thread should not push commands -- but this should
+	 * be awk code anyway */
+	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
+}
+
+static TNode *
+fnexpand(Cell *x, TNode *next, int full)
+{
+	vlong t;
+
+	t = μsec();
+	if(x == nil){
+		if(foreachsel(full ? AFULLEXPAND : AEXPAND) == 0)
+			expandall(full);
+		TIME("awkext", "foreach", t);
+		commitexpand();
+		TIME("awkext", "uncoarsen", t);
+		return nil;
+	}
+	doexpand(x, full);
+	TIME("awkext", "doexpand", t);
+	if(next != nil)
+		return fnexpand(execute(next), next->nnext, full);
+	else
+		commitexpand();
+	TIME("awkext", "commit", t);
+	return nil;
 }
 
 /* FIXME: just always work on selection or everything, have a selectnodes()
@@ -175,54 +216,26 @@ fncommit(Cell *x)
  * a calculation or expression, like CL[i] == red => select matching in
  * main.awk */
 static TNode *
-fncollapse(Cell *x, TNode *nextarg)
+fncollapse(Cell *x, TNode *next, int full)
 {
-	int i, r, all;
 	vlong t;
-	ioff id, *ops;
-	Cell *c;
-	Array *a;
 
-	all = 0;
-	ops = nil;
-	/* FIXME: most of this doesn't need to be C */
 	t = μsec();
-	if(x != nil && !isrec(x)){	/* FIXME: strawk/eval bug */
-		if((id = getid(getsval(x))) < 0)
-			FATAL("%s", error());
-		ops = pushcollapseop(id, ops);
-		for(;nextarg!=nil; nextarg=nextarg->nnext){
-			tempfree(x);
-			x = execute(nextarg);
-			if((id = getid(getsval(x))) < 0)
-				FATAL("%s", error());
-			ops = pushcollapseop(id, ops);
-		}
-	}else{
-		a = core.sel;
-		for(i=0; i<a->size; i++){
-			for(c=a->tab[i]; c!=nil; c=c->cnext){
-				id = atoi(c->nval);
-				ops = pushcollapseop(id, ops);
-			}
-		}
-		if(ops == nil){
-			all = 1;
-			ops = collapseall();
-		}
+	if(x == nil){
+		if(foreachsel(full ? AFULLCOLLAPSE : ACOLLAPSE) == 0)
+			collapseall(full);
+		TIME("fncollapse", "foreach", t);
+		commitcollapse();
+		TIME("fncollapse", "commit", t);
+		return nil;
 	}
-	TIME("collapse", "collect", t);
-	r = all ? collapseup(ops, -1) : collapsedown(ops);
-	dyfree(ops);
-	if(r < 0)
-		FATAL("collapse: %s", error());
-	TIME("collapse", "collapseop", t);
-	if(coarsen() < 0)
-		FATAL("collapse: %s", error());
-	TIME("collapse", "coarsen", t);
-	/* strawk thread should not push commands -- but this should
-	 * be awk code anyway */
-	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
+	docollapse(x, full);
+	TIME("fncollapse", "docollapse", t);
+	if(next != nil)
+		return fncollapse(execute(next), next->nnext, full);
+	else
+		commitcollapse();
+	TIME("fncollapse", "commit", t);
 	return nil;
 }
 
@@ -311,6 +324,35 @@ fnarm(void)
 	armgraph();
 }
 
+static int
+foreachsel(int type)
+{
+	int i, n;
+	ioff id;
+	Array *a;
+	Cell *c, *x;
+
+	a = core.sel;
+	for(n=i=0; i<a->size; i++)
+		for(c=a->tab[i]; c!=nil; c=c->cnext){
+			id = atoi(c->nval);
+			x = gettemp(NUM);
+			setival(x, id);
+			switch(type){
+			case ACOLLAPSE: docollapse(x, 0); break;
+			case AEXPAND: doexpand(x, 0); break;
+			case AEXPLODE: fnexplode(x, nil); break;
+			case AFULLCOLLAPSE: docollapse(x, 1); break;
+			case AFULLEXPAND: doexpand(x, 1); break;
+			default:	/* can't happen */
+				FATAL("illegal function type %d", type);
+				break;
+			}
+			n++;
+		}
+	return n;
+}
+
 /* NOTE: careful with FATAL in functions that may be part of scripts */
 /* FIXME: stricter error checking and recovery */
 Cell *
@@ -322,19 +364,21 @@ addon(TNode **a, int)
 
 	t = ptoi(a[0]);
 	x = execute(a[1]);
+	if(isrec(x))	/* empty arguments list */
+		x = nil;
 	nextarg = a[1]->nnext;
 	ret = gettemp(NUM);
 	setival(ret, 0);
 	switch(t){
 	case AARM: fnarm(); break;
-	case ACOLLAPSE: nextarg = fncollapse(x, nextarg); break;
-	case ACOMMIT: fncommit(x); break;
-	case AEXPAND1: nextarg = fnexpand1(x, nextarg); break;
-	case AEXPANDALL: expandall(); break;
-	case AEXPLODE1: nextarg = fnexplode1(x, nextarg); break;
+	case ACOLLAPSE: nextarg = fncollapse(x, nextarg, 0); break;
+	case AEXPAND: nextarg = fnexpand(x, nextarg, 0); break;
+	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
 	case AEXPORTCOARSE: fnexportct(x); break;
 	case AEXPORTGFA: fnexportgfa(x); break;
 	case AEXPORTSVG: fnexportsvg(x); break;
+	case AFULLCOLLAPSE: nextarg = fncollapse(x, nextarg, 1); break;
+	case AFULLEXPAND: nextarg = fnexpand(x, nextarg, 1); break;
 	case AINFO: fninfo(x); break;
 	case ALOADBATCH: fnloadbatch(); break;
 	case AREFRESH: fnrefresh(); break;
@@ -349,7 +393,8 @@ addon(TNode **a, int)
 			tempfree(y);
 		}
 	}
-	tempfree(x);
+	if(x != nil)
+		tempfree(x);
 	return ret;
 }
 

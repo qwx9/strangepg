@@ -2,6 +2,10 @@ typedef struct CNode CNode;
 
 enum{
 	FCNvisited = 1<<0,
+	FCIseen = 1<<31,
+};
+enum{
+	FCIhidden = 0xfefefefe,
 };
 /* FIXME: some of the properties of the nodes would be nice to keep as read-
  * only for recovery or undoing changes; but a lot of those could just be

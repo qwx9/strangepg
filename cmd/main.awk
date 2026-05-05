@@ -341,8 +341,7 @@ function findnode(name,	i){
 	if(!checknodename(name))
 		return
 	i = id[name]
-	expand1(i, 0)
-	commit(1)
+	expand(i)
 	reselectnode(i)
 	print "N", i
 }
@@ -443,28 +442,8 @@ function toggleselect(i){
 	else
 		selectnodebyid(i)
 }
-function expand(name, full,	x, i){
-	if(name != ""){
-		expand1(id[i], !!full)
-	}else if(length(selected) > 0){
-		for(i in selected)
-			expand1(selected[i], !!full)
-	}else
-		expandall()
-	commit()
-	deselect()
-}
 function redraw(){
 	print "D"
-}
-function explode(d,	i){
-	if(length(selected) == 0)
-		return
-	if(d == "" || float(d) <= 0)
-		d = 8.0
-	for(i in selected)
-		explode1(selected[i], d)
-	redraw()
 }
 function groupby(tag, incl, cm,	acc){
 	delete acc

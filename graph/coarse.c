@@ -401,30 +401,40 @@ uncoarsen(void)
 }
 
 static inline ioff
-unhide(CNode *U, ioff i, ioff nid)
+unhide(CNode *U, ioff nid)
 {
+	ioff i;
+
 	if(U->idx != -1)
 		return nid;
 	U->idx = nid++;
+	i = U - cnodes;
 	dypush(expnodes, i);
 	DPRINT(Debugcoarse, "unhide: adding id=%d idx=%d", i, U->idx);
 	return nid;
 }
 
 static inline ioff
-unhideall(CNode *U, ioff i, ioff nid, int nlevels)
+unhideall(CNode *U, ioff oid, int nlevels)
 {
-	nid = unhide(U, i, nid);
-	nlevels--;
-	if((i = U->child) != -1)
-		nid = unhideall(cnodes + i, i, nid, nlevels);
-	if(nlevels == 0)	/* negative = no limit */
+	ioff i, nid;
+
+	DPRINT(Debugcoarse, "unhideall %zd %d:%d:%d", U - cnodes,
+		U->parent, U->child, U->sibling);
+	nid = unhide(U, oid);
+	if(nlevels-- == 0){	/* negative = no limit */
+		DPRINT(Debugcoarse, "unhideall: reached limit");
 		return nid;
-	for(i=U->sibling; i!=-1; i=U->sibling){
+	}
+	if((i = U->child) != -1){
 		U = cnodes + i;
-		nid = unhide(U, i, nid);
-		if((i = U->child) != -1)
-			nid = unhideall(cnodes + i, i, nid, nlevels);
+		nid = unhideall(U, nid, nlevels);
+		for(i=U->sibling; i!=-1; i=U->sibling){
+			U = cnodes + i;
+			nid = unhide(U, nid);
+			if(nlevels != 0 && (i = U->child) != -1)
+				nid = unhideall(cnodes + i, nid, nlevels);
+		}
 	}
 	return nid;
 }
@@ -448,14 +458,14 @@ expand(ioff i, int all)
 		V = cnodes + j;
 		if(V->idx != -1)
 			break;
-		nid = unhide(V, j, nid);
+		nid = unhide(V, nid);
 	}
-	nid = unhideall(U, i, nid, all ? -1 : 1);
+	unhideall(U, nid, all ? -1 : 1);
 	return 0;
 }
 
 void
-expandall(void)
+expandall(int all)
 {
 	ioff m, l, i, e;
 	Node *u, *ue;
@@ -467,13 +477,13 @@ expandall(void)
 	m = dylen(nodes);
 	l = 1.5 * m;
 	for(u=nodes, ue=u+dylen(nodes); u<ue; u++)
-		expand(u->id, 0);	/* FIXME: just use unhideall from tops */
+		expand(u->id, all);	/* FIXME: just use unhideall from tops */
 	e = dylen(expnodes);
 	m += e;
 	i = 0;
 	while(m < l){
 		for(; i<e; i++, m++)
-			expand(expnodes[i], 0);	/* FIXME */
+			expand(expnodes[i], all);	/* FIXME */
 		e = dylen(expnodes);
 		if(i == e)
 			break;
@@ -610,52 +620,34 @@ coarsen(void)
 	return 0;
 }
 
-/* FIXME: logmsg or just print? */
-int
-commit(int silent)
-{
-	int r;
-	double t;
-	char *name;
-	int (*fn)(void);
-
-	t = μsec();
-	if(ncoarsed > 0){
-		fn = coarsen;
-		name = "collapse";
-	}else if(expnodes != nil){
-		fn = uncoarsen;
-		name = "expand";
-	}else{
-		if(!silent)
-			logmsg("collapse/expand: no effect.\n");
-		else
-			DPRINT(Debugcoarse, "collapse/expand: no effect");
-		return 0;
-	}
-	switch(r = fn()){
-	case -1: return -1;
-	case -2: DPRINT(Debuginfo, "%s: %s", name, error()); /* wet floor */
-	default: r = 0;
-	}
-	t = (μsec() - t) / 1000.0;
-	logmsg(va("%s: done (%.2f ms).\n", name, t));
-	return 0;
-}
-
 /* inactive node implies its entire subtree is inactive; we have to reset
  * lengths here because of the way we're storing it... */
 static inline int
-hide(CNode *U, CNode *P)
+hide(CNode *U)
 {
 	Node *u;
+	CNode *P;
 
-	if(U->idx == -1)
+	if(U->idx == FCIhidden){
+		DPRINT(Debugcoarse, "hide %zd: already visited", U - cnodes);
+		return 1;
+	}
+	if(U->idx == -1){
+		DPRINT(Debugcoarse, "hide %zd: already hidden", U - cnodes);
 		return 0;
+	}
+	if(U->parent == -1){
+		DPRINT(Debugcoarse, "hide %zd: can\'t hide top node", U - cnodes);
+		return 0;
+	}
 	u = nodes + U->idx;
-	if(u->cflags & FNCalias)
+	if(u->cflags & FNCalias){
+		DPRINT(Debugcoarse, "hide %zd: already aliased", U - cnodes);
 		return 0;
+	}
+	DPRINT(Debugcoarse, "hide %zd: idx %d", U - cnodes, U->idx);
 	u->cflags |= FNCalias;
+	P = cnodes + U->parent;
 	assert(U != P);
 	assert(P->idx != -1);
 	updatenodelength(P->idx, nodes[P->idx].length + u->length);
@@ -665,196 +657,170 @@ hide(CNode *U, CNode *P)
 	return 1;
 }
 
-/* FIXME: don't need to go through entire tree every time */
 static inline int
-hideall(CNode *U, CNode *P, int nlevels)
+hideall(CNode *U, int nlevels)
 {
 	int n;
-	ioff j;
+	ioff i;
+	CNode *V;
 
-	if(nlevels-- == 0)	/* negative = no limit */
+	DPRINT(Debugcoarse, "hideall %zd: idx %d (%d)", U - cnodes, U->idx, U->flags);
+	n = 0;
+	if(U->idx == -1)
 		return 0;
-	DPRINT(Debugcoarse, "hideall %zd idx %d pid %zd", U - cnodes, U->idx, P - cnodes);
-	n = hide(U, P);
-	if((j = U->child) != -1)
-		n += hideall(cnodes + j, P, nlevels);
-	for(j=U->sibling; j!=-1; j=U->sibling){
-		U = cnodes + j;
-		if(hide(U, P)){
+	if((i = U->child) != -1){
+		V = cnodes + i;
+		if(V->idx == FCIhidden)
 			n++;
-			if(U->child != -1)
-				n += hideall(cnodes + U->child, P, nlevels);
+		else if(V->idx != -1)
+			n += hideall(V, nlevels);
+		for(i=V->sibling; i!=-1; i=V->sibling){
+			V = cnodes + i;
+			if(V->idx == FCIhidden)
+				n++;
+			else if(V->idx != -1)
+				n += hideall(V, nlevels);
 		}
 	}
+	DPRINT(Debugcoarse, "hideall %zd: %d collapses", U - cnodes, n);
+	if(n == 0)
+		n += hide(U);
 	return n;
 }
 
-static inline int
-hidedescendants(CNode *U, int nlevels)
-{
-	int j;
-
-	if((j = U->child) == -1)
-		return 0;
-	return hideall(cnodes + j, U, nlevels);
-}
-
-/* NOTE: assumption: a node's being collapsed means all of its children being
- *	hidden; a node being hidden implies its child subtree is completely hidden */
-/* collapse top-down selection down to one node per component; because the ct
- * creates a hierarchy without creating new nodes, we may be selecting nodes
- * and their parents at the same time, including root nodes */
-/* FIXME: might just use same 10% or w/e threshold here and do bottom up also? */
 int
-collapsedown(ioff *ids)
+collapseall(int full)
 {
-	ioff i, m, *p, *pe;
-	CNode *U;
+	ioff k, j;
+	CNode *U, *V;
+	Node *u, *ue;
 
-	/* FIXME: better: instead of only one round of coarsening, coarsen down to a
-	 * threshold like 10% or sth, in which case we have to use a different
-	 * function that starts from the leaves and goes up */
-	m = dylen(ids);
-	DPRINT(Debugcoarse, "collapse: %d/%zd nodes", m, dylen(nodes));
-	for(p=ids, pe=p+m; p<pe; p++){
-		i = *p;
-		U = cnodes + i;
-		if((U->flags & FCNvisited) == 0){
-			DPRINT(Debugcoarse, "collapsedown %d idx=%d: already collapsed", i, U->idx);
+	for(u=nodes, ue=u+dylen(u); u<ue; u++){
+		U = cnodes + u->id;
+		if(U->parent == -1){
+			if(full)
+				hideall(U, -1);
 			continue;
-		}
-		U->flags &= ~FCNvisited;
-		if(U->idx == -1){
-			DPRINT(Debugcoarse, "collapsedown %d: already hidden", i);
+		}else if(U->idx == -1 || full)
 			continue;
+		for(k=0, j=U->child; j!=-1; j=V->sibling){
+			V = cnodes + j;
+			if(V->idx != -1){
+				k++;
+				break;
+			}
 		}
-		if(U->parent == -1 && U->child == -1 && U->nedges != 0){
-			warn("FIXME collapsedown: %d idx=%d not part of coarsening tree\n", i, U->idx);
-			continue;
-		}
-		hidedescendants(U, -1);
+		if(k == 0)
+			hide(U);
 	}
 	return 0;
 }
 
-/* FIXME: rename collapse*() functions to something less confusing */
-/* when collapsing entire graph, do it bottom-up until a threshold is reached */
-int
-collapseup(ioff *ids, ssize max)
+/* FIXME: use hideall */
+static int
+collapseupto(ssize max)
 {
-	int j, r;
-	ioff m, n, k, i, *p, *pp, *pe;
+	ioff n, m, i, j, k, *p, *pe, *ids;
 	CNode *U, *V;
+	Node *u, *ue;
 
-	n = dylen(nodes);
+	n = m = dylen(nodes);
 	if(max <= 0)
 		max = 0.5 * n;
-	m = dylen(ids);
-	DPRINT(Debugcoarse, "collapseup: %d/%d nodes, threshold %zd nodes", m, n, max);
-	r = 1;
-	while(n > max && m > 0){	/* seems ok to only check once per round */
-		for(p=pp=ids, pe=ids+m; p<pe; p++){
+	ids = nil;
+	for(u=nodes, ue=u+n; u<ue; u++){
+		i = u->id;
+		U = cnodes + i;
+		assert(U->idx != -1);
+		if(U->parent == -1)
+			continue;
+		for(k=0, j=U->child; j!=-1; j=V->sibling){
+			V = cnodes + j;
+			if(V->idx != -1 || V->idx == FCIhidden){
+				k = 1;
+				break;
+			}
+		}
+		if(k == 0){
+			hide(U);
+			m--;
+			U->idx = FCIhidden;
+		}
+		dypush(ids, i);
+	}
+	n = dylen(ids);
+	while(m > max){
+		DPRINT(Debugcoarse, "collapseupto: %d/%zd(%zd) > %zd",
+			m, dylen(nodes), dylen(ids), max);
+		dyclear(ids);
+		for(p=ids, pe=p+n; p<pe; p++){
 			i = *p;
 			U = cnodes + i;
-			if(U->parent == -1){
-				DPRINT(Debugcoarse, "collapseup %d: can\'t collapse top node", i);
+			if(U->idx == FCIhidden)
+				U->idx = -1;
+			else
+				dypush(ids, i);
+		}
+		n = dylen(ids);
+		for(p=ids, pe=p+n; p<pe; p++){
+			i = *p;
+			U = cnodes + i;
+			if(U->idx == -1)
 				continue;
-			}
-			/* check if collapsible */
-			for(k=0, j=U->child; j!=-1; j=V->sibling){	/* FIXME: inefficient */
+			for(k=0, j=U->child; j!=-1; j=V->sibling){
 				V = cnodes + j;
-				if(V->idx != -1){
-					k++;
+				if(V->idx != -1 || V->idx == FCIhidden){
+					k = 1;
 					break;
 				}
 			}
 			if(k == 0){
-				DPRINT(Debugcoarse, "collapseup %d: collapsible leaf node", i);
-				if(hide(U, cnodes + U->parent)){	/* fails if already hidden */
-					n--;
-					*pp++ = U->parent;
-				}
-			}else
-				*pp++ = i;	/* try again on next round */
+				hide(U);
+				m--;
+				U->idx = FCIhidden;
+			}
 		}
-		DPRINT(Debugcoarse, "collapseup: round %d: remain %d/%zd ratio %.2f thresh %zd queued %zd",
-			r, n, dylen(nodes), (double)n/(pe-ids), max, pp - ids);
-		if(m == pp - ids)
-			break;
-		m = pp - ids;
-		r++;
 	}
+	for(p=ids, pe=p+n; p<pe; p++){
+		i = *p;
+		U = cnodes + i;
+		if(U->idx == FCIhidden)
+			U->idx = -1;
+	}
+	dyfree(ids);
 	return 0;
 }
 
-/* FIXME: assert? */
-ioff *
-collapseall(void)
+/* we actually don't want to collapse the full subtree because we
+ * don't know what that looks like on screen; instead we only want
+ * to collapse its leaves */
+int
+collapse(ioff id, int all)
 {
-	ioff *ids;
-	Node *u, *ue;
-
-	ids = nil;
-	assert(cnodes != nil);
-	for(u=nodes, ue=u+dylen(nodes); u<ue; u++){
-		if((u->flags & FNfixed) == 0)
-			dypush(ids, u->id);
-	}
-	DPRINT(Debugcoarse, "collapseall: pulled %zd leaves out of %zd nodes", dylen(ids), dylen(nodes));
-	return ids;
-}
-
-/* FIXME: as is, contains redundancies: a parent may be part of the selection,
- * but for now, that's ok */
-ioff *
-pushcollapseop(ioff id, ioff *ids)
-{
+	ioff i;
 	CNode *U;
-	Node *u;
 
 	DPRINT(Debugcoarse, "collapse %d", id);
 	assert(cnodes != nil);
 	if(id < 0 || id >= nnodes){
-		warn("pushcollapseop: out of bounds %d > %d", id, nnodes);
-		return ids;
+		warn("collapse: out of bounds %d > %d", id, nnodes);
+		return -1;
 	}
 	U = cnodes + id;
+	/* get active parent: only useful if wasn't hidden by a different
+	 * collapse in this round; ncoarsed=0 is a bad heuristic */
 	if(U->idx == -1){
-		DPRINT(Debugcoarse, "pushcollapseop: %d not visible", id);
-		return ids;
+		if(ncoarsed != 0)
+			return 0;
+		for(i=U->parent; i!=-1; i=U->parent){
+			U = cnodes + i;
+			if(U->idx != -1)
+				break;
+		}
 	}
-	if(U->child == -1 && U->parent != -1){
-		DPRINT(Debugcoarse, "pushcollapseop: %d is childless, getting parent", id);
-		return pushcollapseop(U->parent, ids);
-	}
-	u = nodes + U->idx;
-	if(u->nedges == 0){
-		DPRINT(Debugcoarse, "pushcollapseop: %d idx=%d has no edges", id, U->idx);
-		return ids;
-	}
-	if(U->flags & FCNvisited){	/* unset during processing */
-		DPRINT(Debugcoarse, "pushcollapseop: %d already seen", id);
-		return ids;
-	}
-	U->flags |= FCNvisited;		/* FIXME: poor man's hashset */
-	dypush(ids, id);
-	return ids;
-}
-
-static void
-collapseupto(int n)
-{
-	ioff *ids;
-
-	/* FIXME: get rid of this alloc */
-	ids = collapseall();	/* FIXME: yuck */
-	if(collapseup(ids, n) < 0)
-		sysfatal("collapseup: %s", error());
-	dyfree(ids);
-	switch(coarsen()){
-	case -2: DPRINT(Debuginfo, "coarsen: %s", error()); break;
-	case -1: sysfatal("coarsen: %s", error()); break;
-	}
+	assert(U->idx != -1);
+	hideall(U, all ? -1 : 1);
+	return 0;
 }
 
 static void
@@ -1180,7 +1146,8 @@ armgraph(void)
 	 * a threshold */
 	if(cthresh > 0 && dylen(nodes) > cthresh){
 		logmsg("collapsing graph...\n");
-		collapseupto(cthresh);
+		if(collapseupto(cthresh) < 0 || coarsen() < 0)
+			sysfatal("armgraph: %s", error());
 	}else{
 		wlockdraw();
 		thawworld(nnodes, nedges, nil);
