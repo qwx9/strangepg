@@ -50,9 +50,9 @@ getnodeidx(ioff id)
 		return -1;
 	}
 	idx = cnodes[id].idx;
+	unlockdraw();
 	if(idx >= dylen(nodes))
 		die("out of bounds node idx: %d > %zd", idx, dylen(nodes)-1);
-	unlockdraw();
 	return idx;
 }
 
