@@ -22,11 +22,11 @@ importlayout(char *path)
 	File *fs;
 	RNode *r;
 
-	/* FIXME: mt-safety: maybe just have one message channel
-	 * per component, ie, draw, layout, render? */
-	reqlayout(Lstop);
+	logmsg(va("importlayout: %s\n", path));
 	if((fs = openfs(path, OREAD)) == nil)
 		return -1;
+	freezeworld();
+	wunlockdraw();
 	for(ns=nr=0;; nr++){
 		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
 			break;
@@ -34,14 +34,15 @@ importlayout(char *path)
 		b.u = GBIT32(p);
 		p += sizeof b.u;
 		id = b.i;
-		if((idx = getnodeidx(b.i)) < 0){
-			DPRINT(Debugfs, "importlayout: skipping hidden node %d", b.i);
+		if((idx = getnodeidx(id)) < 0){
+			DPRINT(Debugfs, "importlayout: skipping hidden node %d", id);
 			continue;
 		}
 		if(idx >= dylen(nodes)){
 			DPRINT(Debugfs, "importlayout: skipping out of bounds node %d", idx);
 			continue;
 		}
+		wlockdraw();
 		r = rnodes + idx;
 		b.u = GBIT32(p);
 		p += sizeof b.u;
@@ -51,11 +52,13 @@ importlayout(char *path)
 		r->pos[1] = b.f;
 		b.u = GBIT32(p);
 		r->pos[2] = b.f;
+		wunlockdraw();
 		DPRINT(Debugfs, "importlayout: %d %d %f,%f,%f",
 			idx, id, r->pos[0], r->pos[1], r->pos[2]);
 		ns++;
 	}
 	DPRINT(Debugfs, "importlayout: imported %d/%d positions", ns, nr);
+	thawworld(dylen(nodes), dylen(edges), nil);
 	pushcmd("cmd(\"FGG138\")");
 	flushcmd();
 	if(x > 0 && x < sizeof buf){
@@ -67,7 +70,6 @@ importlayout(char *path)
 	return x;
 }
 
-/* FIXME: coarsen: same comment as above */
 /* technically nodes[] is shared with all graphs */
 int
 exportlayout(char *path)
