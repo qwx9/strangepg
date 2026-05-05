@@ -141,6 +141,7 @@ sac(void *)
 			warn("newlayout: nothing to layout\n");
 			continue;
 		}
+		assert(graph.flags & GFarmed);
 		if(l->scratch == nil && l->target->new != nil){
 			DPRINT(Debuglayout, "sac: reinit f=%d", l->flags);
 			l->scratch = l->target->new(l->flags & LFnuke);

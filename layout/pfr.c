@@ -179,6 +179,8 @@ compute3d(void *arg, volatile int *stat, int i)
 		n = dylen(r0);
 		re = r0 + n;
 		for(u=nodes+i, r=r0+i; r<re; r+=skip, u+=skip){
+			if((*stat & LFstop) != 0)
+				return 0;
 			if(u->nedges == 0)
 				continue;
 			fixed = u->flags & FNfixed;
@@ -289,6 +291,8 @@ compute(void *arg, volatile int *stat, int i)
 		n = dylen(r0);
 		re = r0 + n;
 		for(u=nodes+i, r=r0+i; r<re; r+=skip, u+=skip){
+			if((*stat & LFstop) != 0)
+				return 0;
 			if(u->nedges == 0)
 				continue;
 			fixed = u->flags & FNfixed;
