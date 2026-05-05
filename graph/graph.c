@@ -198,6 +198,8 @@ setnodecolor(size_t id, Value v)
 		return;
 	u = nodes + idx;
 	u->uflags &= ~FNUhigh;
+	if(rnodes == nil)
+		return;
 	r = rnodes + idx;
 	setcolor(r->col, setdefalpha(v.u));
 	reqdraw(Reqshallowdraw);
