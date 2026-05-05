@@ -222,7 +222,7 @@ spawn(ioff idx, ioff p, RNode *rs, ioff nn)
 	RNode *r, *rp;
 
 	up = nodes + p;
-	if(p >= idx){
+	if(p >= nn){
 		P = cnodes + cnodes[up->id].parent;
 		assert(P->idx != -1);
 		spawn(p, P->idx, rs, nn);
