@@ -868,6 +868,8 @@ Coarsening:
 ```awk
 collapse()                 collapse selection or everything if empty
 expand()                   expand selection or everything if empty
+fullcollapse()             same as collapse() down to single nodes
+fullexpand()               same as expand() up to all collapsed nodes in selection
 ```
 
 Files:
@@ -1062,20 +1064,22 @@ Empty selection:
 ```awk
 collapse()       globally "zoom out" by one level
 expand()         globally "zoom in" by one level
+fullcollapse()   globally maximally "zoom out"
+fullexpand()     globally maximally "zoom in"
 ```
 
 One or more nodes selected:
 ```awk
 collapse()       collapse selected nodes if possible
 expand()         expand selected nodes if there's anything to expand
+fullcollapse()   collapse selected nodes as much as possible
+fullexpand()     expand selected nodes as much as possible
 ```
 
-Those functions accept arguments:
+Those functions accept an argument (overriding any selection):
 ```awk
 collapse(label)  collapse by one level given node if possible
 expand(label)    expand by one level given node if collapsed
-expand(label, 1) expand given node's entire subtree if possible
-expand("", 1)    fully expand selected subtrees if possible
 ```
 
 The `findnode` function can be used to look a node up by label
