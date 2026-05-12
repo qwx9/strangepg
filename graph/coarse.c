@@ -431,9 +431,7 @@ unhideall(CNode *U, ioff oid, int nlevels)
 		nid = unhideall(U, nid, nlevels);
 		for(i=U->sibling; i!=-1; i=U->sibling){
 			U = cnodes + i;
-			nid = unhide(U, nid);
-			if(nlevels != 0 && (i = U->child) != -1)
-				nid = unhideall(cnodes + i, nid, nlevels);
+			nid = unhideall(U, nid, nlevels);
 		}
 	}
 	return nid;
