@@ -14,11 +14,11 @@ enum{
 struct CNode{
 	ioff idx;		/* correspondence in visible nodes[] */
 	ioff eoff;		/* FIXME: should be voff to allow 1e9 */
-	ioff nedges;	/* FIXME: get rid of it and use next eoff? */
+	ushort nedges;	/* FIXME: get rid of it and use next eoff? */
+	uchar flags;	/* FIXME */
 	ioff parent;
 	ioff child;
 	ioff sibling;
-	uchar flags;	/* FIXME */
 };
 extern CNode *cnodes;	/* immutable */
 extern ioff *cedges;	/* immutable */

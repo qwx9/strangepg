@@ -50,7 +50,7 @@ struct Node{
 	uchar dflags;	/* drawing flags */
 	uchar uflags;	/* ui flags */
 	ioff eoff;
-	ioff nedges;	/* FIXME: get rid of this */
+	ushort nedges;	/* FIXME: get rid of this */
 };
 extern Node *nodes;	/* visible only */
 extern ioff *edges;	/* visible only */
