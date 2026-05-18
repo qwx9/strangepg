@@ -3,11 +3,8 @@
 #include "layout.h"
 #include "cmd.h"
 
-enum{
-	DIM = 1024,
-};
-
-#define	C	(drawing.nodesz / (Maxsz - Minsz))
+#define	DIM	1000.0
+#define	C	(drawing.nodesz / Maxsz)
 #define Tolerance	0.100f
 
 typedef struct Aux Aux;

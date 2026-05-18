@@ -10,10 +10,12 @@ typedef struct AABB AABB;
 typedef struct Tree Tree;
 typedef struct B B;
 
+/* FIXME: dynamic or adopt different curves */
 #define	Nodesz	1.0f
-#define	Ptsz	1.0f
-#define	Minsz	0.5f
-#define	Maxsz	50.0f
+#define	Ptsz	(Nodesz * 0.8f)
+#define	Minsz	0.1f
+#define	Maxsz	60.0f
+
 #define	Maxthic	128.0f
 
 struct IRange{
