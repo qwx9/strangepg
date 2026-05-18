@@ -145,14 +145,23 @@ setnodefixedz(size_t id, Value v)
 	setz0(idx, 1, v.f);
 }
 
-void
+/* usually done in batches, won't request draw length change itself */
+int
 updatenodelength(Node *u, vlong n)
 {
+	int f;
+
+	f = 0;
 	if(u->length != n)
-		drawing.flags |= DFstalelen;
+		f |= DFstalelen;
 	if(u->length == drawing.length.min || u->length == drawing.length.max)
-		drawing.flags |= DFrecalclen;
+		f |= DFrecalclen;
+	if((drawing.wflags & f) == f)
+		f = 0;
+	else
+		drawing.wflags |= f;
 	u->length = n;
+	return f;
 }
 
 void
@@ -174,7 +183,8 @@ setnodelength(size_t id, Value v)
 			DPRINT(Debuginfo, "LN[%s]: conflicting value %lld not %lld",
 				getname(id), v.i, u->length);
 	}
-	updatenodelength(u, v.i);
+	if(updatenodelength(u, v.i))
+		reqdraw(Reqflags);	/* can't be helped? */
 }
 
 void

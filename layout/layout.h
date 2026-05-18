@@ -31,6 +31,7 @@ enum{
 	Lstop,
 	Lstart,
 	Lreset,
+	Lreinit,
 	Lexport,
 	Lfreeze,
 	Lthaw,

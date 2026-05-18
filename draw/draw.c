@@ -181,6 +181,9 @@ resetlengths(void)
 		max = min;
 	if((m = max - min) <= 0)
 		m = 1;
+	/* FIXME: truncate highest values? base on median length instead? => get
+	 * distribution of lengths and make a curve based on that; treat everything
+	 * outside q1-q3 as outliers? */
 	k = log(2) / m;
 	if(m > Maxsz - Minsz){
 		rmin = Minsz;
@@ -645,6 +648,23 @@ drawback(void)
 	TIME("draw", "lines", t);
 }
 
+/* FIXME: extend to other writable flags */
+static void
+setflags(void)
+{
+	if(drawing.wflags & DFdrawarrows)
+		drawing.flags ^= DFdrawarrows;
+	if(drawing.wflags & DFdrawlabels)
+		drawing.flags ^= DFdrawlabels;
+	if(drawing.wflags & DFstalelen)
+		drawing.flags |= DFstalelen;
+	if(drawing.wflags & DFrecalclen)
+		drawing.flags |= DFrecalclen;
+	if(drawing.wflags & DF3d)
+		drawing.flags ^= DF3d;
+	drawing.wflags = 0;
+}
+
 static void
 drawproc(void *)
 {
@@ -660,6 +680,8 @@ drawproc(void *)
 			r |= f;
 		DPRINT(Debugdraw, "drawproc: %#lx", r);
 		lockdraw();
+		if(r & Reqflags)
+			setflags();
 		if(drawing.flags & DFstalelen)
 			resetlengths();
 		if(r & Reqredraw || r & Reqrefresh && drawing.flags & DF3d)
@@ -708,10 +730,8 @@ frame(void)	/* render thread */
 		}
 		if(r & Reqfocus)
 			focusobj();
-		if(r & Reqshape){
-			drawing.flags ^= DFdrawarrows;
+		if(r & Reqshape)
 			setnodeshape(drawing.flags & DFdrawarrows);
-		}
 	}else
 		snooze = 1;
 	renderframe(r, snooze);
@@ -742,6 +762,7 @@ thawworld(int nn, int ne, RNode *extra)
 	}
 	dyresize(redges, ne);	/* FIXME: may be overestimated */
 	dyclear(redges);
+	setflags();
 	if((drawing.flags & DFnoray) == 0)
 		dyfree(vnodes);
 	else

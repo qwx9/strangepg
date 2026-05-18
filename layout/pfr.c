@@ -134,14 +134,20 @@ new_(int nuke, int is3d)
 static void *
 new(int nuke)
 {
-	drawing.flags &= ~DF3d;
+	if(drawing.flags & DF3d){
+		drawing.wflags &= ~DF3d;
+		reqdraw(Reqflags);
+	}
 	return new_(nuke, 0);
 }
 
 static void *
 new3d(int nuke)
 {
-	drawing.flags |= DF3d;
+	if((drawing.flags & DF3d) == 0){
+		drawing.wflags |= DF3d;
+		reqdraw(Reqflags);
+	}
 	return new_(nuke, 1);
 }
 

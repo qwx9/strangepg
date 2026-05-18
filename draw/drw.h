@@ -73,7 +73,8 @@ enum{
 	DFarmed = 1<<31,
 };
 struct Drawing{
-	int flags;
+	int flags;		/* should only be touched by drawer */
+	int wflags;
 	IRange length;	/* FIXME: make it actual LN range */
 	Range rlen;
 	double k;
@@ -150,16 +151,19 @@ enum{
 	Reqresetdraw = 1<<0,	/* reset and redo everything */
 	Reqresetview = 1<<1,	/* reset view position, etc., redraw */
 	Reqrefresh = 1<<2,		/* re-render + redraw if needed */
-	Reqshape = 1<<3,		/* change node shape */
+	Reqshape = 1<<3,		/* reset node shape */
 	Reqredraw = 1<<4,		/* redraw current geometry */
 	Reqshallowdraw = 1<<5,	/* re-render w/o buffer updates (ui) */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
+	Reqflags = 1<<8,		/* set or toggle draw flags */
 	Reqsleep = 1<<29,		/* force renderer to wait for events */
 	Reqstop = 1<<30,		/* cease all activity and operations */
 	Reqnone = 1<<31,		/* dummy event */
-	Reqanydraw = Reqrefresh | Reqredraw | Reqshallowdraw | Reqfocus,
-	Reqinit = Reqredraw,
+	Reqanydraw =
+		Reqrefresh | Reqredraw | Reqshallowdraw | Reqfocus |
+		Reqflags,
+	Reqinit = Reqredraw & ~Reqflags,
 };
 
 void	nuketree(Tree*);

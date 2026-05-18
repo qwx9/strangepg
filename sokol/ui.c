@@ -18,15 +18,28 @@
 #include "threads.h"
 #include "cmd.h"
 #include "drw.h"
+#include "layout.h"
 
 typedef struct nk_context nk_context;
 typedef struct nk_color nk_color;
 typedef struct nk_text_edit nk_text_edit;
 
+enum{
+	Pnodesz = 1<<0,
+	Pnodew = 1<<1,
+	Pbox = 1<<2,
+};
 static nk_text_edit nkprompt;
 static int prompting;
 static char ptext[8192];
 static int plen;
+enum{
+	NKOnodesz,
+	NKOnodew,
+	NKOend,
+};
+static char nkopt[NKOend][64];
+static int nkoptn[NKOend];
 
 enum{
 	NKpopt =
@@ -47,9 +60,13 @@ enum{
 		NK_EDIT_CLIPBOARD |
 		NK_EDIT_READ_ONLY |
 		NK_EDIT_GOTO_END_ON_ACTIVATE,
+	NKfopt =
+		NK_EDIT_SIMPLE |
+		NK_EDIT_SELECTABLE |
+		NK_EDIT_SIG_ENTER,
 	Fonth = 13,
-	Padh = 8 * 2,
-	Colh = (Fonth + Padh) / 2,
+	Padh = 3,
+	Colh = Fonth + Padh,
 };
 
 /* FIXME: clear text on escape while prompt active */
@@ -75,6 +92,67 @@ pasteprompt(const char *s)
 	plen = s - ptext;
 }
 
+static inline int
+validfloat(double *fp, double min, double max, char *s)
+{
+	double f;
+	char *p;
+
+	f = strtod(s, &p);
+	*fp = f;
+	return *p == 0 && f >= min && f <= max;
+}
+
+static int
+drawoptions(nk_context *ctx)
+{
+	double f;
+	nk_flags e;
+
+	if(!nk_tree_push(ctx, NK_TREE_TAB, "Drawing", NK_MINIMIZED))
+		return 0;
+	nk_layout_row_dynamic(ctx, 2 * Fonth, 2);
+	nk_label(ctx, "Node length (0.01 - 50):", NK_TEXT_LEFT);
+	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodesz],
+	&nkoptn[NKOnodesz], sizeof nkopt[NKOnodesz], nk_filter_default))){
+		if(e & NK_EDIT_COMMITED){
+			prompting &= ~Pnodesz;
+			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodesz])){
+				nk_edit_unfocus(ctx);
+				drawing.nodesz = f;
+				drawing.wflags |= DFstalelen;
+				reqdraw(Reqflags|Reqshape);
+				reqlayout(Lreinit);
+			}else
+				logerr("invalid node length");
+		}else if(e & NK_EDIT_ACTIVE)
+			prompting |= Pnodesz;
+		else
+			prompting &= ~Pnodesz;
+	}else
+		prompting &= ~Pnodesz;
+	nk_label(ctx, "Node width (0.01 - 50):", NK_TEXT_LEFT);
+	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodew],
+	&nkoptn[NKOnodew], sizeof nkopt[NKOnodew], nk_filter_default))){
+		if((e & NK_EDIT_COMMITED) != 0){
+			prompting &= ~Pnodew;
+			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodew])){
+				nk_edit_unfocus(ctx);
+				drawing.fatness = f;
+				reqdraw(Reqshape);
+			}else
+				logerr("invalid node width");
+		}else if(e & NK_EDIT_ACTIVE)
+			prompting |= Pnodew;
+		else
+			prompting &= ~Pnodew;
+	}else
+		prompting &= ~Pnodew;
+	/* FIXME: minsz, maxsz, C (area factor) */
+	nk_tree_pop(ctx);
+	return 1;
+}
+
 /* must be called after a new frame was started and before flushing */
 void
 drawui(nk_context *ctx)
@@ -92,7 +170,7 @@ drawui(nk_context *ctx)
 		nk_layout_row_dynamic(ctx, 8, 1);
 		nk_label(ctx, selstr[0] == 0 ? "" : selstr, NK_TEXT_LEFT);
 		nk_label(ctx, hoverstr[0] == 0 ? "" : hoverstr, NK_TEXT_LEFT);
-		nk_layout_row_dynamic(ctx, 3 * Colh, 1);
+		nk_layout_row_dynamic(ctx, 3 * Fonth, 1);
 		if(nk_group_begin(ctx, "last", NK_WINDOW_NO_SCROLLBAR)){
 			nk_layout_row_dynamic(ctx, 8, 1);
 			for(i=0; i<3; i++){
@@ -103,32 +181,36 @@ drawui(nk_context *ctx)
 			}
 			nk_group_end(ctx);
 		}
-		h = MAX(r.h - Fonth * Colh - s->padding.y - s->border, 24);
+		h = MAX(r.h - (12*Colh - Padh) - s->padding.y - s->border, 24);
 		if(nk_tree_push(ctx, NK_TREE_TAB, "Log", NK_MINIMIZED)){
 			nk_layout_row_dynamic(ctx, 6 * Colh, 1);
 			/* nk_text and nk_label do not handle newlines */
 			if(nk_group_begin(ctx, "all", 0)){
 				sz = logsz;
-				nk_layout_row_dynamic(ctx, nlog * (Fonth + 2.3), 1);
+				nk_layout_row_dynamic(ctx, 10 + nlog * (Fonth+2), 1);
 				nk_edit_string(ctx, NKxopt, (char *)logbuf, &sz, logsz, nk_filter_default);
 				nk_group_end(ctx);
 			}
 			nk_tree_pop(ctx);
-		}else
-			h += 1 * Colh;
+		}
+		drawoptions(ctx);
 		if(nk_tree_push(ctx, NK_TREE_TAB, "Prompt", NK_MAXIMIZED)){
 			nk_layout_row_dynamic(ctx, h, 1);
 			e = nk_edit_buffer(ctx, NKpopt, &nkprompt, nk_filter_default);
-			prompting = (e & NK_EDIT_ACTIVE) != 0;
 			if((e & NK_EDIT_COMMITED) != 0){
+				prompting &= ~Pbox;
 				plen = nk_str_len_char(&nkprompt.string);
 				ptext[plen] = 0;
 				pushcmd("%s", ptext);
 				flushcmd();
 				nk_edit_unfocus(ctx);
-			}
+			}else if(e & NK_EDIT_ACTIVE)
+				prompting |= Pbox;
+			else
+				prompting &= ~Pbox;
 			nk_tree_pop(ctx);
-		}
+		}else
+			prompting &= ~Pbox;
 		promptbox = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
 	}else{	/* minimized */
 		if((p = nk_window_get_panel(ctx)) != nil){
@@ -265,6 +347,8 @@ initnk(void)
 	ctx = snk_get_context();
 	nk_style_hide_cursor(ctx);
 	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
+	nkoptn[NKOnodesz] = snprint(nkopt[NKOnodesz], sizeof nkopt[NKOnodesz], "%.2f", drawing.nodesz);
+	nkoptn[NKOnodew] = snprint(nkopt[NKOnodew], sizeof nkopt[NKOnodew], "%.2f", drawing.fatness);
 }
 
 void

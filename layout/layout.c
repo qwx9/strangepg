@@ -195,6 +195,11 @@ reqlayout(int type)
 	case Lexport:
 	case Lstop:
 		break;
+	case Lreinit:
+		if((graph.flags & GFdrawme) == 0)
+			break;
+		type = Lstart;
+		/* wet floor */
 	case Lreset:
 	case Lstart:
 		if((graph.flags & GFdrawme) != 0)
@@ -230,8 +235,6 @@ newlayout(int type)
 		else
 			type = deflayout;
 	}
-	if(type == LLpfr3d)
-		drawing.flags |= DF3d;
 	l->target = ttab[type];
 	if(txc == nil)
 		opencomms();
