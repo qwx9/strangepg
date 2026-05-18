@@ -446,46 +446,52 @@ uncoarsen(void)
 }
 
 static inline ioff
-unhide(CNode *U, ioff nid)
+unhide(CNode *U)
 {
 	ioff i;
 
 	if(U->idx != -1)
-		return nid;
-	U->idx = nid++;
+		return 0;
+	assert(U->parent != -1);
+	U->idx = dylen(nodes) + dylen(expnodes);
 	i = U - cnodes;
 	dypush(expnodes, i);
 	DPRINT(Debugcoarse, "unhide: adding id=%d idx=%d", i, U->idx);
-	return nid;
+	U = cnodes + U->parent;
+	assert(U->idx != -1);
+	if(U->idx < dylen(nodes))
+		U->flags |= FCNvisited;
+	return 1;
 }
 
-static inline ioff
-unhideall(CNode *U, ioff oid, int nlevels)
+static ioff
+unhideall(CNode *U, int nlevels)
 {
-	ioff i, nid;
+	int n;
+	ioff i;
 
 	DPRINT(Debugcoarse, "unhideall %zd %d:%d:%d", U - cnodes,
 		U->parent, U->child, U->sibling);
-	nid = unhide(U, oid);
+	n = unhide(U);
 	if(nlevels-- == 0){	/* negative = no limit */
 		DPRINT(Debugcoarse, "unhideall: reached limit");
-		return nid;
+		return n;
 	}
 	if((i = U->child) != -1){
 		U = cnodes + i;
-		nid = unhideall(U, nid, nlevels);
+		n += unhideall(U, nlevels);
 		for(i=U->sibling; i!=-1; i=U->sibling){
 			U = cnodes + i;
-			nid = unhideall(U, nid, nlevels);
+			n += unhideall(U, nlevels);
 		}
 	}
-	return nid;
+	return n;
 }
 
 int
 expand(ioff i, int all)
 {
-	ioff j, nid;
+	ioff j;
 	CNode *U, *V;
 
 	if((graph.flags & GFctarmed) == 0){
@@ -495,15 +501,15 @@ expand(ioff i, int all)
 		werrstr("out of bounds %d > %d", i, nnodes);
 		return -1;
 	}
-	nid = dylen(nodes) + dylen(expnodes);
 	U = cnodes + i;
-	for(j=U->parent; j!=-1; j=V->parent){	/* hidden parents */
+	j = U->parent;
+	if(j != -1){
 		V = cnodes + j;
-		if(V->idx != -1)
-			break;
-		nid = unhide(V, nid);
+		/* hidden parents: order is important */
+		if(V->idx == -1 && expand(j, 0) < 0)
+			return -1;
 	}
-	unhideall(U, nid, all ? -1 : 1);
+	unhideall(U, all ? -1 : 1);
 	return 0;
 }
 
