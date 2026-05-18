@@ -333,6 +333,7 @@ foreachsel(int type)
 	Cell *c, *x;
 
 	a = core.sel;
+	rlock(&a->lock);
 	for(n=i=0; i<a->size; i++)
 		for(c=a->tab[i]; c!=nil; c=c->cnext){
 			id = atoi(c->nval);
@@ -350,6 +351,7 @@ foreachsel(int type)
 			}
 			n++;
 		}
+	runlock(&a->lock);
 	return n;
 }
 
