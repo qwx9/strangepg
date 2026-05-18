@@ -82,8 +82,13 @@ getid(char *s)
 uint
 getnodelength(voff id)
 {
+	uint v;
+
 	assert(id >= 0 && id < nnodes);
-	return *((uint *)core.length->tab + id);
+	v = *((uint *)core.length->tab + id);
+	if(v == UNSET || v == 0)
+		v = 1;
+	return v;
 }
 
 void

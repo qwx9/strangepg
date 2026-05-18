@@ -313,18 +313,21 @@ regenedges(edgeset *eset, ioff nedge, ioff nadj)
 }
 
 /* FIXME: too much recursive shit */
-static inline vlong
-sublength(CNode *U)
+static vlong
+sublength(ioff id)
 {
 	vlong n;
 	ioff i;
+	CNode *U;
 
-	n = getnodelength(U - cnodes);
+	n = getnodelength(id);
+	U = cnodes + id;
 	for(i=U->child; i!=-1; i=U->sibling){
 		U = cnodes + i;
 		if(U->idx == -1)
-			n += sublength(U);
+			n += sublength(i);
 	}
+	assert(n > 0);
 	return n;
 }
 
@@ -416,12 +419,14 @@ uncoarsen(void)
 		u->eoff = off;
 		off += *d++;
 		u->nedges = 0;	/* for regenedges */
-		U = cnodes + u->id;
-		/* FIXME: length setting, rmin/max etc. */
-		if(getnodelength(u->id) > 0)
-			updatenodelength(u - nodes, sublength(U));
-		if(i >= nn)
+		j = u->id;
+		U = cnodes + j;
+		if(i >= nn){
+			updatenodelength(u, sublength(j));
 			spawn(i, cnodes[U->parent].idx, rs, nn);
+		}else if(U->flags & FCNvisited)
+			updatenodelength(u, sublength(j));
+		U->flags &= ~FCNvisited;
 	}
 	free(deg);
 	TIME("uncoarsen", "regenerate offsets and nodes", t);
@@ -665,7 +670,7 @@ coarsen(void)
 static inline int
 hide(CNode *U)
 {
-	Node *u;
+	Node *u, *p;
 	CNode *P;
 
 	if(U->idx == FCIhidden){
@@ -690,7 +695,8 @@ hide(CNode *U)
 	P = cnodes + U->parent;
 	assert(U != P);
 	assert(P->idx != -1);
-	updatenodelength(P->idx, nodes[P->idx].length + u->length);
+	p = nodes + P->idx;
+	updatenodelength(p, p->length + u->length);
 	U->idx = -1;
 	u->id = P - cnodes;
 	ncoarsed++;

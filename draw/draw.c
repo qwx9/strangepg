@@ -197,12 +197,13 @@ resetlengths(void)
 			rmin = min;
 		}
 	}
-	if((rmax -= rmin) <= 0.0)
-		rmax = 1.0;
+	if(rmax - rmin <= 0.0)
+		rmax = rmin + 1;
 	if(drawing.nodesz != 1.0){
 		rmin *= drawing.nodesz;
 		rmax *= drawing.nodesz;
 	}
+	rmax -= rmin;
 	drawing.rlen.min = rmin;
 	drawing.rlen.max = rmax;
 	drawing.k = k;

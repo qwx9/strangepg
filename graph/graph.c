@@ -146,21 +146,12 @@ setnodefixedz(size_t id, Value v)
 }
 
 void
-updatenodelength(ioff idx, uint n)
+updatenodelength(Node *u, vlong n)
 {
-	Node *u;
-
-	u = nodes + idx;
-	if(drawing.length.min == 0.0f || drawing.length.min > n){
-		drawing.length.min = n;
+	if(u->length != n)
 		drawing.flags |= DFstalelen;
-	}else if(drawing.length.min == u->length)
-		drawing.flags |= DFstalelen | DFrecalclen;
-	if(drawing.length.max < n){
-		drawing.length.max = n;
-		drawing.flags |= DFstalelen;
-	}else if(drawing.length.max == u->length)
-		drawing.flags |= DFstalelen | DFrecalclen;
+	if(u->length == drawing.length.min || u->length == drawing.length.max)
+		drawing.flags |= DFrecalclen;
 	u->length = n;
 }
 
@@ -177,13 +168,13 @@ setnodelength(size_t id, Value v)
 	/* FIXME: wrong place to check, this should check the
 	 * LN table, nodes might already be collapsed by now */
 	if(u->length != 0){
-		if(u->length == v.u)
+		if(u->length == v.i)
 			return;
 		else	/* FIXME: will be handled by ro values */
 			DPRINT(Debuginfo, "LN[%s]: conflicting value %lld not %lld",
-				getname(id), v.u, u->length);
+				getname(id), v.i, u->length);
 	}
-	updatenodelength(idx, v.u);
+	updatenodelength(u, v.i);
 }
 
 void
