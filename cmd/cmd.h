@@ -25,6 +25,7 @@ int	selectionsize(void);
 
 char*	getname(voff);
 u32int	getnodecolor(voff);
+u32int	getcnodecolor(voff);
 voff	getid(char*);
 void	initpos(void);
 void	loadbatch(void);

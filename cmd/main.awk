@@ -197,14 +197,6 @@ BEGIN{
 	Fdie = 1<<5
 	Fcrm114 = 1<<15
 }
-function setdefcols(	n, i){
-	n = length(default)
-	for(i in CL)
-		if(!(i in CL))
-			CL[i] = default[i % n]
-		else
-			CL[i] = CL[i]
-}
 # FIXME: CL changes currently are still destructive, would be
 # nice to be able to actually reset them to the initial values
 # FIXME: use after free if using i as temp and not a param
@@ -241,7 +233,6 @@ function cmd(code, _i, __i){
 		if(flags & Fdie)
 			quit()
 		arm()
-		setdefcols()	# FIXME: until rnodes are gone
 		if(length(deferredexpr) != 0){	# FIXME: after arm because of rnodes
 			for(_i=1; _i<=length(deferredexpr); _i++)
 				eval("{"deferredexpr[_i]"}")

@@ -3,6 +3,8 @@ typedef struct Core Core;
 struct Core{
 	char **labels;
 	u32int *colors;
+	u32int *defcol;
+	u32int nocol;
 	Array *strs;	/* FIXME: val could be a refcount to allow freeing */
 	Array *ptrs;
 	Array *eptrs;
@@ -11,6 +13,7 @@ struct Core{
 	Array *length;
 	Array *degree;
 	Array *color;
+	Array *defpal;
 	Array *sel;		/* FIXME: actually int hashset */
 	Array *fx;
 	Array *fy;

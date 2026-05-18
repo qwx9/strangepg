@@ -45,8 +45,25 @@ getname(voff id)
 u32int
 getnodecolor(voff id)
 {
+	u32int v;
+
 	assert(id >= 0 && id < nnodes);
-	return core.colors[id];
+	if((v = core.colors[id]) == UNSET || v == core.nocol)
+		v = 0;
+	return v;
+}
+
+u32int
+getcnodecolor(voff id)
+{
+	u32int v, w;
+
+	if((v = core.colors[id]) == UNSET)
+		v = core.defcol[id % core.defpal->nelem];
+	/* FIXME: always get child colors and mix with ours? */
+	else if(v == core.nocol && (w = getchildcolors(id)) != 0)
+		v = w;
+	return v;
 }
 
 voff
@@ -475,6 +492,30 @@ pushname(char *s)
 	return id;
 }
 
+static inline void
+stealpal(void)
+{
+	int i;
+	u32int v;
+	Cell *cp, *c;
+	Array *a;
+
+	cp = lookup("default", symtab);
+	assert(cp != nil && isarr(cp));
+	a = (Array *)cp->sval;
+	rlock(&a->lock);
+	/* FIXME: not in order, use dypushat (with nval or sth?) */
+	for(i=0; i<a->size; i++)
+		for(c=a->tab[i]; c!=nil; c=c->cnext){
+			v = getival(c);
+			dypush(core.defcol, v);
+		}
+	runlock(&a->lock);
+	cp = lookup("translucent", symtab);
+	assert(cp != nil);
+	core.nocol = getival(cp);
+}
+
 void
 fixtabs(voff nn, int *lenp, ushort *degp)
 {
@@ -490,6 +531,8 @@ fixtabs(voff nn, int *lenp, ushort *degp)
 	core.degree = attach("degree", core.ids, degp, nn, RO|NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nn, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nn, NUM|USG, setnodecolor);
+	stealpal();
+	core.defpal = attach("default", nil, core.defcol, dylen(core.defcol), NUM|USG, nil);
 }
 
 static inline Array *
