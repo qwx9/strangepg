@@ -26,7 +26,7 @@ deselectnode(Cell *cp)	/* deletion hook, do not call directly */
 	if((cp->tval & (NUM|STR)) == STR)
 		return;
 	id = getival(cp);
-	v.u = core.colors[id];
+	v.u = getcnodecolor(id);
 	setnodecolor(id, v);
 }
 

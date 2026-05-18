@@ -12,6 +12,7 @@ void	initct(void);
 
 uint	getnodelength(voff);
 
+u32int	getchildcolors(ioff);
 ioff	getnodeidx(ioff);
 ioff	getrealid(ioff);
 

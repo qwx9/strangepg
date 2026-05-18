@@ -144,7 +144,7 @@ rgb2lab(double c[3])
 	c[2] = 200.0 * (Fn(y / Yn) - Fn(z / Zn));
 }
 
-static void
+void
 mixcolors(float *cols, u32int v)
 {
 	double c1[3], c2[3];
@@ -152,9 +152,9 @@ mixcolors(float *cols, u32int v)
 	c1[0] = cols[0];
 	c1[1] = cols[1];
 	c1[2] = cols[2];
-	c2[0] = (double)(v >> 16 & 0xff) / 255.0;
-	c2[1] = (double)(v >> 8 & 0xff) / 255.0;
-	c2[2] = (double)(v & 0xff) / 255.0;
+	c2[0] = (double)(v >> 24 & 0xff) / 255.0;
+	c2[1] = (double)(v >> 16 & 0xff) / 255.0;
+	c2[2] = (double)(v >> 8 & 0xff) / 255.0;
 	rgb2lab(c1);
 	rgb2lab(c2);
 	c1[0] = (c1[0] + c2[0]) / 2.0;
@@ -169,7 +169,7 @@ mixcolors(float *cols, u32int v)
 void
 highlightnode(RNode *r)
 {
-	mixcolors(r->col, theme[Chigh] >> 8);
+	mixcolors(r->col, theme[Chigh]);
 }
 
 void

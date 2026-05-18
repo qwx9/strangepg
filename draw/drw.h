@@ -140,6 +140,7 @@ extern u32int *theme;
 void	highlightnode(RNode*);
 u32int	setdefalpha(u32int);
 void	settheme(void);
+void	mixcolors(float*, u32int);
 u32int	getcolor(float*);
 void	setcolor(float*, u32int);
 

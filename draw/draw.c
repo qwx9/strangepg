@@ -111,7 +111,6 @@ initrnodes(void)
 	k = drawing.k;
 	tot = 0.0;
 	for(i=0, r=rnodes, u=nodes, ue=u+n; u<ue; u++, r++, i++){
-		setrcol(r, getnodecolor(u->id), 0);
 		setrlen(r, u->length, min, max, k);
 		tot += r->len;
 	}
@@ -134,7 +133,16 @@ spawnrnode(RNode *r, RNode *from, voff id)
 		r->pos[2] = (drawing.flags & DFnodepth) == 0
 			? 0.1f * z : 0.00001f * z;
 	}
-	setrcol(r, getnodecolor(id), 0);
+}
+
+static void
+recolornodes(void)
+{
+	RNode *r;
+	Node *u, *ue;
+
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++)
+		setrcol(r, getcnodecolor(u->id), 0);
 }
 
 /* FIXME: compute min/max as we go, has to be at least 1 */
@@ -739,6 +747,7 @@ thawworld(int nn, int ne, RNode *extra)
 		vnodes = rnodes;
 	wunlockdraw();
 	reqlayout(Lthaw);
+	recolornodes();
 }
 
 void

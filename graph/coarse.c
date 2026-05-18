@@ -56,6 +56,46 @@ getnodeidx(ioff id)
 	return idx;
 }
 
+static int
+childcol(ioff id, float *cp, int nc)
+{
+	u32int v;
+	CNode *U;
+
+	U = cnodes + id;
+	if(U->idx == -1 || U->idx == FCIhidden){	/* FIXME */
+		if((v = getnodecolor(id)) != 0){
+			if(nc++ == 0)
+				setcolor(cp, v);
+			else
+				mixcolors(cp, v);
+		}
+	}
+	if((id = U->child) == -1)
+		return nc;
+	nc = childcol(id, cp, nc);
+	U = cnodes + id;
+	for(id=U->sibling; id!=-1; id=U->sibling){
+		nc = childcol(id, cp, nc);
+		U = cnodes + id;
+	}
+	return nc;
+}
+
+u32int
+getchildcolors(ioff id)
+{
+	CNode *U;
+	float cols[4];
+
+	U = cnodes + id;
+	if((id = U->child) == -1 || childcol(id, cols, 0) == 0)
+		return 0;
+	return (u8int)(cols[0] * 255.0) << 24 |
+		(u8int)(cols[1] * 255.0) << 16 |
+		(u8int)(cols[2] * 255.0) << 8;
+}
+
 int
 exportct(char *path)
 {
