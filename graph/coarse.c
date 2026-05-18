@@ -579,10 +579,15 @@ coarsen(void)
 	}
 	DPRINT(Debugcoarse, "kept %d/%zd unique edges, /%d adj", ne, dylen(edges), ne2);
 	TIME("coarsen", "save unique edges", t);
+	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
+	freezeworld();
+	TIME("coarsen", "wait for green light", t);
 	DPRINT(Debugcoarse, "new nodes[]:");
 	for(d=deg, off=0, r=ur=rnodes, u=up=nodes; u<ue; u++, r++){
-		if(u->cflags & FNCalias)
+		if(u->cflags & FNCalias){
+			u->cflags &= ~FNCalias;
 			continue;
+		}
 		*up = *u;
 		up->nedges = 0;
 		up->eoff = off;
@@ -598,9 +603,6 @@ coarsen(void)
 	x = up - nodes;
 	assert(x == dylen(nodes) - ncoarsed);
 	TIME("coarsen", "recompute offsets", t);
-	DPRINT(Debugcoarse, "coarsen: freezing draw and render...");
-	freezeworld();
-	TIME("coarsen", "wait for green light", t);
 	assert(nn == dylen(nodes) - ncoarsed);
 	dyresize(nodes, nn);
 	dyresize(edges, ne2);
