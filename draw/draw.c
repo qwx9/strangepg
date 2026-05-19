@@ -22,6 +22,9 @@ Drawing drawing = {
 	},
 	.nodesz = Nodesz,
 	.fatness = Ptsz,
+	.minsz = Minsz,
+	.maxsz = Maxsz,
+	.fedge = 1000,
 };
 Box promptbox, selbox;
 Channel *rendc, *ctlc;
@@ -185,15 +188,15 @@ resetlengths(void)
 	 * distribution of lengths and make a curve based on that; treat everything
 	 * outside q1-q3 as outliers? */
 	k = log(2) / m;
-	if(m > Maxsz - Minsz){
-		rmin = Minsz;
-		rmax = Maxsz;
+	if(m > drawing.maxsz - drawing.minsz){
+		rmin = drawing.minsz;
+		rmax = drawing.maxsz;
 	}else{
-		if(min >= Maxsz || max >= Maxsz){
-			rmax = Maxsz;
+		if(min >= drawing.maxsz || max >= drawing.maxsz){
+			rmax = drawing.maxsz;
 			rmin = rmax - m;
-		}else if(min < Minsz || max < Minsz || max < min){
-			rmin = Minsz;
+		}else if(min < drawing.minsz || max < drawing.minsz || max < min){
+			rmin = drawing.minsz;
 			rmax = rmin + m;
 		}else{
 			rmax = max;

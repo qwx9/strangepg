@@ -3,8 +3,6 @@
 #include "layout.h"
 #include "cmd.h"
 
-#define	DIM	1000.0
-#define	C	(drawing.nodesz / Maxsz)
 #define Tolerance	0.100f
 
 typedef struct Aux Aux;
@@ -22,20 +20,23 @@ static void *
 init(void)
 {
 	Aux *aux;
+	double C, D;
 
 	aux = emalloc(sizeof *aux);
-	aux->k = C * sqrtf(DIM * DIM / dylen(nodes));
+	D = drawing.fedge * drawing.fedge;
+	C = sqrtf(D / dylen(nodes));
+	aux->k = C * drawing.nodesz / drawing.maxsz;
 	return aux;
 }
 
 static void
 initdim(float *mid, float *var, int is3d)
 {
-	var[0] = DIM;
+	var[0] = drawing.fedge;
 	mid[0] = 0;
-	var[1] = DIM;
+	var[1] = drawing.fedge;
 	mid[1] = 0;
-	var[2] = is3d ? DIM : 0.1f;
+	var[2] = is3d ? drawing.fedge : 0.1f;
 	mid[2] = 0;
 	drawing.mid[0] = mid[0];
 	drawing.mid[1] = mid[1];

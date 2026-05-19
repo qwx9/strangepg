@@ -75,13 +75,16 @@ enum{
 struct Drawing{
 	int flags;		/* should only be touched by drawer */
 	int wflags;
-	IRange length;	/* FIXME: make it actual LN range */
+	IRange length;
 	Range rlen;
 	double k;
 	double meansz;
-	float mid[3];
-	float nodesz;
-	float fatness;
+	double mid[3];
+	double nodesz;	/* base node length */
+	double fatness;	/* node width */
+	double minsz;	/* min node length */
+	double maxsz;	/* max node length */
+	double fedge;	/* edge length: layout area factor */
 	Tree tree;		/* space partitioning */
 	AABB bb;	/* FIXME: compute scene box here while drawing */
 };

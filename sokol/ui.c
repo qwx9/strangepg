@@ -25,9 +25,12 @@ typedef struct nk_color nk_color;
 typedef struct nk_text_edit nk_text_edit;
 
 enum{
-	Pnodesz = 1<<0,
-	Pnodew = 1<<1,
-	Pbox = 1<<2,
+	Pbox = 1<<0,
+	Pnodesz = 1<<1,
+	Pnodew = 1<<2,
+	Pminsz = 1<<3,
+	Pmaxsz = 1<<4,
+	Pfedge = 1<<5,
 };
 static nk_text_edit nkprompt;
 static int prompting;
@@ -36,6 +39,9 @@ static int plen;
 enum{
 	NKOnodesz,
 	NKOnodew,
+	NKOmaxsz,
+	NKOminsz,
+	NKOfedge,
 	NKOend,
 };
 static char nkopt[NKOend][64];
@@ -112,7 +118,8 @@ drawoptions(nk_context *ctx)
 	if(!nk_tree_push(ctx, NK_TREE_TAB, "Drawing", NK_MINIMIZED))
 		return 0;
 	nk_layout_row_dynamic(ctx, 2 * Fonth, 2);
-	nk_label(ctx, "Node length (0.01 - 50):", NK_TEXT_LEFT);
+	/* FIXME: sliders? */
+	nk_label(ctx, "Node length (0.01-50):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodesz],
 	&nkoptn[NKOnodesz], sizeof nkopt[NKOnodesz], nk_filter_default))){
 		if(e & NK_EDIT_COMMITED){
@@ -131,7 +138,7 @@ drawoptions(nk_context *ctx)
 			prompting &= ~Pnodesz;
 	}else
 		prompting &= ~Pnodesz;
-	nk_label(ctx, "Node width (0.01 - 50):", NK_TEXT_LEFT);
+	nk_label(ctx, "Node width (0.01-50):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodew],
 	&nkoptn[NKOnodew], sizeof nkopt[NKOnodew], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
@@ -148,7 +155,70 @@ drawoptions(nk_context *ctx)
 			prompting &= ~Pnodew;
 	}else
 		prompting &= ~Pnodew;
-	/* FIXME: minsz, maxsz, C (area factor) */
+	nk_label(ctx, "Min.node length (0.01-100):", NK_TEXT_LEFT);
+	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOminsz],
+	&nkoptn[NKOminsz], sizeof nkopt[NKOminsz], nk_filter_default))){
+		if((e & NK_EDIT_COMMITED) != 0){
+			prompting &= ~Pminsz;
+			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOminsz]))
+				logerr("invalid min length");
+			else if(f > drawing.maxsz)
+				logerr("must be lesser or equal to max length");
+			else if(f != drawing.minsz){
+				nk_edit_unfocus(ctx);
+				drawing.minsz = f;
+				drawing.wflags |= DFstalelen;
+				reqdraw(Reqflags);
+				reqlayout(Lreinit);
+			}
+		}else if(e & NK_EDIT_ACTIVE)
+			prompting |= Pminsz;
+		else
+			prompting &= ~Pminsz;
+	}else
+		prompting &= ~Pminsz;
+	nk_label(ctx, "Max.node length (0.01-100.0):", NK_TEXT_LEFT);
+	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOmaxsz],
+	&nkoptn[NKOmaxsz], sizeof nkopt[NKOmaxsz], nk_filter_default))){
+		if((e & NK_EDIT_COMMITED) != 0){
+			prompting &= ~Pmaxsz;
+			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOmaxsz]))
+				logerr("invalid max length");
+			else if(f < drawing.minsz)
+				logerr("must be greater or equal to min length");
+			else if(f != drawing.maxsz){
+				nk_edit_unfocus(ctx);
+				drawing.maxsz = f;
+				drawing.wflags |= DFstalelen;
+				reqdraw(Reqflags);
+				reqlayout(Lreinit);
+			}
+		}else if(e & NK_EDIT_ACTIVE)
+			prompting |= Pmaxsz;
+		else
+			prompting &= ~Pmaxsz;
+	}else
+		prompting &= ~Pmaxsz;
+	nk_label(ctx, "Edge length factor (1-5000):", NK_TEXT_LEFT);
+	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOfedge],
+	&nkoptn[NKOfedge], sizeof nkopt[NKOfedge], nk_filter_default))){
+		if((e & NK_EDIT_COMMITED) != 0){
+			prompting &= ~Pfedge;
+			if(!validfloat(&f, 1.0, 5000.0, nkopt[NKOfedge]))
+				logerr("invalid edge length factor");
+			else if(f != drawing.fedge){
+				nk_edit_unfocus(ctx);
+				drawing.fedge = f;
+				drawing.wflags |= DFstalelen;
+				reqdraw(Reqflags);
+				reqlayout(Lreinit);
+			}
+		}else if(e & NK_EDIT_ACTIVE)
+			prompting |= Pfedge;
+		else
+			prompting &= ~Pfedge;
+	}else
+		prompting &= ~Pfedge;
 	nk_tree_pop(ctx);
 	return 1;
 }
@@ -349,6 +419,9 @@ initnk(void)
 	nk_textedit_init_fixed(&nkprompt, ptext, sizeof ptext-1);
 	nkoptn[NKOnodesz] = snprint(nkopt[NKOnodesz], sizeof nkopt[NKOnodesz], "%.2f", drawing.nodesz);
 	nkoptn[NKOnodew] = snprint(nkopt[NKOnodew], sizeof nkopt[NKOnodew], "%.2f", drawing.fatness);
+	nkoptn[NKOminsz] = snprint(nkopt[NKOminsz], sizeof nkopt[NKOminsz], "%.2f", drawing.minsz);
+	nkoptn[NKOmaxsz] = snprint(nkopt[NKOmaxsz], sizeof nkopt[NKOmaxsz], "%.2f", drawing.maxsz);
+	nkoptn[NKOfedge] = snprint(nkopt[NKOfedge], sizeof nkopt[NKOfedge], "%.2f", drawing.fedge);
 }
 
 void
