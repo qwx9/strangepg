@@ -102,6 +102,8 @@ sac(void *)
 			break;
 		case Lstart:
 			DPRINT(Debuglayout, "sac: start");
+			if(l != nil)
+				l->flags |= LFclean;
 			graph.flags |= GFlayme;
 			break;
 		case Lidle:
