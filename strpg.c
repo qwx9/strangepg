@@ -208,8 +208,8 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 's':
 		drawing.nodesz = atof(EARGF(usage()));
 		drawing.fatness = atof(EARGF(usage()));
-		if(drawing.nodesz <= 0.0f || drawing.nodesz >= Maxsz
-		|| drawing.fatness <= 0.0f || drawing.fatness > Maxthic){
+		if(drawing.nodesz <= 0.01f || drawing.nodesz >= Maxsz
+		|| drawing.fatness <= 0.01f || drawing.fatness > Maxthic){
 			warn("invalid node dimensions\n");
 			usage();
 		}
