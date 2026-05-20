@@ -194,8 +194,11 @@ readcmd(char *s, int err)
 			return;
 		case 'Q':
 			quit();
+		case 'C':
+			r |= Reqrecolor;
+			continue;
 		case 'D':
-			r = 1;
+			r |= Reqredraw;
 			continue;
 		case 'E':
 			logerr(va("error: %s\n", s+2));
@@ -203,14 +206,14 @@ readcmd(char *s, int err)
 		case 'R':
 			if(reqlayout(Lreset))
 				warn("readcmd: reqlayout: %s\n", error());
-			r = 1;
+			r |= Reqredraw;
 			continue;
 		case 'r':
 			if(drawing.flags & DFnope){
 				if(reqlayout(Lstart))
 					warn("readcmd: reqlayout: %s\n", error());
 			}else
-				r = 1;
+				r |= Reqredraw;
 			continue;
 		case 'U':	/* FIXME: kludge (see awkext) */
 			pushcmd("deselect()");
@@ -248,7 +251,7 @@ readcmd(char *s, int err)
 			if(loadfs(fld[0], FFcsv, 0) < 0)
 				warn("readcmd: csv %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
-				r = 1;
+				r |= Reqredraw;
 			break;
 		case 'i':
 			if(m != 1)
@@ -256,7 +259,7 @@ readcmd(char *s, int err)
 			if(importlayout(fld[0]) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
-				r = 1;
+				r |= Reqredraw;
 			break;
 		case 'j':
 			if(m != 1)
@@ -264,7 +267,7 @@ readcmd(char *s, int err)
 			if(importodgilayout(fld[0]) < 0)
 				warn("readcmd: importodgilayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
-				r = 1;
+				r |= Reqredraw;
 			break;
 		case 'o':
 			if(m != 1)
@@ -281,7 +284,7 @@ readcmd(char *s, int err)
 		}
 	}
 	if(r)
-		reqdraw(Reqredraw);
+		reqdraw(r);
 }
 
 static void

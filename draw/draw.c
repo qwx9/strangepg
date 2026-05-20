@@ -685,6 +685,8 @@ drawproc(void *)
 		lockdraw();
 		if(r & Reqflags)
 			setflags();
+		if(r & Reqrecolor)
+			recolornodes();
 		if(drawing.flags & DFstalelen)
 			resetlengths();
 		if(r & Reqredraw || r & Reqrefresh && drawing.flags & DF3d)

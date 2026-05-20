@@ -457,6 +457,7 @@ function groupby(tag, incl, cm,	acc){
 	if(m_ > n_)
 		print "warning: more categories than colors"
 	delete acc
+	print "C"
 }
 function quit(){
 	print "Q"
