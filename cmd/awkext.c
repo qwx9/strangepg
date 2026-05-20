@@ -124,46 +124,54 @@ fnrefresh(void)
 	reqdraw(Reqshallowdraw);
 }
 
+static inline int
+doexplode(Cell *x, float Δ)
+{
+	ioff id;
+
+	id = getival(x);
+	explode(id, Δ);
+	return 0;
+}
+
 static TNode *
 fnexplode(Cell *x, TNode *next)
 {
-	ioff id;
 	float Δ;
+	Cell *y;
 
 	if(x == nil){
 		foreachsel(AEXPLODE);
 		return nil;
 	}
-	id = getival(x);
 	if(next != nil){
-		x = execute(next);
-		Δ = getfval(x);
-		tempfree(x);
+		y = execute(next);
+		Δ = getfval(y);
+		tempfree(y);
 		next = next->nnext;
 	}else
 		Δ = 8.0f;
-	explode(id, Δ);
+	if(doexplode(x, Δ) < 0)
+		FATAL("explode: %s", error());
 	return next;
 }
 
-static inline void
+static inline int
 doexpand(Cell *x, int full)
 {
 	ioff id;
 
 	id = getival(x);
-	if(expand(id, full) < 0)
-		FATAL("expand: %s", error());
+	return expand(id, full);
 }
 
-static inline void
+static inline int
 docollapse(Cell *x, int full)
 {
 	ioff id;
 
-	id = getival(x);	/* cnode id */
-	if(collapse(id, full) < 0)
-		FATAL("collapse: %s", error());
+	id = getival(x);
+	return collapse(id, full);
 }
 
 static inline void
@@ -201,7 +209,8 @@ fnexpand(Cell *x, TNode *next, int full)
 		TIME("awkext", "uncoarsen", t);
 		return nil;
 	}
-	doexpand(x, full);
+	if(doexpand(x, full) < 0)
+		FATAL("expand: %s", error());
 	TIME("awkext", "doexpand", t);
 	if(next != nil)
 		return fnexpand(execute(next), next->nnext, full);
@@ -229,7 +238,8 @@ fncollapse(Cell *x, TNode *next, int full)
 		TIME("fncollapse", "commit", t);
 		return nil;
 	}
-	docollapse(x, full);
+	if(docollapse(x, full) < 0)
+		FATAL("collapse: %s", error());
 	TIME("fncollapse", "docollapse", t);
 	if(next != nil)
 		return fncollapse(execute(next), next->nnext, full);
@@ -327,31 +337,37 @@ fnarm(void)
 static int
 foreachsel(int type)
 {
-	int i, n;
+	int i, n, r;
 	ioff id;
 	Array *a;
 	Cell *c, *x;
 
 	a = core.sel;
+	x = gettemp(NUM);
 	rlock(&a->lock);
 	for(n=i=0; i<a->size; i++)
 		for(c=a->tab[i]; c!=nil; c=c->cnext){
 			id = atoi(c->nval);
-			x = gettemp(NUM);
 			setival(x, id);
+			r = 0;
 			switch(type){
-			case ACOLLAPSE: docollapse(x, 0); break;
-			case AEXPAND: doexpand(x, 0); break;
-			case AEXPLODE: fnexplode(x, nil); break;
-			case AFULLCOLLAPSE: docollapse(x, 1); break;
-			case AFULLEXPAND: doexpand(x, 1); break;
+			case ACOLLAPSE: r = docollapse(x, 0); break;
+			case AEXPAND: r = doexpand(x, 0); break;
+			case AEXPLODE: r = doexplode(x, 8.0f); break;
+			case AFULLCOLLAPSE: r = docollapse(x, 1); break;
+			case AFULLEXPAND: r = doexpand(x, 1); break;
 			default:	/* can't happen */
+				runlock(&a->lock);
 				FATAL("illegal function type %d", type);
-				break;
+			}
+			if(r < 0){
+				runlock(&a->lock);
+				FATAL("%s", error());
 			}
 			n++;
 		}
 	runlock(&a->lock);
+	tempfree(x);
 	return n;
 }
 
