@@ -124,6 +124,7 @@ drawoptions(nk_context *ctx)
 	&nkoptn[NKOnodesz], sizeof nkopt[NKOnodesz], nk_filter_default))){
 		if(e & NK_EDIT_COMMITED){
 			prompting &= ~Pnodesz;
+			nkopt[NKOnodesz][nkoptn[NKOnodesz]] = 0;
 			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodesz])){
 				nk_edit_unfocus(ctx);
 				drawing.nodesz = f;
@@ -131,7 +132,7 @@ drawoptions(nk_context *ctx)
 				reqdraw(Reqflags|Reqshape);
 				reqlayout(Lreinit);
 			}else
-				logerr("invalid node length");
+				logerr("invalid node length\n");
 		}else if(e & NK_EDIT_ACTIVE)
 			prompting |= Pnodesz;
 		else
@@ -143,12 +144,13 @@ drawoptions(nk_context *ctx)
 	&nkoptn[NKOnodew], sizeof nkopt[NKOnodew], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pnodew;
+			nkopt[NKOnodew][nkoptn[NKOnodew]] = 0;
 			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodew])){
 				nk_edit_unfocus(ctx);
 				drawing.fatness = f;
 				reqdraw(Reqshape);
 			}else
-				logerr("invalid node width");
+				logerr("invalid node width\n");
 		}else if(e & NK_EDIT_ACTIVE)
 			prompting |= Pnodew;
 		else
@@ -160,10 +162,11 @@ drawoptions(nk_context *ctx)
 	&nkoptn[NKOminsz], sizeof nkopt[NKOminsz], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pminsz;
+			nkopt[NKOminsz][nkoptn[NKOminsz]] = 0;
 			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOminsz]))
-				logerr("invalid min length");
+				logerr("invalid min length\n");
 			else if(f > drawing.maxsz)
-				logerr("must be lesser or equal to max length");
+				logerr("must be lesser or equal to max length\n");
 			else if(f != drawing.minsz){
 				nk_edit_unfocus(ctx);
 				drawing.minsz = f;
@@ -182,10 +185,11 @@ drawoptions(nk_context *ctx)
 	&nkoptn[NKOmaxsz], sizeof nkopt[NKOmaxsz], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pmaxsz;
+			nkopt[NKOmaxsz][nkoptn[NKOmaxsz]] = 0;
 			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOmaxsz]))
-				logerr("invalid max length");
+				logerr("invalid max length\n");
 			else if(f < drawing.minsz)
-				logerr("must be greater or equal to min length");
+				logerr("must be greater or equal to min length\n");
 			else if(f != drawing.maxsz){
 				nk_edit_unfocus(ctx);
 				drawing.maxsz = f;
@@ -204,8 +208,9 @@ drawoptions(nk_context *ctx)
 	&nkoptn[NKOfedge], sizeof nkopt[NKOfedge], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pfedge;
+			nkopt[NKOfedge][nkoptn[NKOfedge]] = 0;
 			if(!validfloat(&f, 1.0, 5000.0, nkopt[NKOfedge]))
-				logerr("invalid edge length factor");
+				logerr("invalid edge length factor\n");
 			else if(f != drawing.fedge){
 				nk_edit_unfocus(ctx);
 				drawing.fedge = f;
