@@ -48,7 +48,7 @@ getnodecolor(voff id)
 	u32int v;
 
 	assert(id >= 0 && id < nnodes);
-	if((v = core.colors[id]) == UNSET || v == core.nocol)
+	if((v = core.colors[id]) == UNSET || v >> 8 == core.nocol)
 		v = 0;
 	return v;
 }
@@ -56,13 +56,14 @@ getnodecolor(voff id)
 u32int
 getcnodecolor(voff id)
 {
-	u32int v, w;
+	u32int v;
 
-	if((v = core.colors[id]) == UNSET)
-		v = core.defcol[id % core.defpal->nelem];
-	/* FIXME: always get child colors and mix with ours? */
-	else if(v == core.nocol && (w = getchildcolors(id)) != 0)
-		v = w;
+	if((v = getchildcolors(id)) == 0){
+		if((v = core.colors[id]) == UNSET)
+			v = core.defcol[id % core.defpal->nelem];
+		else if(v >> 8 != core.nocol)
+			warn("[%d] getcnodecolor: can\'t happen: %x\n", id, v);
+	}
 	return v;
 }
 
@@ -518,7 +519,7 @@ stealpal(void)
 	runlock(&a->lock);
 	cp = lookup("translucent", symtab);
 	assert(cp != nil);
-	core.nocol = getival(cp);
+	core.nocol = (u32int)getival(cp) >> 8;
 }
 
 void
@@ -576,7 +577,7 @@ inittag(char *tag, short type, Array **app)
 	cp = setsymtab(tag, EMPTY, ZV, CON|type, symtab);
 	if(app == nil){
 		if(!isarr(cp))
-			cp->tval |= ARR|PTR;
+			cp->tval |= ARR|PTR;	/* FIXME: ? not always? */
 		return;
 	}
 	*app = mkarray(cp);

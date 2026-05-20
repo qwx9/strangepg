@@ -51,33 +51,33 @@ getnodeidx(ioff id)
 	}
 	idx = cnodes[id].idx;
 	unlockdraw();
-	if(idx >= dylen(nodes))
-		die("out of bounds node idx: %d > %zd", idx, dylen(nodes)-1);
+	if(idx >= dylen(nodes)){
+		werrstr("out of bounds node idx: %d > %zd", idx, dylen(nodes)-1);
+		return -1;
+	}
 	return idx;
 }
 
+/* FIXME: could go the other way: go through all nodes, and mix their color
+ * onto parent */
 static int
-childcol(ioff id, float *cp, int nc)
+childcol(ioff i, float *cp, int nc)
 {
 	u32int v;
 	CNode *U;
 
-	U = cnodes + id;
-	if(U->idx == -1 || U->idx == FCIhidden){	/* FIXME */
-		if((v = getnodecolor(id)) != 0){
-			if(nc++ == 0)
-				setcolor(cp, v);
-			else
-				mixcolors(cp, v);
+	U = cnodes + i;
+	for(i=U->child; i!=-1; i=U->sibling){
+		U = cnodes + i;
+		if(U->idx == -1 || U->idx == FCIhidden){	/* FIXME */
+			if((v = getnodecolor(i)) != 0){
+				if(nc++ == 0)
+					setcolor(cp, v);
+				else
+					mixcolors(cp, v);
+			}
+			nc = childcol(i, cp, nc);
 		}
-	}
-	if((id = U->child) == -1)
-		return nc;
-	nc = childcol(id, cp, nc);
-	U = cnodes + id;
-	for(id=U->sibling; id!=-1; id=U->sibling){
-		nc = childcol(id, cp, nc);
-		U = cnodes + id;
 	}
 	return nc;
 }
@@ -85,11 +85,19 @@ childcol(ioff id, float *cp, int nc)
 u32int
 getchildcolors(ioff id)
 {
-	CNode *U;
+	int nc;
+	u32int v;
 	float cols[4];
 
-	U = cnodes + id;
-	if((id = U->child) == -1 || childcol(id, cols, 0) == 0)
+	nc = 0;
+	if((v = getnodecolor(id)) != 0)
+		nc++;
+	cols[0] = (float)(v >> 24 & 0xff) / 255.0f;
+	cols[1] = (float)(v >> 16 & 0xff) / 255.0f;
+	cols[2] = (float)(v >> 8 & 0xff) / 255.0f;
+	cols[3] = 0;
+	nc = childcol(id, cols, nc);
+	if(nc == 0)
 		return 0;
 	return (u8int)(cols[0] * 255.0) << 24 |
 		(u8int)(cols[1] * 255.0) << 16 |
@@ -855,7 +863,7 @@ collapse(ioff id, int all)
 	DPRINT(Debugcoarse, "collapse %d", id);
 	assert(cnodes != nil);
 	if(id < 0 || id >= nnodes){
-		warn("collapse: out of bounds %d > %d", id, nnodes);
+		werrstr("collapse: out of bounds %d > %d", id, nnodes);
 		return -1;
 	}
 	U = cnodes + id;
