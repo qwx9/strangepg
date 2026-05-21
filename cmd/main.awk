@@ -291,7 +291,7 @@ function checkselected(	i){
 }
 function checknodeid(i){
 	if(i < 0 || i >= length(node)){
-		print "E\id out of bounds: " i
+		print "E\tid out of bounds: " i
 		return 0
 	}
 	return 1
