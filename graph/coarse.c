@@ -58,6 +58,30 @@ getnodeidx(ioff id)
 	return idx;
 }
 
+ioff
+getactiveidx(ioff id)
+{
+	CNode *U;
+
+	if((graph.flags & GFctarmed) == 0)
+		return id;
+	if(id < 0 || id >= nnodes){
+		werrstr("out of bounds cnode id: %d > %d", id, nnodes-1);
+		return -1;
+	}
+	/* FIXME: fugly */
+	if(!canlockdraw()){
+		werrstr("coarsening in progress");
+		return -1;
+	}
+	U = cnodes + id;
+	while(U->idx == -1){
+		assert(U->parent != -1);
+		U = cnodes + U->parent;
+	}
+	return U->idx;
+}
+
 /* FIXME: could go the other way: go through all nodes, and mix their color
  * onto parent */
 static int

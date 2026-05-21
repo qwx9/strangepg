@@ -14,6 +14,7 @@ uint	getnodelength(voff);
 
 u32int	getchildcolors(ioff);
 ioff	getnodeidx(ioff);
+ioff	getactiveidx(ioff);
 ioff	getrealid(ioff);
 
 /* FIXME: should be voff or usize */
