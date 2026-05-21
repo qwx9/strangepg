@@ -99,42 +99,9 @@ getchildcolors(ioff id)
 	nc = childcol(id, cols, nc);
 	if(nc == 0)
 		return 0;
-	return (u8int)(cols[0] * 255.0) << 24 |
-		(u8int)(cols[1] * 255.0) << 16 |
-		(u8int)(cols[2] * 255.0) << 8;
-}
-
-int
-exportct(char *path)
-{
-	int r;
-	ioff i;
-	char buf[1024], *p;
-	File *fs;
-	CNode *U, *UE;
-
-	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
-		werrstr("no tree yet");
-		return -1;
-	}
-	if((fs = openfs(path, OWRITE)) == nil)
-		return -1;
-	r = -1;
-	p = seprint(buf, buf + sizeof buf, "digraph {\n");
-	if(writefs(fs, buf, p - buf) < 0)
-		goto end;
-	for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
-		if(U->parent != -1){
-			p = seprint(buf, buf + sizeof buf, "\t%d -> %d\n", U->parent, i);
-			if(writefs(fs, buf, p - buf) < 0)
-				goto end;
-		}
-	}
-	p = seprint(buf, buf + sizeof buf, "}\n");
-	r = writefs(fs, buf, p - buf);
-end:
-	freefs(fs);
-	return r;
+	return (uint)(cols[0] * 255.0) << 24 |
+		(int)(cols[1] * 255.0) << 16 |
+		(int)(cols[2] * 255.0) << 8;
 }
 
 static inline void
@@ -399,6 +366,7 @@ uncoarsen(void)
 	deg = emalloc((nn + nnew) * sizeof *deg);
 	/* FIXME: good enough for now (1e7 edges: 500ms on p14s), correct
 	 * shortcuts are hard to find; fix it later */
+	assert(cedges != nil);
 	for(U=cnodes, UE=U+nnodes; U<UE; U++){
 		if((i = U->idx) == -1)
 			i = activetop(U)->idx;
@@ -664,6 +632,10 @@ coarsen(void)
 	TIME("coarsen", "recompute offsets", t);
 	assert(nn == dylen(nodes) - ncoarsed);
 	dyresize(nodes, nn);
+	if(cedges == nil){
+		cedges = edges;
+		edges = nil;
+	}
 	dyresize(edges, ne2);
 	TIME("coarsen", "shrink arrays", t);
 	regenedges(eset, ne, ne2);
@@ -883,11 +855,11 @@ collapse(ioff id, int all)
 	return 0;
 }
 
+/* FIXME: avoid having an actual copy of the data */
 static void
 reallyinitcoarse(void)
 {
 	voff i;
-	ssize n;
 	CNode *U, *UE;
 	Node *u;
 
@@ -897,10 +869,6 @@ reallyinitcoarse(void)
 		U->nedges = u->nedges;
 		U->flags = 0;
 	}
-	free(cedges);
-	n = nedges * sizeof *cedges;
-	cedges = emalloc(n);
-	memcpy(cedges, edges, n);
 	graph.flags |= GFctarmed;
 }
 

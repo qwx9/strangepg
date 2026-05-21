@@ -21,13 +21,22 @@ getval(char *s, ioff *ip)
 	return 0;
 }
 
+enum{
+	Recsz = sizeof(ioff) * 3,
+};
+
+/* cedges don't need to be allocated initially */
 static void
 loadct(void *arg)
 {
-	int r;
-	char *s, *path;
+	int x, r;
+	ioff idx;
+	union { u32int u; s32int i; } b;
+	uchar buf[Recsz], *p;
+	char *path;
 	File *f;
 	CNode *U, *UE;
+	Node *u;
 
 	path = arg;
 	if(graph.flags & GFctarmed){
@@ -43,43 +52,108 @@ loadct(void *arg)
 		logerr(va("loadctab %s: %s\n", path, error()));
 		return;
 	}
-	for(r=0, U=cnodes, UE=U+nnodes;; U++){
-		if(readline(f) == nil)
+	r = -1;
+	for(idx=x=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, idx++){
+		if((x = readfs(f, buf, sizeof buf)) < sizeof buf)
 			break;
-		if(U >= UE){
-			werrstr("more ctab records than nodes");
-			r = -1;
-			break;
-		}
-		if((s = nextfield(f)) == nil
-		|| getval(s, &U->parent) < 0){
-			werrstr("invalid record");
-			r = -1;
-			break;
-		}else if((s = nextfield(f)) == nil
-		|| getval(s, &U->child) < 0){
-			werrstr("invalid record");
-			r = -1;
-			break;
-		}else if((s = nextfield(f)) == nil
-		|| getval(s, &U->sibling) < 0){
-			werrstr("invalid record");
-			r = -1;
-			break;
-		}
+		p = buf;
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		U->parent = b.i;
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		U->child = b.i;
+		b.u = GBIT32(p);
+		p += sizeof b.u;
+		U->sibling = b.i;
+		U->idx = idx;
+		U->eoff = u->eoff;
+		U->nedges = u->nedges;
 	}
+	r = 0;
 	if(U != UE){
-		werrstr("too few records in ctab, %zd < %zd", U-cnodes, UE-cnodes);
+		werrstr("too few records in ctab, %zd < %d", U-cnodes, nnodes);
 		r = -1;
-	}
+	}else if(x < 0)
+		r = -1;
 	graph.flags |= GFctarmed;
 	pushcmd("cmd(\"HGI234\")");	/* signal needed to continue, error or no */
 	flushcmd();
 	if(r < 0)
-		logerr(va("loadctab %s: %s, line %d\n", path, error(), f->nr));
+		logerr(va("loadct %s: %s, line %d\n", path, error(), f->nr));
 	else
-		logmsg("loadctab: done\n");
+		logmsg("loadct: done\n");
 	freefs(f);
+}
+
+int
+exportct(char *path)
+{
+	int r, x;
+	union { u32int u; s32int i; } b;
+	uchar buf[Recsz], *p;
+	File *f;
+	CNode *U, *UE;
+
+	logmsg(va("exportct: %s\n", path));
+	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
+		werrstr("no tree yet");
+		return -1;
+	}
+	if((f = openfs(path, OWRITE)) == nil)
+		return -1;
+	r = -1;
+	for(x=0, U=cnodes, UE=U+nnodes; U<UE; U++){
+		p = buf;
+		b.i = U->parent;
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		b.i = U->child;
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		b.i = U->sibling;
+		PBIT32(p, b.u);
+		p += sizeof b.u;
+		if((x = writefs(f, buf, sizeof buf)) < 0)
+			break;
+	}
+	r = x < 0 ? -1 : 0;
+	freefs(f);
+	logmsg("exportct: done\n");
+	return r;
+}
+
+int
+exportdot(char *path)
+{
+	int r;
+	ioff i;
+	char buf[1024], *p;
+	File *f;
+	CNode *U, *UE;
+
+	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
+		werrstr("no tree yet");
+		return -1;
+	}
+	if((f = openfs(path, OWRITE)) == nil)
+		return -1;
+	r = -1;
+	p = seprint(buf, buf + sizeof buf, "digraph {\n");
+	if(writefs(f, buf, p - buf) < 0)
+		goto end;
+	for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
+		if(U->parent != -1){
+			p = seprint(buf, buf + sizeof buf, "\t%d -> %d\n", U->parent, i);
+			if(writefs(f, buf, p - buf) < 0)
+				goto end;
+		}
+	}
+	p = seprint(buf, buf + sizeof buf, "}\n");
+	r = writefs(f, buf, p - buf);
+end:
+	freefs(f);
+	return r;
 }
 
 static Filefmt ff = {
