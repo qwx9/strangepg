@@ -61,6 +61,7 @@ getnodeidx(ioff id)
 ioff
 getactiveidx(ioff id)
 {
+	ioff idx;
 	CNode *U;
 
 	if((graph.flags & GFctarmed) == 0)
@@ -79,7 +80,9 @@ getactiveidx(ioff id)
 		assert(U->parent != -1);
 		U = cnodes + U->parent;
 	}
-	return U->idx;
+	idx = U->idx;
+	unlockdraw();
+	return idx;
 }
 
 /* FIXME: could go the other way: go through all nodes, and mix their color
