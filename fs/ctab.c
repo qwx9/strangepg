@@ -43,6 +43,7 @@ loadct(void *arg)
 		logerr(va("loadctab %s: coarsening table already initialized\n", path));
 		return;
 	}
+	logmsg(va("loadct: %s\n", path));
 	if(initcoarse() < 0){
 		logerr(va("loadctab %s: %s\n", path, error()));
 		return;
