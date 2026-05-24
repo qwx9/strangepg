@@ -74,7 +74,6 @@ enum{
 };
 struct Drawing{
 	int flags;		/* should only be touched by drawer */
-	int wflags;
 	IRange length;
 	Range rlen;
 	double k;
@@ -159,14 +158,13 @@ enum{
 	Reqshallowdraw = 1<<5,	/* re-render w/o buffer updates (ui) */
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
-	Reqflags = 1<<8,		/* set or toggle draw flags */
-	Reqrecolor = 1<<9,		/* force node recoloring */
+	Reqrecolor = 1<<8,		/* force node recoloring */
 	Reqsleep = 1<<29,		/* force renderer to wait for events */
 	Reqstop = 1<<30,		/* cease all activity and operations */
 	Reqnone = 1<<31,		/* dummy event */
 	Reqanydraw =
 		Reqrefresh | Reqredraw | Reqshallowdraw | Reqfocus |
-		Reqflags | Reqrecolor,
+		Reqrecolor,
 	Reqinit = Reqredraw,
 };
 
@@ -187,6 +185,7 @@ void	wakedrawup(void);
 void	thawworld(int, int, RNode*);
 void	freezeworld(void);
 void	reqdraw(int);
+void	reqflags(int);
 void	lockrend(void);
 int	canlockrend(void);
 void	unlockrend(void);

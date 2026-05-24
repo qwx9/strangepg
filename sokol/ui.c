@@ -128,8 +128,7 @@ drawoptions(nk_context *ctx)
 			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodesz])){
 				nk_edit_unfocus(ctx);
 				drawing.nodesz = f;
-				drawing.wflags |= DFstalelen;
-				reqdraw(Reqflags|Reqshape);
+				reqflags(DFstalelen);
 				reqlayout(Lreinit);
 			}else
 				logerr("invalid node length\n");
@@ -170,8 +169,7 @@ drawoptions(nk_context *ctx)
 			else if(f != drawing.minsz){
 				nk_edit_unfocus(ctx);
 				drawing.minsz = f;
-				drawing.wflags |= DFstalelen;
-				reqdraw(Reqflags);
+				reqflags(DFstalelen);
 				reqlayout(Lreinit);
 			}
 		}else if(e & NK_EDIT_ACTIVE)
@@ -193,8 +191,7 @@ drawoptions(nk_context *ctx)
 			else if(f != drawing.maxsz){
 				nk_edit_unfocus(ctx);
 				drawing.maxsz = f;
-				drawing.wflags |= DFstalelen;
-				reqdraw(Reqflags);
+				reqflags(DFstalelen);
 				reqlayout(Lreinit);
 			}
 		}else if(e & NK_EDIT_ACTIVE)
@@ -214,8 +211,7 @@ drawoptions(nk_context *ctx)
 			else if(f != drawing.fedge){
 				nk_edit_unfocus(ctx);
 				drawing.fedge = f;
-				drawing.wflags |= DFstalelen;
-				reqdraw(Reqflags);
+				reqflags(DFstalelen);
 				reqlayout(Lreinit);
 			}
 		}else if(e & NK_EDIT_ACTIVE)

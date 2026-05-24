@@ -30,7 +30,7 @@ Box promptbox, selbox;
 Channel *rendc, *ctlc;
 int drawstate;
 
-static Channel *drawc;
+static Channel *drawc, *flagc;
 static RLine raxes[6], rselbox[4];
 static RWLock drawlock;
 static QLock raylock;
@@ -653,26 +653,36 @@ drawback(void)
 
 /* FIXME: extend to other writable flags */
 static void
-setflags(void)
+setflags(ulong f)
 {
-	if(drawing.wflags & DFdrawarrows)
+	ulong rf;
+
+	rf = 0;
+	if(f & DFdrawarrows){
 		drawing.flags ^= DFdrawarrows;
-	if(drawing.wflags & DFdrawlabels)
+		rf |= Reqshape;
+	}
+	if(f & DFdrawlabels){
 		drawing.flags ^= DFdrawlabels;
-	if(drawing.wflags & DFstalelen)
+		rf |= Reqshape;
+	}
+	if(f & DFstalelen)
 		drawing.flags |= DFstalelen;
-	if(drawing.wflags & DFrecalclen)
+	if(f & DFrecalclen)
 		drawing.flags |= DFrecalclen;
-	if(drawing.wflags & DF3d)
+	if(f & DF3d){
 		drawing.flags ^= DF3d;
-	drawing.wflags = 0;
+		rf |= Reqshape;
+	}
+	if(rf)
+		reqdraw(rf);
 }
 
 static void
 drawproc(void *)
 {
 	int go;
-	ulong f, r;
+	ulong f, r, fr;
 
 	initstatic();
 	drawing.flags |= DFarmed;
@@ -681,10 +691,13 @@ drawproc(void *)
 			break;
 		while((f = nbrecvul(drawc)) != 0)
 			r |= f;
-		DPRINT(Debugdraw, "drawproc: %#lx", r);
+		fr = 0;
+		while((f = nbrecvul(flagc)) != 0)
+			fr |= f;
+		DPRINT(Debugdraw, "drawproc: %#lx %#lx", r, fr);
 		lockdraw();
-		if(r & Reqflags)
-			setflags();
+		if(fr != 0)
+			setflags(fr);
 		if(r & Reqrecolor)
 			recolornodes();
 		if(drawing.flags & DFstalelen)
@@ -767,7 +780,6 @@ thawworld(int nn, int ne, RNode *extra)
 	}
 	dyresize(redges, ne);	/* FIXME: may be overestimated */
 	dyclear(redges);
-	setflags();
 	if((drawing.flags & DFnoray) == 0)
 		dyfree(vnodes);
 	else
@@ -823,6 +835,21 @@ void
 unlockrend(void)
 {
 	qunlock(&raylock);
+}
+
+void
+reqflags(int r)
+{
+	static ulong reqs;
+
+	DPRINT(Debugdraw, "reqstate %#x reqs %#lx flags %#x ",
+		r, reqs, drawing.flags);
+	if((reqs & r) != r)
+		reqs |= r;
+	if(reqs != 0 && nbsendul(flagc, reqs) == 1){
+		reqs = 0;
+		reqdraw(Reqrefresh);	/* FIXME: ugh */
+	}
 }
 
 /* FIXME: filtering here might not really make sense, maybe drawc/rendc
@@ -888,6 +915,7 @@ initdrw(void)
 	/* FIXME: this chan implementation SUCKS */
 	if((drawc = chancreate(sizeof(ulong), 8)) == nil
 	|| (rendc = chancreate(sizeof(ulong), 8)) == nil
-	|| (ctlc = chancreate(sizeof(ulong), 1)) == nil)
+	|| (ctlc = chancreate(sizeof(ulong), 1)) == nil
+	|| (flagc = chancreate(sizeof(ulong), 1)) == nil)
 		sysfatal("initdrw: chancreate");
 }

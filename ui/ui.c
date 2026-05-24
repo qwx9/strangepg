@@ -89,7 +89,7 @@ keyevent(Rune r, int down)
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: reqdraw(Reqresetview); break;
-	case 'a': drawing.wflags |= DFdrawarrows; reqdraw(Reqflags|Reqshape); break;
+	case 'a': reqflags(DFdrawarrows); break;
 	case 'l': if(mod & Mctrl) resetprompt(); break;
 	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
 	case 'r': reqlayout(Lreset); break;

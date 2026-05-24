@@ -156,10 +156,7 @@ updatenodelength(Node *u, vlong n)
 		f |= DFstalelen;
 	if(u->length == drawing.length.min || u->length == drawing.length.max)
 		f |= DFrecalclen;
-	if((drawing.wflags & f) == f)
-		f = 0;
-	else
-		drawing.wflags |= f;
+	reqflags(f);
 	u->length = n;
 	return f;
 }
@@ -183,10 +180,11 @@ setnodelength(size_t id, Value v)
 			DPRINT(Debuginfo, "LN[%s]: conflicting value %lld not %lld",
 				getname(id), v.i, u->length);
 	}
-	if(updatenodelength(u, v.i))
-		reqdraw(Reqflags);	/* can't be helped? */
+	updatenodelength(u, v.i);
 }
 
+/* FIXME: proper color priorities: unsetting color, always using children
+ * colors? */
 void
 setnodecolor(size_t id, Value v)
 {
