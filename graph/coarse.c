@@ -96,7 +96,7 @@ childcol(ioff i, float *cp, int nc)
 	U = cnodes + i;
 	for(i=U->child; i!=-1; i=U->sibling){
 		U = cnodes + i;
-		if(U->idx == -1 || U->idx == FCIhidden){	/* FIXME */
+		if(U->idx == -1){
 			if((v = getnodecolor(i)) != 0){
 				if(nc++ == 0)
 					setcolor(cp, v);
@@ -575,12 +575,14 @@ coarsen(void)
 		sysfatal("coarsen: %s", error());
 	DPRINT(Debugcoarse, "assigning new top node slots...");
 	for(off=0, u=nodes, ue=u+dylen(u); u<ue; u++){
+		U = cnodes + u->id;
 		if(u->cflags & FNCalias){
 			DPRINT(Debugcoarse, "> skipping aliased node %zd (→%d)", u-nodes, u->id);
+			U->flags &= ~FCNvisited;
+			u->id = U->parent;
 			continue;
 		}
 		DPRINT(Debugcoarse, "> store node[%03d] = %d", off, u->id);
-		U = cnodes + u->id;
 		U->idx = off++;
 	}
 	nn = off;
@@ -673,6 +675,9 @@ coarsen(void)
 		dylen(nodes), ne));
 	ncoarsed = 0;
 	printgraph();
+	if(debug & Debugcoarse)
+		for(U=cnodes, V=cnodes+nnodes; U<V; U++)
+			assert((U->flags & FCNvisited) == 0);
 	checktree();
 	TIME("coarsen", "total", t0);
 	return 0;
@@ -686,7 +691,7 @@ hide(CNode *U)
 	Node *u, *p;
 	CNode *P;
 
-	if(U->idx == FCIhidden){
+	if(U->flags & FCNvisited){
 		DPRINT(Debugcoarse, "hide %zd: already visited", U - cnodes);
 		return 1;
 	}
@@ -699,10 +704,7 @@ hide(CNode *U)
 		return 0;
 	}
 	u = nodes + U->idx;
-	if(u->cflags & FNCalias){
-		DPRINT(Debugcoarse, "hide %zd: already aliased", U - cnodes);
-		return 0;
-	}
+	assert((u->cflags & FNCalias) == 0);
 	DPRINT(Debugcoarse, "hide %zd: idx %d", U - cnodes, U->idx);
 	u->cflags |= FNCalias;
 	P = cnodes + U->parent;
@@ -711,7 +713,7 @@ hide(CNode *U)
 	p = nodes + P->idx;
 	updatenodelength(p, p->length + u->length);
 	U->idx = -1;
-	u->id = P - cnodes;
+	U->flags |= FCNvisited;
 	ncoarsed++;
 	return 1;
 }
@@ -729,13 +731,13 @@ hideall(CNode *U, int nlevels)
 		return 0;
 	if((i = U->child) != -1){
 		V = cnodes + i;
-		if(V->idx == FCIhidden)
+		if(V->flags & FCNvisited)
 			n++;
 		else if(V->idx != -1)
 			n += hideall(V, nlevels);
 		for(i=V->sibling; i!=-1; i=V->sibling){
 			V = cnodes + i;
-			if(V->idx == FCIhidden)
+			if(V->flags & FCNvisited)
 				n++;
 			else if(V->idx != -1)
 				n += hideall(V, nlevels);
@@ -795,7 +797,7 @@ collapseupto(ssize max)
 			continue;
 		for(k=0, j=U->child; j!=-1; j=V->sibling){
 			V = cnodes + j;
-			if(V->idx != -1 || V->idx == FCIhidden){
+			if(V->idx != -1 || V->flags & FCNvisited){
 				k = 1;
 				break;
 			}
@@ -803,10 +805,12 @@ collapseupto(ssize max)
 		if(k == 0){
 			hide(U);
 			m--;
-			U->idx = FCIhidden;
-		}
-		dypush(ids, i);
+		}else
+			dypush(ids, i);
 	}
+	for(U=cnodes, V=cnodes+nnodes; U<V; U++)
+		if(U->flags & FCNvisited)
+			U->flags &= ~FCNvisited;
 	n = dylen(ids);
 	while(m > max){
 		DPRINT(Debugcoarse, "collapseupto: %d/%zd(%zd) > %zd",
@@ -815,11 +819,14 @@ collapseupto(ssize max)
 		for(p=ids, pe=p+n; p<pe; p++){
 			i = *p;
 			U = cnodes + i;
-			if(U->idx == FCIhidden)
-				U->idx = -1;
+			if(U->idx == -1)
+				U->flags &= ~FCNvisited;
 			else
 				dypush(ids, i);
 		}
+		if(debug & Debugcoarse)
+			for(U=cnodes, V=cnodes+nnodes; U<V; U++)
+				assert((U->flags & FCNvisited) == 0);
 		n = dylen(ids);
 		for(p=ids, pe=p+n; p<pe; p++){
 			i = *p;
@@ -828,7 +835,7 @@ collapseupto(ssize max)
 				continue;
 			for(k=0, j=U->child; j!=-1; j=V->sibling){
 				V = cnodes + j;
-				if(V->idx != -1 || V->idx == FCIhidden){
+				if(V->idx != -1 || V->flags & FCNvisited){
 					k = 1;
 					break;
 				}
@@ -836,17 +843,19 @@ collapseupto(ssize max)
 			if(k == 0){
 				hide(U);
 				m--;
-				U->idx = FCIhidden;
 			}
 		}
 	}
 	for(p=ids, pe=p+n; p<pe; p++){
 		i = *p;
 		U = cnodes + i;
-		if(U->idx == FCIhidden)
-			U->idx = -1;
+		if(U->idx == -1)
+			U->flags &= ~FCNvisited;
 	}
 	dyfree(ids);
+	if(debug & Debugcoarse)
+		for(U=cnodes, V=cnodes+nnodes; U<V; U++)
+			assert((U->flags & FCNvisited) == 0);
 	return 0;
 }
 
@@ -866,10 +875,10 @@ collapse(ioff id, int all)
 		return -1;
 	}
 	U = cnodes + id;
-	/* get active parent: only useful if wasn't hidden by a different
-	 * collapse in this round; ncoarsed=0 is a bad heuristic */
 	if(U->idx == -1){
-		if(ncoarsed != 0)
+		/* FIXME: maybe we shouldn't touch parents even if all=1?
+		 * or don't do hideall but hide with parents? */
+		if(U->flags & FCNvisited || !all)
 			return 0;
 		for(i=U->parent; i!=-1; i=U->parent){
 			U = cnodes + i;
@@ -877,7 +886,6 @@ collapse(ioff id, int all)
 				break;
 		}
 	}
-	assert(U->idx != -1);
 	hideall(U, all ? -1 : 1);
 	return 0;
 }
