@@ -119,13 +119,13 @@ drawoptions(nk_context *ctx)
 		return 0;
 	nk_layout_row_dynamic(ctx, 2 * Fonth, 2);
 	/* FIXME: sliders? */
-	nk_label(ctx, "Node length (0.01-50):", NK_TEXT_LEFT);
+	nk_label(ctx, "Node length (0.01-100):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodesz],
 	&nkoptn[NKOnodesz], sizeof nkopt[NKOnodesz], nk_filter_default))){
 		if(e & NK_EDIT_COMMITED){
 			prompting &= ~Pnodesz;
 			nkopt[NKOnodesz][nkoptn[NKOnodesz]] = 0;
-			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodesz])){
+			if(validfloat(&f, 0.01, 100.0, nkopt[NKOnodesz])){
 				nk_edit_unfocus(ctx);
 				drawing.nodesz = f;
 				reqflags(DFstalelen);
@@ -138,13 +138,13 @@ drawoptions(nk_context *ctx)
 			prompting &= ~Pnodesz;
 	}else
 		prompting &= ~Pnodesz;
-	nk_label(ctx, "Node width (0.01-50):", NK_TEXT_LEFT);
+	nk_label(ctx, "Node width (0.01-100):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodew],
 	&nkoptn[NKOnodew], sizeof nkopt[NKOnodew], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pnodew;
 			nkopt[NKOnodew][nkoptn[NKOnodew]] = 0;
-			if(validfloat(&f, 0.01, 50.0, nkopt[NKOnodew])){
+			if(validfloat(&f, 0.01, 100.0, nkopt[NKOnodew])){
 				nk_edit_unfocus(ctx);
 				drawing.fatness = f;
 				reqdraw(Reqshape);
@@ -178,13 +178,13 @@ drawoptions(nk_context *ctx)
 			prompting &= ~Pminsz;
 	}else
 		prompting &= ~Pminsz;
-	nk_label(ctx, "Max.node length (0.01-100.0):", NK_TEXT_LEFT);
+	nk_label(ctx, "Max.node length (0.01-1000.0):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOmaxsz],
 	&nkoptn[NKOmaxsz], sizeof nkopt[NKOmaxsz], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pmaxsz;
 			nkopt[NKOmaxsz][nkoptn[NKOmaxsz]] = 0;
-			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOmaxsz]))
+			if(!validfloat(&f, 0.01, 1000.0, nkopt[NKOmaxsz]))
 				logerr("invalid max length\n");
 			else if(f < drawing.minsz)
 				logerr("must be greater or equal to min length\n");
@@ -200,13 +200,13 @@ drawoptions(nk_context *ctx)
 			prompting &= ~Pmaxsz;
 	}else
 		prompting &= ~Pmaxsz;
-	nk_label(ctx, "Edge length factor (1-5000):", NK_TEXT_LEFT);
+	nk_label(ctx, "Edge length factor (1-50k):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOfedge],
 	&nkoptn[NKOfedge], sizeof nkopt[NKOfedge], nk_filter_default))){
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pfedge;
 			nkopt[NKOfedge][nkoptn[NKOfedge]] = 0;
-			if(!validfloat(&f, 1.0, 5000.0, nkopt[NKOfedge]))
+			if(!validfloat(&f, 1.0, 50000.0, nkopt[NKOfedge]))
 				logerr("invalid edge length factor\n");
 			else if(f != drawing.fedge){
 				nk_edit_unfocus(ctx);
