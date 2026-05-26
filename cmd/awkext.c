@@ -181,6 +181,7 @@ commitexpand(void)
 	case -1: FATAL("expand: %s", error()); break;
 	case -2: WARNING("expand: %s", error()); break;
 	}
+	//awkprint("U\n");	/* FIXME: kludge + won't work in scripts */
 }
 
 static inline void
@@ -192,7 +193,7 @@ commitcollapse(void)
 	}
 	/* strawk thread should not push commands -- but this should
 	 * be awk code anyway */
-	awkprint("U\n");	/* FIXME: kludge; unnecessary if this is in awk */
+	//awkprint("U\n");	/* FIXME: kludge + won't work in scripts */
 }
 
 static TNode *

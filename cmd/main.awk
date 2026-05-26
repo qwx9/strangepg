@@ -403,19 +403,16 @@ function deselect(	x, i){
 function selectall(i){
 	for(i in node)
 		selectnodebyid(i)
-	showselected()
 }
 function deselectnode(name,	i){
 	if(!checknodename(name))
 		return
 	deselectnodebyid(id[name])
-	showselected()
 }
 function selectnode(name){
 	if(!checknodename(name))
 		return
 	selectnodebyid(id[name])
-	showselected()
 }
 function reselectnode(i){
 	if(!checknodeid(i))
@@ -489,8 +486,10 @@ $1 == "defer"{
 	next
 }
 {
-	ns = length(selected)
+	ns_ = length(selected)
 	eval("{" $0 "}")
-	if(ns != length(selected) && length(selected) != 0)
+	if(ns_ != length(selected) && length(selected) != 0){
 		checkselected()
+		showselected()
+	}
 }
