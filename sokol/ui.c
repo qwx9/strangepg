@@ -282,6 +282,7 @@ drawui(nk_context *ctx)
 			nk_tree_pop(ctx);
 		}else
 			prompting &= ~Pbox;
+		r = nk_window_get_bounds(ctx);	/* can be different */
 		promptbox = (Box){r.x, r.y, r.x + r.w, r.y + r.h};
 	}else{	/* minimized */
 		if((p = nk_window_get_panel(ctx)) != nil){
