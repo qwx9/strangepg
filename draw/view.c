@@ -44,16 +44,6 @@ updateviewbb(void)
 		HMM_V3(+1.0f, +1.0f, +1.0f),
 		HMM_V3(+1.0f, -1.0f, -1.0f),
 		HMM_V3(-1.0f, -1.0f, -1.0f),
-		/*
-		HMM_V3(-1.0f, -1.0f, -1.0f),
-		HMM_V3(-1.0f, -1.0f, +1.0f),
-		HMM_V3(-1.0f, +1.0f, -1.0f),
-		HMM_V3(-1.0f, +1.0f, +1.0f),
-		HMM_V3(+1.0f, -1.0f, -1.0f),
-		HMM_V3(+1.0f, -1.0f, +1.0f),
-		HMM_V3(+1.0f, +1.0f, -1.0f),
-		HMM_V3(+1.0f, +1.0f, +1.0f),
-		*/
 	}, *p;
 
 	/* FIXME: easier way? two points only? */
@@ -88,12 +78,23 @@ updateview(void)
 	updateviewbb();
 }
 
+static void
+stopfollow(void)
+{
+	view.follow = -1;
+	/*
+	if(drawing.flags & DFfollow)
+		reqflags(DFfollow);
+	*/
+}
+
 void
 pandraw(float Δx, float Δy)
 {
 	HMM_Quat q;
 	HMM_Vec3 o;
 
+	stopfollow();
 	if((drawing.flags & DF3d) == 0){
 		/* FIXME: redundancy with scr2world and ui code */
 		Δx /= view.w;
@@ -138,6 +139,30 @@ worldview(HMM_Vec3 v)
 		view.Δeye = HMM_SubV3(view.eye, view.center);
 		zoomdraw(-0.1f, 0.0f, 0.0f);
 	}
+}
+
+int
+followview(void)
+{
+	ioff i;
+	RNode *r;
+	HMM_Vec3 v;
+
+	if((drawing.flags & DFfollow) == 0 || view.follow == -1
+	|| (i = view.follow & ~(1U<<31)) >= dylen(nodes))
+		return 0;
+	r = rnodes + i;
+	v.X = r->pos[0];
+	v.Y = r->pos[1];
+	if(drawing.flags & DF3d)
+		v.Z = view.center.Z + r->pos[2] / (2.0f * view.tfov);
+	else{
+		v.Z = view.eye.Z;
+		if((drawing.flags & DF3d) == 0)
+			v.Z -= 10.0f;
+	}
+	worldview(v);
+	return 1;
 }
 
 void
@@ -188,6 +213,7 @@ zoomdraw(float Δ, float Δx, float Δy)
 {
 	HMM_Vec3 v;
 
+	stopfollow();
 	if((drawing.flags & DF3d) == 0){
 		Δ *= view.eye.Z;
 		view.eye.Z -= Δ;
@@ -211,6 +237,7 @@ resetview(void)
 	view.right = HMM_V3(1.0f, 0.0f, 0.0f);
 	view.front = HMM_V3(0.0f, 0.0f, 1.0f);
 	view.rot = HMM_Q(0.0f, 0.0f, 0.0f, 1.0f);
+	view.follow = -1;
 }
 
 void

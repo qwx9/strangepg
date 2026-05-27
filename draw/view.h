@@ -26,6 +26,7 @@ struct View{
 	HMM_Mat4 mvp;
 	HMM_Quat rot;
 	AABB bb;
+	ioff follow;
 };
 extern View view;
 
@@ -41,6 +42,7 @@ void	expandbb(AABB*, AABB*);
 void	intersectbb(AABB*, AABB*);
 
 void	updateview(void);
+int	followview(void);
 void	zoomdraw(float, float, float);
 void	pandraw(float, float);
 void	worldview(HMM_Vec3);

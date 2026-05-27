@@ -15,7 +15,7 @@ RLine *rlines;
 ioff *v2id;
 
 Drawing drawing = {
-	.flags = DFstalelen | DFrecalclen | DFnoray,
+	.flags = DFstalelen | DFrecalclen | DFnoray | DFfollow,
 	.length = {
 		.min = 0x7fffffff,
 		.max = 0,
@@ -674,6 +674,10 @@ setflags(ulong f)
 		drawing.flags ^= DF3d;
 		rf |= Reqshape;
 	}
+	if(f & DFfollow){
+		drawing.flags ^= DFfollow;
+		rf |= Reqrefresh;
+	}
 	if(rf)
 		reqdraw(rf);
 }
@@ -686,6 +690,9 @@ drawproc(void *)
 
 	initstatic();
 	drawing.flags |= DFarmed;
+	if((drawing.flags & (DF3d|DFfollow)) == DFfollow
+	&& view.follow == -1)
+		view.follow = dylen(nodes) / 2;
 	for(go=1;;){
 		if((r = recvul(drawc)) == 0)
 			break;
@@ -738,16 +745,17 @@ frame(void)	/* render thread */
 	if(r != 0){
 		if(r & Reqsleep)
 			snooze = 1;
-		if(r & Reqresetdraw){
-			resizedraw();
-			updateview();
-		}
 		if(r & Reqresetview){
 			resetview();
-			updateview();
+			if(drawing.flags & DFfollow && view.follow == -1)
+				view.follow = xnrand(dylen(nodes));
 		}
+		if(r & Reqresetdraw)
+			resizedraw();
 		if(r & Reqfocus)
-			focusobj();
+			view.follow = focusobj();
+		if(followview() || r & (Reqresetview|Reqresetdraw))
+			updateview();
 		if(r & Reqshape)
 			setnodeshape(drawing.flags & DFdrawarrows);
 	}else

@@ -90,6 +90,7 @@ keyevent(Rune r, int down)
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: reqdraw(Reqresetview); break;
 	case 'a': reqflags(DFdrawarrows); break;
+	case 'f': reqflags(DFfollow); break;
 	case 'l': if(mod & Mctrl) resetprompt(); break;
 	case 'p': reqlayout(graph.flags & GFdrawme ? Lstop : Lstart); break;
 	case 'r': reqlayout(Lreset); break;
@@ -353,18 +354,21 @@ mouseselect(ioff idx, int multi, int toggle)
 	return 0;
 }
 
-void
+ioff
 focusobj(void)
 {
+	ioff i;
 	RNode *r;
 
-	if(focused == -1 || (focused & (1UL<<31)) != 0)	/* unimplemented */
-		return;
-	r = rnodes + focused;
-	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
-	mouseselect(focused, 0, 0);
-	resetselbox(view.w, view.h);
+	i = focused;
 	focused = -1;
+	if(i == -1 || (i & 1UL << 31) != 0)	/* unimplemented */
+		return -1;
+	r = rnodes + i;
+	worldview(HMM_V3(r->pos[0], r->pos[1], r->pos[2]));
+	mouseselect(i, 0, 0);
+	resetselbox(view.w, view.h);
+	return i;
 }
 
 void

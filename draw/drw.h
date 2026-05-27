@@ -68,6 +68,7 @@ enum{
 	DF3d = 1<<8,
 	DFnoalpha = 1<<9,
 	DFnoray = 1<<10,
+	DFfollow = 1<<11,
 	DFrecalclen = 1<<29,
 	DFfiring = 1<<30,
 	DFarmed = 1<<31,

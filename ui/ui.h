@@ -10,7 +10,7 @@ extern char selstr[512], hoverstr[256];
 
 void	resetprompt(void);
 void	prompt(Rune);
-void	focusobj(void);
+ioff	focusobj(void);
 void	focusnode(ioff);
 int	mouseevent(float, float, float, float);
 int	keyevent(Rune, int);
