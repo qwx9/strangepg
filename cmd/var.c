@@ -435,21 +435,14 @@ setedgetag(char *tag, voff id, char ttype, char *val)
 	Cell *cp;
 	TVal v;
 
-	r = 0;
-	DPRINT(Debugawk, "setedgetag %s[%d] = %s", tag, id, val);
-	cp = setsymtab(tag, NULL, ZV, 0|UNS, symtab);	/* FIXME: hack */
-	if(isptr(cp) && cp->sval != EMPTY && ((Array *)cp->sval)->ids != nil
-	|| !isptr(cp) && (cp->tval & UNS) == 0){
-		snprint(etag, sizeof etag, "e%s", tag);
-		cp = setsymtab(etag, NULL, ZV, NUM, symtab);
-		/* only print the warning once */
-		if(!isptr(cp) && (cp->tval & UNS) == 0){
-			werrstr("%s is a node tag, renaming", tag);
-			r--;
-			cp->tval |= UNS;
-		}
+	DPRINT(Debugawk, "setedgetag e%s[%d] = %s", tag, id, val);
+	snprint(etag, sizeof etag, "e%s", tag);
+	cp = setsymtab(etag, NULL, ZV, NUM, symtab);
+	if(!isptr(cp) && (cp->tval & UNS) == 0){	/* FIXME: hack */
+		DPRINT(Debuginfo, "renaming edge tag %s to %s", tag, etag);
+		cp->tval |= UNS;
 	}
-	r += tagtype(val, ttype, &type);
+	r = tagtype(val, ttype, &type);
 	type = vartype(val, type, &v, cp);
 	pushval(cp, id, type, v);
 	return r;
