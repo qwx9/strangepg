@@ -707,8 +707,9 @@ while clicking and dragging in empty space.
 
 #### Keyboard shortcuts:
 
-- `Esc`: Reset view to initial position.
+- `Esc`: Reset view to initial position. If follow mode is enabled, pick a random node to center on.
 - `a`: Toggle showing oriented nodes as arrows (oriented in read direction).
+- `f`: Toggle follow mode, centering on a node.
 - `p`: Pause/unpause layout (unpause = restart layout from current state).
 - `r`: Restart layouting from scratch.
 - `q`: Quit.
