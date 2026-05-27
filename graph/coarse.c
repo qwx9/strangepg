@@ -719,7 +719,7 @@ hide(CNode *U)
 }
 
 static inline int
-hideall(CNode *U, int nlevels)
+hideall(CNode *U, int all)
 {
 	int n;
 	ioff i;
@@ -729,23 +729,16 @@ hideall(CNode *U, int nlevels)
 	n = 0;
 	if(U->idx == -1)
 		return 0;
-	if((i = U->child) != -1){
+	for(i=U->child; i!=-1; i=V->sibling){
 		V = cnodes + i;
 		if(V->flags & FCNvisited)
 			n++;
 		else if(V->idx != -1)
-			n += hideall(V, nlevels);
-		for(i=V->sibling; i!=-1; i=V->sibling){
-			V = cnodes + i;
-			if(V->flags & FCNvisited)
-				n++;
-			else if(V->idx != -1)
-				n += hideall(V, nlevels);
-		}
+			n += hideall(V, all);
 	}
-	DPRINT(Debugcoarse, "hideall %zd: %d collapses", U - cnodes, n);
-	if(n == 0)
+	if(n == 0 || all)
 		n += hide(U);
+	DPRINT(Debugcoarse, "hideall %zd: %d collapses", U - cnodes, n);
 	return n;
 }
 
@@ -760,7 +753,7 @@ collapseall(int full)
 		U = cnodes + u->id;
 		if(U->parent == -1){
 			if(full)
-				hideall(U, -1);
+				hideall(U, 1);
 			continue;
 		}else if(U->idx == -1 || full)
 			continue;
@@ -886,7 +879,7 @@ collapse(ioff id, int all)
 				break;
 		}
 	}
-	hideall(U, all ? -1 : 1);
+	hideall(U, all);
 	return 0;
 }
 
@@ -903,6 +896,9 @@ reallyinitcoarse(void)
 		U->eoff = u->eoff;
 		U->nedges = u->nedges;
 		U->flags = 0;
+		DPRINT(Debugcoarse, "ct[%zd] %d %d %d idx=%d eoff=%d:%d",
+			U-cnodes, U->parent, U->child, U->sibling,
+			U->idx, U->eoff, U->nedges);
 	}
 	graph.flags |= GFctarmed;
 }
@@ -921,6 +917,7 @@ initcoarse(void)
 	}
 	cnodes = emalloc(nnodes * sizeof *cnodes);
 	for(i=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, i++){
+		u->id = i;
 		U->idx = i;
 		U->eoff = -1;
 		U->parent = U->child = U->sibling = -1;
