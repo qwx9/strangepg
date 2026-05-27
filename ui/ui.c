@@ -89,6 +89,7 @@ keyevent(Rune r, int down)
 	case Kscrlup: zoom(5.0f, 5.0f); break;
 	case Kscrldn: zoom(-5.0f, -5.0f); break;
 	case Kesc: reqdraw(Reqresetview); break;
+	case 'q': if(mod & Kctl) quit(); break;
 	case 'a': reqflags(DFdrawarrows); break;
 	case 'f': reqflags(DFfollow); break;
 	case 'l': if(mod & Mctrl) resetprompt(); break;

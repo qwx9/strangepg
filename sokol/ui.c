@@ -346,7 +346,6 @@ keyev(sapp_keycode k, uint32_t mod, int down)
 	case SAPP_KEYCODE_RIGHT_CONTROL: r = Kctl; break;
 	case SAPP_KEYCODE_LEFT_ALT: /* wet floor */
 	case SAPP_KEYCODE_RIGHT_ALT: r = Kalt; break;
-	case SAPP_KEYCODE_Q: sapp_quit(); return 1;
 	case SAPP_KEYCODE_EQUAL: if((mod & SAPP_MODIFIER_SHIFT) != 0) r = '+'; break;
 	default:
 		if(k >= 'A' && k <= 'Z')
