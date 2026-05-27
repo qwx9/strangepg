@@ -786,7 +786,7 @@ thawworld(int nn, int ne, RNode *extra)
 		vnodes = rnodes;
 	wunlockdraw();
 	reqlayout(Lthaw);
-	recolornodes();
+	reqdraw(Reqrecolor);
 }
 
 void
@@ -900,7 +900,7 @@ waitforit(void)
 		f |= r;
 	}
 	DPRINT(Debugdraw, "fries salted.");
-	reqdraw(f & ~Reqinit | Reqredraw);
+	reqdraw(f & ~Reqinit | Reqredraw | Reqrecolor);
 	newthread(drawproc, nil, nil, nil, "draw", mainstacksize);
 }
 

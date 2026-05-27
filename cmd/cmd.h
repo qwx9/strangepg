@@ -32,6 +32,7 @@ void	loadbatch(void);
 int	setedgetag(char*, voff, char, char*);
 int	settag(char*, voff, char, char*);
 int	setnamedtag(char*, char*, char*);
+void	stealvars(void);
 voff	pushname(char*);
 void	fixtabs(voff, int*, ushort*);
 void	initvars(void);

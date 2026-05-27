@@ -196,6 +196,7 @@ BEGIN{
 	Ffcsv = 1<<4
 	Fdie = 1<<5
 	Fcrm114 = 1<<15
+	print ">"
 }
 # FIXME: CL changes currently are still destructive, would be
 # nice to be able to actually reset them to the initial values

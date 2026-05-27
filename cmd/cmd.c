@@ -192,6 +192,10 @@ readcmd(char *s, int err)
 		switch(*s){
 		case 0:
 			return;
+		case '>':
+			stealvars();
+			r |= Reqawkinit;	/* FIXME: kludge */
+			continue;
 		case 'Q':
 			quit();
 		case 'C':

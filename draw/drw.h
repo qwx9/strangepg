@@ -159,13 +159,14 @@ enum{
 	Reqfocus = 1<<6,		/* focus node event */
 	Reqpickbuf = 1<<7,		/* cache new mouse picking buffer */
 	Reqrecolor = 1<<8,		/* force node recoloring */
+	Reqawkinit = 1<<9,		/* FIXME */
 	Reqsleep = 1<<29,		/* force renderer to wait for events */
 	Reqstop = 1<<30,		/* cease all activity and operations */
 	Reqnone = 1<<31,		/* dummy event */
 	Reqanydraw =
 		Reqrefresh | Reqredraw | Reqshallowdraw | Reqfocus |
-		Reqrecolor,
-	Reqinit = Reqredraw,
+		Reqrecolor | Reqawkinit,
+	Reqinit = Reqredraw | Reqrecolor | Reqawkinit,
 };
 
 void	nuketree(Tree*);

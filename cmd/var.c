@@ -520,6 +520,14 @@ stealpal(void)
 	cp = lookup("translucent", symtab);
 	assert(cp != nil);
 	core.nocol = (u32int)getival(cp) >> 8;
+	core.defpal = attach("default", nil, core.defcol, dylen(core.defcol), NUM|USG, nil);
+}
+
+/* ran after BEGIN is done executing */
+void
+stealvars(void)
+{
+	stealpal();
 }
 
 void
@@ -537,8 +545,6 @@ fixtabs(voff nn, int *lenp, ushort *degp)
 	core.degree = attach("degree", core.ids, degp, nn, RO|NUM|P16|USG, nil);
 	core.label = attach("node", core.ids, core.labels, nn, RO|STR, nil);
 	core.color = attach("CL", core.ids, core.colors, nn, NUM|USG, setnodecolor);
-	stealpal();
-	core.defpal = attach("default", nil, core.defcol, dylen(core.defcol), NUM|USG, nil);
 }
 
 static inline Array *
