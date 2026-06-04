@@ -156,7 +156,6 @@ updatenodelength(Node *u, vlong n)
 		f |= DFstalelen;
 	if(u->length == drawing.length.min || u->length == drawing.length.max)
 		f |= DFrecalclen;
-	reqflags(f);
 	u->length = n;
 	return f;
 }

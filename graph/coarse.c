@@ -356,6 +356,7 @@ int
 uncoarsen(void)
 {
 	short *deg, *d;
+	int f;
 	ioff off, i, j, x, nn, nnew, *e, *ee, *ip, *ie;
 	vlong t;
 	Node *u, *ue, *unew;
@@ -418,6 +419,7 @@ uncoarsen(void)
 	free(unew);
 	rs = nil;
 	dyresize(rs, nnew);
+	f = 0;
 	for(i=off=0, d=deg, u=nodes, ue=u+nn+nnew; u<ue; u++, i++){
 		u->eoff = off;
 		off += *d++;
@@ -425,13 +427,15 @@ uncoarsen(void)
 		j = u->id;
 		U = cnodes + j;
 		if(i >= nn){
-			updatenodelength(u, sublength(j));
+			f |= updatenodelength(u, sublength(j));
 			spawn(i, cnodes[U->parent].idx, rs, nn);
 		}else if(U->flags & FCNvisited)
-			updatenodelength(u, sublength(j));
+			f |= updatenodelength(u, sublength(j));
 		U->flags &= ~FCNvisited;
 	}
 	free(deg);
+	if(f != 0)
+		reqflags(f);
 	TIME("uncoarsen", "regenerate offsets and nodes", t);
 	dyresize(edges, off);
 	x = kh_size(eset);
@@ -669,6 +673,7 @@ coarsen(void)
 	TIME("coarsen", "shrink arrays", t);
 	regenedges(eset, ne, ne2);
 	TIME("coarsen", "restore edges", t);
+	reqflags(DFstalelen | DFrecalclen);
 	thawworld(nn, ne, nil);
 	es_destroy(eset);
 	logmsg(va("graph after coarsening: %zd nodes, %d edges\n",

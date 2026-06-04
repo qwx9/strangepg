@@ -845,18 +845,21 @@ unlockrend(void)
 	qunlock(&raylock);
 }
 
+/* no protection against storms, just don't do that */
 void
 reqflags(int r)
 {
 	static ulong reqs;
 
-	DPRINT(Debugdraw, "reqstate %#x reqs %#lx flags %#x ",
+	DPRINT(Debugdraw, "reqflags %#x reqs %#lx flags %#x ",
 		r, reqs, drawing.flags);
 	if((reqs & r) != r)
 		reqs |= r;
+	else
+		return;
 	if(reqs != 0 && nbsendul(flagc, reqs) == 1){
 		reqs = 0;
-		reqdraw(Reqrefresh);	/* FIXME: ugh */
+		reqdraw(Reqnone);	/* FIXME: ugh */
 	}
 }
 
@@ -924,6 +927,6 @@ initdrw(void)
 	if((drawc = chancreate(sizeof(ulong), 8)) == nil
 	|| (rendc = chancreate(sizeof(ulong), 8)) == nil
 	|| (ctlc = chancreate(sizeof(ulong), 1)) == nil
-	|| (flagc = chancreate(sizeof(ulong), 1)) == nil)
+	|| (flagc = chancreate(sizeof(ulong), 8)) == nil)
 		sysfatal("initdrw: chancreate");
 }
