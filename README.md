@@ -712,7 +712,7 @@ while clicking and dragging in empty space.
 - `f`: Toggle follow mode, centering on a node.
 - `p`: Pause/unpause layout (unpause = restart layout from current state).
 - `r`: Restart layouting from scratch.
-- `q`: Quit.
+- `Ctrl+q`: Quit.
 - Arrow keys: move view by 1/3 of the screen up/down/left/right.
 
 <p align="center"><img src=".pics/arrows.png"/></p>
