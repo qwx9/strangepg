@@ -24,7 +24,7 @@ Drawing drawing = {
 	.fatness = Ptsz,
 	.minsz = Minsz,
 	.maxsz = Maxsz,
-	.fedge = 1000,
+	.fedge = Edgef,
 };
 Box promptbox, selbox;
 Channel *rendc, *ctlc;

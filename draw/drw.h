@@ -15,8 +15,13 @@ typedef struct B B;
 #define	Ptsz	(Nodesz * 0.8f)
 #define	Minsz	0.1f
 #define	Maxsz	60.0f
+#define	Edgef	1000.0f
 
-#define	Maxthic	128.0f
+#define	Minminsz	0.01f
+#define	Maxminsz	100.0f
+#define	Maxmaxsz	1000.0f
+#define	Minedgef	1.0f
+#define	Maxedgef	10000.0f
 
 struct IRange{
 	vlong min;

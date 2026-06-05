@@ -118,14 +118,14 @@ drawoptions(nk_context *ctx)
 	if(!nk_tree_push(ctx, NK_TREE_TAB, "Drawing", NK_MINIMIZED))
 		return 0;
 	nk_layout_row_dynamic(ctx, 2 * Fonth, 2);
-	/* FIXME: sliders? */
+	/* FIXME: sliders? or both */
 	nk_label(ctx, "Node length (0.01-100):", NK_TEXT_LEFT);
 	if((e = nk_edit_string(ctx, NKfopt, nkopt[NKOnodesz],
 	&nkoptn[NKOnodesz], sizeof nkopt[NKOnodesz], nk_filter_default))){
 		if(e & NK_EDIT_COMMITED){
 			prompting &= ~Pnodesz;
 			nkopt[NKOnodesz][nkoptn[NKOnodesz]] = 0;
-			if(validfloat(&f, 0.01, 100.0, nkopt[NKOnodesz])){
+			if(validfloat(&f, Minminsz, Maxminsz, nkopt[NKOnodesz])){
 				nk_edit_unfocus(ctx);
 				drawing.nodesz = f;
 				reqflags(DFstalelen);
@@ -144,7 +144,7 @@ drawoptions(nk_context *ctx)
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pnodew;
 			nkopt[NKOnodew][nkoptn[NKOnodew]] = 0;
-			if(validfloat(&f, 0.01, 100.0, nkopt[NKOnodew])){
+			if(validfloat(&f, Minminsz, Maxminsz, nkopt[NKOnodew])){
 				nk_edit_unfocus(ctx);
 				drawing.fatness = f;
 				reqdraw(Reqshape);
@@ -162,7 +162,7 @@ drawoptions(nk_context *ctx)
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pminsz;
 			nkopt[NKOminsz][nkoptn[NKOminsz]] = 0;
-			if(!validfloat(&f, 0.01, 100.0, nkopt[NKOminsz]))
+			if(!validfloat(&f, Minminsz, Maxminsz, nkopt[NKOminsz]))
 				logerr("invalid min length\n");
 			else if(f > drawing.maxsz)
 				logerr("must be lesser or equal to max length\n");
@@ -184,7 +184,7 @@ drawoptions(nk_context *ctx)
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pmaxsz;
 			nkopt[NKOmaxsz][nkoptn[NKOmaxsz]] = 0;
-			if(!validfloat(&f, 0.01, 1000.0, nkopt[NKOmaxsz]))
+			if(!validfloat(&f, Minminsz, Maxmaxsz, nkopt[NKOmaxsz]))
 				logerr("invalid max length\n");
 			else if(f < drawing.minsz)
 				logerr("must be greater or equal to min length\n");
@@ -206,7 +206,7 @@ drawoptions(nk_context *ctx)
 		if((e & NK_EDIT_COMMITED) != 0){
 			prompting &= ~Pfedge;
 			nkopt[NKOfedge][nkoptn[NKOfedge]] = 0;
-			if(!validfloat(&f, 1.0, 50000.0, nkopt[NKOfedge]))
+			if(!validfloat(&f, Minedgef, Maxedgef, nkopt[NKOfedge]))
 				logerr("invalid edge length factor\n");
 			else if(f != drawing.fedge){
 				nk_edit_unfocus(ctx);

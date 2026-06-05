@@ -10,7 +10,7 @@
 
 int status;
 
-static char usestr[] = "[-ACEHMRWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s LEN WIDE] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
+static char usestr[] = "[-ACEHMRWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s L W m M E] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -82,7 +82,7 @@ help(void)
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
 		"-q             Avoid printing messages to stdout\n"
 		"-r FILE        Read coarsening table from FILE\n"
-		"-s LEN WIDE    Set node length and width (max: %.1f %.1f, default: %.1f %.1f)\n"
+		"-s L W m M E   Set shape params: node length/width/min/max, edge size (def. %.1f %.1f %.1f %.1f %.1f)\n"
 		"-t N           Set number of layouting threads (1-1024, default: 4)\n"
 		"-v             Print version and exit\n"
 		"-A             Disable transparency (for performance)\n"
@@ -99,7 +99,7 @@ help(void)
 		" fr            Parallelized variant of Fruchterman-Reingold (default)\n"
 		" 3d            Experimental 3d version of the above\n" \
 		"CMD is a literal and valid strawk command to be queued\n",
-			Maxsz, Maxthic, Nodesz, Ptsz
+			Nodesz, Ptsz, Minsz, Maxsz, Edgef
 	);
 	quit();
 }
@@ -208,9 +208,15 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 's':
 		drawing.nodesz = atof(EARGF(usage()));
 		drawing.fatness = atof(EARGF(usage()));
-		if(drawing.nodesz <= 0.01f || drawing.nodesz >= Maxsz
-		|| drawing.fatness <= 0.01f || drawing.fatness > Maxthic){
-			warn("invalid node dimensions\n");
+		drawing.minsz = atof(EARGF(usage()));
+		drawing.maxsz = atof(EARGF(usage()));
+		drawing.fedge = atof(EARGF(usage()));
+		if(drawing.nodesz < Minminsz || drawing.nodesz > Maxminsz
+		|| drawing.fatness < Minminsz || drawing.fatness > Maxminsz
+		|| drawing.minsz < Minminsz || drawing.minsz > Maxminsz
+		|| drawing.maxsz < Minminsz || drawing.maxsz > Maxmaxsz
+		|| drawing.fedge < Minedgef || drawing.fedge > Maxedgef){
+			warn("invalid shape parameters\n");
 			usage();
 		}
 		break;
