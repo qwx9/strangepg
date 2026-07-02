@@ -48,6 +48,7 @@ typedef uint64_t u64int;
 #define ORDWR	O_RDWR
 #define AEXIST	F_OK
 #define AREAD	R_OK
+#define AWRITE	W_OK
 #define IOUNIT	(1<<16)
 
 extern char *argv0;
