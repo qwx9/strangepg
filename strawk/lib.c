@@ -126,7 +126,7 @@ void initgetrec(void)
  * whenever a new record is read in (implicitly or via getline), or when
  * a new value is assigned to $0.
  */
-void savefs(void)
+void stashfs(void)
 {
 	size_t len;
 
@@ -195,7 +195,7 @@ int getrec(char **pbuf, int *pbufsize, bool isrecord)	/* get next input record *
 				}
 				donefld = false;
 				donerec = true;
-				savefs();
+				stashfs();
 			}
 			setival(nrloc, nrloc->val.i+1);
 			setival(fnrloc, fnrloc->val.i+1);
@@ -370,7 +370,7 @@ void fldbld(void)	/* create fields from current record */
 	fr = fields;
 	i = 0;	/* number of fields accumulated here */
 	if (inputFS == NULL)	/* make sure we have a copy of FS */
-		savefs();
+		stashfs();
 	if (strlen(inputFS) > 1) {	/* it's a regular expression */
 		i = refldbld(r, inputFS);
 	} else if ((sep = *inputFS) == ' ') {	/* default whitespace */
