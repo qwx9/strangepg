@@ -508,12 +508,13 @@ expand(ioff i, int all)
 		werrstr("out of bounds %d > %d", i, nnodes);
 		return -1;
 	}
+	DPRINT(Debugcoarse, "expand %zd:%s all=%d", i, getname(i), all);
 	U = cnodes + i;
 	j = U->parent;
 	if(j != -1){
 		V = cnodes + j;
 		/* hidden parents: order is important */
-		if(V->idx == -1 && expand(j, 0) < 0)
+		if((V->idx == -1 || V->parent == -1) && expand(j, 0) < 0)
 			return -1;
 	}
 	unhideall(U, all ? -1 : 1);
