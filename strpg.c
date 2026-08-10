@@ -32,6 +32,8 @@ load(Input *files)
 	if(files == nil)
 		return;
 	for(in=files, end=in+dylen(files); in!=end; in++){
+		if(access(in->path, AREAD) < 0)
+			sysfatal("can\'t open %s: %s", in->path, error());
 		switch(in->type){
 		/* defer anything that must be loaded after the graph(s) */
 		case FFcsv:
