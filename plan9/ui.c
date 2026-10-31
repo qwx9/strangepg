@@ -28,6 +28,7 @@ kproc(void *)
 
 	if((fd = open("/dev/kbd", OREAD)) < 0)
 		sysfatal("kproc: %r");
+	threadsetname("kproc");
 	memset(buf, 0, sizeof buf);
 	for(;;){
 		if(buf[0] != 0){
@@ -78,7 +79,6 @@ enterprompt(Rune r, char *old)
 		p += runetochar(p, &r);
 		*p = 0;
 	}
-	lockdisplay(display);
 	conson = 1;
 	n = enter("cmd:", buf, sizeof buf - UTFmax, mc, &kc, _screen);
 	conson = 0;
@@ -86,7 +86,6 @@ enterprompt(Rune r, char *old)
 	 * to block on send nor miss key strokes; it sucks */
 	while(nbrecv(kc.c, nil) == 1)
 		;
-	unlockdisplay(display);
 	if(n < 0){
 		warn("enterprompt: %r\n");
 		return nil;
@@ -137,10 +136,8 @@ evloop(void)
 	for(;;){
 		switch(alt(a)){
 		case Aresize:
-			lockdisplay(display);
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("resize failed: %r");
-			unlockdisplay(display);
 			reqdraw(Reqresetdraw);
 			mold.xy = mc->xy;
 			/* wet floor */

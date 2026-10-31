@@ -149,25 +149,25 @@ setnodeshape(int arrow)
 		if(arrow){
 			nnodev = nelem(arrowv3d);
 			free(nodev);
-			nodev = emalloc(sizeof *arrowv3d);
-			memcpy(nodev, arrowv3d, sizeof *arrowv3d);
+			nodev = emalloc(nnodev * sizeof *arrowv3d);
+			memcpy(nodev, arrowv3d, nnodev * sizeof *arrowv3d);
 		}else{
 			nnodev = nelem(quadv3d);
 			free(nodev);
-			nodev = emalloc(sizeof *quadv3d);
-			memcpy(nodev, quadv3d, sizeof *quadv3d);
+			nodev = emalloc(nnodev * sizeof *quadv3d);
+			memcpy(nodev, quadv3d, nnodev * sizeof *quadv3d);
 		}
 	}else{
 		if(arrow){
 			nnodev = nelem(arrowv);
 			free(nodev);
-			nodev = emalloc(sizeof *arrowv);
-			memcpy(nodev, arrowv, sizeof *arrowv);
+			nodev = emalloc(nnodev * sizeof *arrowv);
+			memcpy(nodev, arrowv, nnodev * sizeof *arrowv);
 		}else{
 			nnodev = nelem(quadv);
 			free(nodev);
-			nodev = emalloc(sizeof *quadv);
-			memcpy(nodev, quadv, sizeof *quadv);
+			nodev = emalloc(nnodev * sizeof *quadv);
+			memcpy(nodev, quadv, nnodev * sizeof *quadv);
 		}
 	}
 }
@@ -179,12 +179,12 @@ mousepick(int x, int y)
 	union { uchar u[8]; u32int v; } u;	/* libdraw bug */
 
 	if(selfb == nil)
-		return 0;
+		return -1;
 	r = Rect(x, y, x+1, y+1);
 	r = rectaddpt(r, ΔZP);
 	if(unloadimage(selfb, r, u.u, sizeof u.u) < 0)
 		warn("mousepick: %r\n");
-	return u.v;
+	return u.v - 1;
 }
 
 static Image *
@@ -244,16 +244,29 @@ drawlabels(void)
 	}
 }
 
+/* FIXME: rotation and 3d */
+static void
+w2s(HMM_Vec3 *p)
+{
+	float f;
+
+	f = 2.0f * view.zoom * view.tfov;
+	p->Y /= f;
+	p->X /= f * view.ar;
+	p->X *= view.w;
+	p->Y *= -view.h;
+}
+
 /* FIXME: no prior screen intersection test */
 int
 drawquad(RNode *v)
 {
-	ioff i;
+	ioff i, j;
 	float *cp, *ce;
-	Point p[5];	/* FIXME: arrows */
+//	Point p[nelem(arrowv)+1];	/* FIXME */
+	Point p[10+1];
 	Color *c;
 	HMM_Vec3 g, pos;
-	HMM_Vec4 m;
 	HMM_Quat q;
 
 	/* FIXME: 3d version */
@@ -261,43 +274,22 @@ drawquad(RNode *v)
 		return -1;
 	q = HMM_Q(v->dir[0], v->dir[1], v->dir[2], v->dir[3]);
 	pos = HMM_V3(v->pos[0], v->pos[1], v->pos[2]);
+	pos = HMM_SubV3(pos, view.center);
 	for(i=0, cp=nodev, ce=cp+nnodev; cp<ce; cp+=2, i++){
 		g = HMM_V3(cp[0] * v->len, cp[1], 0.0f);
 		g = HMM_RotateV3Q(g, q);
 		g = HMM_AddV3(g, pos);
-		m = HMM_MulM4V4(view.mvp, HMM_V4(g.X, g.Y, g.Z, 1.0f));
-		/* FIXME: w2s, this doesn't work */
-		g = HMM_SubV3(m.XYZ, view.center);
-		g = HMM_RotateV3Q(g, HMM_InvQ(view.rot));
-		g.X /= view.zoom * view.ar * view.fov;
-		g.Y /= view.zoom * view.tfov;
-		g.X += 1.0f;
-		g.Y += 1.0f;
-		g.X /= 2.0f / view.w;
-		g.Y /= 2.0f / view.h;
+		w2s(&g);
 		p[i].x = g.X;
 		p[i].y = g.Y;
 	}
-	p[4] = p[0];
+	p[i++] = p[0];
 	c = colorimage(FCOL(v->col));
-	/*
-	pos.X = v->pos[0];
-	pos.Y = v->pos[1];
-	dir.X = v->dir[0];
-	dir.Y = v->dir[1];
-	cθ = dir.X;
-	sθ = dir.Y;
-	p[0] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, -drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[1] = v2p(centerscalev(addv(pos, zrotv(V(+drawing.nodesz/2.0f, -drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[2] = v2p(centerscalev(addv(pos, zrotv(V(+drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[3] = v2p(centerscalev(addv(pos, zrotv(V(-drawing.nodesz/2.0f, +drawing.nodesz/4.0f, 0.0f), cθ, sθ))));
-	p[4] = p[0];
-	*/
-	polyop(viewfb, p, nelem(p), 0, 0, 1, c->shad, ZP, SatopD);
-	fillpoly(viewfb, p, nelem(p), ~0, c->i, ZP);
-	i = v - rnodes;
-	poly(selfb, p, nelem(p), 0, 0, 1, i2c(i), ZP);
-	fillpoly(selfb, p, nelem(p), ~0, i2c(i), ZP);
+	polyop(viewfb, p, i, 0, 0, 1, c->shad, ZP, SatopD);	/* FIXME: slow */
+	fillpoly(viewfb, p, i, ~0, c->i, ZP);
+	j = v - rnodes;
+	poly(selfb, p, i, 0, 0, 1, i2c(j), ZP);
+	fillpoly(selfb, p, i, ~0, i2c(j), ZP);
 	return 0;
 }
 
@@ -305,40 +297,45 @@ drawquad(RNode *v)
 int
 drawbezier(REdge *r)
 {
-	int w;
-	ioff i;
+	int i, w;
 	float Δx, Δy;
 	double θ;
+	Color *col;
 	Point p[4];
-	FVertex a, b;
-	Color *c;
+	HMM_Vec3 a, b, c, d;
 
-	a.X = r->pos1[0];
-	a.Y = r->pos1[1];
-	b.X = r->pos2[0];
-	b.Y = r->pos2[1];
+	/* FIXME: 3d */
+	a = HMM_SubV3(HMM_V3(r->pos1[0], r->pos1[1], r->pos1[2]), view.center);
+	w2s(&a);
+	d = HMM_SubV3(HMM_V3(r->pos2[0], r->pos2[1], r->pos2[2]), view.center);
+	w2s(&d);
+
 	Δx = b.X - a.X;
 	Δy = b.Y - a.Y;
-	//θ = atan2(a.x - b.X, a.Y - b.Y);
-	c = colorimage(theme[Cedge]);
+	//θ = atan2(a.X - b.X, a.Y - b.Y);
 	θ = atan2(Δy, Δx);
-	p[0] = v2p(centerscalev(a));
-	p[3] = v2p(centerscalev(b));
-	/* FIXME: doesn't take into account opposite direction */
+	/* FIXME: makes no sense, why diagonal */
 	if(Δx > 0.f)
-		p[1] = addpt(p[0], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
+		b = HMM_AddV3(a, HMM_V3(5.0f, 5.0f, 0.0f));
 	else
-		p[1] = subpt(p[0], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
+		b = HMM_SubV3(a, HMM_V3(5.0f, 5.0f, 0.0f));
 	if(Δy > 0.f)
-		p[2] = addpt(p[3], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
+		c = HMM_AddV3(d, HMM_V3(5.0f, 5.0f, 0.0f));
 	else
-		p[2] = subpt(p[3], mulpt(Pt(drawing.nodesz,drawing.nodesz), θ));
+		c = HMM_SubV3(d, HMM_V3(5.0f, 5.0f, 0.0f));
+
+	p[0] = Pt(a.X, a.Y);
+	p[1] = Pt(b.X, b.Y);
+	p[2] = Pt(c.X, c.Y);
+	p[3] = Pt(d.X, d.Y);
+
 	//w = MAX(0., view.zoom/5);
 	w = 0;
+	col = colorimage(theme[Cedge]);
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
-		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, c->i, ZP);
+		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, col->i, ZP);
 	bezier(viewfb, p[0], p[1], p[2], p[3], Endsquare,
-		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, c->shad, ZP);
+		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w+1, col->shad, ZP);
 	i = r - redges;
 	bezier(selfb, p[0], p[1], p[2], p[3], Endsquare,
 		(drawing.flags & DFdrawarrows) != 0 ? Endarrow : Endsquare, w, i2c(i), ZP);
@@ -356,10 +353,8 @@ renderscene(void)
 
 	c = colorimage(theme[Cbg]);
 	draw(viewfb, viewfb->r, c->i, nil, ZP);
-	/*
 	for(e=redges, ee=e+dylen(e); e<ee; e++)
 		drawbezier(e);
-	*/
 	for(r=rnodes, re=r+dylen(r); r<re; r++)
 		drawquad(r);
 	l = le = nil;
