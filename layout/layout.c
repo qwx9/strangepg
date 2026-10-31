@@ -236,6 +236,8 @@ newlayout(int type)
 			type = LLpfr;
 		else
 			type = deflayout;
+		if(type == LLpfr3d)
+			reqflags(DF3d);
 	}
 	l->target = ttab[type];
 	if(txc == nil)
