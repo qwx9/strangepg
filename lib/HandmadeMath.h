@@ -2329,9 +2329,9 @@ static inline HMM_Quat HMM_NormQ(HMM_Quat Quat)
     ASSERT_COVERED(HMM_NormQ);
 
     /* NOTE(lcf): Take advantage of SSE implementation in HMM_NormV4 */
-    HMM_Vec4 Vec = {Quat.X, Quat.Y, Quat.Z, Quat.W};
+    HMM_Vec4 Vec = HMM_V4(Quat.X, Quat.Y, Quat.Z, Quat.W);
     Vec = HMM_NormV4(Vec);
-    HMM_Quat Result = {Vec.X, Vec.Y, Vec.Z, Vec.W};
+    HMM_Quat Result = HMM_Q(Vec.X, Vec.Y, Vec.Z, Vec.W);
 
     return Result;
 }
