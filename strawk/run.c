@@ -532,6 +532,11 @@ void hookdel(Array *ap, void (*fn)(Cell *))
 	ap->delfn = fn;
 }
 
+void hooknew(Array *ap, void (*fn)(Cell *))
+{
+	ap->newfn = fn;
+}
+
 Cell *awkdelete(TNode **a, int n)	/* a[0] is symtab, a[1] is list of subscripts */
 {
 	Cell *x;

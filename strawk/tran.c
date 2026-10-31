@@ -401,6 +401,8 @@ Cell *setsymtab(const char *n, const char *s, Value v, unsigned t, Array *tp)
 	p->cnext = tp->tab[h];
 	tp->tab[h] = p;
 	wunlock(&tp->lock);
+	if(tp->newfn != NULL)
+		tp->newfn(p);
 	DPRINTF("setsymtab set %p: n=%s s=\"%s\" i=%lld f=%g t=%o\n",
 		(void*)p, p->nval, p->sval, p->val.i, p->val.f, p->tval);
 	return(p);
