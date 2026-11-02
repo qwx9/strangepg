@@ -35,3 +35,4 @@ int	updatenodelength(Node*, vlong);
 void	setnodelength(size_t, Value);
 void	setnodecolor(size_t, Value);
 void	deselectnode(Cell*);
+void	selectnode(Cell*);

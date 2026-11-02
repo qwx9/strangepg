@@ -357,12 +357,11 @@ function selinfostr(	x, i, l, n, m, s){
 	# very deliberate and assuming nodes for now
 	if(length(selected) == 1)
 		for(i in selected)
-			return "Selected: " nodeinfostr(selected[i])
+			return "Selected: " nodeinfostr(i)
 	l = 0
 	s = ""
 	n = m = 0
-	for(x in selected){
-		i = selected[x]
+	for(i in selected){
 		l += LN[i]
 		if(m < 5){
 			m = length(s)
@@ -397,15 +396,15 @@ function showselected(){
 	selinfo = selinfostr()
 	refresh()
 }
-function deselect(	x, i){
+function deselect(){
 	selinfo = ""
 	delete selected
 }
-function selectall(i){
+function selectall(	i){
 	for(i in node)
 		selectnodebyid(i)
 }
-function deselectnode(name,	i){
+function deselectnode(name){
 	if(!checknodename(name))
 		return
 	deselectnodebyid(id[name])

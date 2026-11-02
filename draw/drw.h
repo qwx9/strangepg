@@ -149,6 +149,7 @@ enum{
 extern u32int *theme;
 
 void	highlightnode(RNode*);
+void	resetnodecolor(RNode*, ioff);
 u32int	setdefalpha(u32int);
 void	settheme(void);
 void	mixcolors(float*, u32int);

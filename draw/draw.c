@@ -84,14 +84,6 @@ initstatic(void)
 }
 
 static inline void
-setrcol(RNode *r, u32int col, int high)
-{
-	setcolor(r->col, setdefalpha(col));	/* FIXME: set alpha elsewhere? */
-	if(high)
-		highlightnode(r);
-}
-
-static inline void
 setrlen(RNode *r, vlong n, double min, double max, double k)
 {
 	if((n -= drawing.length.min) < 0)
@@ -144,8 +136,11 @@ recolornodes(void)
 	RNode *r;
 	Node *u, *ue;
 
-	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++)
-		setrcol(r, getcnodecolor(u->id), 0);
+	for(r=rnodes, u=nodes, ue=u+dylen(u); u<ue; u++, r++){
+		resetnodecolor(r, u->id);
+		if(u->uflags & FNUhigh)
+			highlightnode(r);
+	}
 }
 
 /* FIXME: compute min/max as we go, has to be at least 1 */
@@ -452,10 +447,6 @@ drawnodes(void)
 			u->dflags |= FNDvis;
 		else if((u->dflags & FNDvis) == 0)	/* FIXME: what about edges? */
 			continue;
-		if(u->uflags & FNUhigh){
-			highlightnode(r);
-			u->uflags &= ~FNUhigh;
-		}
 		if(u->nedges > 0){
 			if(is3d)
 				faceyourfearsin3d(r, u);

@@ -1,4 +1,5 @@
 #include "strpg.h"
+#include "cmd.h"
 #include "drw.h"
 #include "fs.h"
 #include "threads.h"
@@ -170,6 +171,12 @@ void
 highlightnode(RNode *r)
 {
 	mixcolors(r->col, theme[Chigh]);
+}
+
+void
+resetnodecolor(RNode *r, ioff id)
+{
+	setcolor(r->col, setdefalpha(getcnodecolor(id)));
 }
 
 void

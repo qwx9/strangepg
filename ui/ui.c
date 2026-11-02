@@ -168,7 +168,6 @@ dragselect(int x, int y)
 				continue;
 			if(selectnodebyidx(idx, 1, 0) <= 0)
 				continue;
-			u->uflags |= FNUhigh;
 		}
 	flushcmd();
 	for(x=ry.x1; x<ry.x2; x++)
@@ -193,7 +192,6 @@ dragselect(int x, int y)
 				continue;
 			if(selectnodebyidx(idx, 1, 0) <= 0)
 				continue;
-			u->uflags |= FNUhigh;
 		}
 	flushcmd();
 	reqdraw(Reqshallowdraw);
@@ -327,20 +325,13 @@ mousehover(int x, int y)
 static int
 mouseselect(ioff idx, int multi, int toggle)
 {
-	int new;
-	Node *u;
-
 	if(prompting)
 		return 0;
 	if(idx != -1){
 		if((idx & 1UL<<31) == 0){
-			if((new = selectnodebyidx(idx, multi, toggle)) < 0){
+			if(selectnodebyidx(idx, multi, toggle) < 0){
 				DPRINT(Debugui, "mouseselect: %s", error());
 				return 0;
-			}
-			if(new){
-				u = nodes + idx;
-				u->uflags |= FNUhigh;
 			}
 			showselection();
 		}else{	/* FIXME: edges: not appearing in this film */

@@ -607,6 +607,7 @@ initvars(void)	/* called within strawk */
 	setsymtab("degree", "degree", ZV, STR|CON, core.ptrs);
 	core.sel = initset("selected");
 	hookdel(core.sel, deselectnode);
+	hooknew(core.sel, selectnode);
 	autoattachfn = autoattach;
 	qunlock(&buflock);
 }
