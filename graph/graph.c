@@ -67,22 +67,43 @@ getrealid(ioff idx)
 static inline void
 setx0(ioff idx, int fixed, float f)
 {
-	nodes[idx].flags |= fixed ? FNfixedx | FNinitx : FNinitx;
-	rnodes[idx].pos[0] = f - drawing.mid[0];
+	nodes[idx].flags |= FNinitx;
+	if(fixed){
+		nodes[idx].flags |= FNfixedx;
+		if(rnodes != nil){
+			lockdraw();
+			rnodes[idx].pos[0] = f - drawing.mid[0];
+			unlockdraw();
+		}
+	}
 }
 
 static inline void
 sety0(ioff idx, int fixed, float f)
 {
-	nodes[idx].flags |= fixed ? FNfixedy | FNinity : FNinity;
-	rnodes[idx].pos[1] = f - drawing.mid[1];
+	nodes[idx].flags |= FNinity;
+	if(fixed){
+		nodes[idx].flags |= FNfixedy;
+		if(rnodes != nil){
+			lockdraw();
+			rnodes[idx].pos[1] = f - drawing.mid[1];
+			unlockdraw();
+		}
+	}
 }
 
 static inline void
 setz0(ioff idx, int fixed, float f)
 {
-	nodes[idx].flags |= fixed ? FNfixedz | FNinitz : FNinitz;
-	rnodes[idx].pos[2] = f - drawing.mid[2];
+	nodes[idx].flags |= FNinitz;
+	if(fixed){
+		nodes[idx].flags |= FNfixedz;
+		if(rnodes != nil){
+			lockdraw();
+			rnodes[idx].pos[2] = f - drawing.mid[2];
+			unlockdraw();
+		}
+	}
 }
 
 void
