@@ -33,7 +33,7 @@ maxdepth(CNode *U)
 	return n + m;
 }
 
-/* FIXMEp per component? */
+/* FIXME: per component? */
 static void
 save(void *arg)
 {
