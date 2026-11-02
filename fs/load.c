@@ -11,11 +11,61 @@ cleanup(void *path)
 	free(path);
 }
 
+static int
+forkfs(char *path, int type, int issave)
+{
+	void (*fp)(void *);
+	Filefmt *ff;
+
+	if(type <= FFdead || type >= nelem(fftab)){
+		werrstr("invalid fs type");
+		return -1;
+	}
+	ff = fftab[type];
+	if(ff == nil){
+		werrstr("unimplemented type");
+		return -1;
+	}
+	fp = issave ? ff->save : ff->load;
+	if(fp == nil){
+		werrstr("%s: %s unimplemented", ff->name,
+			issave ? "load" : "save");
+		return -1;
+	}
+	if(path != nil)
+		path = estrdup(path);
+	newthread(fp, cleanup, path, path, ff->name, mainstacksize);
+	return 0;
+}
+
+int
+savefs(char *path, int type, int direct)
+{
+	Filefmt *ff;
+
+	if(!direct)
+		return forkfs(path, type, 0);
+	if(type <= FFdead || type >= nelem(fftab)){
+		werrstr("invalid fs type");
+		return -1;
+	}
+	ff = fftab[type];
+	assert(ff != nil);
+	if(ff->save == nil){
+		werrstr("unimplemented fs type");
+		return -1;
+	}
+	ff->save(path);
+	return 0;
+}
+
 int
 loadfs(char *path, int type, int direct)
 {
 	Filefmt *ff;
 
+	if(!direct)
+		return forkfs(path, type, 0);
 	if(type <= FFdead || type >= nelem(fftab)){
 		werrstr("invalid fs type");
 		return -1;
@@ -26,12 +76,7 @@ loadfs(char *path, int type, int direct)
 		werrstr("unimplemented fs type");
 		return -1;
 	}
-	if(path != nil)
-		path = estrdup(path);
-	if(direct)
-		ff->load(path);
-	else
-		newthread(ff->load, cleanup, path, path, ff->name, mainstacksize);
+	ff->load(path);
 	return 0;
 }
 

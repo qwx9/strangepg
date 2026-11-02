@@ -27,7 +27,7 @@ struct File{
 struct Filefmt{
 	char *name;
 	void (*load)(void *);
-	int (*save)(void);
+	void (*save)(void *);
 	void (*nuke)(void);
 };
 
@@ -108,5 +108,6 @@ int	seekfs(File*, vlong);
 vlong	tellfs(File*);
 void	closefs(File*);
 void	freefs(File*);
+int	savefs(char*, int, int);
 int	loadfs(char*, int, int);
 void	initfs(void);
