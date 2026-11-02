@@ -623,6 +623,7 @@ drawworld(int go)
 	if(graph.layout == nil)
 		return 0;
 	if((graph.flags & GFdrawme) != 0 || go){
+		go = 1;
 		if(drawing.flags & DFnoray || (go = partition()))
 			redraw();
 	}else
@@ -648,6 +649,7 @@ setflags(ulong f)
 {
 	ulong rf;
 
+	DPRINT(Debugdraw, "setflags %lx", f);
 	rf = 0;
 	if(f & DFdrawarrows){
 		drawing.flags ^= DFdrawarrows;
@@ -872,7 +874,7 @@ reqdraw(int r)
 	}else if(r & Reqanydraw)
 		df |= r & Reqanydraw;
 	/* FIXME: why is the chanavail shit necessary at all here? */
-	if((orf & r) == 0 || chanavail(rendc) == 0){
+	if((orf & r) != r || chanavail(rendc) == 0){
 		rf |= r;
 		orf = rf;
 	}
