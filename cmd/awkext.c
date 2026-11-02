@@ -9,27 +9,52 @@
 #include "strawk/awk.h"
 #include "var.h"
 
-/* NOTE: pushcmd here is asking for trouble. fs/gfa and others
- * may be saturating the cmd buffer and we're the only reader. */
-
 QLock buflock;
 
 static int	foreachsel(int);
 
+/* FIXME: fucking mess between these, pushcmd, strawk functions,
+ * multiple draw*.c and ui*.c functions, and other shit */
 /* FIXME: have upfn use Cell as well */
+/* hooks, do not call directly */
 void
-deselectnode(Cell *cp)	/* deletion hook, do not call directly */
+deselectnode(Cell *cp)
 {
-	ioff id;
-	Value v;
+	ioff id, idx;
 
 	if((cp->tval & (NUM|STR)) == STR)
 		return;
 	id = getival(cp);
-	v.u = getcnodecolor(id);
-	setnodecolor(id, v);
+	if(rnodes == nil || (idx = getnodeidx(id)) < 0)
+		return;
+	nodes[idx].uflags &= ~FNUhigh;
+	resetnodecolor(rnodes + idx, id);
+}
+void
+selectnode(Cell *cp)
+{
+	int r;
+	ioff id, idx;
+	Value v;
+
+	if((cp->tval & (NUM|STR)) == STR){	/* FIXME */
+		v.i = 0;
+		if(r = is_number(cp->nval, &v))
+			setival(cp, v.i);
+		else
+			return;
+		id = v.i;
+	}else
+		id = getival(cp);
+	if((idx = getnodeidx(id)) < 0)
+		return;
+	if(rnodes == nil)
+		return;
+	nodes[idx].uflags |= FNUhigh;
+	highlightnode(rnodes + idx);
 }
 
+/* all four called from ui */
 int
 selectnodebyidx(ioff idx, int multi, int toggle)
 {
@@ -41,11 +66,12 @@ selectnodebyidx(ioff idx, int multi, int toggle)
 		return -1;
 	snprint(buf, sizeof buf, "%d", id);
 	if(lookup(buf, core.sel) == nil){	/* needs fast path for drag */
-		v.i = id;
-		setsymtab(buf, EMPTY, v, NUM, core.sel);
 		if(!multi && !toggle){
 			pushcmd("reselectnode(%d)", id);
 			flushcmd();
+		}else{
+			v.i = id;
+			setsymtab(buf, EMPTY, v, NUM, core.sel);
 		}
 		return 1;
 	}else if(toggle){
@@ -61,7 +87,6 @@ dragselection(float Δx, float Δy, void (*fn)(ioff, float, float))
 	int i;
 	ioff idx;
 	Value v;
-	
 	Cell *cp;
 	Array *ap;
 
