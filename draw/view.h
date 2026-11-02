@@ -41,13 +41,13 @@ extern View view;
 void	expandbb(AABB*, AABB*);
 void	intersectbb(AABB*, AABB*);
 
-void	updateview(void);
+int	updateview(void);
 int	followview(void);
-void	zoomdraw(float, float, float);
-void	pandraw(float, float);
-void	worldview(HMM_Vec3);
-void	rotzview(float, float, float, float);
-void	moveview(float, float);
+int	zoomdraw(float, float, float);
+int	pandraw(float, float);
+int	worldview(HMM_Vec3);
+int	rotzview(float, float, float, float);
+int	moveview(float, float);
 
 static inline HMM_Vec3
 s2w(HMM_Vec2 s)

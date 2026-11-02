@@ -4,6 +4,7 @@
 #include "view.h"
 
 View view = {
+	.follow = -1,
 	.fov = 45.0f,
 	.ar = 1920.0f / 1080.0f,	/* dummy */
 };
@@ -64,31 +65,29 @@ updateviewbb(void)
 	view.bb = b;
 }
 
-void
+int
 updateview(void)
 {
-	HMM_Mat4 vw, proj;
+	HMM_Mat4 m, vw, proj;
 
 	view.Δeye = HMM_SubV3(view.eye, view.center);
 	view.zoom = HMM_LenV3(view.Δeye);
 	proj = HMM_Perspective_RH_NO(view.fov, view.ar, Near, Far);
 	vw = HMM_LookAt_RH(view.eye, view.center, view.up);
-	view.mvp = HMM_MulM4(proj, vw);
+	m = HMM_MulM4(proj, vw);
+	if(memcmp(&m, &view.mvp, sizeof view.mvp) == 0){
+		DPRINT(Debugdraw, "redundant updateview");
+		return 0;
+	}
+	view.mvp = m;
 	drawstate |= DSstalepick | DSmoving;
 	updateviewbb();
+	if(drawing.flags & DFarmed)
+		reqdraw(Reqrefresh);
+	return 1;
 }
 
-static void
-stopfollow(void)
-{
-	view.follow = -1;
-	/*
-	if(drawing.flags & DFfollow)
-		reqflags(DFfollow);
-	*/
-}
-
-void
+int
 pandraw(float Δx, float Δy)
 {
 	HMM_Quat q;
@@ -116,11 +115,10 @@ pandraw(float Δx, float Δy)
 		view.up = HMM_RotateV3Q(view.up, q);
 		view.front = HMM_RotateV3Q(view.front, q);
 	}
-	updateview();
-	reqdraw(Reqrefresh);
+	return updateview();
 }
 
-void
+int
 worldview(HMM_Vec3 v)
 {
 	HMM_Vec3 d;
@@ -130,15 +128,33 @@ worldview(HMM_Vec3 v)
 		view.eye = v;
 		view.center.X = v.X;
 		view.center.Y = v.Y;
-		updateview();
-		reqdraw(Reqrefresh);
+		return updateview();
 	}else{
 		view.center = v;
 		d = HMM_MulV3F(view.front, 10.0f);
 		view.eye = HMM_AddV3(HMM_RotateV3Q(v, view.rot), d);
 		view.Δeye = HMM_SubV3(view.eye, view.center);
-		zoomdraw(-0.1f, 0.0f, 0.0f);
+		return zoomdraw(-0.1f, 0.0f, 0.0f);
 	}
+}
+
+void
+stopfollow(void)
+{
+	view.follow = -1;
+}
+
+void
+follownode(ioff i)
+{
+	if((drawing.flags & (DF3d|DFfollow)) != DFfollow)
+		return;
+	if(i < 0){
+		if(view.follow != -1)
+			return;
+		i = xnrand(dylen(nodes));
+	}
+	view.follow = i;
 }
 
 int
@@ -161,11 +177,10 @@ followview(void)
 		if((drawing.flags & DF3d) == 0)
 			v.Z -= 10.0f;
 	}
-	worldview(v);
-	return 1;
+	return worldview(v);
 }
 
-void
+int
 moveview(float Δx, float Δy)
 {
 	float d;
@@ -179,12 +194,11 @@ moveview(float Δx, float Δy)
 	v = HMM_AddV3(HMM_MulV3F(view.right, -Δx), HMM_MulV3F(view.front, -Δy));
 	view.eye = HMM_AddV3(view.eye, v);
 	view.center = HMM_AddV3(view.center, v);
-	updateview();
-	reqdraw(Reqrefresh);
+	return updateview();
 }
 
 /* FIXME: angle only a hack, not really correct */
-void
+int
 rotzview(float x, float y, float Δx, float Δy)
 {
 	float Δ;
@@ -204,11 +218,10 @@ rotzview(float x, float y, float Δx, float Δy)
 	view.center = HMM_AddV3(HMM_RotateV3Q(HMM_SubV3(view.center, o), q), o);
 	view.right = HMM_RotateV3Q(view.right, q);
 	view.up = HMM_RotateV3Q(view.up, q);
-	updateview();
-	reqdraw(Reqrefresh);
+	return updateview();
 }
 
-void
+int
 zoomdraw(float Δ, float Δx, float Δy)
 {
 	HMM_Vec3 v;
@@ -217,12 +230,11 @@ zoomdraw(float Δ, float Δx, float Δy)
 	if((drawing.flags & DF3d) == 0){
 		Δ *= view.eye.Z;
 		view.eye.Z -= Δ;
-		pandraw(Δx, Δy);
+		return pandraw(Δx, Δy);
 	}else{
 		v = HMM_MulV3F(view.Δeye, Δ);
 		view.eye = HMM_SubV3(view.eye, v);
-		updateview();
-		reqdraw(Reqrefresh);
+		return updateview();
 	}
 }
 
@@ -237,7 +249,6 @@ resetview(void)
 	view.right = HMM_V3(1.0f, 0.0f, 0.0f);
 	view.front = HMM_V3(0.0f, 0.0f, 1.0f);
 	view.rot = HMM_Q(0.0f, 0.0f, 0.0f, 1.0f);
-	view.follow = -1;
 }
 
 void

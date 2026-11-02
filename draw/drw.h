@@ -182,6 +182,9 @@ ioff	raytrace(Tree*);
 
 void	spawnrnode(RNode*, RNode*, voff);
 
+void	stopfollow(void);
+void	follownode(ioff);
+
 void	resizedraw(void);
 void	renderframe(ulong, int);
 void	frame(void);

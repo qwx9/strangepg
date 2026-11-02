@@ -690,9 +690,7 @@ drawproc(void *)
 
 	initstatic();
 	drawing.flags |= DFarmed;
-	if((drawing.flags & (DF3d|DFfollow)) == DFfollow
-	&& view.follow == -1)
-		view.follow = dylen(nodes) / 2;
+	follownode(dylen(nodes) / 2);
 	for(go=1;;){
 		if((r = recvul(drawc)) == 0)
 			break;
@@ -747,13 +745,12 @@ frame(void)	/* render thread */
 			snooze = 1;
 		if(r & Reqresetview){
 			resetview();
-			if(drawing.flags & DFfollow && view.follow == -1)
-				view.follow = xnrand(dylen(nodes));
+			follownode(-1);
 		}
 		if(r & Reqresetdraw)
 			resizedraw();
 		if(r & Reqfocus)
-			view.follow = focusobj();
+			follownode(focusobj());
 		if(followview() || r & (Reqresetview|Reqresetdraw))
 			updateview();
 		if(r & Reqshape)
