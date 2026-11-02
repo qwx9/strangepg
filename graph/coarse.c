@@ -27,12 +27,6 @@ KHASHL_SET_INIT(KH_LOCAL, edgeset, es, u64int, kh_hash_uint64, kh_eq_generic)
 static int ncoarsed;
 static ioff *expnodes;
 
-enum{
-	Srandom,
-	Sascdeg,
-	Sdscdeg,
-};
-
 ioff
 getnodeidx(ioff id)
 {
@@ -811,7 +805,7 @@ collapseupto(ssize max)
 		if(U->flags & FCNvisited)
 			U->flags &= ~FCNvisited;
 	n = dylen(ids);
-	while(m > max){
+	while(m > max && n > 0){
 		DPRINT(Debugcoarse, "collapseupto: %d/%zd(%zd) > %zd",
 			m, dylen(nodes), dylen(ids), max);
 		dyclear(ids);
@@ -826,7 +820,7 @@ collapseupto(ssize max)
 		if(debug & Debugcoarse)
 			for(U=cnodes, V=cnodes+nnodes; U<V; U++)
 				assert((U->flags & FCNvisited) == 0);
-		n = dylen(ids);
+		n = dylen(ids);	/* empty once only top nodes remain */
 		for(p=ids, pe=p+n; p<pe; p++){
 			i = *p;
 			U = cnodes + i;
@@ -960,9 +954,9 @@ lastchild(CNode *U)
 
 /* FIXME: split up */
 static Adj *
-sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof, int type)
+sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof)
 {
-	int abs;
+	int abs, Δ;
 	uint d;
 	ioff i, j, nn, n, m, w, o, *op, *off, *e, *ee, *ep, *tp, *te, *totals;
 	ssize sz;
@@ -974,7 +968,6 @@ sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof, int type)
 	edgeset *es;
 	khint_t kk;
 
-	USED(type);
 	nn = 0;
 	totals = nil;	/* degree d frequency count */
 	t = μsec();
@@ -1030,8 +1023,18 @@ sortedges(Adj **adjp, Adj *adje, edgeset **eset, ioff *offof, int type)
 		return nil;
 	}
 	w = dylen(totals);
+	assert(w > 0);
 	off = emalloc(w * sizeof *off);
-	for(n=m=0, d=0, op=off, tp=totals, te=tp+w; tp<te; tp++, d++, op++){
+	if((status & FSctdescdeg) == 0){
+		Δ = 1;
+		d = 0;
+		te = totals + w;
+	}else{
+		Δ = -1;
+		d = w - 1;
+		te = totals;
+	}
+	for(n=m=0, op=off+d, tp=totals+d; tp!=te; tp+=Δ, d+=Δ, op+=Δ){
 		w = *tp;
 		*tp = n;		/* now cumulative number of nodes up to degree d */
 		n += w;
@@ -1127,7 +1130,7 @@ buildct(void *)
 	ioff i, j, *e, *ee, *coff;
 	edgeset *eset;
 	Adj *adj, *adje, *a;
-	CNode *U, *V, *C;
+	CNode *U, *V, *W, *C;
 
 	logmsg("building coarsening table...\n");
 	t = t0 = μsec();
@@ -1137,7 +1140,7 @@ buildct(void *)
 	adj = nil;
 	eset = nil;
 	coff = emalloc(nnodes * sizeof *coff);
-	adje = sortedges(&adj, nil, nil, coff, Sascdeg);
+	adje = sortedges(&adj, nil, nil, coff);
 	TIME("buildct", "sortedges", t);
 	while(adje > adj){
 		tt = t = μsec();
@@ -1181,7 +1184,7 @@ buildct(void *)
 			U->flags |= FCNvisited;	/* leave alone until next iteration */
 		}
 		TIME("buildct", "node merging", tt);
-		adje = sortedges(&adj, adje, &eset, coff, Sascdeg);
+		adje = sortedges(&adj, adje, &eset, coff);
 		TIME("buildct", "sortedges", tt);
 		TIME("buildct", "round", t);
 	}

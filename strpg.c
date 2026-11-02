@@ -10,7 +10,7 @@
 
 int status;
 
-static char usestr[] = "[-ACEHMRWZbhqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s L W m M E] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
+static char usestr[] = "[-ACEHMRWZbhiqv] [-c FILE] [-f FILE] [-l ALG] [-n FILE] [-r FILE] [-s L W m M E] [-t N] [-O FILE] [-T MAX] FILE [CMD..]";
 
 typedef struct Input Input;
 struct Input{
@@ -80,6 +80,7 @@ help(void)
 		"-c FILE        Load tags from csv FILE\n"
 		"-f FILE        Load layout from FILE\n"
 		"-h             Print usage information and exit\n"
+		"-i             Coarsening tree construction: invert node sorting order\n"
 		"-l ALG         Set layouting algorithm (default: pfr)\n"
 		"-n FILE        Run layouting headless, saving to FILE periodically\n"
 		"-q             Avoid printing messages to stdout\n"
@@ -188,6 +189,7 @@ parseargs(int argc, char **argv, Input **files, char ***defer)
 	case 'c': pushfile(files, EARGF(usage()), FFcsv); break;
 	case 'f': pushfile(files, EARGF(usage()), FFlayout); break;
 	case 'h': help(); break;
+	case 'i': status |= FSctdescdeg; break;
 	case 'l':
 		s = EARGF(usage());
 		if(strcmp(s, "fr") == 0)

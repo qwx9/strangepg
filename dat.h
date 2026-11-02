@@ -104,6 +104,7 @@ enum{
 	FSquiet = 1<<1,
 	FSnoetags = 1<<2,
 	FSdontmindme = 1<<3,
+	FSctdescdeg = 1<<4,
 };
 extern int status;
 
