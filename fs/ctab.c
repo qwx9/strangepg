@@ -27,7 +27,7 @@ enum{
 
 /* cedges don't need to be allocated initially */
 static void
-loadct(void *arg)
+load(void *arg)
 {
 	int x, r;
 	ioff idx;
@@ -40,20 +40,15 @@ loadct(void *arg)
 
 	path = arg;
 	if(graph.flags & GFctarmed){
-		logerr(va("loadctab %s: coarsening table already initialized\n", path));
+		logerr(va("importctab %s: ctab already initialized\n", path));
 		return;
 	}
-	logmsg(va("loadct: %s\n", path));
-	if(initcoarse() < 0){
-		logerr(va("loadctab %s: %s\n", path, error()));
-		return;
-	}
-	DPRINT(Debugfs, "loadctab %s", path);
-	if((f = openfs(path, OREAD)) == nil){
-		logerr(va("loadctab %s: %s\n", path, error()));
-		return;
-	}
+	logmsg(va("importing coarsening table from %s...\n", path));
 	r = -1;
+	if((f = openfs(path, OREAD)) == nil)
+		goto end;
+	if(initcoarse() < 0)
+		goto end;
 	for(idx=x=0, u=nodes, U=cnodes, UE=U+nnodes; U<UE; U++, u++, idx++){
 		if((x = readfs(f, buf, sizeof buf)) < sizeof buf)
 			break;
@@ -71,39 +66,42 @@ loadct(void *arg)
 		U->eoff = u->eoff;
 		U->nedges = u->nedges;
 	}
-	r = 0;
 	if(U != UE){
 		werrstr("too few records in ctab, %zd < %d", U-cnodes, nnodes);
 		r = -1;
-	}else if(x < 0)
-		r = -1;
+	/* FIXME: detect too large files by an extra read and x == 0 */
+	}else
+		r = x < 0 ? -1 : 0;
+end:
+	if(r < 0)	/* ctab corrupted, can't continue */
+		sysfatal("importctab %s line %d: aborting: %s", path, f->nr, error());
 	graph.flags |= GFctarmed;
 	pushcmd("cmd(\"HGI234\")");	/* signal needed to continue, error or no */
 	flushcmd();
-	if(r < 0)
-		logerr(va("loadct %s: %s, line %d\n", path, error(), f->nr));
-	else
-		logmsg("loadct: done\n");
+	logmsg("done importing coarsening table.\n");
 	freefs(f);
 }
 
-int
-exportct(char *path)
+static void
+save(void *arg)
 {
-	int r, x;
+	int x;
+	char *path;
 	union { u32int u; s32int i; } b;
 	uchar buf[Recsz], *p;
 	File *f;
 	CNode *U, *UE;
 
-	logmsg(va("exportct: %s\n", path));
-	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
-		werrstr("no tree yet");
-		return -1;
+	path = arg;
+	if((f = openfs(path, OWRITE)) == nil){
+		logerr(va("exportctab %s: %s\n", path, error()));
+		return;
 	}
-	if((f = openfs(path, OWRITE)) == nil)
-		return -1;
-	r = -1;
+	while((graph.flags & GFctarmed) == 0){
+		DPRINT(Debugfs, "exportctab: waiting");
+		sleep(1);
+	}
+	logmsg(va("exporting coarsening table to %s...\n", path));
 	for(x=0, U=cnodes, UE=U+nnodes; U<UE; U++){
 		p = buf;
 		b.i = U->parent;
@@ -118,48 +116,17 @@ exportct(char *path)
 		if((x = writefs(f, buf, sizeof buf)) < 0)
 			break;
 	}
-	r = x < 0 ? -1 : 0;
+	if(x < 0)
+		logerr(va("exportctab: %s\n", error()));
+	else
+		logmsg("done exporting coarsening table.\n");
 	freefs(f);
-	logmsg("exportct: done\n");
-	return r;
-}
-
-int
-exportdot(char *path)
-{
-	int r;
-	ioff i;
-	char buf[1024], *p;
-	File *f;
-	CNode *U, *UE;
-
-	if((graph.flags & GFctarmed) == 0){	/* FIXME: build it? */
-		werrstr("no tree yet");
-		return -1;
-	}
-	if((f = openfs(path, OWRITE)) == nil)
-		return -1;
-	r = -1;
-	p = seprint(buf, buf + sizeof buf, "digraph {\n");
-	if(writefs(f, buf, p - buf) < 0)
-		goto end;
-	for(i=0, U=cnodes, UE=U+nnodes; U<UE; U++, i++){
-		if(U->parent != -1){
-			p = seprint(buf, buf + sizeof buf, "\t%d -> %d\n", U->parent, i);
-			if(writefs(f, buf, p - buf) < 0)
-				goto end;
-		}
-	}
-	p = seprint(buf, buf + sizeof buf, "}\n");
-	r = writefs(f, buf, p - buf);
-end:
-	freefs(f);
-	return r;
 }
 
 static Filefmt ff = {
 	.name = "ctab",
-	.load = loadct,
+	.load = load,
+	.save = save,
 };
 
 Filefmt *

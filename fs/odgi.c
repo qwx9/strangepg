@@ -28,14 +28,14 @@ readhdr(File *f)
 	return f->foff;
 }
 
-int
-importodgilayout(char *path)
+void
+load(void *arg)
 {
 	int rc, nc;
 	uint *cis, ci;
 	ioff idx;
 	voff id;
-	char *s, *p;
+	char *path, *s, *p;
 	double rf, x, y, c, t;
 	vlong nr, start;
 	File *f;
@@ -44,26 +44,29 @@ importodgilayout(char *path)
 
 	t = μsec();
 	reqlayout(Lstop);
-	if((f = openfs(path, OREAD)) == nil)
-		return -1;
-	if((start = readhdr(f)) < 0)
-		return -1;
-	nr = 1;
-	rc = -1;
-	nc = 0;
+	path = arg;
+	if((f = openfs(path, OREAD)) == nil){
+		logerr(va("importodgi %s: %s\n", path, error()));
+		return;
+	}
 	cs = nil;
 	cis = nil;
+	rc = -1;
+	if((start = readhdr(f)) < 0)
+		goto end;
+	nr = 1;
+	nc = 0;
 	/* doesn't assume ordering outside of pairs */
 	while(readline(f) != nil){
 		nr++;
 		if((s = nextfield(f)) == nil){
 			werrstr("line %lld: short read", nr);
-			goto error;
+			goto end;
 		}
 		id = strtoull(s, &p, 10);
 		if(*p != 0 || id < 0){
 			werrstr("line %lld: invalid index: %d", nr, id);
-			goto error;
+			goto end;
 		}
 		if((idx = getnodeidx(id >> 1)) < 0){
 			DPRINT(Debugfs, "importodgilayout: skipping collapsed node %d", id >> 1);
@@ -72,12 +75,12 @@ importodgilayout(char *path)
 		r = rnodes + idx;
 		if((s = nextfield(f)) == nil){
 			werrstr("line %lld: short read", nr);
-			goto error;
+			goto end;
 		}
 		c = strtod(s, &p);
 		if(*p != 0){
 			werrstr("line %lld: invalid x: %f", nr, c);
-			goto error;
+			goto end;
 		}
 		if((id & 1) == 0)
 			x = c;
@@ -87,12 +90,12 @@ importodgilayout(char *path)
 		}
 		if((s = nextfield(f)) == nil){
 			werrstr("line %lld: short read", nr);
-			goto error;
+			goto end;
 		}
 		c = strtod(s, &p);
 		if(*p != 0){
 			werrstr("line %lld: invalid y: %f", nr, c);
-			goto error;
+			goto end;
 		}
 		if((id & 1) == 0)
 			y = -c;
@@ -109,7 +112,7 @@ importodgilayout(char *path)
 			ci = strtoul(s, &p, 10);
 			if(*p != 0){
 				werrstr("line %lld: invalid component: %d", nr, ci);
-				goto error;
+				goto end;
 			}
 		}else
 			ci = 0;
@@ -156,12 +159,12 @@ importodgilayout(char *path)
 		nr++;
 		if((s = nextfield(f)) == nil){
 			werrstr("line %lld: short read", nr);
-			goto error;
+			goto end;
 		}
 		id = strtoull(s, &p, 10);
 		if(*p != 0){
 			werrstr("line %lld: invalid index", nr);
-			goto error;
+			goto end;
 		}
 		if(id & 1)
 			continue;
@@ -178,13 +181,28 @@ importodgilayout(char *path)
 		r->pos[1] *= rf;
 	}
 	rc = 0;
-error:
+end:
 	dyfree(cs);
 	dyfree(cis);
-	freefs(f);
+	/* FIXME: push command anyway to avoid stoppage? */
+	if(rc < 0)
+		logerr(va("importodgi: %s\n", error()));
+	else{
+		t = (μsec() - t) / 1000.0;
+		logmsg(va("importodgilayout: done in %.2f ms\n", t));
+	}
 	pushcmd("cmd(\"FGG138\")");
 	flushcmd();
-	t = (μsec() - t) / 1000.0;
-	logmsg(va("importodgilayout: done in %.2f ms\n", t));
-	return rc;
+	freefs(f);
+}
+
+static Filefmt ff = {
+	.name = "odgi",
+	.load = load,
+};
+
+Filefmt *
+regodgi(void)
+{
+	return &ff;
 }

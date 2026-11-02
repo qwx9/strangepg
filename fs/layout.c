@@ -12,19 +12,27 @@ enum{
 	Recsz = sizeof(ioff) + 3 * sizeof(float),
 };
 
-int
-importlayout(char *path)
+/* FIXME: if we want to importlayout then exportsvg, exportsvg needs to wait
+ * until this is done, either here or in awk: maybe just defer exportsvg,
+ * which means it shouldn't be an awk function */
+
+static void
+load(void *arg)
 {
 	union { u32int u; float f; ioff i; } b;
 	int x, nr, ns;
+	char *path;
 	ioff id, idx;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r;
 
-	logmsg(va("importlayout: %s\n", path));
-	if((fs = openfs(path, OREAD)) == nil)
-		return -1;
+	path = arg;
+	logmsg(va("importing layout from %s...\n", path));
+	if((fs = openfs(path, OREAD)) == nil){
+		logerr(va("importlayout %s: %s\n", path, error()));
+		return;
+	}
 	for(ns=nr=0;; nr++){
 		if((x = readfs(fs, buf, sizeof buf)) < sizeof buf)
 			break;
@@ -56,30 +64,36 @@ importlayout(char *path)
 		ns++;
 	}
 	DPRINT(Debugfs, "importlayout: imported %d/%d positions", ns, nr);
+	/* FIXME: push cmd anyway to avoid interrupting awk? */
+	if(x < 0)
+		logerr(va("importlayout: %s\n", error()));
+	else if(x > 0 && x < sizeof buf)
+		logerr(va("importlayout: unexpected EOF: truncated input\n"));
+	else
+		logmsg("done importing layout.\n");
 	pushcmd("cmd(\"FGG138\")");
 	flushcmd();
-	if(x > 0 && x < sizeof buf){
-		werrstr("unexpected EOF: truncated input");
-		x = -1;
-	}
 	freefs(fs);
-	logmsg("importlayout: done\n");
-	return x;
 }
 
 /* technically nodes[] is shared with all graphs */
-int
-exportlayout(char *path)
+static void
+save(void *arg)
 {
 	union { u32int u; float f; ioff i; } b;
 	int x;
+	char *path;
 	uchar buf[Recsz], *p;
 	File *fs;
 	RNode *r, *re;
 	Node *u;
 
-	if((fs = openfs(path, OWRITE)) == nil)
-		return -1;
+	path = arg;
+	if((fs = openfs(path, OWRITE)) == nil){
+		logerr(va("exportlayout %s: %s\n", path, error()));
+		return;
+	}
+	logmsg(va("exporting layout to %s...\n", path));
 	x = 0;
 	lockdraw();
 	for(u=nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
@@ -101,8 +115,21 @@ exportlayout(char *path)
 			break;
 	}
 	unlockdraw();
+	if(x < 0)
+		logerr(va("exportlayout: %s\n", error()));
+	else if((drawing.flags & DFnope) == 0)
+		logmsg("done exporting layout.\n");
 	freefs(fs);
-	if((drawing.flags & DFnope) == 0)
-		logmsg("exportlayout: done\n");
-	return x;
+}
+
+static Filefmt ff = {
+	.name = "layout",
+	.load = load,
+	.save = save,
+};
+
+Filefmt *
+reglayout(void)
+{
+	return &ff;
 }

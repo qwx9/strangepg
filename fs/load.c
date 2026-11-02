@@ -86,4 +86,8 @@ initfs(void)
 	fftab[FFgfa] = reggfa();
 	fftab[FFcsv] = regcsv();
 	fftab[FFctab] = regctab();
+	fftab[FFsvg] = regsvg();
+	fftab[FFodgilayout] = regodgi();
+	fftab[FFlayout] = reglayout();
+	fftab[FFdot] = regdot();
 }

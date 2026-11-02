@@ -224,10 +224,13 @@ readcmd(char *s, int err)
 			flushcmd();
 			continue;
 		case 'N':
+		case 'c':
+		case 'd':
 		case 'f':
 		case 'i':
 		case 'j':
 		case 'o':
+		case 's':
 		case 't':
 			break;
 		default:
@@ -249,6 +252,18 @@ readcmd(char *s, int err)
 			if(fnfindnode(fld[0]) < 0)
 				goto error;
 			break;
+		case 'c':
+			if(m != 1)
+				goto invalid;
+			if(savefs(fld[0], FFctab, 1) < 0)
+				warn("readcmd: exportctab to %s: %s\n", fld[0], error());
+			break;
+		case 'd':
+			if(m != 1)
+				goto invalid;
+			if(savefs(fld[0], FFdot, 1) < 0)
+				warn("readcmd: exportdot to %s: %s\n", fld[0], error());
+			break;
 		case 'f':
 			if(m != 1)
 				goto invalid;
@@ -260,7 +275,7 @@ readcmd(char *s, int err)
 		case 'i':
 			if(m != 1)
 				goto invalid;
-			if(importlayout(fld[0]) < 0)
+			if(loadfs(fld[0], FFlayout, 0) < 0)
 				warn("readcmd: importlayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
 				r |= Reqredraw;
@@ -268,7 +283,7 @@ readcmd(char *s, int err)
 		case 'j':
 			if(m != 1)
 				goto invalid;
-			if(importodgilayout(fld[0]) < 0)
+			if(loadfs(fld[0], FFodgilayout, 0) < 0)
 				warn("readcmd: importodgilayout from %s: %s\n", fld[0], error());
 			if(graph.flags & GFarmed)
 				r |= Reqredraw;
@@ -276,8 +291,14 @@ readcmd(char *s, int err)
 		case 'o':
 			if(m != 1)
 				goto invalid;
-			if(exportlayout(fld[0]) < 0)
+			if(savefs(fld[0], FFlayout, 1) < 0)
 				warn("readcmd: exportlayout to %s: %s\n", fld[0], error());
+			break;
+		case 's':
+			if(m != 1)
+				goto invalid;
+			if(savefs(fld[0], FFsvg, 1) < 0)
+				warn("readcmd: exportsvg to %s: %s\n", fld[0], error());
 			break;
 		case 't':
 			if(m != 1)

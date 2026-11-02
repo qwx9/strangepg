@@ -233,6 +233,7 @@ function cmd(code, _i, __i){
 		loadbatch()
 		if(flags & Fdie)
 			quit()
+		flags |= Fcrm114
 		arm()
 		if(length(deferredexpr) != 0){	# FIXME: after arm because of rnodes
 			for(_i=1; _i<=length(deferredexpr); _i++)
@@ -246,9 +247,26 @@ function cmd(code, _i, __i){
 				print layout[_i]
 			delete layout
 		}
-		flags |= Fcrm114
 		print (flags & Fflayout ? "r" : "R")
 	}
+}
+function exportctab(f){
+	if(flags & Fcrm114)
+		print "c", f
+	else
+		deferredexpr[length(deferredexpr)+1] = "exportctab(\"f\")"
+}
+function exportdot(f){
+	if(flags & Fcrm114)
+		print "d", f
+	else
+		deferredexpr[length(deferredexpr)+1] = "exportdot(\"f\")"
+}
+function exportsvg(f){
+	if(flags & Fcrm114)
+		print "s", f
+	else
+		deferredexpr[length(deferredexpr)+1] = "exportsvg(\"f\")"
 }
 function exportlayout(f){
 	print "o", f

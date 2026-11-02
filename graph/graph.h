@@ -1,4 +1,3 @@
-int	exportct(char*);
 void	printgraph(void);
 void	explode(ioff, float);
 int	expand(ioff, int);

@@ -134,6 +134,7 @@ OBJ:=\
 	draw/ray.o\
 	draw/view.o\
 	fs/ctab.o\
+	fs/dot.o\
 	fs/em.o\
 	fs/fs.o\
 	fs/gfa.o\

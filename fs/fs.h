@@ -38,23 +38,25 @@ enum{
 	FFlayout,
 	FFodgilayout,
 	FFctab,
+	FFsvg,
+	FFdot,
 	FFnil,
 };
 
 Filefmt*	reggfa(void);
 Filefmt*	regcsv(void);
 Filefmt*	regctab(void);
+Filefmt*	regsvg(void);
+Filefmt*	regodgi(void);
+Filefmt*	reglayout(void);
+Filefmt*	regdot(void);
+
 char*	nextfield(File*);
 int	skipline(File*);
 char*	readline(File*);
 int	readlineat(File*, int, vlong);
 void	splitfs(File*, char);
 void	regfs(Filefmt*);
-
-int	importodgilayout(char*);
-int	importlayout(char*);
-int	exportlayout(char*);
-int	exportsvg(char*);
 
 int	sysopen(File*, char*, int);
 int	sysfdopen(File*, int, int);

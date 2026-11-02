@@ -278,19 +278,6 @@ fncollapse(Cell *x, TNode *next, int full)
 /* FIXME: stdin commands only get sent/updated on an event like mouse
  * move in window */
 
-static void
-fnexportct(Cell *x)
-{
-	char *s;
-
-	s = getsval(x);
-	if(strlen(s) < 1)
-		FATAL("invalid file path: %s", s);
-	if(exportct(s) < 0)
-		FATAL("%s", error());
-	logmsg("exportcoarse: done\n");
-}
-
 /* FIXME: fs: fsprint()/fseprint() functions or sth */
 /* FIXME: should be in gfa.c or in awk */
 static int
@@ -335,23 +322,11 @@ fnexportgfa(Cell *x)
 	char *s;
 
 	s = getsval(x);
-	if(strlen(s) < 1)
+	if(strlen(s) < 1 || access(s, AWRITE) < 0)
 		FATAL("invalid file path: %s", s);
 	if(printgfa(s) < 0)
 		FATAL("%s", error());
 	logmsg("exportgfa: done\n");
-}
-
-static void
-fnexportsvg(Cell *x)
-{
-	char *s;
-
-	s = getsval(x);
-	if(strlen(s) < 1)
-		FATAL("invalid file path: %s", s);
-	if(exportsvg(s) < 0)
-		FATAL("%s", error());
 }
 
 static void
@@ -418,9 +393,7 @@ addon(TNode **a, int)
 	case ACOLLAPSE: nextarg = fncollapse(x, nextarg, 0); break;
 	case AEXPAND: nextarg = fnexpand(x, nextarg, 0); break;
 	case AEXPLODE: nextarg = fnexplode(x, nextarg); break;
-	case AEXPORTCOARSE: fnexportct(x); break;
 	case AEXPORTGFA: fnexportgfa(x); break;
-	case AEXPORTSVG: fnexportsvg(x); break;
 	case AFULLCOLLAPSE: nextarg = fncollapse(x, nextarg, 1); break;
 	case AFULLEXPAND: nextarg = fnexpand(x, nextarg, 1); break;
 	case AINFO: fninfo(x); break;

@@ -20,6 +20,7 @@ OFILES=\
 	draw/ray.$O\
 	draw/view.$O\
 	fs/ctab.$O\
+	fs/dot.$O\
 	fs/em.$O\
 	fs/fs.$O\
 	fs/gfa.$O\

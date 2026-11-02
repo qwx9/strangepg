@@ -7,18 +7,36 @@
 #include "layout.h"
 #include "threads.h"
 
-int
-exportsvg(char *path)
+/* FIXME: quit() in a script will interrupt any waiting here */
+/* ... and our current fix doesn't work because there's TWO different
+ * defer lists... maybe we should just stipulate WHEN individual commands
+ * may be executed, ie. in what state the main program has to be, or maybe
+ * we just can spawn a thread and wait until the condition is complete,
+ * even if that sucks */
+
+static void
+save(void *arg)
 {
-	char buf[1024], tail[256], *p;
+	int rc;
+	char *path, buf[1024], tail[256], *p;
 	float c, s, θ, dim[4] = {9999.0f, 9999.0f, 0.0f, 0.0f};
 	u32int col;
 	RNode *r, *re;
 	REdge *e, *ee;
+	Node *u;
 	File *fs;
 
-	if((fs = openfs(path, OWRITE)) == nil)
-		return -1;
+	while((graph.flags & (GFarmed | GFdrawme | GFlayme)) != GFarmed){
+		DPRINT(Debugfs, "exportsvg: waiting");
+		sleep(1);
+	}
+	path = arg;
+	if((fs = openfs(path, OWRITE)) == nil){
+		logerr(va("exportsvg %s: %s\n", path, error()));
+		return;
+	}
+	logmsg(va("exporting svg render to %s...\n", path));
+	rc = -1;
 	lockdraw();
 	/* FIXME: rotate according to view */
 	dim[0] = view.bb.tl.x;
@@ -29,10 +47,8 @@ exportsvg(char *path)
 		"<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" "
 		"width=\"%d\" height=\"%d\" viewBox=\"%f %f %f %f\">\n",
 		view.w, view.h, dim[0], dim[1], dim[2]-dim[0], dim[3]-dim[1]);
-	if(writefs(fs, buf, p - buf) < 0){
-		logerr(va("exportsvg: %s\n", error()));
+	if(writefs(fs, buf, p - buf) < 0)
 		goto end;
-	}
 	seprint(tail, tail+sizeof tail,
 		"x=\"%f\" y=\"%f\" width=\"%f\" height=\"%f\"/>\n",
 		-0.5f * drawing.nodesz,	-0.5f * drawing.fatness,
@@ -42,12 +58,12 @@ exportsvg(char *path)
 			"<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" "
 			"style=\"stroke:#cccccc;stroke-opacity:0.3;stroke-width:0.05\"/>\n",
 			e->pos1[0], -e->pos1[1], e->pos2[0], -e->pos2[1]);
-		if(writefs(fs, buf, p - buf) < 0){
-			logerr(va("exportsvg: %s\n", error()));
+		if(writefs(fs, buf, p - buf) < 0)
 			goto end;
-		}
 	}
-	for(r=rnodes, re=r+dylen(r); r<re; r++){
+	for(u=nodes, r=rnodes, re=r+dylen(r); r<re; r++, u++){
+		if(u->nedges == 0)
+			continue;
 		s = 2.0f * (r->dir[3] * r->dir[2] + r->dir[0] * r->dir[1]);
 		c = 1.0f - 2.0f * (r->dir[1] * r->dir[1] + r->dir[2] * r->dir[2]);
 		θ = HMM_ToDeg(atan2f(s, c));
@@ -59,19 +75,29 @@ exportsvg(char *path)
 			"fill=\"#%06x\" fill-opacity=\"%f\" ",
 			r->pos[0], r->pos[1], θ, r->len, col, r->col[3]);
 		p = strecpy(p, buf+sizeof buf, tail);
-		if(writefs(fs, buf, p - buf) < 0){
-			logerr(va("exportsvg: %s\n", error()));
+		if(writefs(fs, buf, p - buf) < 0)
 			goto end;
-		}
 	}
 	unlockdraw();
 	p = seprint(buf, buf+sizeof buf, "</svg>\n");
-	if(writefs(fs, buf, p - buf) < 0){
-		logerr(va("exportsvg: %s\n", error()));
+	if(writefs(fs, buf, p - buf) < 0)
 		goto end;
-	}
-	logmsg("exportsvg: done\n");
+	rc = 0;
 end:
+	if(rc < 0)
+		logerr(va("exportsvg: %s\n", error()));
+	else
+		logmsg("done exporting svg.\n");
 	freefs(fs);
-	return 0;
+}
+
+static Filefmt ff = {
+	.name = "svg",
+	.save = save,
+};
+
+Filefmt *
+regsvg(void)
+{
+	return &ff;
 }
